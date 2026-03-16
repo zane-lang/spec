@@ -114,19 +114,21 @@ Boolean fields are grouped and packed into bits at the **end** of the struct or 
 
 #### Struct-downstream enforcement
 
-Structs form a closed world of value types. A struct may only contain fields that are primitives or other structs — **never a class**. This is enforced by the compiler and applies transitively: a struct containing a struct containing a class is also an error.
+Structs form a closed world of value types. A struct may only contain fields that are primitives or other structs — **never a class or a ref**. This is enforced by the compiler and applies transitively: a struct containing a struct containing a class is also an error.
 
-The reason is ownership and copying. Structs are copied by flat `memcpy` — there is no destructor, no anchor, no heap interaction. If a struct could contain a class field, copying the struct would silently duplicate a strong reference, violating single ownership. Struct-downstream enforcement makes this impossible at the type level.
+The reason is ownership and copying. Structs are copied by flat `memcpy` — there is no destructor, no anchor, no heap interaction. If a struct could contain a class field, copying the struct would silently duplicate a strong reference, violating single ownership. If a struct could contain a ref field, copying would duplicate a weak reference without registering the copy in the target's `weak_ref_stack`. Struct-downstream enforcement makes both impossible at the type level.
 
-Classes, by contrast, may contain both struct fields and class fields. A class field is a strong ownership relationship — the containing class owns the field for its lifetime.
+Classes, by contrast, may contain struct fields, class fields (owning), and ref fields (non-owning). See `zane_pointer.md` for the ownership and ref semantics that govern these field types.
 
 ```
 struct Vec2  { x: f32, y: f32 }          // ok — only primitives
 struct Rect  { pos: Vec2, size: Vec2 }   // ok — only structs
 struct Bad   { name: String }            // error — String is a class
+struct Bad2  { ref target: Player }      // error — ref in a struct
 
 class Player { pos: Vec2, hp: i32 }      // ok — struct fields in a class
 class World  { players: List<Player> }   // ok — class fields in a class
+class Unit   { ref target: Player }      // ok — ref field in a class
 ```
 
 ```
@@ -167,133 +169,186 @@ Only class instances carry an anchor back-pointer. Structs stored on the stack o
 
 ---
 
-## Anchors
+## Anchors and refs
 
-Every heap-allocated object — every class instance and every list — is assigned an **anchor** at the moment of creation. The anchor is a small separately-allocated heap object with a fixed address that never changes for the lifetime of the object it represents. The anchor is the object's persistent identity.
+This section covers the data structures and protocols. For the behavioral rules (ownership, ref semantics, lifetime), see `zane_pointer.md`.
 
-The object itself may move — when a list relocates to a larger slot, for example — but the anchor stays at its original address. All weak references refer to objects through their anchor, so moves are invisible to the rest of the program.
+### Anchors
+
+An **anchor** is a small heap-allocated object with a fixed address that never changes. It holds the current heap-relative offset of the object it represents. When an object moves, only the anchor's offset is updated — all refs to that object remain valid automatically.
 
 ```
 anchor: {
-    offset:         u32           // heap-relative offset of the object's current location
-    weak_ref_stack: List<*anchor> // absolute addresses of registered weak ref anchors
+    heapoffset:    u32                  // heap-relative offset of the object's current location
+    weak_ref_stack: Stack<*ref_anchor>  // absolute addresses of the ref_anchors of all live refs
 }
 ```
 
-**All references to anchors are absolute addresses.** The anchor's address never changes, so an absolute pointer to it is permanently valid — no base address is needed to resolve it, and no update is ever required when objects move. This is the fundamental property that makes anchors useful: they are the one thing in the system that can be pointed to absolutely. By contrast, the `offset` field *inside* the anchor is heap-relative, because it points at the object which can move.
+Anchors are created lazily — only when the first `ref` to an object is made (see the back-pointer section above for the 0-sentinel guarantee).
 
-The anchor for a standalone class instance holds the instance's current heap offset. The anchor for a `List<store T>` holds the list's current base offset. Each element within a `List<store T>` has its own anchor holding the element's byte offset relative to the list's base — not an absolute heap offset.
+### Refs
 
-#### Anchor lifetime
-
-An anchor is allocated when its object is created and freed when its object is destroyed. The two always live and die together. There is no lazy initialisation — every object has an anchor from birth, regardless of whether any weak references to it are ever created. This keeps the model uniform and eliminates null checks on the anchor pointer.
-
-#### Weak references
-
-A weak reference does not point at an object directly. It holds a `Stack<*anchor>` — a fixed-length sequence of absolute anchor addresses representing the chain of class-typed values traversed to reach the target. The length of the stack equals the number of class-typed levels in the access chain, which is always statically known from the type at the point the weak ref is created. The compiler emits the stack as an inline fixed-length array — no heap allocation.
-
-The first entry is always the outermost heap-allocated object, whose anchor offset is heap-relative. Every subsequent entry is a nested class value, whose anchor offset is relative to its parent's base address.
+A `ref` is a heap-allocated object that holds a pointer to the target object's anchor, a back-pointer to its own `ref_anchor`, and a `stack_index` for O(1) unregistration. The `ref_anchor` is the variable that holds the ref — either a stack local or a class field. It stores a `u32` heap-relative offset to the ref object.
 
 ```
-weak_ref = { anchors: Stack<*anchor> }  // length statically known from type
+ref object:   { target_anchor: *anchor, back_ptr: *ref_anchor, stack_index: u32 }
+ref_anchor:   { heapoffset: u32 }   // stack variable or class field — no weak_ref_stack,
+                                    // because refs cannot be ref'd
+```
+
+The `stack_index` records the ref's position in its target anchor's `weak_ref_stack`. This enables O(1) unregistration when the ref is destroyed.
+
+**All pointers to anchors and ref_anchors are absolute addresses.** Anchors never move, so a pointer to one is permanently valid. Ref_anchors on the stack never move. Ref_anchors embedded in class fields can move when the containing class relocates — this case is handled by the ref_anchor move protocol (see below).
+
+Dereference resolves the target through the anchor:
+
+```
+ref Tank myTank = tanks[0]
 
 dereference:
-    addr = heap_base + anchors[0].offset     // outermost — heap-relative
-    for i in 1..anchors.len:
-        addr = addr + anchors[i].offset      // each nested level — parent-relative
-    return addr
+    ref_obj = heap_base + myTank.heapoffset
+    object  = heap_base + ref_obj.target_anchor.heapoffset
 ```
 
-The depth of the stack is determined by the number of class-typed levels crossed in the access expression, not by the number of generic type parameters. Struct fields are value types and contribute no anchor to the chain — only class instances do.
+### Leaf-only registration
+
+When a ref is created, its `ref_anchor`'s absolute address is registered in the `weak_ref_stack` of only the **leaf** object's anchor — the object the ref directly points to. It does not register with any parent or ancestor anchors.
 
 ```
-class Player { age: Int }
-class World  { players: List<Player> }
-
-world: World
-ref = world.players[0]
-// anchors = [ &world_anchor, &list_anchor, &player_anchor ]  — length 3
-
-struct Vec2 { x: f32, y: f32 }
-class Line  { start: Vec2, end: Vec2 }
-
-line: Line
-ref = line.start          // Vec2 is a struct — no anchor, not weakly referenceable
-ref = line               // anchors = [ &line_anchor ]  — length 1
+ref Player myPlayer = world.players[0]
+// registers &myPlayer only in: player_anchor.weak_ref_stack
 ```
 
-All entries in the stack are absolute anchor addresses. The dereference requires no base-address arithmetic to locate any anchor — each is followed directly. Only resolving the final object address at each level requires adding the parent base, which is computed as part of the fold.
+When an ancestor is destroyed, destruction recurses through the ownership tree. Each child's destruction checks its own `back_ptr`. If non-zero, that child's anchor iterates its `weak_ref_stack` and nulls all refs. The total ref-nulling work across the entire subtree is exactly proportional to the number of refs that exist.
 
-#### Weak ref registration
+This keeps ref creation and destruction O(1) — one registration, one unregistration — at the cost of one `back_ptr == 0` branch per child during destruction. Since refs are rare, `back_ptr` is almost always 0, the branch predictor learns this pattern immediately, and the check is effectively free on modern hardware.
 
-When a weak reference is created, it registers its own anchor's absolute address in the `weak_ref_stack` of **every** anchor in its stack. This means destroying any class-typed object in the access chain — not just the leaf — will null the weak ref.
+### Ref lifetime
 
-When a weak reference is destroyed, it removes itself from every anchor stack it registered with. Removal is O(1) via swap-with-last-and-pop.
+A ref is owned by its ref_anchor — either a stack variable or a class field. When the ref_anchor is destroyed — because a local goes out of scope or a containing class is destroyed — the ref object is destroyed and its `ref_anchor` address is removed from the target anchor's `weak_ref_stack` using swap-with-last-and-pop, indexed by the ref's stored `stack_index` — O(1). When a ref is swapped to a new position during another ref's unregistration, the swapped ref's `stack_index` is updated to reflect its new position.
 
-#### Move protocol
+If a `ref` is returned from a function, the compiler creates a new ref to the same target in the caller's scope. The original ref is destroyed at the end of the returning scope as normal.
+
+Refs as class fields are destroyed as part of the containing class's destruction protocol — after owned children are destroyed, all ref fields are unregistered from their targets and the ref objects are freed.
+
+### Object move protocol
 
 When an object needs to relocate to a new heap slot:
 
 ```
 1. read:   anchor = object.anchor_ptr              // follow absolute back-pointer at old address
-2. write:  anchor.offset = new_offset              // update anchor before moving
-3. copy:   memcpy(new_address, old_address, sizeof(T)) // move data
-4. free:   free_stacks[sizeof(T)].push(old_offset) // release old slot
+2. write:  anchor.heapoffset = new_offset          // update anchor before moving
+3. copy:   memcpy(new_address, old_address, sizeof(T))
+4. free:   free_stacks[sizeof(T)].push(old_offset)
 ```
 
-Step 2 must happen before step 3. The back-pointer is read at the old address; after the copy the old address is considered freed. Updating the anchor first ensures it is valid for exactly one read before the object is gone. All existing weak refs are unaffected — they hold the anchor's absolute address directly and follow it to the new location.
+Step 2 must happen before step 3. All existing refs are unaffected — they follow `target_anchor.heapoffset` which now points to the new address.
 
-#### Destruction protocol
+If the object has `ref` fields, each ref field is a ref_anchor whose absolute address is stored in a target's `weak_ref_stack`. After the move, these ref_anchors have a new absolute address. Each ref field's ref object must be updated with the new ref_anchor address, and the corresponding entry in the target's `weak_ref_stack` must be updated. The compiler knows statically which fields are refs, so this is a fixed-cost operation per ref field — no dynamic discovery.
+
+```
+for each ref field in moved object:
+    ref_obj = heap_base + ref_field.heapoffset
+    ref_obj.back_ptr = &new_address.ref_field           // update ref's back-pointer
+    anchor = ref_obj.target_anchor
+    anchor.weak_ref_stack[ref_obj.stack_index] = &new_address.ref_field  // update target's entry
+```
+
+### Ref move protocol
+
+When a ref object needs to relocate (e.g. inside a `List<ref T>` that grows):
+
+```
+1. read:   ref_anchor = ref_obj.back_ptr           // follow absolute back-pointer at old address
+2. write:  ref_anchor.heapoffset = new_offset      // update ref_anchor before moving
+3. copy:   memcpy(new_address, old_address, sizeof(ref))
+4. free:   free_stacks[sizeof(ref)].push(old_offset)
+```
+
+The ref_anchor is updated in step 2. The target anchor is not touched — only the ref's location changed, not the target's.
+
+### Destruction protocol
 
 When an object is destroyed:
 
 ```
-1. for each anchor_ptr in anchor.weak_ref_stack:
-       anchor_ptr.offset = NULL                    // null the weak ref via its absolute anchor address
-2. free anchor slot
-3. free object slot
+1. destroy all owned children recursively (same protocol)
+
+2. for each ref field on this object:
+       ref_obj = heap_base + ref_field.heapoffset
+       anchor  = ref_obj.target_anchor
+       // unregister using swap-with-last-and-pop:
+       last_index = anchor.weak_ref_stack.len - 1
+       if ref_obj.stack_index != last_index:
+           swapped_ref_anchor_ptr = anchor.weak_ref_stack[last_index]
+           anchor.weak_ref_stack[ref_obj.stack_index] = swapped_ref_anchor_ptr
+           swapped_ref_obj = heap_base + swapped_ref_anchor_ptr.heapoffset
+           swapped_ref_obj.stack_index = ref_obj.stack_index
+       anchor.weak_ref_stack.pop()
+       free ref object slot
+
+3. if object.back_ptr == 0:
+       free object slot
+
+   else:
+       anchor = object.back_ptr
+       for each ref_anchor_ptr in anchor.weak_ref_stack:
+           ref_anchor_ptr.heapoffset = 0xFFFFFFFF    // null sentinel — ref is now dead
+       free anchor slot
+       free object slot
 ```
 
-All weak references to the object are nulled in one pass. No heap-base arithmetic is needed to locate the weak ref anchors — they are followed directly by their absolute addresses. Any subsequent dereference of a nulled weak ref is a caught runtime error.
+Children are destroyed before the parent's own ref fields are cleaned up and before the parent's own anchor teardown. At each level, the `back_ptr == 0` check determines whether any ref-nulling is needed. Since refs are rare, this branch is almost always not-taken and costs effectively nothing on modern hardware. The compiler knows statically which fields are refs, so step 2 has zero cost for objects with no ref fields.
+
+When a ref local goes out of scope:
+
+```
+ref_obj = heap_base + ref_anchor.heapoffset
+anchor  = ref_obj.target_anchor
+
+// O(1) swap-with-last-and-pop using stored stack_index:
+last_index = anchor.weak_ref_stack.len - 1
+if ref_obj.stack_index != last_index:
+    swapped_ref_anchor_ptr = anchor.weak_ref_stack[last_index]
+    anchor.weak_ref_stack[ref_obj.stack_index] = swapped_ref_anchor_ptr
+    // update the swapped ref's stack_index:
+    swapped_ref_obj = heap_base + swapped_ref_anchor_ptr.heapoffset
+    swapped_ref_obj.stack_index = ref_obj.stack_index
+anchor.weak_ref_stack.pop()
+
+free ref object slot
+// ref_anchor (stack variable) is reclaimed with the stack frame
+```
 
 ---
 
-## `List<store T>`
+## Inline list storage
 
-The `store` qualifier in a type parameter changes where the element data lives. `List<T>` holds strong references to heap-allocated `T` instances. `List<store T>` holds the `T` data **inline in the list slot itself** — the list is the storage.
-
-```
-List<Tank>        →  [ ptr, ptr, ptr, ptr ]   each ptr → Tank on heap
-List<store Tank>  →  [ Tank | Tank | Tank ]   Tank data inline, no pointer chase
-```
-
-The list itself has one anchor tracking its current base offset. Each element within a `List<store T>` has its own anchor tracking its byte offset from the list base. When the list grows and moves, only the list anchor is updated — all element anchors hold relative offsets and remain valid.
-
-Because elements are stored inline and never individually freed, `List<store T>` does not support removal from the middle. Elements can be appended and removed from the end only. Removing from the end frees the element's anchor and nulls any weak refs to that element via the element anchor's weak ref stack. If ordered iteration with arbitrary removal is needed, a separate index array can impose an access order without disturbing element addresses.
-
-Structs were always `store` semantics — value types stored inline wherever they appear. `List<store Tank>` is the same intuition extended explicitly to class types.
-
-#### `store` is recursive
-
-The `store` qualifier applies to each type parameter independently. Nesting `store` composes inline storage at every level:
+`List<T>` stores element data **inline** — contiguous in the list's heap allocation, no pointer chase. This is the default and only owning mode. `List<ref T>` holds non-owning references to objects owned elsewhere.
 
 ```
-List<store Tank>
-  → Tank data stored inline in the list slot
+List<Tank>      →  [ Tank | Tank | Tank ]   Tank data inline, no pointer chase
+List<ref Tank>  →  [ ref, ref, ref ]        each ref → Tank owned elsewhere
+```
+
+Each element within a `List<T>` has its own anchor holding the element's current absolute heap offset — updated whenever the list moves. When the list grows and relocates, all element anchors are updated in the same pass. Any `ref` to a list element dereferences directly through the element's own anchor: `heap_base + element_anchor.heapoffset`. No addition of parent and child offsets is needed.
+
+Because elements are stored inline and never individually freed, `List<T>` does not support removal from the middle. Elements can be appended and removed from the end only. Removing from the end destroys the element using the standard destruction protocol — if the element has a non-zero back-pointer, its anchor's `weak_ref_stack` is iterated to null all refs, the anchor is freed, then the element slot is reclaimed. If ordered iteration with arbitrary removal is needed, a separate index array can impose an access order without disturbing element addresses.
+
+#### Nesting
+
+Inline storage composes naturally through nesting:
+
+```
+List<Tank>
+  → Tank data inline in the list
   → no pointer chase to reach a Tank
 
-List<store List<store Tank>>
-  → outer list stores inner List headers inline
-  → each inner list stores Tank data inline
-  → the entire structure lives contiguously on the heap, growing as one unit
-
-List<store List<Tank>>
-  → outer list stores inner List headers inline
-  → each inner list holds strong references to heap-allocated Tanks
-  → Tanks live on the heap separately, accessed via pointer
+List<List<Tank>>
+  → inner List headers inline in the outer list
+  → Tank data inline in each inner list
+  → the entire structure is contiguous on the heap
 ```
-
-The `store` qualifier on the outer type parameter only controls whether that level's data is inline. What the inner type does with its own elements is determined by its own type parameter independently.
 
 ---
 
@@ -311,11 +366,11 @@ The `store` qualifier on the outer type parameter only controls whether that lev
 
 **Random free order is free.** Deallocation is always a single push to a size-indexed free stack. There is no coalescing, no adjacency check, no cost difference between freeing in order or at random.
 
-**Move safety without scanning.** When an object moves, exactly one write is needed — updating the anchor's offset. No weak refs need to be found or updated. The anchor is the single point of indirection that makes this possible.
+**Move safety without scanning.** When an object moves, its anchor's `heapoffset` is updated in one write. If the object has ref fields, each ref field's back-pointer and target `weak_ref_stack` entry are also updated — the compiler knows statically how many ref fields exist, so this is a fixed-cost operation with no dynamic discovery. When a ref object moves, exactly one write is needed — updating the ref_anchor's `heapoffset` via the ref's back-pointer. No heap scanning is required in either case.
 
-**O(1) bulk nulling on destruction.** When an object is destroyed, all weak refs to it are nulled in one pass over the anchor's weak ref stack. No heap scanning, no reference counting.
+**O(1) bulk nulling on destruction.** When an object is destroyed, all refs to it are nulled in one pass over the anchor's `weak_ref_stack`. No heap scanning, no reference counting.
 
-**Cache-friendly inline storage.** `List<store T>` eliminates pointer chasing entirely. Iterating elements is a pure linear scan through contiguous memory.
+**Cache-friendly inline storage.** `List<T>` stores elements inline, eliminating pointer chasing entirely. Iterating elements is a pure linear scan through contiguous memory.
 
 **Statically known layout.** Every class size, every possible list slot size, and every struct layout is known at compile time. The free stack table is a static array. The compiler emits direct arithmetic for all allocations.
 
@@ -325,9 +380,9 @@ The `store` qualifier on the outer type parameter only controls whether that lev
 
 **Fixed total region size must be chosen upfront.** The mmap reservation is fixed at startup. If the heap and stack together exhaust the free region the program terminates. Sizing the reservation is a deployment concern.
 
-**Anchor overhead per object.** Every heap-allocated object carries a 4-byte back-pointer in its runtime layout and a separately allocated anchor on the heap. The back-pointer frequently occupies existing end-padding bytes at no extra cost. The anchor allocation is O(1) and goes through the same free stack as any other allocation.
+**Anchor overhead per ref.** Objects that are never ref'd pay zero anchor overhead — the back-pointer slot is 8 bytes initialised to 0 and the anchor is never allocated. Objects that are ref'd pay one anchor allocation (O(1)) plus one ref object allocation per `ref` variable. Both go through the same free stack as any other heap allocation.
 
-**`List<store T>` cannot remove from the middle.** Inline storage gives stable element addresses, which means arbitrary removal would invalidate weak refs. Only append and end-removal are supported.
+**Lists cannot remove from the middle.** Inline storage gives stable element addresses, which means arbitrary removal would invalidate refs. Only append and end-removal are supported.
 
 **Same-size slot contention.** All types of the same byte size share one free stack. A program that heavily allocates and frees objects of many different types with the same size will see those slots interleaved in memory. Per-type sequential access patterns lose their locality. This is a tradeoff against the flexibility of a unified heap.
 
@@ -345,11 +400,11 @@ The `store` qualifier on the outer type parameter only controls whether that lev
 | Deallocation cost | O(1) always | Deferred to GC | Allocator-dependent | Coalescing overhead |
 | Random free order cost | Same as sequential | Deferred | Same as sequential | Higher (coalescing) |
 | Destruction timing | Deterministic | Non-deterministic | Deterministic | Manual / RAII |
-| Dangling pointer risk | None (weak refs via anchors) | None | None (compile-time) | Yes |
+| Dangling pointer risk | None (refs via anchors) | None | None (compile-time) | Yes |
 | Move safety | O(1) anchor update | GC-managed | compile-time (Pin) | Manual |
-| Weak ref nulling on destroy | O(1) via anchor stack | N/A | N/A | N/A |
+| Ref nulling on destroy | O(1) via anchor stack | N/A | N/A | N/A |
 | Lifetime annotations | None | None | Required | None |
 | Struct/class layout | Declaration order, auto bool-pack | JVM-managed | Repr-controlled | Manual / compiler |
 | Bool packing | Automatic | No | Manual (`bitflags`) | Manual (bitfields) |
-| Inline list storage | `List<store T>` | No | Manual (`Vec<T>` inline) | Manual |
+| Inline list storage | Default | No | Manual (`Vec<T>` inline) | Manual |
 | Per-type memory isolation | No (shared free stacks) | No | No | No |
