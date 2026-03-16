@@ -86,7 +86,7 @@ The variable that holds a `ref` — whether a stack local or a class field — i
 Key properties:
 
 - **Lazy allocation.** An anchor is created only when the first ref to an object is made. Objects with no refs have no anchor and no overhead beyond a zeroed back-pointer slot.
-- **Move safety.** Moving an object on the heap updates exactly one location — the anchor's offset. All refs see the new address on their next dereference.
+- **Move safety.** Moving an object on the heap updates its anchor's offset and, because owned fields are inlined, the anchors and ref registrations of any children in the subtree. The full set of fixups is statically known from the type layout — no runtime discovery, no object-side move logic. All refs see the new address on their next dereference.
 - **Nulling on destroy.** When an object is destroyed, its anchor iterates all registered refs and nulls them. Any subsequent dereference is a caught error.
 - **Leaf-only registration.** A ref registers only in the leaf object's anchor — not in any parent or ancestor. The alternative — registering in every ancestor up the ownership chain — would cost O(depth) on every ref creation and destruction, and force anchor allocation on intermediate objects that may never be ref'd directly. Leaf-only avoids both. When an ancestor is destroyed, recursive teardown reaches every child anyway (to free it and its memory), so checking each child's back-pointer is unavoidable regardless of registration strategy. The check is a single branch per child, almost always not-taken since refs are rare, and effectively free on modern hardware.
 - **O(1) ref creation and destruction.** Registering a ref is a push; unregistering is a swap-and-pop.

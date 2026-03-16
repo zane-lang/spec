@@ -244,7 +244,21 @@ When an object needs to relocate to a new heap slot:
 
 Step 2 must happen before step 3. All existing refs are unaffected — they follow `target_anchor.heapoffset` which now points to the new address.
 
-If the object has `ref` fields, each ref field is a ref_anchor whose absolute address is stored in a target's `weak_ref_stack`. After the move, these ref_anchors have a new absolute address. Each ref field's ref object must be updated with the new ref_anchor address, and the corresponding entry in the target's `weak_ref_stack` must be updated. The compiler knows statically which fields are refs, so this is a fixed-cost operation per ref field — no dynamic discovery.
+Because owned fields are inlined, all children in the subtree physically move with the parent. The compiler must also fixup any child that has an active anchor or ref fields:
+
+```
+for each inlined child (recursively, statically known from type layout):
+    if child.back_ptr != 0:
+        child_anchor = child.back_ptr
+        child_anchor.heapoffset = new_offset_of_child   // update child's anchor
+    for each ref field in child:
+        ref_obj = heap_base + ref_field.heapoffset
+        ref_obj.back_ptr = &new_address_of_child.ref_field
+        anchor = ref_obj.target_anchor
+        anchor.weak_ref_stack[ref_obj.stack_index] = &new_address_of_child.ref_field
+```
+
+The same applies to the moved object's own ref fields:
 
 ```
 for each ref field in moved object:
@@ -253,6 +267,8 @@ for each ref field in moved object:
     anchor = ref_obj.target_anchor
     anchor.weak_ref_stack[ref_obj.stack_index] = &new_address.ref_field  // update target's entry
 ```
+
+The full set of fixups is statically known from the type layout — the compiler emits a flat sequence of writes at the move site. No runtime discovery, no object-side move logic.
 
 ### Ref move protocol
 
@@ -366,7 +382,7 @@ List<List<Tank>>
 
 **Random free order is free.** Deallocation is always a single push to a size-indexed free stack. There is no coalescing, no adjacency check, no cost difference between freeing in order or at random.
 
-**Move safety without scanning.** When an object moves, its anchor's `heapoffset` is updated in one write. If the object has ref fields, each ref field's back-pointer and target `weak_ref_stack` entry are also updated — the compiler knows statically how many ref fields exist, so this is a fixed-cost operation with no dynamic discovery. When a ref object moves, exactly one write is needed — updating the ref_anchor's `heapoffset` via the ref's back-pointer. No heap scanning is required in either case.
+**Move safety without scanning.** When an object moves, its anchor's `heapoffset` is updated in one write. Because owned fields are inlined, all children in the subtree move with the parent — the compiler emits fixups for any child anchors and ref registrations from the statically known type layout. When a ref object moves, exactly one write is needed — updating the ref_anchor's `heapoffset` via the ref's back-pointer. No heap scanning is required in either case.
 
 **O(1) bulk nulling on destruction.** When an object is destroyed, all refs to it are nulled in one pass over the anchor's `weak_ref_stack`. No heap scanning, no reference counting.
 
