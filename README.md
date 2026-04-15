@@ -10,6 +10,7 @@ The techniques described in these documents were conceived and developed by the 
 |---|---|
 | `zane_pointer.md` | Ownership model, weak references, anchor system, supervisor tree |
 | `memory_layout.md` | Heap layout, free-stack allocator, struct/class layout, anchor protocol |
+| `dependency_management.md` | Package identity, manifest, symbol placeholder, global registry, versioned symbols |
 | `bench/zane_bench.c` | C benchmark comparing Zane's allocator against malloc, arena, and pool |
 | `bench/zane_bench_results.txt` | Benchmark results (median of 20 runs per test) |
 | `bench/benchmark.html` | Bar graph showing the benchmark results |
