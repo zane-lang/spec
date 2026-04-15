@@ -33,7 +33,7 @@ zane update math vers1.1.0
 zane update           # re-fetches all deps and resolves each to its latest release
 ```
 
-`zane add` fetches the package, installs it to the global registry, and appends the entry to the `deps` block. `zane remove` removes the entry and any registry entries no longer referenced by the project. `zane update` with a version argument pins the alias to the new tag; without arguments, it queries each package's releases and pins each to the latest.
+`zane add` fetches the package, installs it to the global packages directory, and appends the entry to the `deps` block. `zane remove` removes the entry and any packages no longer referenced by the project. `zane update` with a version argument pins the alias to the new tag; without arguments, it queries each package's releases and pins each to the latest.
 
 ---
 
@@ -65,44 +65,51 @@ $math$add  →  vers1.0.1math$add
 $math$dot  →  vers1.0.1math$dot
 ```
 
-This substitution is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global registry under the package URL and version (see Global registry). From that point on, the version tag is permanently embedded in every symbol name exported by that library.
+This substitution is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global packages directory under the package URL and version (see Global packages directory). From that point on, the version tag is permanently embedded in every symbol name exported by that library.
 
 Because `$` cannot appear inside an identifier in Zane source (it is a grammar-level separator token, not a valid identifier character), no user-written symbol can ever accidentally collide with a versioned library symbol.
 
 ---
 
-## Global registry
+## Global packages directory
 
 Packages are installed to a **global location shared across all projects on the machine**:
 
 ```
-~/.zane/registry/<mangled_url>/<version>/
+~/.zane/packages/<mangled_url>/<mangled_version>/
 ```
 
-The full URL is the registry key, not just the package name. URL mangling makes the path filesystem-safe — for example:
+The full URL is the identity key, not just the package name. URL components are mapped to a directory hierarchy using `/` as the separator — the same mangling scheme used by the Go module cache. The URL scheme separator `://` is collapsed to a single `/`:
 
 ```
-https://github.com/zane-lang/math  →  https___github.com_zane-lang_math
+https://github.com/zane-lang/math  →  https/github.com/zane-lang/math
 ```
 
-A typical installed package looks like:
+Capital letters are escaped with `!` followed by the lowercase equivalent (e.g. `MyLib` → `!my!lib`), matching Go's path-escaping rules for case-insensitive filesystems.
+
+Version tags follow the same escaping rule for capital letters. Tags that contain characters illegal on the local filesystem (e.g. `:`, `*`, `?`, `<`, `>`, `|`, `\`, `"`, or a raw `/`) cause `zane add` to abort with a pull-time error. These characters cannot be represented safely in a directory name on all supported platforms.
+
+A typical installed layout looks like:
 
 ```
-~/.zane/registry/
-    https___github.com_zane-lang_math/
-        vers1.0.1/
-            math.o
-            zane.coda
-        vers2.0.0/
-            math.o
-            zane.coda
-    https___github.com_zane-lang_http/
-        vers2.3.0/
-            http.o
-            zane.coda
+~/.zane/packages/
+    https/
+        github.com/
+            zane-lang/
+                math/
+                    vers1.0.1/
+                        math.o
+                        zane.coda
+                    vers2.0.0/
+                        math.o
+                        zane.coda
+                http/
+                    vers2.3.0/
+                        http.o
+                        zane.coda
 ```
 
-The shared registry means the same package version is never downloaded or substituted more than once across all projects on the machine. If two projects both depend on `vers1.0.1` of `math`, the second `zane add` is a no-op — the already-substituted object file is reused.
+The shared packages directory means the same package version is never downloaded or substituted more than once across all projects on the machine. If two projects both depend on `vers1.0.1` of `math`, the second `zane add` is a no-op — the already-substituted object file is reused.
 
 ---
 
@@ -137,13 +144,13 @@ At compile time, the compiler looks up each alias in the `deps` table and substi
 
 ## Transitive dependencies
 
-Libraries declare their own dependencies in their own `zane.coda`. When a package is pulled, the toolchain reads its manifest and **recursively installs all transitive dependencies** into the global registry before the package itself is considered ready.
+Libraries declare their own dependencies in their own `zane.coda`. When a package is pulled, the toolchain reads its manifest and **recursively installs all transitive dependencies** into the global packages directory before the package itself is considered ready.
 
 Each transitive dependency goes through the same pull-time substitution:
 
 1. Fetch the dependency's object file from its release.
 2. Replace the `$` placeholder with the version tag specified in the library's manifest.
-3. Write the substituted object file to the global registry.
+3. Write the substituted object file to the global packages directory.
 4. Repeat for any further transitive deps.
 
 Because substitution bakes the version into the symbol names, two packages that depend on **different versions of the same library** coexist cleanly. If `plot` requires `vers2.0.0math` and `http` requires `vers1.5.0math`, both are installed, and their symbols (`vers2.0.0math$*` and `vers1.5.0math$*`) are entirely distinct. No conflict, no resolution algorithm, no diamond problem.
@@ -194,7 +201,7 @@ By default, the toolchain uses the pre-compiled object file from the release. A 
 zane add math https://github.com/zane-lang/math vers1.0.1 --from-source
 ```
 
-This clones the repository at the specified tag, compiles it locally, and installs the result to the registry in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol substitution. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
+This clones the repository at the specified tag, compiles it locally, and installs the result to the packages directory in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol substitution. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
 
 ---
 
@@ -213,7 +220,7 @@ The end-to-end flow from library authorship to consumer compilation:
    Toolchain fetches math.o from the vers1.0.1 release.
    Toolchain runs: llvm-objcopy --redefine-sym $math$vec=vers1.0.1math$vec ...
    Substituted object file is written to:
-       ~/.zane/registry/https___github.com_zane-lang_math/vers1.0.1/math.o
+       ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o
    Manifest entry is appended to zane.coda.
    Transitive deps from math's zane.coda are fetched and substituted recursively.
 
@@ -224,7 +231,7 @@ The end-to-end flow from library authorship to consumer compilation:
 5. Consumer runs: zane build
    Compiler reads zane.coda, resolves math → vers1.0.1.
    Compiler substitutes: math$vec → vers1.0.1math$vec throughout the IR.
-   Linker links against ~/.zane/registry/.../vers1.0.1/math.o.
+   Linker links against ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o.
    Binary is produced.
 ```
 
@@ -238,7 +245,8 @@ The end-to-end flow from library authorship to consumer compilation:
 | Exact version pinning | Deterministic builds; no surprise upgrades; explicit in manifest |
 | `$` placeholder at compile time | Version tag does not exist when binary is built; placeholder is substituted at pull time |
 | Symbol substitution at pull time | Bakes version into symbol names once, reused across all projects |
-| Global shared registry | No duplicate downloads or substitutions; shared across all projects on the machine |
+| Global shared packages directory | No duplicate downloads or substitutions; shared across all projects on the machine |
+| Go-style URL and tag path mangling | `/` as subdir separator mirrors Go module cache; capital letters escaped with `!`; illegal chars error at pull time |
 | Version in symbol name | Multiple versions coexist in one binary; no linker conflicts |
 | Manifest key enforcement | No way to bypass the manifest; version strings stay out of source code |
 | Pre-compiled object files | Fast dependency installation; no recompilation on the consumer side |
