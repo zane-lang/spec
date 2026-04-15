@@ -4,7 +4,7 @@
 
 Zane's dependency management system has no central registry. A package is identified by its full repository URL — a GitHub or Codeberg URL is the canonical package identity. No account, approval process, or central index is involved. If a repository is publicly reachable, it is a valid Zane dependency.
 
-Dependencies are declared in the project manifest (`zane.coda`) using a local alias, a URL, and an exact version tag. Source code only ever sees the alias — URLs and version strings never appear in `.zane` files. The toolchain resolves and pins the exact version at `zane add` time; subsequent builds use that pin exactly.
+Dependencies are declared in the project manifest (`zane.coda`) using a local alias, a URL, and an exact version tag. Source code only ever sees the alias — URLs and version strings never appear in Zane source files. The toolchain resolves and pins the exact version at `zane add` time; subsequent builds use that pin exactly.
 
 Libraries are distributed as **pre-compiled object files** attached to a release. The consumer's toolchain fetches and links them directly — the consumer never recompiles the library. A source-compile fallback is available for consumers who do not trust the distributor; see Platform artifacts.
 
@@ -235,7 +235,7 @@ A complete build proceeds in these steps:
     b. If absent:
        i.  Fetch the platform-matching release asset from the repository.
        ii. Run llvm-nm to list exported symbols matching '$pkgname$...' pattern.
-       iii.Run llvm-objcopy --redefine-sym to substitute '$' prefix with version tag.
+       iii. Run llvm-objcopy --redefine-sym to substitute '$' prefix with version tag.
        iv. Write substituted object to the global registry.
     c. Read the dep's own zane.coda and recurse to install its transitive deps.
 
