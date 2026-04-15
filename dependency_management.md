@@ -1,3 +1,4 @@
+
 # Zane Dependency Management
 
 ## Overview
@@ -37,37 +38,30 @@ zane update           # re-fetches all deps and resolves each to its latest rele
 
 ---
 
-## Symbol placeholder
+## Package name rewriting at pull time
 
-When a library author compiles their library for release, the version tag does not exist yet. The release is created *after* the binary is built and attached to it. The version number cannot be baked into the object file at compile time because it is not yet known.
-
-To solve this, the compiler emits a `$` prefix as a **placeholder** on every exported symbol name. A library `math` compiled for release produces symbols like:
+When a consumer runs `zane add`, the toolchain fetches the pre-compiled object file and rewrites the package name itself — prepending the version tag to every symbol that belongs to that package:
 
 ```
-$math$vec
-$math$add
-$math$dot
+math$vec  →  vers1.0.1math$vec
+math$add  →  vers1.0.1math$add
 ```
 
-The leading `$` is the version placeholder. The middle `$` is the standard Zane package separator (matching the grammar rule `(package=IDENTIFIER '$')? name=IDENTIFIER`). The author then creates the release, applies the version tag (e.g. `vers1.0.1`), and attaches the object file to it. The object file is version-agnostic at build time — the tag is applied externally after the fact.
-
-Tradeoff: the author is responsible for tagging the release after building, and for not modifying the binary between build and attach. If the binary is rebuilt with a different tag, the placeholder approach still works correctly — the symbols just resolve to the new tag. There is no cryptographic binding between the binary and the tag; that is left to the distribution channel (e.g. a signed release).
-
----
-
-## Symbol substitution at pull time
-
-When a consumer runs `zane add`, the toolchain fetches the pre-compiled object file and replaces every leading `$` placeholder with the actual version tag:
-
-```
-$math$vec  →  vers1.0.1math$vec
-$math$add  →  vers1.0.1math$add
-$math$dot  →  vers1.0.1math$dot
-```
-
-This substitution is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global packages directory under the package URL and version (see Global packages directory). From that point on, the version tag is permanently embedded in every symbol name exported by that library.
+This rewrite is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global packages directory under the package URL and version (see [Global packages directory](#global-packages-directory)). From that point on, the version tag is permanently part of the package name embedded in every symbol.
 
 Because `$` cannot appear inside an identifier in Zane source (it is a grammar-level separator token, not a valid identifier character), no user-written symbol can ever accidentally collide with a versioned library symbol.
+
+### Why no placeholder is needed
+
+When a library author compiles their library, the compiler emits symbols using the package key and the `$` separator, e.g. `math$vec`. The version tag is **not** embedded at compile time and does not need to be — the toolchain has all the information it needs at pull time:
+
+- the manifest key (e.g. `math`)
+- the version tag (e.g. `vers1.0.1`)
+- the object file just downloaded
+
+It rewrites every symbol matching `math$*` to `vers1.0.1math$*` directly, with no placeholder convention required.
+
+For **transitive dependencies**, no rewriting is needed at all. When `plot` is compiled, its compiler already resolves its own manifest and emits fully versioned symbols like `vers2.0.0math$vec` directly into `plot.o`. By the time a consumer pulls `plot`, those symbols are already final.
 
 ---
 
@@ -109,7 +103,7 @@ A typical installed layout looks like:
                         zane.coda
 ```
 
-The shared packages directory means the same package version is never downloaded or substituted more than once across all projects on the machine. If two projects both depend on `vers1.0.1` of `math`, the second `zane add` is a no-op — the already-substituted object file is reused.
+The shared packages directory means the same package version is never downloaded or prefixed more than once across all projects on the machine. If two projects both depend on `vers1.0.1` of `math`, the second `zane add` is a no-op — the already-prefixed object file is reused.
 
 ---
 
@@ -146,14 +140,9 @@ At compile time, the compiler looks up each alias in the `deps` table and substi
 
 Libraries declare their own dependencies in their own `zane.coda`. When a package is pulled, the toolchain reads its manifest and **recursively installs all transitive dependencies** into the global packages directory before the package itself is considered ready.
 
-Each transitive dependency goes through the same pull-time substitution:
+Because each library's compiler already bakes fully versioned symbols into its object file at compile time, transitive dependency objects arrive pre-versioned and require no further rewriting. The toolchain only needs to ensure they are present in the global packages directory.
 
-1. Fetch the dependency's object file from its release.
-2. Replace the `$` placeholder with the version tag specified in the library's manifest.
-3. Write the substituted object file to the global packages directory.
-4. Repeat for any further transitive deps.
-
-Because substitution bakes the version into the symbol names, two packages that depend on **different versions of the same library** coexist cleanly. If `plot` requires `vers2.0.0math` and `http` requires `vers1.5.0math`, both are installed, and their symbols (`vers2.0.0math$*` and `vers1.5.0math$*`) are entirely distinct. No conflict, no resolution algorithm, no diamond problem.
+Because versioned symbols are distinct strings, two packages that depend on **different versions of the same library** coexist cleanly. If `plot` requires `vers2.0.0math` and `http` requires `vers1.5.0math`, both are installed, and their symbols (`vers2.0.0math$*` and `vers1.5.0math$*`) are entirely distinct. No conflict, no resolution algorithm, no diamond problem.
 
 ---
 
@@ -201,7 +190,7 @@ By default, the toolchain uses the pre-compiled object file from the release. A 
 zane add math https://github.com/zane-lang/math vers1.0.1 --from-source
 ```
 
-This clones the repository at the specified tag, compiles it locally, and installs the result to the packages directory in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol substitution. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
+This clones the repository at the specified tag, compiles it locally, and installs the result to the packages directory in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol prefixing. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
 
 ---
 
@@ -211,18 +200,19 @@ The end-to-end flow from library authorship to consumer compilation:
 
 ```
 1. Library author writes and compiles the library.
-   Compiler emits $math$vec, $math$add, ... ($ = version placeholder).
+   Compiler emits math$vec, math$add, ... using the package key as a prefix.
 
 2. Author creates a GitHub/Codeberg release with a version tag (e.g. vers1.0.1).
    Author attaches the compiled object file(s) to the release.
 
 3. Consumer runs: zane add math https://github.com/zane-lang/math vers1.0.1
    Toolchain fetches math.o from the vers1.0.1 release.
-   Toolchain runs: llvm-objcopy --redefine-sym $math$vec=vers1.0.1math$vec ...
-   Substituted object file is written to:
+   Toolchain runs: llvm-objcopy --redefine-sym math$vec=vers1.0.1math$vec ...
+   Prefixed object file is written to:
        ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o
    Manifest entry is appended to zane.coda.
-   Transitive deps from math's zane.coda are fetched and substituted recursively.
+   Transitive deps from math's zane.coda are fetched recursively.
+   (Transitive dep object files are already fully versioned; no rewriting needed.)
 
 4. Consumer writes source code:
        import math
@@ -243,13 +233,13 @@ The end-to-end flow from library authorship to consumer compilation:
 |---|---|
 | No central registry | Eliminates a single point of failure and control; URL = identity |
 | Exact version pinning | Deterministic builds; no surprise upgrades; explicit in manifest |
-| `$` placeholder at compile time | Version tag does not exist when binary is built; placeholder is substituted at pull time |
-| Symbol substitution at pull time | Bakes version into symbol names once, reused across all projects |
-| Global shared packages directory | No duplicate downloads or substitutions; shared across all projects on the machine |
+| Symbol prefixing at pull time | Toolchain has key and version at `zane add` time; no placeholder needed in the binary |
+| Transitive deps emit versioned symbols at compile time | No rewriting needed for indirect deps; each library owns its version choices at build time |
+| Global shared packages directory | No duplicate downloads or prefixing; shared across all projects on the machine |
 | Go-style URL and tag path mangling | `/` as subdir separator mirrors Go module cache; capital letters escaped with `!`; illegal chars error at pull time |
 | Version in symbol name | Multiple versions coexist in one binary; no linker conflicts |
 | Manifest key enforcement | No way to bypass the manifest; version strings stay out of source code |
 | Pre-compiled object files | Fast dependency installation; no recompilation on the consumer side |
 | Source-compile opt-in | Trust escape hatch for security-conscious consumers |
-| Transitive deps auto-installed | Consumer does not need to enumerate indirect deps; each library owns its version choices |
+| Transitive deps auto-installed | Consumer does not need to enumerate indirect deps |
 | Per-library version namespace | Diamond deps resolve trivially; no global version negotiation |
