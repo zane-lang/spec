@@ -2,231 +2,223 @@
 
 ## Overview
 
-Zane's dependency management system has no central registry. A package is identified by its source repository URL — a GitHub or Codeberg URL is the canonical package identity. Version information and dependency relationships live entirely in a per-project manifest file (`.coda`); source code never contains URLs or version numbers.
+Zane's dependency management system has no central registry. A package is identified by its full repository URL — a GitHub or Codeberg URL is the canonical package identity. No account, approval process, or central index is involved. If a repository is publicly reachable, it is a valid Zane dependency.
 
-The `import` statement takes only a bare identifier. That identifier is an alias resolved to a URL and version by the manifest. Multiple projects can alias the same package under different names without ambiguity, and source code is insulated from version details entirely.
+Dependencies are declared in the project manifest (`zane.coda`) using a local alias, a URL, and an exact version tag. Source code only ever sees the alias — URLs and version strings never appear in `.zane` files. The toolchain resolves and pins the exact version at `zane add` time; subsequent builds use that pin exactly.
 
-There is no global package database, no account required, and no approval process. If a repository is publicly reachable, it is a valid Zane dependency.
+Libraries are distributed as **pre-compiled object files** attached to a release. The consumer's toolchain fetches and links them directly — the consumer never recompiles the library. A source-compile fallback is available for consumers who do not trust the distributor; see Platform artifacts.
 
 ---
 
-## Manifest format
+## Manifest
 
-Every Zane project has a `.coda` file at its root. The format uses bare keywords, one declaration per line, matching the style of the language itself.
+Every Zane project has a `zane.coda` file at its root. Dependencies are declared in a `deps` block:
 
 ```
-package myapp
-version 1.0.0
-
-dep plot  github.com/zane-lang/plot  4.2.1
-dep http  github.com/zane-lang/http  3.0.7
+deps [
+  # key is the local alias used in import statements; version is the exact tag name
+  key  url                                    version
+  math https://github.com/zane-lang/math      vers1.0.1
+  http https://github.com/zane-lang/http      vers2.3.0
+]
 ```
 
-Each `dep` line has three fields:
+Each entry has three fields:
 
 | Field | Description |
 |---|---|
-| alias | The bare identifier used in `import` statements and as the `$` prefix in source code |
-| url | The canonical package identity — the repository URL, no scheme prefix |
-| resolved-version | The exact fetched version; written and maintained by the toolchain |
+| key | The alias used in `import` statements and as the `$`-prefix in source code |
+| url | Full repository URL — the canonical package identity |
+| version | Exact release tag, e.g. `vers1.0.1`; written by the toolchain, not by hand |
 
-The alias must be a valid Zane identifier (`[\p{L}_][\p{L}\p{N}_]*`). The resolved version is a full semver triple (`MAJOR.MINOR.PATCH`) written by `zane add` or `zane update`; it is not written by hand.
+The key must be a valid Zane identifier. The version field holds the exact, resolved tag name as it appears on the release — not a range, not a major-only specifier. The toolchain writes and updates this field; developers do not edit it manually.
 
-### Mutating the manifest
+### CLI commands
 
-The manifest is managed through three CLI commands. Direct edits to the `dep` lines are valid but the toolchain normalises the file on the next run.
+The manifest is managed through the following commands:
 
+```sh
+zane add    math https://github.com/zane-lang/math vers1.0.1
+zane remove math
+zane update math vers1.1.0
+zane update                  # update all deps to their latest versions
 ```
-zane add   github.com/zane-lang/plot 4     # fetch latest 4.x.x, append dep line
-zane remove plot                           # remove the dep line for alias 'plot'
-zane update plot                           # fetch latest MAJOR.x.x, rewrite resolved version
-```
 
-`zane add` derives the alias from the final path component of the URL unless a `--alias` flag overrides it. If a dep with that alias already exists, the command errors.
+`zane add` fetches the specified release, applies symbol substitution (see Symbol substitution at pull time), writes the entry to the `deps` block, and installs the substituted object to the global registry.
 
-`zane update` without an argument updates all deps.
+`zane update` re-resolves the specified dep (or all deps) to a new version and reinstalls.
 
 ---
 
-## Versioning model
+## Version resolution
 
-Zane pins the **major version only**. When you add a dependency with `zane add github.com/zane-lang/plot 4`, the toolchain fetches the latest `4.x.x` release at that moment and writes the full triple to the manifest for reproducibility. Future `zane build` invocations use the pinned triple exactly. Only an explicit `zane update` re-resolves to a newer `4.x.x`.
+Zane pins **exact release tags**. When you run `zane add math https://github.com/zane-lang/math vers1.0.1`, the toolchain fetches the object file attached to the `vers1.0.1` release and writes `vers1.0.1` verbatim into `zane.coda`. All subsequent builds on all machines use that exact object file.
 
-The model rests on a semver trust contract:
+There is no automatic update, no floating range, no "latest compatible" resolution. The manifest is both the configuration and the lock — no separate lock file is required.
 
-- **Patch** releases are bug fixes — no API changes.
-- **Minor** releases add to the API — existing callers are unaffected.
-- **Major** releases are allowed to break API compatibility.
-
-Pinning only the major means a team always gets bug fixes and new features for free, while API-breaking changes require an explicit update to a new major. The full resolved version in the manifest means builds are reproducible across machines and CI runs without a lock file format separate from the manifest.
-
-Different major versions of the same package are treated as **distinct packages** at the symbol level. A project may depend on both `plot` v1 and `plot` v2 simultaneously if two of its deps require them — they do not conflict. See Symbol mangling and Transitive conflict scenarios.
+Updating a dep is always an explicit action (`zane update`). This keeps builds reproducible and avoids situations where a build produces a different binary on different machines or at different times.
 
 ---
 
-## Import syntax
+## Symbol placeholder
 
-Every Zane source file begins with a `package` declaration followed by zero or more `import` declarations:
+When a library author compiles their library for release, the **version tag does not exist yet**. The release is created and tagged *after* the binary is built — the binary is the thing being released, so the tag cannot be known when the binary is compiled.
 
-```antlr
-pkgDef    : 'package' name=IDENTIFIER ;
-pkgImport : 'import'  name=IDENTIFIER ;
+To break this circularity, the compiler emits a `$` prefix on every exported symbol name as a placeholder for the version tag. So a library `math` compiled without a known version produces:
+
+```
+$math$vec
+$math$add
+$math$dot
 ```
 
-The `import` statement takes the alias exactly as it appears in the manifest, with no URL or version:
+The leading `$` is the placeholder slot. The `$` between the package name and the symbol name is the Zane namespace separator (matching the grammar: `(package=IDENTIFIER '$')? name=IDENTIFIER`), and is not a placeholder.
+
+The library author then creates the release and tags it — for example, `vers1.0.1` — and attaches the compiled object file. The binary is complete; only the tag is added after the fact.
+
+---
+
+## Symbol substitution at pull time
+
+When a consumer runs `zane add math https://github.com/zane-lang/math vers1.0.1`, the toolchain:
+
+1. Fetches the object file from the `vers1.0.1` release.
+2. Reads all exported symbols matching the `$pkgname$...` pattern using `llvm-nm`.
+3. Runs `llvm-objcopy --redefine-sym` to replace the leading `$` placeholder with the resolved version tag:
+
+```
+$math$vec  →  vers1.0.1math$vec
+$math$add  →  vers1.0.1math$add
+$math$dot  →  vers1.0.1math$dot
+```
+
+The substitution command looks like:
+
+```
+llvm-objcopy --redefine-sym $math$vec=vers1.0.1math$vec   \
+             --redefine-sym $math$add=vers1.0.1math$add   \
+             --redefine-sym $math$dot=vers1.0.1math$dot   \
+             math.o math_vers1.0.1.o
+```
+
+The toolchain generates the full `--redefine-sym` list automatically from the symbol table; no hand-written lists are needed. The resulting substituted object is written to the global registry and reused for all future builds that reference `vers1.0.1` of this package. The original fetched object is discarded after substitution.
+
+---
+
+## Import and compilation
+
+In source code, packages are imported by their local alias from the manifest:
 
 ```zane
-package myapp
-
-import plot
+import math
 import http
 ```
 
-Symbols from an imported package are accessed using the `$` separator defined by the grammar:
-
-```antlr
-typeSymbol  : (package=IDENTIFIER '$')? name=IDENTIFIER ;
-valueSymbol : (package=IDENTIFIER '$')? name=IDENTIFIER ;
-```
-
-The package identifier comes first, then `$`, then the symbol name:
+Symbols are accessed using the `$` separator from the grammar:
 
 ```zane
-plot$Canvas canvas = plot$Canvas(800, 600)
-plot$draw(canvas, scene)
-
-http$Response resp = http$get("https://example.com")
+math$vec(1.0, 2.0, 3.0)
+http$get("https://example.com")
 ```
 
-Without a package prefix, a symbol refers to the current package. The `$` separator is the only namespace separator in Zane — there is no `::` or `.` equivalent for cross-package references. The `!` character is an operator character (part of the `OPERATOR` lexer token) and has no role in namespacing.
+**At compile time**, the compiler looks up each alias in `zane.coda` and substitutes the versioned form everywhere that alias appears:
+
+```
+import math       →   import vers1.0.1math
+math$vec(...)     →   vers1.0.1math$vec(...)
+```
+
+This substitution is performed by the compiler and is entirely invisible to the programmer. The source file never contains version strings.
+
+### Enforcement
+
+Every alias used in an `import` statement must exist as a key in the `deps` table. Attempting to write the versioned form directly in source code is a **compile error**:
+
+```zane
+import vers1.0.1math   # compile error — 'vers1.0.1math' is not a key in deps
+```
+
+The compiler only accepts bare alias names that match manifest keys. This rule ensures that all dependencies are declared in one place (`zane.coda`) and that the source code remains free of version details.
 
 ---
 
-## Symbol mangling
+## Global registry
 
-At the source level, the package separator is `$` as defined by the grammar. No version number ever appears in source.
-
-At the **object-file level**, the compiler and toolchain need to distinguish symbols from different major versions of the same package, because the same major version from two separate dependency paths is deduplicated (same symbols), while different major versions must coexist without collision.
-
-The convention is:
-
-- Symbols in compiled object files are mangled as `pkgname_MAJOR$symbolname`.
-- For example, major version 1 of `plot` produces symbols `plot_1$draw`, `plot_1$Canvas`, etc.
-- Major version 2 produces `plot_2$draw`, `plot_2$Canvas`, etc.
-
-This is a **below-source-level** concern. The `pkgname_MAJOR` prefix is not valid as a user-facing import alias — `IDENTIFIER` (`[\p{L}_][\p{L}\p{N}_]*`) does allow digits after the first character (so `plot_1` is syntactically valid), but versioned identifiers like `plot_1` are **prohibited by convention** as import aliases. Import aliases must be plain package names with no embedded version number. The mangled form `plot_1` exists only in object-file symbol tables and is never written in source code.
-
-Source code is always compiled with knowledge of which major version each import alias resolves to. The compiler emits references to the mangled names directly — `plot$draw(...)` in source becomes a reference to `plot_1$draw` in the object file if `plot` resolves to major 1.
-
-### Library distribution
-
-Pre-compiled library objects are distributed with a **version placeholder** in the mangled symbol names rather than a hard-coded major number. This allows a single set of pre-compiled objects to be re-used after symbol substitution at link time regardless of which major the consumer resolves to.
-
-The placeholder is the string `_$` in the package-name portion of each symbol. For example, the distributed object file for `plot` contains symbols like:
+Packages are not stored inside the project. They are installed to a **global shared location** on the developer's machine:
 
 ```
-plot_$draw
-plot_$Canvas
-plot_$Rect
+~/.zane/registry/<package_url>/<version>/
 ```
 
-The `_$` token is the version placeholder. This is not Zane source syntax — it is a binary-level naming convention that the Zane toolchain knows about. The `$` character is legal in ELF and COFF symbol names even though it is not legal in a Zane `IDENTIFIER`.
+Because two packages from different sources may share the same name, the full URL is used as the registry key rather than the alias. Some URL mangling is applied to produce a valid filesystem path (e.g., replacing `://` and `/` with underscores):
+
+```
+~/.zane/registry/
+  https___github.com_zane-lang_math/
+    vers1.0.1/
+      math_vers1.0.1.o      # substituted object file, ready to link
+  https___github.com_zane-lang_http/
+    vers2.3.0/
+      http_vers2.3.0.o
+```
+
+Consequences of the shared registry:
+
+- The same package version is never downloaded or substituted more than once across all projects on the machine.
+- Disk usage is minimised — all projects referencing `vers1.0.1` of the same URL share one object file.
+- `zane build` never performs network access for deps already in the registry.
 
 ---
 
-## Symbol substitution pass
+## Transitive dependencies
 
-Before linking, the build system applies a substitution pass to each pre-compiled library object. It rewrites every placeholder symbol to the major-versioned form resolved for this build:
+Libraries that have their own dependencies declare them in their own `zane.coda`. When a library is pulled, the toolchain reads its manifest and **automatically installs its transitive dependencies** to the global registry.
+
+Because each library's symbols are versioned into their names (e.g., `vers2.0.0math$vec`), there are no conflicts between:
+
+- Two top-level packages that depend on different versions of the same library
+- A top-level package and one of its transitive dependencies that use different versions of a shared library
+
+Each version occupies its own symbol namespace. The dependency graph does not need global conflict resolution — every edge independently records its exact version, and the symbol names enforce isolation at link time.
+
+---
+
+## Multiple versions
+
+Because the version tag is embedded in the symbol prefix, it is completely safe to have multiple versions of the same package present in a single binary. `vers1.0.1math$vec` and `vers2.0.0math$vec` are entirely distinct symbols. The linker sees no collision. Both are present; both work correctly.
+
+This has two useful properties:
+
+- **No diamond problem.** If package A requires `math vers1.0.1` and package B requires `math vers2.0.0`, both versions simply coexist. No resolution step, no error, no forced upgrade.
+- **More deterministic compilation.** The exact version is always explicit in the symbol name. There is no implicit global resolution that could produce a different result on a different machine or at a different time.
+
+The tradeoff is binary size: if many different versions of the same library are pulled in transitively, all of them appear in the final binary. In practice this is uncommon and the clarity and correctness benefits outweigh the occasional size cost.
+
+---
+
+## Platform artifacts
+
+Pre-compiled object files are platform-specific. The naming convention for release assets is:
 
 ```
-llvm-objcopy --redefine-sym plot_$draw=plot_1$draw      \
-             --redefine-sym plot_$Canvas=plot_1$Canvas  \
-             --redefine-sym plot_$Rect=plot_1$Rect      \
-             libplot.o libplot_v1.o
+math-vers1.0.1-x86_64-linux-gnu.o       # ELF  (Linux, x86-64)
+math-vers1.0.1-aarch64-linux-gnu.o      # ELF  (Linux, ARM64)
+math-vers1.0.1-x86_64-windows-msvc.obj  # COFF (Windows, x86-64)
 ```
 
-The resulting `libplot_v1.o` exports `plot_1$draw`, etc., and is linked into the final binary. The original distributed `libplot.o` is unchanged in the cache.
+The format is `{alias}-{version}-{target-triple}.{ext}`, where `.o` is used for ELF targets and `.obj` for COFF targets. The Zane toolchain uses the Zig compiler infrastructure to cross-compile objects for any supported target triple.
 
-The toolchain generates the full `--redefine-sym` argument list by reading the exported symbol table of the cached library object with `llvm-nm` and filtering for symbols matching the `pkgname_$` prefix. No hand-written symbol lists are required.
-
-### Platform artifacts
-
-Pre-compiled objects are platform-specific. The naming convention is:
-
-```
-libplot-4.2.1-x86_64-linux-gnu.o       # ELF  (Linux, x86-64)
-libplot-4.2.1-aarch64-linux-gnu.o      # ELF  (Linux, ARM64)
-libplot-4.2.1-x86_64-windows-msvc.obj  # COFF (Windows, x86-64)
-```
-
-The format is `lib{alias}-{version}-{target-triple}.{ext}` where the extension is `.o` for ELF targets and `.obj` for COFF targets. The Zane toolchain uses the Zig compiler infrastructure to cross-compile library objects for any supported target triple.
-
-Library authors are expected to distribute pre-compiled objects for all supported targets in their repository's release assets. A standard CI script pattern:
+Library authors are expected to attach pre-compiled objects for all supported targets to each release. A typical CI script:
 
 ```
 for each TARGET in supported-targets:
-    zig build-obj --target TARGET src/lib.zane -o lib{pkg}-{version}-{TARGET}.{ext}
-    sign and attach to release
+    zig build-obj --target TARGET src/lib.zane -o {pkg}-{version}-{TARGET}.{ext}
+    attach to release
 ```
 
-If no pre-compiled object exists for the host triple, the toolchain falls back to compiling the library source directly.
+### Source-compile fallback
 
----
-
-## Fetch and cache
-
-Fetched packages are stored in a local cache keyed by URL, full version, and target triple:
-
-```
-~/.zane/cache/
-  github.com/zane-lang/plot/4.2.1/x86_64-linux-gnu/
-    libplot.o                    # distributed object (placeholder symbols)
-    libplot.zane-symbols          # exported symbol list (generated by llvm-nm)
-  github.com/zane-lang/http/3.0.7/x86_64-linux-gnu/
-    libhttp.o
-    libhttp.zane-symbols
-```
-
-A cached entry is reused without network access as long as:
-
-- The resolved version in the manifest matches the directory name exactly.
-- The target triple matches the current build target.
-
-`zane build` never re-fetches a dep that already exists in the cache for the current target. `zane update` explicitly re-resolves and re-fetches.
-
-The `.zane-symbols` file is a plain-text list of the mangled symbol names exported by the library object — one symbol per line. It is generated once at fetch time and used at every build to construct the `--redefine-sym` arguments without re-running `llvm-nm`.
-
----
-
-## Dependency graph topology
-
-Zane models the dependency graph as a **tree**, not a directed acyclic graph (DAG).
-
-In a DAG model, the same package node is shared across all paths that reach it. In Zane's tree model, each dependency edge owns its own subtree. If two packages both depend on `plot 4.x.x`, the tree appears to have two separate `plot` nodes — but because they resolve to the same major version, they produce identically-named symbols (`plot_4$draw`, etc.), and the linker deduplicates them automatically. No explicit deduplication mechanism is needed; it falls out of the symbol naming convention.
-
-If two packages depend on different major versions — `plot 1.x.x` and `plot 2.x.x` — the symbols are distinct (`plot_1$draw` vs `plot_2$draw`) and both link into the final binary without collision. The tree structure means each edge independently tracks which version it resolved to, so per-edge substitution (see Transitive dependency resolution) is straightforward.
-
-### Why trees instead of a DAG
-
-The main consequence of the tree model is that **diamond dependencies are resolved per-edge, not globally**. If packages A and B both depend on `util`, A and B each get their own resolved `util` instance in the dependency tree. If both resolve to the same major version, deduplication happens at the linker level for free. If they resolve to different major versions, isolation happens at the linker level for free.
-
-There is no global resolution pass, no version conflict resolution algorithm, and no error when two paths reach different minor versions of the same major. The tree topology eliminates the diamond problem entirely by refusing to share nodes — sharing happens at the symbol level as an emergent property instead.
-
----
-
-## Transitive dependency resolution
-
-Each library's transitive dependencies are resolved **in the library's own namespace**, not in the consuming project's namespace. The consuming project's manifest controls only its direct dependencies.
-
-When library `plot 4.2.1` is fetched, the toolchain also fetches all of `plot`'s transitive dependencies at the versions `plot` recorded in its own manifest. The symbol substitution pass is applied **per-edge**:
-
-1. Fetch `plot 4.2.1` and its dep list.
-2. For each of `plot`'s deps, fetch and apply substitution with `plot`'s resolved versions — not the consumer's.
-3. Link `plot`'s substituted objects into `libplot_resolved.o` for the consumer.
-
-The consumer links against `libplot_resolved.o`. It never directly interacts with `plot`'s transitive dependencies. Their symbols may be present in the binary (if not already provided by another dep), but they are invisible at the source level to the consumer.
-
-This per-edge model means a library always sees the symbol versions it was compiled against, regardless of what the consumer has chosen for its own direct deps. Two libraries that both use `util` but at different minor versions are both satisfied independently — their respective `util` symbols are substituted and resolved in their own sub-trees.
+If a consumer does not trust the distributor, they can opt in to compiling the library from source instead of using the pre-built object. This is an explicit opt-in — the default is always to use the pre-built artifact for speed. Compiling from source produces the same result: after symbol substitution, the symbols are identical. The fallback is a trust and verification mechanism, not an alternative build model.
 
 ---
 
@@ -235,71 +227,45 @@ This per-edge model means a library always sees the symbol versions it was compi
 A complete build proceeds in these steps:
 
 ```
-1. Parse .coda — read all dep aliases, URLs, and resolved versions.
+1.  Parse zane.coda — read all dep keys, URLs, and version tags.
 
-2. For each dep (recursively, depth-first):
-   a. Check the local cache (~/.zane/cache/) for the resolved version and target triple.
-   b. If absent, fetch the release asset for the matching target triple.
-   c. Generate the .zane-symbols file if not already cached.
+2.  For each dep (recursively, depth-first):
+    a. Check the global registry (~/.zane/registry/<url>/<version>/) for the
+       substituted object.
+    b. If absent:
+       i.  Fetch the platform-matching release asset from the repository.
+       ii. Run llvm-nm to list exported symbols matching '$pkgname$...' pattern.
+       iii.Run llvm-objcopy --redefine-sym to substitute '$' prefix with version tag.
+       iv. Write substituted object to the global registry.
+    c. Read the dep's own zane.coda and recurse to install its transitive deps.
 
-3. Detect circular dependencies — if any dep path reaches the same URL at any ancestor level,
-   abort with an error naming the cycle.
+3.  Compile all project source files. The compiler reads zane.coda, resolves each
+    import alias to its version tag, and emits versioned symbol references:
+        import math    →   import vers1.0.1math
+        math$vec(...)  →   vers1.0.1math$vec(...)
+    Using a bare alias that is not in deps, or writing a versioned import directly
+    in source, is a compile error.
 
-4. For each dep, apply the symbol substitution pass:
-      llvm-objcopy --redefine-sym <placeholder>=<versioned> ...
-   producing a versioned object file in a per-build scratch directory.
-
-5. Compile all project source files. The compiler resolves each import alias to its
-   major version from the manifest and emits mangled symbol references accordingly.
-
-6. Link all compiled project objects and all versioned dep objects into the final binary.
-
-7. Clean up the per-build scratch directory.
+4.  Link all compiled project objects against the substituted dep objects from the
+    global registry.
 ```
-
-Step 3 is a hard error — circular dependencies are not supported. Unlike different-major isolation (which works automatically) or same-major deduplication (which works automatically), cycles cannot be resolved by any symbol-level mechanism and indicate a structural error in the dependency graph.
 
 ---
 
-## Transitive conflict scenarios
+## Summary table
 
-### Same major version — deduplication
-
-If packages A and B both declare `dep util github.com/zane-lang/util 2.x.x` and both resolve to `util 2.3.1`, the symbol substitution pass for each produces identically-named symbols (`util_2$something`). The linker deduplicates these automatically. One copy of `util`'s code ends up in the binary. No explicit deduplication mechanism is required.
-
-If A resolves to `util 2.3.1` and B resolves to `util 2.5.0`, the symbol names are still `util_2$something` for both — different minor and patch versions produce the same mangled names under the same major. The linker picks one copy. Which copy wins is unspecified; the build system may warn. This is the accepted cost of semver trust: minor versions are assumed compatible, and the minor version in the manifest is advisory rather than enforcement.
-
-### Different major versions — isolation
-
-If A depends on `util 1.x.x` and B depends on `util 2.x.x`, the substitution pass produces `util_1$something` for A and `util_2$something` for B. These are distinct symbols. Both link into the binary without conflict. Each library sees the version it was compiled against. No action is required by the project author.
-
-### Circular dependency — hard error
-
-If A depends on B and B depends on A (directly or transitively), the build aborts:
-
-```
-error: circular dependency detected
-  myapp -> A -> B -> A
-```
-
-Circular dependencies cannot be resolved by symbol substitution and indicate a design flaw in the dependency graph. They must be broken by refactoring shared code into a third package that neither A nor B depends on.
-
----
-
-## Design decisions
-
-| Decision | Rationale |
+| Design decision | Rationale |
 |---|---|
-| No central registry | Eliminates a single point of failure and gatekeeping. Any public repo is a valid dep. |
-| URL as package identity | Globally unique without coordination. Repo ownership implies package ownership. |
-| Major-only pinning | Minor and patch updates are semver-safe. Pinning full versions creates unnecessary churn. |
-| Full version written to manifest | Reproducible builds without a separate lock file. The manifest is both the config and the lock. |
-| Tree topology, not DAG | Eliminates global diamond resolution. Deduplication and isolation emerge from symbol naming. |
-| Per-edge substitution | Each library's transitive deps are resolved in its own namespace; consumers are insulated. |
-| `$` as source-level separator | Matches the grammar (`typeSymbol`, `valueSymbol`). Naturally partitions the symbol namespace. |
-| Version in mangled ABI names | Different major versions coexist in one binary with no runtime overhead. |
-| Pre-compiled objects | Fast consumer builds — only the project's own source is compiled, not all transitive deps. |
-| `llvm-objcopy` substitution | Standard tool, no custom binary format. Works on both ELF and COFF. |
-| Placeholder `_$` in distributed objects | Library authors distribute one set of objects; the toolchain stamps in the major version at link time. |
-| Circular deps as hard errors | No sound resolution exists. Fail early with a clear diagnostic. |
-| Cache keyed by URL + version + triple | Fetches are idempotent. Network access occurs only when a new version or target is needed. |
+| No central registry | No single point of failure or gatekeeping. Any public repo is a valid dep. |
+| URL as package identity | Globally unique without coordination. Different packages with the same name cannot collide. |
+| Exact tag pinning | Builds are fully reproducible. The manifest is both the config and the lock — no separate lock file. |
+| `$` as version placeholder | The version is unknown at compile time; `$` reserves the prefix slot for later substitution. |
+| Pull-time symbol substitution | The pre-built object is generic; the toolchain stamps in the exact version at install time. |
+| `llvm-objcopy --redefine-sym` | Standard tool with no custom binary format. Works on both ELF and COFF targets. |
+| Global shared registry | One copy of each version per machine. Disk efficient; no per-project duplication. |
+| Version embedded in symbol name | Multiple versions of the same package coexist in one binary without conflict. |
+| Compiler-side alias substitution | Source code never contains version strings. All version information lives in `zane.coda`. |
+| Bare alias enforced in source | Prevents bypassing the manifest. All deps must be declared; accidental version coupling is impossible. |
+| Transitive deps auto-installed | The consumer does not need to enumerate transitive deps; the library's manifest handles them. |
+| Source-compile fallback | Trust is not mandatory. Consumers can verify by building from source without changing the workflow. |
+| Zig for cross-compilation | Library authors produce platform objects with one toolchain; no separate cross-compiler setup needed. |
