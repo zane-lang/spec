@@ -40,28 +40,32 @@ zane update           # re-fetches all deps and resolves each to its latest rele
 
 ## Package name rewriting at pull time
 
-When a consumer runs `zane add`, the toolchain fetches the pre-compiled object file and rewrites the package name itself — prepending the version tag to every symbol that belongs to that package:
+When a consumer runs `zane add`, the toolchain fetches the pre-compiled object file and rewrites every symbol that carries the `!` placeholder prefix — replacing `!` with the version tag:
 
 ```
-math$vec  →  vers1.0.1math$vec
-math$add  →  vers1.0.1math$add
+!math$vec  →  vers1.0.1math$vec
+!math$add  →  vers1.0.1math$add
 ```
 
-This rewrite is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global packages directory under the package URL and version (see [Global packages directory](#global-packages-directory)). From that point on, the version tag is permanently part of the package name embedded in every symbol.
+This rewrite is performed using `llvm-objcopy --redefine-sym`. The rewritten object file is written to the global packages directory under the package URL and version (see [Global packages directory](#global-packages-directory)). From that point on, the version tag is permanently part of the symbol name embedded in the object file.
 
-Because `$` cannot appear inside an identifier in Zane source (it is a grammar-level separator token, not a valid identifier character), no user-written symbol can ever accidentally collide with a versioned library symbol.
+### The `!` placeholder convention
 
-### Why no placeholder is needed
+When a library author compiles their library, the Zane compiler emits all of the library's own symbols with a `!` prefix in place of the eventual version tag:
 
-When a library author compiles their library, the compiler emits symbols using the package key and the `$` separator, e.g. `math$vec`. The version tag is **not** embedded at compile time and does not need to be — the toolchain has all the information it needs at pull time:
+```
+math$vec   (source)  →  !math$vec   (emitted into math.o)
+math$add   (source)  →  !math$add   (emitted into math.o)
+```
 
-- the manifest key (e.g. `math`)
+The `!` character is not a valid identifier character in Zane, so it cannot appear in any user-written name. It is reserved exclusively as this placeholder marker. At pull time the toolchain has everything it needs:
+
 - the version tag (e.g. `vers1.0.1`)
-- the object file just downloaded
+- the object file, where every own symbol starts with `!`
 
-It rewrites every symbol matching `math$*` to `vers1.0.1math$*` directly, with no placeholder convention required.
+It rewrites every symbol matching `!*` by replacing the leading `!` with the version tag. The search is unambiguous because `!` only appears as this placeholder — no other symbol in the object file starts with `!`.
 
-For **transitive dependencies**, no rewriting is needed at all. When `plot` is compiled, its compiler already resolves its own manifest and emits fully versioned symbols like `vers2.0.0math$vec` directly into `plot.o`. By the time a consumer pulls `plot`, those symbols are already final.
+For **transitive dependencies**, the own symbols of each library were already versioned when that library was pulled into the author's build environment. By the time a consumer pulls a transitive dependency, the `!`-prefixed symbols it emitted when compiled have already been rewritten to their final versioned form. No further rewriting of transitive symbols is needed.
 
 ---
 
@@ -132,6 +136,8 @@ At compile time, the compiler looks up each alias in the `deps` table and substi
 | `import http` | resolves to `vers2.3.0http` internally |
 | `http$get` | emitted as `vers2.3.0http$get` in the object file |
 
+Consumer code is compiled with full knowledge of each dependency's version (from `zane.coda`), so the compiler emits fully versioned symbol references directly. The `!` placeholder prefix only appears in library object files — it is the marker used when a library is compiled without a version, so the toolchain can inject one at pull time.
+
 **Enforcement:** Every name used in an `import` statement must be a key in the `deps` table. Writing `import vers1.0.1math` directly in source is a compile error — the string `vers1.0.1math` is not a manifest key. There is no way to bypass the manifest and reference a versioned symbol directly. This ensures the manifest is always the single source of truth for version resolution.
 
 ---
@@ -140,7 +146,7 @@ At compile time, the compiler looks up each alias in the `deps` table and substi
 
 Libraries declare their own dependencies in their own `zane.coda`. When a package is pulled, the toolchain reads its manifest and **recursively installs all transitive dependencies** into the global packages directory before the package itself is considered ready.
 
-Because each library's compiler already bakes fully versioned symbols into its object file at compile time, transitive dependency objects arrive pre-versioned and require no further rewriting. The toolchain only needs to ensure they are present in the global packages directory.
+When a library is compiled, the compiler emits its own symbols with the `!` placeholder prefix (e.g. `!math$vec`). References to other packages it depends on are emitted as fully versioned symbols, because those packages were already pulled and versioned in the author's build environment. By the time a consumer pulls the library, the `!`-prefixed own symbols are rewritten with the version tag; the already-versioned transitive references are left unchanged.
 
 Because versioned symbols are distinct strings, two packages that depend on **different versions of the same library** coexist cleanly. If `plot` requires `vers2.0.0math` and `http` requires `vers1.5.0math`, both are installed, and their symbols (`vers2.0.0math$*` and `vers1.5.0math$*`) are entirely distinct. No conflict, no resolution algorithm, no diamond problem.
 
@@ -200,19 +206,20 @@ The end-to-end flow from library authorship to consumer compilation:
 
 ```
 1. Library author writes and compiles the library.
-   Compiler emits math$vec, math$add, ... using the package key as a prefix.
+   Compiler emits !math$vec, !math$add, ... using ! as a version placeholder prefix.
 
 2. Author creates a GitHub/Codeberg release with a version tag (e.g. vers1.0.1).
    Author attaches the compiled object file(s) to the release.
 
 3. Consumer runs: zane add math https://github.com/zane-lang/math vers1.0.1
    Toolchain fetches math.o from the vers1.0.1 release.
-   Toolchain runs: llvm-objcopy --redefine-sym math$vec=vers1.0.1math$vec ...
+   Toolchain runs: llvm-objcopy --redefine-sym !math$vec=vers1.0.1math$vec ...
+   (Replaces the leading ! with the version tag on every !-prefixed symbol.)
    Prefixed object file is written to:
        ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o
    Manifest entry is appended to zane.coda.
    Transitive deps from math's zane.coda are fetched recursively.
-   (Transitive dep object files are already fully versioned; no rewriting needed.)
+   (Transitive dep object files have their own !-prefixed symbols rewritten when each is pulled.)
 
 4. Consumer writes source code:
        import math
@@ -233,8 +240,8 @@ The end-to-end flow from library authorship to consumer compilation:
 |---|---|
 | No central registry | Eliminates a single point of failure and control; URL = identity |
 | Exact version pinning | Deterministic builds; no surprise upgrades; explicit in manifest |
-| Symbol prefixing at pull time | Toolchain has key and version at `zane add` time; no placeholder needed in the binary |
-| Transitive deps emit versioned symbols at compile time | No rewriting needed for indirect deps; each library owns its version choices at build time |
+| Symbol prefixing at pull time | `!` placeholder in library object files is replaced with the version tag; unambiguous because `!` is not a valid identifier character |
+| Transitive deps reference versioned symbols at compile time | Library authors compile against already-pulled (versioned) deps; only own `!`-prefixed symbols need rewriting at each pull |
 | Global shared packages directory | No duplicate downloads or prefixing; shared across all projects on the machine |
 | Go-style URL and tag path mangling | `/` as subdir separator mirrors Go module cache; capital letters escaped with `!`; illegal chars error at pull time |
 | Version in symbol name | Multiple versions coexist in one binary; no linker conflicts |
