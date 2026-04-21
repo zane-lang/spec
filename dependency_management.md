@@ -1,13 +1,12 @@
-
 # Zane Dependency Management
 
 ## Overview
 
 Zane has no central package registry. A package is identified by its full source URL — typically a GitHub or Codeberg repository URL. Two packages from different hosts can share the same short name without conflict because the URL, not the name, is the canonical identity.
 
-Libraries are distributed as **pre-compiled object files** attached to a release. The Zane toolchain fetches and links them directly. The consumer never recompiles the library unless they explicitly opt in.
+Libraries are distributed as **pre-compiled object files committed directly into the repository**. The Zane toolchain clones the repository at the specified tag and uses the object files from the repository tree. The consumer never recompiles the library unless they explicitly opt in.
 
-Versions are **exact release tags**. There is no implicit resolution, no semver range matching, and no global lockfile negotiation across packages. The exact tag is chosen by the user on the command line and written into the project manifest. What is in the manifest is what gets linked.
+Versions are **exact tags pointing to exact commits**. There is no implicit resolution, no semver range matching, and no global lockfile negotiation across packages. The exact tag is chosen by the user on the command line and written into the project manifest alongside the commit hash it must resolve to. What is in the manifest is what gets linked.
 
 ---
 
@@ -19,22 +18,102 @@ Every Zane project has a `zane.coda` file at its root. Dependencies are declared
 deps [
     # key is the local alias used in import statements
     # url is the full package URL
-    # version is the exact release tag
-    math https://github.com/zane-lang/math vers1.0.1
-    http https://github.com/zane-lang/http vers2.3.0
+    # version is the exact tag
+    # commit is the exact commit hash the tag must point to
+	key url version commit
+    math https://github.com/zane-lang/math vers1.0.1 a3f8c2d
+    http https://github.com/zane-lang/http vers2.3.0 b91e4f7
 ]
 ```
 
-Each entry has three fields: a short **key** (the alias used in source code), the full **URL**, and the exact **version tag**. The user never edits `zane.coda` directly. All changes go through CLI commands:
+Each entry has four fields: a short **key** (the alias used in source code), the full **URL**, the exact **version tag**, and the **commit hash** that the tag must resolve to. The user never edits `zane.coda` directly. All changes go through CLI commands:
 
 ```sh
 zane add math https://github.com/zane-lang/math vers1.0.1
 zane remove math
 zane update math vers1.1.0
-zane update           # re-fetches all deps and resolves each to its latest release
+zane update           # re-fetches all deps and resolves each to its latest tag
 ```
 
-`zane add` fetches the package, installs it to the global packages directory, and appends the entry to the `deps` block. `zane remove` removes the entry and any packages no longer referenced by the project. `zane update` with a version argument pins the alias to the new tag; without arguments, it queries each package's releases and pins each to the latest.
+When `zane add` fetches a package it records both the tag and the commit hash the tag currently points to. Both are written into `zane.coda`. The commit hash is the trust anchor — the tag is a human-readable label, but the commit hash is what the toolchain actually enforces.
+
+`zane remove` removes the entry and any packages no longer referenced by the project.
+
+`zane update` with a version argument pins the alias to the new tag, resolves it to its commit hash, and updates both fields in `zane.coda`. Without arguments, it queries each repository's tags and pins each to the latest, updating both tag and commit hash fields.
+
+---
+
+## Repository layout
+
+Library authors commit their pre-built object files directly into the repository alongside source. A typical library repository looks like:
+
+```
+math/
+  src/
+    vec.zane
+    add.zane
+  prebuilt/
+    math-x86_64-linux.o
+    math-aarch64-macos.o
+    math-x86_64-windows.o
+  zane.coda
+```
+
+The pre-built object files are part of the git tree. When a tag is created, the tag points to a commit, and that commit includes both the source and the binaries. **The binaries are therefore as immutable as the commit itself** — they cannot be swapped out without creating a new commit and moving the tag, which is detectable by the manifest's commit hash verification.
+
+Library authors are strongly encouraged to enable **tag protection** on their forge (GitHub, Codeberg, etc.) to prevent tags from being force-pushed to a different commit. With tag protection enabled and binaries in the repo tree, a tagged version is fully immutable. Even without forge-level tag protection, the manifest's commit hash check provides a cryptographic guard.
+
+---
+
+## Tag and commit verification
+
+Every time a dependency is fetched on a machine that does not already have it cached, the toolchain resolves the tag to its current commit hash and compares it against the hash recorded in `zane.coda`:
+
+```
+recorded in zane.coda:  math  vers1.0.1  a3f8c2d
+resolved from remote:   vers1.0.1  →  a3f8c2d   ✅ match, fetch proceeds
+```
+
+```
+recorded in zane.coda:  math  vers1.0.1  a3f8c2d
+resolved from remote:   vers1.0.1  →  f00ba12   ❌ mismatch, fetch aborted
+```
+
+If the hashes do not match, the toolchain **aborts the fetch for that library** and prints a prominent error:
+
+```
+SECURITY ERROR: tag mismatch for math (https://github.com/zane-lang/math)
+
+  Tag     : vers1.0.1
+  Expected: a3f8c2d  (recorded in zane.coda)
+  Got     : f00ba12  (current remote)
+
+  The tag has been moved to a different commit since this dependency was added.
+  This may indicate a compromised repository or an intentional release change.
+
+  To accept the new commit and update the manifest:
+      zane update math vers1.0.1 --force-recommit
+
+  Do not do this unless you trust the new commit and understand why the tag moved.
+```
+
+The build does not proceed for any target that depends on the affected library. Other libraries whose tags resolve correctly are fetched and cached as normal.
+
+---
+
+## Fetching
+
+Because binaries live in the repository itself, fetching is a straightforward shallow clone at the verified commit:
+
+```sh
+git clone --depth 1 --branch vers1.0.1 https://github.com/zane-lang/math
+# After clone, verify that HEAD is at a3f8c2d
+git rev-parse HEAD  # must equal a3f8c2d
+```
+
+This works on **any git host** without forge-specific release asset APIs. No special integration with GitHub releases, Codeberg attachments, or any other forge-specific mechanism is required. Any host that speaks git works out of the box.
+
+The toolchain selects the correct object file from the `prebuilt/` directory based on the current target triple (e.g. `x86_64-linux`, `aarch64-macos`, `x86_64-windows`). If the target is not available in `prebuilt/`, the fetch aborts with an error indicating that the library does not support the target.
 
 ---
 
@@ -171,32 +250,70 @@ Tradeoff: if a project transitively pulls in several major versions of a large l
 
 ## Platform artifacts
 
-Pre-compiled object files are platform-specific. A release typically attaches one object file per target triple (e.g. `x86_64-linux`, `aarch64-macos`, `x86_64-windows`). The toolchain selects the correct artifact based on the host target.
-
-Library authors are expected to build release artifacts using CI. A typical pattern:
+Pre-compiled object files are platform-specific. A release commit includes one object file per supported target triple in the `prebuilt/` directory:
 
 ```
-# build.yml (GitHub Actions)
-strategy:
-  matrix:
-    target: [x86_64-linux, aarch64-macos, x86_64-windows]
-
-steps:
-  - run: zig build-lib -target ${{ matrix.target }} math.zane -femit-bin=math-${{ matrix.target }}.o
-  - run: gh release upload $TAG math-${{ matrix.target }}.o
+prebuilt/
+  math-x86_64-linux.o
+  math-aarch64-macos.o
+  math-x86_64-windows.o
 ```
 
-The Zane compiler uses the [Zig](https://ziglang.org) toolchain for cross-compilation. A library built on a Linux CI machine can produce correct object files for all supported targets without additional setup.
+The toolchain selects the correct artifact based on the current target at pull time.
+
+Because the Zane compiler uses the [Zig](https://ziglang.org) toolchain for cross-compilation, library authors can produce all platform artifacts from a single machine without CI:
+
+```sh
+zig build-lib -target x86_64-linux   math.zane -femit-bin=prebuilt/math-x86_64-linux.o
+zig build-lib -target aarch64-macos  math.zane -femit-bin=prebuilt/math-aarch64-macos.o
+zig build-lib -target x86_64-windows math.zane -femit-bin=prebuilt/math-x86_64-windows.o
+git add prebuilt/
+git commit -m "release vers1.0.1"
+git tag vers1.0.1
+git push && git push --tags
+```
+
+No CI infrastructure is required. The author builds locally, commits the artifacts, and tags the commit. The tag now immutably captures both source and binaries in a single git object.
 
 ### Trust and source-compile opt-in
 
-By default, the toolchain uses the pre-compiled object file from the release. A consumer who does not trust the distributor can opt in to **compiling the package from source** instead:
+By default, the toolchain uses the pre-compiled object file from the repository. A consumer who does not trust the pre-built artifacts can opt in to **compiling the package from source** instead:
 
 ```sh
 zane add math https://github.com/zane-lang/math vers1.0.1 --from-source
 ```
 
-This clones the repository at the specified tag, compiles it locally, and installs the result to the packages directory in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol prefixing. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
+This clones the repository at the specified tag (with commit hash verification), compiles it locally from source, and installs the result to the packages directory in place of the pre-built artifact. The output is functionally identical to the pre-built object after symbol prefixing. The `--from-source` flag is a trust/verification escape hatch, not a normal workflow.
+
+---
+
+## CLI behaviour around commit hashes
+
+`zane add` always records the commit hash automatically. The user never supplies it manually:
+
+```sh
+zane add math https://github.com/zane-lang/math vers1.0.1
+# fetches, verifies tag resolves to a commit, writes both tag and commit into zane.coda
+```
+
+`zane update math vers1.1.0` pins the alias to the new tag, resolves it to its current commit hash, and updates both the tag and commit hash fields in `zane.coda`. The old commit hash is discarded.
+
+`zane update` (no arguments) re-resolves each tag to its latest and updates both the tag and commit hash fields in `zane.coda`. This is the only normal workflow in which commit hashes change in the manifest.
+
+`zane update math vers1.0.1 --force-recommit` is the escape hatch for the tag mismatch case. It re-resolves the existing tag to its current commit hash and overwrites the recorded commit hash with the new value. It requires an explicit flag and prints a warning reminding the user to audit the new commit before trusting it:
+
+```
+WARNING: Force-recommitting math to a new commit.
+
+  Tag     : vers1.0.1
+  Old hash: a3f8c2d
+  New hash: f00ba12
+
+  You are accepting a tag that points to a different commit than before.
+  Verify that the new commit is trustworthy before building.
+
+  The manifest will be updated if you proceed.
+```
 
 ---
 
@@ -205,27 +322,39 @@ This clones the repository at the specified tag, compiles it locally, and instal
 The end-to-end flow from library authorship to consumer compilation:
 
 ```
-1. Library author writes and compiles the library.
+1. Library author writes and compiles the library locally.
    Compiler emits !math$vec, !math$add, ... using ! as a version placeholder prefix.
+   Author cross-compiles for all supported targets using the Zig toolchain.
+   Resulting object files are committed to prebuilt/ in the repository.
 
-2. Author creates a GitHub/Codeberg release with a version tag (e.g. vers1.0.1).
-   Author attaches the compiled object file(s) to the release.
+2. Author creates a version tag (e.g. vers1.0.1) pointing to the commit.
+   The tag captures both source and prebuilt binaries as a single git object.
+   Tag protection on the forge is recommended to prevent the tag from being moved.
 
 3. Consumer runs: zane add math https://github.com/zane-lang/math vers1.0.1
-   Toolchain fetches math.o from the vers1.0.1 release.
-   Toolchain runs: llvm-objcopy --redefine-sym !math$vec=vers1.0.1math$vec ...
-   (Replaces the leading ! with the version tag on every !-prefixed symbol.)
-   Prefixed object file is written to:
-       ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o
+   Toolchain resolves the tag on the remote to its commit hash.
+   Toolchain records both tag and commit hash in zane.coda.
+   Toolchain performs: git clone --depth 1 --branch vers1.0.1 <url>
+   Toolchain verifies the cloned HEAD matches the recorded commit hash.
+   Toolchain selects the correct object file from prebuilt/ for the current target.
+   Toolchain runs llvm-objcopy to rewrite !-prefixed symbols with the version tag.
+   Prefixed object file is written to the global packages directory.
    Manifest entry is appended to zane.coda.
-   Transitive deps from math's zane.coda are fetched recursively.
-   (Transitive dep object files have their own !-prefixed symbols rewritten when each is pulled.)
+   Transitive deps from the library's zane.coda are fetched recursively.
+   Each transitive dep undergoes the same tag/commit verification before fetching.
 
-4. Consumer writes source code:
+4. Team member clones the project and runs: zane build
+   For each dependency not already in the global packages directory:
+       Toolchain resolves the tag on the remote.
+       Toolchain compares the resolved commit hash against the hash in zane.coda.
+       If they match, fetch proceeds normally as in step 3.
+       If they do not match, fetch is aborted with a SECURITY ERROR and the build stops.
+
+5. Consumer writes source code:
        import math
        let v = math$vec(1.0, 2.0)
 
-5. Consumer runs: zane build
+6. Consumer runs: zane build
    Compiler reads zane.coda, resolves math → vers1.0.1.
    Compiler substitutes: math$vec → vers1.0.1math$vec throughout the IR.
    Linker links against ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o.
@@ -239,14 +368,18 @@ The end-to-end flow from library authorship to consumer compilation:
 | Design decision | Rationale |
 |---|---|
 | No central registry | Eliminates a single point of failure and control; URL = identity |
+| Binaries committed to repository | Binaries are part of the git tree and covered by the commit hash; cannot be swapped without moving the tag |
+| Commit hash recorded in manifest | Tags are mutable; the commit hash is the actual trust anchor; mismatch aborts the fetch with a security error |
+| Tag protection recommended | Prevents force-pushing a tag; commit hash verification in the manifest catches it even without forge-level protection |
+| Plain git clone for fetching | Works on any git host without forge-specific APIs; no release asset infrastructure needed |
 | Exact version pinning | Deterministic builds; no surprise upgrades; explicit in manifest |
-| Symbol prefixing at pull time | `!` placeholder in library object files is replaced with the version tag; unambiguous because `!` is not a valid identifier character |
+| Symbol prefixing at pull time | `!` placeholder replaced with the version tag at fetch time |
 | Transitive deps reference versioned symbols at compile time | Library authors compile against already-pulled (versioned) deps; only own `!`-prefixed symbols need rewriting at each pull |
 | Global shared packages directory | No duplicate downloads or prefixing; shared across all projects on the machine |
 | Go-style URL and tag path mangling | `/` as subdir separator mirrors Go module cache; capital letters escaped with `!`; illegal chars error at pull time |
 | Version in symbol name | Multiple versions coexist in one binary; no linker conflicts |
 | Manifest key enforcement | No way to bypass the manifest; version strings stay out of source code |
-| Pre-compiled object files | Fast dependency installation; no recompilation on the consumer side |
+| Pre-compiled object files in repo | Fast dependency installation; no recompilation on the consumer side; local cross-compilation via Zig toolchain means no CI required |
 | Source-compile opt-in | Trust escape hatch for security-conscious consumers |
-| Transitive deps auto-installed | Consumer does not need to enumerate indirect deps |
+| Transitive deps auto-installed | Consumer does not enumerate indirect deps |
 | Per-library version namespace | Diamond deps resolve trivially; no global version negotiation |
