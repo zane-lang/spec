@@ -6,10 +6,10 @@ The techniques described in these documents were conceived and developed by the 
 
 ---
 
-| File | Description |
-|---|---|
-| `memory_layout.md` | Ownership model, refs, anchor system, supervisor tree, heap layout, free-stack allocator, struct/class layout |
-| `dependency_management.md` | Package identity, manifest, symbol placeholder, global registry, versioned symbols |
-| `bench/zane_bench.c` | C benchmark comparing Zane's allocator against malloc, arena, and pool |
-| `bench/zane_bench_results.txt` | Benchmark results (median of 20 runs per test) |
-| `bench/benchmark.html` | Bar graph showing the benchmark results |
+| File                           | Description                                                                                                   |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------|
+| `memory_model.md`              | Ownership model, refs, anchor system, supervisor tree, heap layout, free-stack allocator, struct/class layout |
+| `dependency_management.md`     | Package identity, manifest, symbol placeholder, global registry, versioned symbols                            |
+| `bench/zane_bench.c`           | C benchmark comparing Zane's allocator against malloc, arena, and pool                                        |
+| `bench/zane_bench_results.txt` | Benchmark results (median of 20 runs per test)                                                                |
+| `bench/benchmark.html`         | Bar graph showing the benchmark results                                                                       |
