@@ -1,7 +1,5 @@
 # Zane Purity / Effects Model
 
-> **See also:** [`oop.md`](oop.md) for package structure, class/struct declarations, constructor syntax, method declarations, and overloading rules. This document covers only the effect-inference layer that sits on top of those constructs.
-
 ## 1. Overview
 
 Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
@@ -22,6 +20,8 @@ Instead:
 - the compiler derives all stronger properties automatically
 
 This keeps the language simple for programmers while still giving the compiler the information it needs for optimization and concurrency analysis.
+
+> **See also:** [`oop.md`](oop.md) for package structure, class/struct declarations, constructor syntax, method declarations, and overloading rules. This document covers only the effect-inference layer that sits on top of those constructs.
 
 ---
 
@@ -417,7 +417,9 @@ Int ? DivErr div(a Int, b Int) {
 }
 ```
 
-The compiler may still optimize this aggressively if it can prove the abort path is unreachable. See [`error_handling.md`](error_handling.md) for full abortability semantics.
+The compiler may still optimize this aggressively if it can prove the abort path is unreachable.
+
+> **See also:** [`error_handling.md`](error_handling.md) for full abortability semantics.
 
 ---
 
