@@ -21,9 +21,9 @@ When an object is created, it is born with a single owning variable. There can n
 Simply declaring a variable makes it the owner of the object assigned to it. There is no keyword for ownership — it is the unmarked, default case. Objects are created by calling a constructor — they cannot be created by copying or assigning from another owning variable.
 
 ```zane
-Tank tank = Tank(...)          // tank owns this Tank
-Tank clone = tank              // compile error — cannot copy or move between owning variables
-ref Tank myTank = tank         // ok — myTank is a non-owning reference to tank's object
+tank Tank = Tank(...)          // tank owns this Tank
+clone Tank = tank              // compile error — cannot copy or move between owning variables
+myTank ref Tank = tank         // ok — myTank is a non-owning reference to tank's object
 ```
 
 This rule eliminates ambiguity about which variable owns the object. At any point in the code, the owner is always the variable that received the constructor call, or the container/field that received it via ownership transfer (see §Lifetime composition).
@@ -32,7 +32,7 @@ This rule eliminates ambiguity about which variable owns the object. At any poin
 The `ref` keyword creates a non-owning reference to an existing object. A ref does not control the object's lifetime. If the owner is destroyed while a ref exists, the ref becomes null and any dereference is a caught error.
 
 ```zane
-ref Tank myTank = tanks[0]   // myTank does not own the Tank
+myTank ref Tank = tanks[0]   // myTank does not own the Tank
 ```
 
 Refs can be declared as local variables or as class fields. A local ref lives as long as its scope. A ref field lives as long as the containing class instance.
@@ -52,10 +52,10 @@ For class fields, the same rule applies. A field declared with a class type mean
 
 ```zane
 class World {
-    Player player              // World owns this Player
-    ref Player spectated       // non-owning reference to a Player owned elsewhere
-    List<Tank> tanks           // World owns the list and all Tanks in it
-    List<ref Tank> visible     // World owns the list, but the Tanks are owned elsewhere
+    player Player              // World owns this Player
+    spectated ref Player       // non-owning reference to a Player owned elsewhere
+    tanks List<Tank>           // World owns the list and all Tanks in it
+    visible List<ref Tank>     // World owns the list, but the Tanks are owned elsewhere
 }
 ```
 
@@ -68,7 +68,7 @@ The object's destructor runs, its memory is returned to the heap, and **all refs
 A ref going out of scope does not destroy the object — it destroys the ref itself. Only the owner controls the object's lifetime. A ref to a temporary that has no owning variable is immediately null — the temporary is destroyed at the end of the statement because no owner catches it.
 
 ```zane
-ref Tank ghost = Tank(...) // Tank is created, but no owner catches it — destroyed immediately
+ghost ref Tank = Tank(...) // Tank is created, but no owner catches it — destroyed immediately
                            // ghost is null from the start — dereferencing it is a caught error
 ```
 
@@ -82,14 +82,14 @@ Because only one owner can exist at a time, and a child cannot own its parent, o
 Objects are composed by placing them into owning containers or scopes. Ownership transfers at the point of assignment or insertion — the source variable is consumed and cannot be used again:
 
 ```zane
-let tanks: List<Tank> = List()
-let tank = Tank(...)
-tanks.push(tank)           // ownership transfers to the list — tank is consumed
-tank.fire()                // compile error — tank was moved
+tanks List<Tank> = List<Tank>()
+tank Tank = Tank(...)
+tanks:push(tank)           // ownership transfers to the list — tank is consumed
+tank:fire()                // compile error — tank was moved
 
-let player = Player(...)
+player Player = Player(...)
 world.player = player      // ownership transfers to World — player is consumed
-player.move()              // compile error — player was moved
+player:move()              // compile error — player was moved
 ```
 
 An object can be moved into an owning location exactly once. After the move, the source variable is dead and any use is a compile-time error. There is no implicit copy — ownership transfer is always explicit through assignment or insertion.
@@ -248,19 +248,19 @@ The reason is ownership and copying. Structs are copied by flat `memcpy` — the
 Classes, by contrast, may contain struct fields, class fields (owning), and ref fields (non-owning).
 
 ```
-struct Vec2  { x: f32, y: f32 }          // ok — only primitives
-struct Rect  { pos: Vec2, size: Vec2 }   // ok — only structs
-struct Bad   { name: String }            // error — String is a class
-struct Bad2  { ref target: Player }      // error — ref in a struct
+struct Vec2  { x f32,  y f32 }             // ok — only primitives
+struct Rect  { pos Vec2,  size Vec2 }      // ok — only structs
+struct Bad   { name String }               // error — String is a class
+struct Bad2  { target ref Player }         // error — ref in a struct
 
-class Player { pos: Vec2, hp: i32 }      // ok — struct fields in a class
-class World  { players: List<Player> }   // ok — class fields in a class
-class Unit   { ref target: Player }      // ok — ref field in a class
+class Player { pos Vec2,  hp i32 }         // ok — struct fields in a class
+class World  { players List<Player> }      // ok — class fields in a class
+class Unit   { target ref Player }         // ok — ref field in a class
 ```
 
 ```
-struct Player { alive: bool, active: bool, health: i32, score: i64 }
-class Entity  { visible: bool, health: i32, position: f64 }
+struct Player { alive Bool,  active Bool,  health i32,  score i64 }
+class Entity  { visible Bool,  health i32,  position f64 }
 
 // Player in memory (stack):
 // [score: 8][health: 4][alive|active|......: 1][pad: 3]
@@ -336,7 +336,7 @@ The `stack_index` records the ref's position in its target anchor's `weak_ref_st
 Dereference resolves the target through the anchor:
 
 ```
-ref Tank myTank = tanks[0]
+myTank ref Tank = tanks[0]
 
 dereference:
     ref_obj = heap_base + myTank.heapoffset
@@ -348,7 +348,7 @@ dereference:
 When a ref is created, its `ref_anchor`'s absolute address is registered in the `weak_ref_stack` of only the **leaf** object's anchor — the object the ref directly points to. It does not register with any parent or ancestor anchors.
 
 ```
-ref Player myPlayer = world.players[0]
+myPlayer ref Player = world.players[0]
 // registers &myPlayer only in: player_anchor.weak_ref_stack
 ```
 
