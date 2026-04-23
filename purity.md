@@ -1,39 +1,39 @@
-# Zane Purity / Effects Model — Specification
-
-This document specifies Zane's purity and effect model. It reflects the refined OOP design where:
-
-- packages are **namespaces**, not classes
-- a package may optionally define a **class of the same name** for instanceful behavior
-- methods are **free functions** with `this` as their first parameter
-- `mut` is the **only effect marker** (replaces the earlier `pure`/`readonly` declared constraint pair for most cases)
-- `pure` survives as an optional **declared constraint** for total referential transparency
-
-Syntax is illustrative and subject to change; semantics are normative.
-
----
+# Zane Purity / Effects Model
 
 ## 1. Overview
 
-Zane's purity model is a **two-layer system**:
+Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
 
-1. **Structural inference (always on):** the compiler classifies every function's effect level by analyzing the ownership tree, `ref` edges, capability reachability, and the call graph. No annotations required for the compiler to reason about effects.
+The compiler infers how effectful each function is by analyzing:
 
-2. **Declared constraints (optional, enforced):** the programmer may declare `pure` on a function to assert total referential transparency. The compiler verifies this and rejects any violation at compile time, preventing silent purity regressions.
+- what state it can reach through ownership and `ref`
+- which capability objects (I/O, system state) it can reach
+- whether it is a method on `this`
+- what other functions it calls
+- whether it is marked `mut`
 
-This is not an effect-tagging system. Programmers do not maintain lists of effects. Effect classification falls out of how data and capabilities are wired through the ownership tree, and how `mut` is used on methods.
+There are **no user-facing purity tags** like `pure` or `readonly`.  
+Instead:
+
+- functions and methods are **read-only by default**
+- methods marked `mut` may mutate their receiver (`this`)
+- the compiler derives all stronger properties automatically
+
+This keeps the language simple for programmers while still giving the compiler the information it needs for optimization and concurrency analysis.
 
 ---
 
-## 2. Packages, Classes, and the Effect Boundary
+## 2. Packages, Classes, and Effect Boundaries
 
 ### 2.1 Packages are namespaces
 
-A `package X` is a namespace. It contains:
-- type declarations (`class`, `struct`, etc.)
-- immutable constants (package-level values)
-- static free functions (no `this`, no instance required)
+A `package X` is a namespace containing:
 
-Package-level constants are immutable. Package-level static functions can only touch their explicit parameters and those constants, making them always at least Read-Only with respect to external state.
+- type declarations (`class`, `struct`, etc.)
+- immutable constants
+- static free functions
+
+Package members are accessed through `$`.
 
 ```zane
 package Math
@@ -45,11 +45,23 @@ Float radsToDeg(x Float) {
 }
 ```
 
-`Math$radsToDeg` is called without any instance and is referentially transparent.
+Usage:
 
-### 2.2 The instanceful package pattern
+```zane
+package Main
+import Math
 
-If a package defines a class of the same name, it gains an instantiable stateful object alongside its static members. The class is an ordinary class — its fields define what state a "Math instance" owns, including any capabilities it needs.
+Void main() {
+    deg Float = Math$radsToDeg(Float(1))
+}
+```
+
+### 2.2 Instanceful package pattern
+
+A package may define a class with the same name as the package. This gives the package both:
+
+- static namespace functionality (`Math$...`)
+- instanceful object functionality (`math:...`)
 
 ```zane
 package Math
@@ -72,9 +84,11 @@ Math(log Log) {
 }
 
 Void debugPi(this Math) mut {
-    this.log:write(Math$radsToDeg(pi))
+    this.log:write("pi")
 }
 ```
+
+Usage:
 
 ```zane
 package Main
@@ -84,15 +98,15 @@ import Log
 Void main() {
     log Log("stdout")
 
-    deg Float = Math$radsToDeg(Float(1))    // static — no instance
-    math Math(log)
-    math:debugPi()                          // instance method — Full Impure
+    deg Float = Math$radsToDeg(Float(1))   // static
+    math Math(log)                         // instance
+    math:debugPi()
 }
 ```
 
-### 2.3 Scope isolation enforces the effect boundary
+### 2.3 Scope isolation
 
-Constructor and method bodies cannot access package-level values directly. Any state a constructor or method depends on must arrive as an explicit parameter. This prevents hidden ambient dependencies and keeps the ownership/capability graph explicit and analyzable.
+Constructors and methods cannot access package-level values directly. Any package-level state they need must be passed explicitly.
 
 ```zane
 package Graph
@@ -108,61 +122,77 @@ Node(id Int) {
     return init{
         _id: id,
         scale: Float(1)
-        // counter not accessible here — compile error if referenced
+        // counter not accessible here
     }
 }
 ```
 
+This prevents hidden state capture and keeps dependencies explicit.
+
 ---
 
-## 3. Definitions
+## 3. Core Definitions
 
 ### 3.1 Side effect
 
 A **side effect** is any observable interaction beyond returning a value, including:
 
-- Writing to `this` or any owned descendant (via a `mut` method)
-- Reading through a `ref` (observing external mutable state)
-- Writing through a `ref` (mutating external state)
-- Performing I/O through a capability object
-- Allocation or destruction of heap objects (allocator state is affected)
+- writing to `this` or owned descendants
+- reading through a `ref`
+- writing through a `ref`
+- performing I/O through a capability object
+- allocating or destroying heap objects
 
 ### 3.2 Capability
 
-A **capability** is any object whose `mut` methods represent interaction with external state or I/O (filesystem, console, network, logger, RNG, clock, etc.). Capabilities are ordinary class instances. A function gains access to a capability only by receiving or storing an instance explicitly — there is no ambient authority.
+A **capability** is any object whose methods represent access to external state or I/O:
 
-### 3.3 `mut` as the effect marker
+- filesystem
+- console
+- logger
+- network
+- clock
+- random generator
+- FFI bridge objects
 
-`mut` is the only user-facing effect annotation in Zane. It is a modifier on a method declaration that grants write access to `this`. It does not appear on free functions (which have no `this`) or constructors (which produce `this` from nothing via `init{ }`).
+Capabilities are ordinary objects. Code can only use them if they are explicitly passed or stored.
 
-The rule is simple:
+### 3.3 `mut`
 
-> The only way any code can mutate state is by calling a `mut` method on some receiver. Parameters are always read-only.
+`mut` is the only effect modifier in Zane.
 
-This makes every effect traceable to a specific `mut` call on a specific receiver.
+A method marked `mut` may:
+
+- write to `this`
+- write to objects owned by `this`
+- call other `mut` methods on `this` or owned fields
+
+A method without `mut` may:
+
+- read `this`
+- read its parameters
+- call only non-`mut` functions/methods
+
+A function may never mutate its explicit parameters directly.
 
 ---
 
-## 4. The Four Inferred Effect Levels
+## 4. Inferred Effect Levels
 
-The compiler classifies every function into one of four levels based on structural analysis. These levels reflect "how far effects reach" relative to the function's position in the ownership tree.
+The compiler internally classifies each function into one of four levels. These are **not syntax**. They are semantic categories used for optimization and concurrency reasoning.
 
 ---
 
 ### Level 1 — Total Pure
 
-**Definition:** depends only on explicit parameters and local computation. Does not read or write any external state. Referentially transparent: the same inputs always produce the same output and the call can be replaced by its result.
+**Definition:** depends only on explicit parameters and immutable package constants. No reads or writes of mutable external state.
 
-**What causes loss of Total Pure:**
-- reading `this` (makes result depend on instance state)
-- reading through a `ref`
-- calling anything not Total Pure
+Examples:
 
-**Example:**
 ```zane
 package Math
 
-Int square(Int x) {
+Int square(x Int) {
     return x * x
 }
 
@@ -171,45 +201,62 @@ Float radsToDeg(x Float) {
 }
 ```
 
-Both are Total Pure: no `this`, no `ref`, no capability, no impure callees.
+Both are Total Pure.
 
-**Compiler freedoms:** constant folding, memoization, dead code elimination, reordering, parallelization, common subexpression elimination, loop hoisting.
+**Compiler freedoms:**
+- constant folding
+- memoization
+- dead code elimination
+- reordering
+- parallelization
 
 ---
 
 ### Level 2 — Read-Only Impure
 
-**Definition:** reads external state (through a `ref` field, `ref` parameter, or read-only capability access) but does not mutate anything outside local scope. Same inputs may produce different outputs over time because observed state can change.
+**Definition:** reads mutable external state but does not mutate it.
 
-**Example:**
+This includes:
+- reading through a `ref`
+- reading from observational capabilities
+- reading object state that may vary between calls
+
+Example:
+
 ```zane
 package Hud
 import Game
 
 class Hud {
-    display ref Game
+    game ref Game
 }
 
-Hud(display ref Game) {
+Hud(game ref Game) {
     return init{
-        display: display
+        game: game
     }
 }
 
 Int currentScore(this Hud) {
-    return this.display.score    // reads through ref => Read-Only Impure
+    return this.game.score
 }
 ```
 
-**Compiler limitations:** cannot cache across time; can only reorder or parallelize with proof that no relevant writer runs concurrently.
+`currentScore` is Read-Only Impure because it reads through `ref`.
+
+**Compiler limitations:**
+- cannot globally memoize across time
+- cannot freely reorder past writes to the same state
+- parallelization requires proof that no writer is concurrent
 
 ---
 
-### Level 3 — Package Pure (instance-local mutation)
+### Level 3 — Instance-Local Mutation
 
-**Definition:** mutates only state owned by `this` and its owned descendants. Does not write through any `ref`. Does not call capability methods that perform external I/O.
+**Definition:** mutates only `this` and its owned subtree. No writes through `ref`. No external I/O.
 
-**Example:**
+Example:
+
 ```zane
 package Counter
 
@@ -224,32 +271,35 @@ Counter(start Int) {
 }
 
 Void inc(this Counter) mut {
-    this.n = this.n + Int(1)    // mutates only this => Package Pure
-}
-
-Int get(this Counter) {
-    return this.n
+    this.n = this.n + Int(1)
 }
 ```
 
-**Concurrency:** safe to parallelize across distinct instances (non-overlapping ownership subtrees); must serialize calls on the same instance.
+`inc` mutates only the receiver, so it is instance-local.
+
+**Concurrency:**
+- safe across distinct instances
+- must serialize on the same instance
 
 ---
 
 ### Level 4 — Full Impure
 
-**Definition:** effects escape the instance's ownership subtree or touch external systems. Triggers include:
-- calling a `mut` method on a capability (I/O)
-- writing through a `ref`
-- calling any Full Impure function
-- allocation/destruction boundaries
+**Definition:** effects escape the receiver's ownership subtree or touch external systems.
 
-**Example:**
+This includes:
+- calling `mut` methods on capabilities
+- writing through a `ref`
+- allocation/destruction boundaries
+- calling other Full Impure functions
+
+Example:
+
 ```zane
 package Log
 
 class Log {
-    Void write(this Log, msg String) mut { ... }    // FFI bridge: effectful
+    Void write(this Log, msg String) mut { ... }
 }
 ```
 
@@ -267,29 +317,64 @@ Feature(log Log) {
     }
 }
 
-Void doThing(this Feature, x Int) mut {
-    this.log:write("x=" + x)    // calls mut on capability => Full Impure
+Void run(this Feature) mut {
+    this.log:write("hello")
 }
 ```
 
-**Compiler restrictions:** no elimination, caching, or reordering across relevant effects.
+`run` is Full Impure because it performs I/O through a capability.
 
 ---
 
-## 5. How `mut` Maps onto the Four Levels
+## 5. Method Semantics and Effects
 
-With `mut` as the only annotation, the compiler can derive the effect level of any method mechanically:
+### 5.1 Read-only by default
 
-| Method form | What it can do | Inferred level |
-|---|---|---|
-| No `this` (free/static function) | touches only params and package constants | Total Pure |
-| `this`, no `mut`, no `ref` fields, no capability fields | reads `this` and params | Level 2 or Total Pure depending on callees |
-| `this`, no `mut`, has `ref` fields | reads through `ref` | Read-Only Impure |
-| `this`, `mut`, no capability in subtree | writes `this` only | Package Pure |
-| `this`, `mut`, capability reachable | writes `this`, calls I/O via capability | Full Impure |
-| `this`, no `mut`, calls `mut` on capability | compile error: cannot call `mut` from non-`mut` context | — |
+A method without `mut` is read-only:
 
-The last row is enforced by the compiler: a non-`mut` method cannot call `mut` methods on owned fields because that would mutate `this` indirectly.
+```zane
+package Graph
+
+Int scaledId(this Node, factor Int) {
+    return this.scale * factor
+}
+```
+
+This method may read `this`, but may not modify it.
+
+### 5.2 `mut` means receiver mutation
+
+```zane
+package Graph
+
+Void setScale(this Node, s Float) mut {
+    this.scale = s
+}
+```
+
+This method may mutate `this`.
+
+### 5.3 Parameters are always read-only
+
+```zane
+package Graph
+
+Void bad(this Node, other Node) mut {
+    other.scale = this.scale    // compile error
+}
+```
+
+To mutate another object, that object must become the receiver of a `mut` call.
+
+```zane
+package Graph
+
+Void copyScaleTo(this Node, other Node) {
+    other:setScale(this.scale)
+}
+```
+
+### 5.4 Non-`mut` methods cannot call `mut` methods
 
 ```zane
 package Feature
@@ -300,13 +385,15 @@ class Feature {
 }
 
 Void bad(this Feature) {
-    this.log:write("hi")    // compile error: calling mut method from non-mut context
+    this.log:write("hi")    // compile error
 }
 
 Void good(this Feature) mut {
-    this.log:write("hi")    // ok
+    this.log:write("hi")
 }
 ```
+
+This prevents hidden mutation from read-only contexts.
 
 ---
 
@@ -314,106 +401,83 @@ Void good(this Feature) mut {
 
 ### 6.1 Ownership layout analysis
 
-Because every class has a statically known set of owned fields and `ref` fields, the compiler can determine at class-definition time what categories of state are reachable from any instance. A class with no `ref` fields and no capability fields anywhere in its ownership subtree is structurally incapable of producing Full Impure or Read-Only Impure methods.
+The compiler uses type layout to infer reachable state:
+
+- owned fields → mutation/read may stay local
+- `ref` fields → effects may cross ownership subtrees
+- capability fields → may cause external effects
+
+### 6.2 Call graph propagation
+
+A function is at most as "pure" as the least-pure thing it does or calls.
 
 ```zane
 package Math
 
-class Math {
-    // no fields
+Int add(a Int, b Int) {
+    return a + b
 }
 
-// all methods on Math are at most Total Pure
-// Math has no state to read or write
+Int doubleAdd(x Int) {
+    return add(x, x)
+}
 ```
 
-### 6.2 Call graph propagation
+If `add` is Total Pure, `doubleAdd` can also be Total Pure.
 
-Purity propagates bottom-up through the call graph. A function's inferred level is the minimum of its own direct effects and the levels of all functions it calls. The least-pure callee dominates.
+### 6.3 Unknown callees are assumed Full Impure
+
+If the compiler cannot prove a callee's behavior, it assumes the worst.
+
+---
+
+## 7. Methods and Functions as Values
+
+Methods are free functions in the package namespace. They are passed as values using `$`, just like free functions.
 
 ```zane
 package Graph
 
-Int add(a Int, b Int) {
-    return a + b                // Total Pure
+Int scaledId(this Node, factor Int) {
+    return this._id * factor
 }
 
-Int scaledAdd(this Node, b Int) {
-    return add(this.scale, b)   // calls Total Pure + reads this => Read-Only or Package Pure
-}
-```
-
-### 6.3 Conservative default for unknown callees
-
-If a callee's effect level cannot be determined (e.g., FFI without metadata), the compiler assumes Full Impure. Pre-compiled Zane object files may carry effect metadata; when present, the compiler uses it.
-
----
-
-## 7. Declared Purity Constraint: `pure`
-
-### 7.1 What `pure` means
-
-`pure` is an optional declared constraint asserting **Total Pure**: the function depends only on its explicit parameters, reads no external state, and produces no observable effects. The compiler verifies this and rejects any violation.
-
-```zane
-package Math
-
-Int square(Int x) pure {
-    return x * x
+Void setScale(this Node, s Float) mut {
+    this.scale = s
 }
 ```
 
-### 7.2 What `pure` is for
-
-`pure` is not needed for the compiler to infer Total Pure and apply optimizations — inference handles that. `pure` exists to:
-
-- **prevent regression**: once declared, no future change can silently degrade purity. Adding a `ref`, a capability field, or an impure callee becomes a compile-time error.
-- **express intent**: distinguishes "accidentally pure right now" from "must remain pure forever".
-- **enable API contracts**: higher-order functions that need referentially transparent callbacks can demand `pure` in the function type.
+References:
 
 ```zane
-package Algo
-
-// caller guarantees transform can be memoized/parallelized
-List<U> map(List<T> xs, (T) pure -> U transform) {
-    ...
-}
+Graph$scaledId    // type: (Graph$Node, Int) -> Int
+Graph$setScale    // type: (mut Graph$Node, Float) -> Void
 ```
 
-### 7.3 `pure` is a minimum guarantee
-
-A function that is declared `pure` but inferred at a higher purity level (i.e., it is even "more pure" than Total Pure — which is impossible, Total Pure is the maximum) is always fine. A function declared `pure` that is inferred below Total Pure is a compile-time error.
-
-### 7.4 `mut` and `pure` are mutually exclusive
-
-A `mut` method writes `this` by definition. Writing is a side effect. A method cannot be both `pure` and `mut`.
+There are no built-in bound method references. If needed, the programmer wraps explicitly:
 
 ```zane
-Void inc(this Counter) mut pure {    // compile error: mut and pure are contradictory
-    this.n = this.n + Int(1)
-}
+bound () -> Int = () { node:scaledId(Int(5)) }
 ```
 
 ---
 
 ## 8. Capability Wiring and Prop Drilling
 
-Because there is no ambient authority, capabilities must be passed or stored explicitly. This section describes common patterns for doing so without excessive prop drilling.
+Because there is no ambient authority, effects only become possible if capabilities are explicitly passed or stored.
 
-### 8.1 Explicit parameter passing (most transparent)
+### 8.1 Explicit parameter passing
 
 ```zane
 package Feature
 import Log
 
-Void doThing(x Int, log Log) {
-    log:write("x=" + x)
+Void doThing(x Int, log Log) mut {
+    log:write("x")
 }
 ```
 
-Maximally explicit. Every call site must supply `log`. Best for shallow call chains.
-
-### 8.2 Constructor injection (owned capability)
+### 8.2 Constructor injection
 
 ```zane
 package Feature
@@ -430,13 +494,11 @@ Feature(log Log) {
 }
 
 Void doThing(this Feature, x Int) mut {
-    this.log:write("x=" + x)
+    this.log:write("x")
 }
 ```
 
-`log` is passed once at construction. Methods that use it are Full Impure; methods that do not are unaffected.
-
-### 8.3 `ref` field injection (non-owning capability reference)
+### 8.3 `ref` field injection
 
 ```zane
 package Worker
@@ -456,10 +518,6 @@ Void run(this Worker) mut {
     this.log:write("running")
 }
 ```
-
-The `Worker` does not own the logger. The logger's lifetime must outlive the `Worker` — if the owner of `log` is destroyed while `Worker` holds a `ref`, the ref becomes null and dereference is a caught runtime error (per the memory model spec).
-
-**Effect impact:** reading through `ref log` (e.g., checking a log level) is at least Read-Only Impure. Calling `mut` methods on it is Full Impure.
 
 ### 8.4 Context object pattern
 
@@ -499,126 +557,88 @@ Feature(ctx ref Context) {
 }
 
 Void doThing(this Feature) mut {
-    this.ctx.log:write("hi")    // Full Impure
+    this.ctx.log:write("hi")
 }
-```
-
-Bundles multiple capabilities into one object passed once. Keeps wiring explicit at the root while avoiding long parameter lists deeper in the tree.
-
----
-
-## 9. Methods as Values and Effect Types
-
-### 9.1 Method references via package namespace
-
-Methods are free functions in the package namespace. They are referenced as values using `$`, like any other package-level function. When used as a value, `this` becomes an explicit first argument.
-
-```zane
-package Graph
-
-Int scaledId(this Node, factor Int) {
-    return this._id * factor
-}
-
-Void setScale(this Node, s Float) mut {
-    this.scale = s
-}
-```
-
-References:
-```zane
-Graph$scaledId    // type: (Graph$Node, Int) -> Int
-Graph$setScale    // type: (mut Graph$Node, Float) -> Void
-```
-
-`mut` appears in the function type of `mut` method references, signaling to callers that invoking the reference may mutate the first argument.
-
-### 9.2 Purity in function types
-
-Higher-order functions may demand a specific effect level via the function type:
-
-```zane
-package Algo
-
-// demands Total Pure: compiler may memoize/parallelize calls to transform
-List<U> map(List<T> xs, (T) pure -> U transform) { ... }
-
-// accepts any callable (no purity constraint)
-Void forEach(List<T> xs, (T) -> Void action) { ... }
-
-// accepts mut callable (may mutate first arg)
-Void mutateAll(List<T> xs, (mut T) -> Void action) { ... }
 ```
 
 ---
 
-## 10. Constructors and the Effect Model
+## 9. Constructors, Allocation, and Destruction
 
-### 10.1 Constructors produce objects; they do not mutate existing ones
+### 9.1 Constructors are not methods
 
-A constructor has no `this`. It produces a new instance via `init{ }` and returns it. The concept of `mut` does not apply. The allocation itself is treated as Full Impure (it advances the heap frontier), but this is a property of the call site, not of the constructor body.
+Constructors have no `this`. They produce a new instance with `init{ }`.
+
+### 9.2 Allocation/destruction are effect boundaries
+
+Even if a constructor body is logically simple, object creation and destruction still affect allocator state.
 
 ```zane
 package Main
 import Graph
 
 Void main() {
-    node Graph$Node(Int(1))     // allocation: Full Impure boundary
-    result Int = node:scaledId(Int(5))  // Total Pure if scaledId has no side effects
-}                               // destruction: Full Impure boundary
+    node Graph$Node(Int(1))      // allocation boundary
+    // ...
+}                                // destruction boundary
 ```
 
-### 10.2 Constructor bodies are scope-isolated
-
-Constructor bodies cannot access package-level values (see §2.3). Any state they need must be an explicit parameter. This makes construction deterministic and keeps the capability graph visible at the call site.
+For optimization purposes, construction and destruction are treated as Full Impure boundaries.
 
 ---
 
-## 11. Abort Paths are Orthogonal to Purity
+## 10. Abortability is Orthogonal
 
-The abort mechanism (`?`) is a control-flow contract, not an effect contract. A `pure` function may abort. Aborting is a conditional jump — it allocates nothing, writes no external state, and is not observable beyond the function boundary except through the value it carries.
+Abortability (`?`) is independent of effects. A function can be Total Pure and still abort.
 
 ```zane
 package SafeMath
 
-Int ? DivErr div(Int a, Int b) pure {
-    if (b == 0) abort DivErr::ByZero
+Int ? DivErr div(a Int, b Int) {
+    if (b == Int(0)) abort DivErr$ByZero
     return a / b
 }
 ```
 
-The compiler may apply all Total Pure optimizations to a pure aborting function, including eliminating the abort path if it can prove the condition is unreachable for given inputs.
+The compiler may still optimize this aggressively if it can prove the abort path is unreachable.
 
 ---
 
-## 12. Concurrency Implications
+## 11. Concurrency Implications
 
-| Level | Threading rule |
+| Level | Concurrency rule |
 |---|---|
-| Total Pure | Always safe to parallelize and reorder freely |
-| Read-Only Impure | Safe to parallelize with proof that no writer is concurrent; otherwise requires explicit synchronization |
-| Package Pure | Safe to parallelize across distinct instances; must serialize on same instance |
-| Full Impure | Preserve source order; parallelize only with explicit synchronization |
+| Total Pure | always safe to reorder and parallelize |
+| Read-Only Impure | safe only with proof of no concurrent writer |
+| Instance-Local Mutation | safe across distinct instances, not same instance |
+| Full Impure | preserve order unless explicitly synchronized |
 
-The ownership tree provides the compiler's primary tool for proving non-overlap: two independently-owned instances cannot share mutable state, so Package Pure calls on them can always be parallelized.
+Because Zane has single ownership, the compiler can often prove that two instance-local `mut` calls act on disjoint subtrees.
 
 ---
 
-## 13. Summary Table
+## 12. Summary Table
 
 | Level | Reads external state | Writes external state | Cacheable | Removable if unused | Parallelizable |
-|---|---|---|---|---|---|
-| Total Pure | No | No | Yes | Yes | Always |
+|---|---:|---:|---:|---:|---:|
+| Total Pure | No | No | Yes | Yes | Yes |
 | Read-Only Impure | Yes | No | No | Sometimes | With proof of no writer |
-| Package Pure | Own subtree only | Own subtree only | No | No | Across distinct instances |
+| Instance-Local Mutation | Only within `this` subtree | Only within `this` subtree | No | No | Across distinct instances |
 | Full Impure | Yes | Yes | No | No | Not without explicit sync |
 
 ---
 
-## 14. Design Principle
+## 13. Design Principle
 
-The purity model is designed around one principle:
+Zane's effect model is based on one rule:
 
-> **The compiler should be able to prove as much as possible from the structure of the program — ownership layout, `ref` edges, capability wiring, and `mut` annotations — without requiring the programmer to maintain effect lists.**
+> **The only way code can mutate state is through a `mut` method on a receiver.**
 
-`mut` is the only required annotation and it carries a single, unambiguous meaning: this method may write to its receiver. Everything else — which level a function sits at, whether it is safe to cache or parallelize, whether it can be eliminated — follows from structure alone. `pure` exists only when the programmer wants to make a permanent, compiler-enforced promise that a function will always remain at Level 1.
+Everything else follows from structure:
+
+- ownership tells the compiler what can be reached
+- `ref` tells it where reads/writes can escape
+- capabilities tell it where external effects live
+- `mut` tells it where mutation is allowed
+
+There is no `pure` keyword. The compiler still infers when code is Total Pure, but that is an internal property used for optimization, not a user annotation.
