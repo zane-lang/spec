@@ -43,6 +43,8 @@ myTank ref Tank = tanks[0]   // myTank does not own the Tank
 
 Refs can be declared as local variables or as class fields. A local ref lives as long as its scope. A ref field lives as long as the containing class instance.
 
+> See [`syntax.md`](syntax.md) §6 for the complete syntax of ref declarations and ownership annotations in type positions.
+
 ### 2.4 Ownership is declared in the type
 
 Containers own their elements by default. Elements are stored inline — contiguous in memory, no pointer chase. The `ref` keyword in a type parameter opts out of ownership: the container holds non-owning references to objects owned elsewhere.

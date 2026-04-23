@@ -108,11 +108,13 @@ If any field is missing from `init{ }`, it is a **compile-time error**.
 
 ### 3.4 Positional constructors
 
-A positional constructor takes an ordered parameter list and is invoked with `Type(args)` syntax. Positional constructors:
+Positional constructors:
 - may be **overloaded** by arity or parameter types
 - may **not** have default parameters (prevents ambiguity with overload resolution)
 
-**Declaration:**
+> See [`syntax.md`](syntax.md) §3.6 for the declaration and call-site grammar.
+
+**Example:**
 ```zane
 package Graph
 
@@ -145,11 +147,13 @@ Void main() {
 
 ### 3.5 Named constructors
 
-A named constructor declares a field-like parameter list with optional defaults. It is invoked with `Type{ field: value }` syntax. Named constructors:
+Named constructors:
 - may **not** be overloaded (defaults handle optional fields)
 - allow fields with defaults to be omitted at the call site
 
-**Declaration:**
+> See [`syntax.md`](syntax.md) §3.7 for the declaration and call-site grammar.
+
+**Example:**
 ```zane
 package Graph
 
@@ -205,23 +209,11 @@ Int scaledId(this Node, factor Int) {
 }
 ```
 
-### 4.2 Call syntax: `:` for methods, direct for free functions
+### 4.2 Methods vs. free function calls
 
-The method call operator `:` is used exclusively for calling functions whose first parameter is `this`. Free functions are called directly by name (or via namespace reference).
+Methods (functions whose first parameter is `this`) are called with the `:` operator. Free functions are called directly by name. `:` is **only** call syntax — it cannot produce a value or reference.
 
-```zane
-package Main
-import Graph
-
-Void main() {
-    node Graph$Node(Int(1))
-
-    result Int = node:scaledId(Int(5))          // method call via :
-    s Float = Graph$getScale(node)              // free function call
-}
-```
-
-`:` is **only** call syntax. It cannot be used to access a value or produce a reference.
+> See [`syntax.md`](syntax.md) §4 for the full call syntax reference.
 
 ### 4.3 Default methods are read-only
 
@@ -366,29 +358,14 @@ Int doSomething(node Node, number Int) { ... }
 Methods are free functions that live in the package namespace. There is no special syntax for referencing a method as a value through the type. All package-scope functions — whether methods or free functions — are referenced as values using the `$` namespace separator:
 
 ```zane
-package Graph
-
-Int scaledId(this Node, factor Int) {
-    return this._id * factor
-}
-
-Void setScale(this Node, s Float) mut {
-    this.scale = s
-}
-
-Float getScale(node Node) {
-    return node.scale
-}
-```
-
-References:
-```zane
 Graph$scaledId    // type: (Graph$Node, Int) -> Int
 Graph$setScale    // type: (mut Graph$Node, Float) -> Void
 Graph$getScale    // type: (Graph$Node) -> Float
 ```
 
 When used as a value, `this` becomes an explicit first argument. `mut` appears in the function type to signal that calling the reference may mutate the first argument.
+
+> See [`syntax.md`](syntax.md) §4.4 for the full grammar of function references and §2.4 for function type notation.
 
 ### 7.2 Passing functions as values
 

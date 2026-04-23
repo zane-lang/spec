@@ -74,99 +74,7 @@ fn2 (String) -> Int = Math$parse  // COMPILER ERROR: abort type 'String' is lost
 
 ---
 
-## 3. Function Declaration Syntax
-
-### 3.1 Standard Block Syntax
-
-```
-ReturnType ? AbortType FunctionName(Parameters) [mut] { Body }
-```
-
-```zane
-package Parser
-
-// Returns Int, aborts with a String message
-Int ? String parse(input String) {
-    if (input:isEmpty()) abort "Input was empty"
-    return input:toInt()
-}
-
-// Returns Int, aborts with a typed error code
-Int ? Codes divide(a Int, b Int) {
-    if (b == Int(0)) abort Codes$DivisionByZero
-    return a / b
-}
-
-// Returns Int, aborts with no payload
-Int ? Void tryRead(this FileSystem, fileName String) {
-    if (!this:exists(fileName)) abort
-    return this:read(fileName)
-}
-
-// Cannot abort at all (no ? in signature)
-Int square(x Int) {
-    return x * x
-}
-```
-
-### 3.2 Shorthand `=>` Syntax
-
-For single-expression functions, the `=>` shorthand can be used. If the expression on the right side already handles all abort paths (e.g. via `??`), the function's signature requires no `?`:
-
-```zane
-package Parser
-
-// Shorthand, can abort (passes abort upward)
-Int ? String processInput(s String) => parse(s)
-
-// Shorthand, cannot abort (abort is handled inline by ??)
-Int safeParseOrZero(s String) => parse(s) ?? Int(0)
-```
-
----
-
-## 4. Function Type Syntax
-
-Function types follow the same structure, making higher-order functions fully type-safe:
-
-```
-(ParameterTypes) [mut] -> ReturnType ? AbortType
-```
-
-```zane
-// A function taking an Int, returning Int, cannot abort
-(Int) -> Int
-
-// A function taking a String, returning Int, aborts with String
-(String) -> Int ? String
-
-// A mut method reference taking a String, returning Int, aborts with Void
-(mut FileSystem, String) -> Int ? Void
-
-// A function taking two Ints, returning Int, aborts with Codes
-(Int, Int) -> Int ? Codes
-```
-
-**Example: Higher-order function using function types:**
-
-```zane
-package Algo
-
-List<Int> ? String parseAll(
-    inputs List<String>,
-    parser (String) -> Int ? String
-) {
-    results List<Int> = List<Int>()
-    for (str in inputs) {
-        results:push(parser(str) ? err { abort err })
-    }
-    return results
-}
-```
-
----
-
-## 5. Call Site Handling
+## 3. Call Site Handling
 
 When calling a function that can abort, the caller **must** handle the abort path. There are three mechanisms for this.
 
@@ -257,7 +165,7 @@ x Int = fs:tryRead("file.txt") ? {
 
 ---
 
-## 6. The `resolve` Keyword
+## 4. The `resolve` Keyword
 
 `resolve` is a **block-level return** that substitutes a value as the result of the aborted call expression. It does **not** exit the parent function. It is only valid inside a `?` handler block.
 
@@ -293,9 +201,9 @@ String ? Codes process(this Feature, fileName String) mut {
 
 ---
 
-## 7. Connection to Zane's Effect Model
+## 5. Connection to Zane's Effect Model
 
-### 7.1 Abortability is orthogonal to `mut`
+### 5.1 Abortability is orthogonal to `mut`
 
 A method can be `mut` and aborting, `mut` and non-aborting, non-`mut` and aborting, or non-`mut` and non-aborting. All four combinations are valid. Neither property implies or restricts the other.
 
@@ -333,7 +241,7 @@ Graph$safeScaledId    // type: (Graph$Node, Int) -> Int ? Codes
 
 ---
 
-## 8. Compiler Guarantees
+## 6. Compiler Guarantees
 
 | Guarantee | Description |
 |---|---|
@@ -346,29 +254,7 @@ Graph$safeScaledId    // type: (Graph$Node, Int) -> Int ? Codes
 
 ---
 
-## 9. Summary of Syntax
+## 7. Syntax Quick-Reference
 
-```
-// Function declaration
-ReturnType ? AbortType Name(Params) [mut] { ... }
-ReturnType ? AbortType Name(Params) [mut] => expr
-
-// Function type
-(ParamTypes) [mut] -> ReturnType ? AbortType
-
-// Handler block (AbortType is T)
-expr ? binder { ... resolve Value ... }
-
-// Handler block (AbortType is Void)
-expr ? { ... resolve Value ... }
-
-// Coalescing shorthand
-expr ?? DefaultValue
-
-// Inside a handler block
-resolve Value     // Substitute value; continue parent function
-return Value      // Exit parent function via primary path
-abort Value       // Exit parent function via secondary path
-abort             // Exit parent function via secondary path (Void abort type)
-```
+> See [`syntax.md`](syntax.md) §3 for function and method declaration grammar, §2.4 for function type syntax, and §5 for the complete error handling syntax quick-reference.
 

@@ -57,7 +57,9 @@ Capabilities are ordinary objects. Code can only use them if they are explicitly
 
 ### 2.3 `mut`
 
-`mut` is the only effect modifier in Zane.
+`mut` is the only effect modifier in Zane. It appears on the function declaration, after the parameter list.
+
+> See [`syntax.md`](syntax.md) §3.4 for `mut` placement in function declarations and §2.4 for `mut` in function types.
 
 A method marked `mut` may:
 

@@ -13,6 +13,7 @@ The techniques described in these documents were conceived and developed by the 
 | `oop.md`                       | Classes, structs, constructors, methods, free functions, overloading, packages, instanceful pattern           |
 | `purity.md`                    | Effect model, `mut` modifier, inferred purity levels, capability wiring, concurrency implications             |
 | `error_handling.md`            | Bifurcated return paths, `?` handler block, `??` shorthand, `resolve`/`abort`/`return` semantics             |
+| `syntax.md`                    | Canonical syntax reference for all Zane constructs (declarations, types, functions, constructors, calls, error handling) |
 | `rationale.md`                 | Design decisions and their rationale across all five areas                                                    |
 | `comparison.md`                | Comparisons with other languages: memory model vs Rust/C++/GC; error handling vs C/Go/Java/Python/Rust/Swift/Zig |
 | `bench/zane_bench.c`           | C benchmark comparing Zane's allocator against malloc, arena, and pool                                        |
