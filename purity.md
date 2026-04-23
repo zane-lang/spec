@@ -1,4 +1,10 @@
-# Zane Purity / Effects Model
+# Zane Effect Model
+
+This document specifies Zane's effect model: how the compiler infers and enforces the purity of functions, what the `mut` modifier means, and how capabilities control access to external state.
+
+> **See also:** [`oop.md`](oop.md) for class/struct declarations, constructor syntax, method declarations, and overloading rules — this document covers only the effect-inference layer that sits on top of those constructs. [`rationale.md`](rationale.md) §3 for the reasoning behind each design decision.
+
+---
 
 ## 1. Overview
 
@@ -20,8 +26,6 @@ Instead:
 - the compiler derives all stronger properties automatically
 
 This keeps the language simple for programmers while still giving the compiler the information it needs for optimization and concurrency analysis.
-
-> **See also:** [`oop.md`](oop.md) for package structure, class/struct declarations, constructor syntax, method declarations, and overloading rules. This document covers only the effect-inference layer that sits on top of those constructs.
 
 ---
 
@@ -449,15 +453,8 @@ Because Zane has single ownership, the compiler can often prove that two instanc
 
 ## 11. Design Principle
 
-Zane's effect model is based on one rule:
-
 > **The only way code can mutate state is through a `mut` method on a receiver.**
 
-Everything else follows from structure:
+Everything else follows from structure: ownership tells the compiler what can be reached; `ref` tells it where reads/writes can escape; capabilities tell it where external effects live; `mut` tells it where mutation is allowed. There is no `pure` keyword — Total Pure is an internal compiler property used for optimization, not a user annotation.
 
-- ownership tells the compiler what can be reached
-- `ref` tells it where reads/writes can escape
-- capabilities tell it where external effects live
-- `mut` tells it where mutation is allowed
-
-There is no `pure` keyword. The compiler still infers when code is Total Pure, but that is an internal property used for optimization, not a user annotation.
+> **See also:** [`rationale.md`](rationale.md) §3 for the full reasoning behind these choices.

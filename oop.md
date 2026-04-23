@@ -1,8 +1,8 @@
-# Zane OOP Specification
+# Zane Object-Oriented Model
 
-This document specifies Zane's object-oriented model: how types are defined, how objects are constructed, how behavior is attached to types, and how all of this connects to Zane's package system and purity/effect model.
+This document specifies Zane's object-oriented model: how types are defined, how objects are constructed, how behavior is attached to types, and how packages work as namespaces.
 
-Syntax is illustrative and subject to change; semantics are normative.
+> **See also:** [`purity.md`](purity.md) for the effect model that sits on top of these constructs. [`memory_model.md`](memory_model.md) for the ownership and lifetime rules that govern class instances.
 
 ---
 
@@ -554,34 +554,17 @@ Node(id Int, count Int) {
 
 ---
 
-## 10. Connection to the Purity and Effect Model
+## 10. Connection to the Effect Model
 
-### 10.1 Read-only by default
-
-Every function and method is read-only by default. Reading `this.field` in a method is semantically equivalent to reading a parameter field in a free function — both are reading an input.
-
-```zane
-// these are semantically equivalent under the effect model
-Int doFree(node Node, number Int) {
-    return node.scale * number
-}
-
-Int doMethod(this Node, number Int) {
-    return this.scale * number
-}
-```
-
-### 10.2 `mut` is the only effect marker
-
-The only way to mutate state is through a `mut` method on a receiver. I/O is exposed by the standard library as `mut` methods on capability objects. A non-`mut` method cannot call `mut` methods on owned fields, preventing hidden mutation.
-
-### 10.3 The ownership tree and method effects
+Every function and method is **read-only by default**. Reading `this.field` in a method is semantically equivalent to reading a parameter in a free function — both are reading an input. The only way to mutate state is through a `mut` method on a receiver.
 
 Because Zane enforces single ownership, the compiler knows statically which parts of the object graph a `mut` call can affect:
 
-- Two `mut` calls on **different** instances can be safely parallelized
-- Two `mut` calls on the **same** instance must be serialized
-- Read-only calls on the same instance can be reordered freely if no `mut` call intervenes
+- Two `mut` calls on **different** instances can be safely parallelized.
+- Two `mut` calls on the **same** instance must be serialized.
+- Read-only calls on the same instance can be reordered freely if no `mut` call intervenes.
+
+> **See also:** [`purity.md`](purity.md) for the complete effect model, inferred purity levels, capability wiring, and concurrency implications.
 
 ---
 
