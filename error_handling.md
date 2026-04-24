@@ -1,4 +1,8 @@
-# Error Handling Specification
+# Zane Error Handling
+
+This document specifies Zane's error handling model: how functions declare failure paths, how callers handle them, and the compile-time guarantees the system provides.
+
+> **See also:** [`syntax.md`](syntax.md) §3 for function and method declaration grammar, §2.4 for function type syntax, and §5 for the complete error handling syntax quick-reference.
 
 ---
 
@@ -61,112 +65,22 @@ package Math
 
 // non-mut can be assigned to a non-mut function variable
 Int square(x Int) { return x * x }
-fn (Int) -> Int = Math$square    // OK
+fn (Int) -> Int
+fn = Math$square    // OK
 
 // abort type cannot be dropped implicitly
 Int ? String parse(s String) { ... }
-fn2 (String) -> Int = Math$parse  // COMPILER ERROR: abort type 'String' is lost
+fn2 (String) -> Int
+fn2 = Math$parse  // COMPILER ERROR: abort type 'String' is lost
 ```
 
 ---
 
-## 3. Function Declaration Syntax
-
-### 3.1 Standard Block Syntax
-
-```
-ReturnType ? AbortType FunctionName(Parameters) [mut] { Body }
-```
-
-```zane
-package Parser
-
-// Returns Int, aborts with a String message
-Int ? String parse(input String) {
-    if (input:isEmpty()) abort "Input was empty"
-    return input:toInt()
-}
-
-// Returns Int, aborts with a typed error code
-Int ? Codes divide(a Int, b Int) {
-    if (b == Int(0)) abort Codes$DivisionByZero
-    return a / b
-}
-
-// Returns Int, aborts with no payload
-Int ? Void tryRead(this FileSystem, fileName String) {
-    if (!this:exists(fileName)) abort
-    return this:read(fileName)
-}
-
-// Cannot abort at all (no ? in signature)
-Int square(x Int) {
-    return x * x
-}
-```
-
-### 3.2 Shorthand `=>` Syntax
-
-For single-expression functions, the `=>` shorthand can be used. If the expression on the right side already handles all abort paths (e.g. via `??`), the function's signature requires no `?`:
-
-```zane
-package Parser
-
-// Shorthand, can abort (passes abort upward)
-Int ? String processInput(s String) => parse(s)
-
-// Shorthand, cannot abort (abort is handled inline by ??)
-Int safeParseOrZero(s String) => parse(s) ?? Int(0)
-```
-
----
-
-## 4. Function Type Syntax
-
-Function types follow the same structure, making higher-order functions fully type-safe:
-
-```
-(ParameterTypes) [mut] -> ReturnType ? AbortType
-```
-
-```zane
-// A function taking an Int, returning Int, cannot abort
-(Int) -> Int
-
-// A function taking a String, returning Int, aborts with String
-(String) -> Int ? String
-
-// A mut method reference taking a String, returning Int, aborts with Void
-(mut FileSystem, String) -> Int ? Void
-
-// A function taking two Ints, returning Int, aborts with Codes
-(Int, Int) -> Int ? Codes
-```
-
-**Example: Higher-order function using function types:**
-
-```zane
-package Algo
-
-List<Int> ? String parseAll(
-    inputs List<String>,
-    parser (String) -> Int ? String
-) {
-    results List<Int> = List<Int>()
-    for (str in inputs) {
-        results:push(parser(str) ? err { abort err })
-    }
-    return results
-}
-```
-
----
-
-## 5. Call Site Handling
+## 3. Call Site Handling
 
 When calling a function that can abort, the caller **must** handle the abort path. There are three mechanisms for this.
 
-### 5.1 The `?` Handler Block
+### 3.1 The `?` Handler Block
 
 The primary mechanism. A block is attached to the call expression. The block receives the aborted value as a named binder (or no binder if the abort type is `Void`). Every path through the block must either:
 
@@ -181,7 +95,8 @@ import Log
 
 // With a named binder (AbortType is String)
 Void example1(log Log) mut {
-    x Int = parse("abc") ? err {
+    x Int
+    x = parse("abc") ? err {
         log:write("Failed: " + err)
         resolve Int(0)
     }
@@ -189,20 +104,23 @@ Void example1(log Log) mut {
 
 // With no binder (AbortType is Void)
 Void example2(fs FileSystem) {
-    x Int = fs:tryRead("file.txt") ? {
+    x Int
+    x = fs:tryRead("file.txt") ? {
         resolve Int(0)
     }
 }
 
 // Propagating the abort upward (parent must declare ? String)
 Int ? String process(input String) {
-    x Int = parse(input) ? err { abort err }
+    x Int
+    x = parse(input) ? err { abort err }
     return x * Int(2)
 }
 
 // Mixed: recover some errors, propagate others
 Int ? Codes load(fs FileSystem, fileName String) {
-    content String = fs:read(fileName) ? err {
+    content String
+    content = fs:read(fileName) ? err {
         if (err == Codes$FileNotFound) { resolve "default" }
         abort err
     }
@@ -210,50 +128,55 @@ Int ? Codes load(fs FileSystem, fileName String) {
 }
 ```
 
-### 5.2 Exhaustiveness Rule
+### 3.2 Exhaustiveness Rule
 
 The compiler performs **exhaustiveness checking** on every `?` handler block. If any code path through the block fails to `resolve`, `return`, or `abort`, it is a **compile-time error**.
 
 ```zane
 // COMPILER ERROR: not all paths resolve/return/abort
-x Int = parse("abc") ? err {
+x Int
+x = parse("abc") ? err {
     log:write(err)
     // Missing resolve/return/abort!
 }
 ```
 
-### 5.3 The `??` Shorthand (Value Coalescing)
+### 3.3 The `??` Shorthand (Value Coalescing)
 
 For the common case of "resolve with a default value if aborted", the `??` operator provides a concise inline shorthand. It is syntactic sugar for a `?` block containing only `resolve`:
 
 ```zane
 // Sugar
-x Int = parse("abc") ?? Int(0)
+x Int
+x = parse("abc") ?? Int(0)
 
 // Equivalent to
-x Int = parse("abc") ? _ { resolve Int(0) }
+x Int
+x = parse("abc") ? _ { resolve Int(0) }
 ```
 
 `??` is valid regardless of the abort type, including `Void`.
 
-### 5.4 Omitting the Result (`Void` Primary Return)
+### 3.4 Omitting the Result (`Void` Primary Return)
 
 Just as a call to a `Void`-returning function must not be assigned to a variable, a call whose abort path is handled must not assign the abort binder when the abort type is `Void`:
 
 ```zane
 // Primary Void: result is not assigned
 log:write("hello")
-s String = log:write("hello")    // COMPILER ERROR
+s String
+s = log:write("hello")    // COMPILER ERROR
 
 // Secondary Void: binder is omitted in the handler
-x Int = fs:tryRead("file.txt") ? {
+x Int
+x = fs:tryRead("file.txt") ? {
     resolve Int(0)
 }
 ```
 
 ---
 
-## 6. The `resolve` Keyword
+## 4. The `resolve` Keyword
 
 `resolve` is a **block-level return** that substitutes a value as the result of the aborted call expression. It does **not** exit the parent function. It is only valid inside a `?` handler block.
 
@@ -269,17 +192,20 @@ import FileSystem
 
 String ? Codes process(this Feature, fileName String) mut {
     // resolve: only exits the handler, process() continues
-    content String = this.fs:read(fileName) ? err {
+    content String
+    content = this.fs:read(fileName) ? err {
         resolve "default"
     }
 
     // return: exits process() entirely via primary path
-    backup String = this.fs:read("backup.txt") ? err {
+    backup String
+    backup = this.fs:read("backup.txt") ? err {
         return "hardcoded fallback"
     }
 
     // abort: exits process() entirely via secondary path
-    final String = this.fs:read("final.txt") ? err {
+    final String
+    final = this.fs:read("final.txt") ? err {
         abort Codes$Unrecoverable
     }
 
@@ -289,9 +215,9 @@ String ? Codes process(this Feature, fileName String) mut {
 
 ---
 
-## 7. Connection to Zane's Effect Model
+## 5. Connection to Zane's Effect Model
 
-### 7.1 Abortability is orthogonal to `mut`
+### 5.1 Abortability is orthogonal to `mut`
 
 A method can be `mut` and aborting, `mut` and non-aborting, non-`mut` and aborting, or non-`mut` and non-aborting. All four combinations are valid. Neither property implies or restricts the other.
 
@@ -321,23 +247,15 @@ Void ? Codes setScaleSafe(this Node, s Float) mut {
 }
 ```
 
-### 7.2 Compiler optimization of aborting functions
-
-When the compiler infers that a function is Total Pure (under the purity model: no `mut`, no `ref` reads, no capability access, depends only on parameters), it may apply aggressive optimizations even if the function can abort:
-
-- **Constant folding:** if all arguments are compile-time constants and the abort path is provably unreachable, the call can be replaced by its result.
-- **Dead code elimination:** if the result is unused and the abort path is provably unreachable, the call can be removed.
-- **Memoization:** repeated calls with identical arguments will always produce the same result or the same abort.
-
 The abort type is part of the structural function type and travels with method references:
 
 ```zane
-Graph$safeScaledId    // type: (Graph$Node, Int) -> Int ? Codes
+Graph$safeScaledId    // type: (this Graph$Node, Int) -> Int ? Codes
 ```
 
 ---
 
-## 8. Compiler Guarantees
+## 6. Compiler Guarantees
 
 | Guarantee | Description |
 |---|---|
@@ -350,51 +268,24 @@ Graph$safeScaledId    // type: (Graph$Node, Int) -> Int ? Codes
 
 ---
 
-## 9. Summary of Syntax
-
-```
-// Function declaration
-ReturnType ? AbortType Name(Params) [mut] { ... }
-ReturnType ? AbortType Name(Params) [mut] => expr
-
-// Function type
-(ParamTypes) [mut] -> ReturnType ? AbortType
-
-// Handler block (AbortType is T)
-expr ? binder { ... resolve Value ... }
-
-// Handler block (AbortType is Void)
-expr ? { ... resolve Value ... }
-
-// Coalescing shorthand
-expr ?? DefaultValue
-
-// Inside a handler block
-resolve Value     // Substitute value; continue parent function
-return Value      // Exit parent function via primary path
-abort Value       // Exit parent function via secondary path
-abort             // Exit parent function via secondary path (Void abort type)
-```
-
----
-
-## 10. Design Rationale
+## 7. Design Rationale
 
 | Decision | Rationale |
 |---|---|
-| `?` separates return and abort types | Creates visual and syntactic symmetry between declaration and call site. |
-| Abort type is structural, not behavioral | Changing the abort type changes the call contract. It cannot be dropped implicitly. |
-| `mut` is behavioral, not structural | A `mut` method is a strict superset of a non-`mut` method. The abort type is independent of `mut`. |
-| `resolve` is a distinct keyword | Prevents ambiguity between "exit this block" and "exit this function." `return` and `abort` always refer to the parent function. |
-| `Void` abort type instead of empty `?` | Acknowledges that failure is a real, explicit code path. Mirrors the meaning of `Void` as a primary return type. |
-| No stored `T?E` values | Abortability is a control flow construct, not a data construct. Developers who need to store success/failure use `Union<T,E>` explicitly. |
+| `?` separates return and abort types | Creates visual and syntactic symmetry between declaration and call site. The primary path is on the left; the secondary path is on the right. |
+| Abort type is structural, not behavioral | Changing the abort type changes the physical call contract between function and caller. It cannot be dropped implicitly — it must be handled or explicitly propagated. |
+| `mut` is behavioral, not structural | A `mut` method is a strict superset of a non-`mut` method in terms of behavior. The abort type is independent of `mut`. |
+| `resolve` is a distinct keyword | Prevents ambiguity between "exit this block with a value" and "exit this function with a value." `return` and `abort` always refer to the parent function. `resolve` always refers to the handler block. Every other language leaves this to convention or labeled blocks. |
+| `Void` abort type instead of empty `?` | Acknowledges that failure is a real, explicit code path. Mirrors the meaning of `Void` as a primary return type. Makes it impossible to accidentally omit handling — the abort type is always visible in the signature. |
+| No stored `T?E` values | Abortability is a control flow construct, not a data construct. No `Result`-like value is created unless stored explicitly as `Union<T,E>`. This means zero heap allocation and zero union storage at the call site — just a conditional jump. |
 | No implicit default initialization | Variables must be consciously set. The compiler uses Control Flow Graph analysis to guarantee all paths initialize a variable before use, with zero runtime overhead. |
+| Exhaustiveness checking on every `?` handler | Every path through a `?` handler block must `resolve`, `return`, or `abort`. Missing paths are compile-time errors. This makes it impossible to silently fall through without handling the abort. |
 
 ---
 
-## 11. Comparison With Other Languages
+## 8. Language Comparisons
 
-### 11.1 Comparison Table
+### 8.1 Feature Matrix
 
 | Feature | Zane | C | Go | Java | Python | Rust | Swift | Zig |
 |---|---|---|---|---|---|---|---|---|
@@ -409,9 +300,9 @@ abort             // Exit parent function via secondary path (Void abort type)
 | Inline default value | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ Verbose | ✅ | ✅ |
 | Single effect annotation (`mut`) | ✅ | ❌ | ❌ | ❌ | ❌ | ⚠️ `&mut` | ❌ | ❌ |
 
-### 11.2 Zane vs. C (Return Codes)
+### 8.2 Zane vs. C (Return Codes)
 
-C is the most primitive error handling model in widespread use. Functions signal failure by returning a sentinel value (usually `-1` or `NULL`), and set a global `errno` variable to specify the reason.
+C signals failure by returning a sentinel value (usually `-1` or `NULL`) and setting a global `errno` variable.
 
 **C:**
 ```c
@@ -424,7 +315,8 @@ if (f == NULL) {
 
 **Zane:**
 ```zane
-f File = fs:openFile("file.txt") ? err {
+f File
+f = fs:openFile("file.txt") ? err {
     log:write("Error: " + err)
     abort err
 }
@@ -437,7 +329,7 @@ f File = fs:openFile("file.txt") ? err {
 | Error codes and success values share the same return channel, requiring magic sentinel values. | The primary and secondary paths are completely separate. |
 | Functions cannot be composed without manual intermediate checks. | `??` and inline `?` blocks allow safe composition in a single expression. |
 
-### 11.3 Zane vs. Go (Multiple Return Values)
+### 8.3 Zane vs. Go (Multiple Return Values)
 
 **Go:**
 ```go
@@ -449,7 +341,8 @@ if err != nil {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err { abort err }
+content String
+content = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane Solves It |
@@ -459,7 +352,7 @@ content String = fs:readFile("file.txt") ? err { abort err }
 | Error propagation requires manually constructing zero values for other return values. | `abort err` propagates cleanly with no dummy values. |
 | The `error` type is a generic interface with no compile-time distinction between error kinds. | The abort type is fully typed (`? IOError`, `? ParseError`). |
 
-### 11.4 Zane vs. Java (Checked Exceptions)
+### 8.4 Zane vs. Java (Checked Exceptions)
 
 **Java:**
 ```java
@@ -473,7 +366,8 @@ try {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }
@@ -486,7 +380,7 @@ content String = fs:readFile("file.txt") ? err {
 | Unchecked exceptions (`RuntimeException`) escape the type system entirely. | All abort paths are declared and enforced by the compiler. |
 | Inline recovery is not possible. | `??` and `?` handler enable inline, expression-level recovery. |
 
-### 11.5 Zane vs. Python (Unchecked Exceptions)
+### 8.5 Zane vs. Python (Unchecked Exceptions)
 
 **Python:**
 ```python
@@ -498,7 +392,8 @@ except FileNotFoundError as e:
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     resolve "default"
 }
 ```
@@ -509,7 +404,7 @@ content String = fs:readFile("file.txt") ? err {
 | Any function can raise any exception with no static guarantee. | Functions without `?` are statically guaranteed to never abort. |
 | Exceptions unwind the stack. | Zane uses zero-cost conditional jumps. |
 
-### 11.6 Zane vs. Rust (`Result<T, E>`)
+### 8.6 Zane vs. Rust (`Result<T, E>`)
 
 **Rust:**
 ```rust
@@ -521,7 +416,8 @@ let content = read_file("file.txt").unwrap_or_else(|e| {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }
@@ -535,7 +431,7 @@ content String = fs:readFile("file.txt") ? err {
 | **Storing errors** | `Result<T, E>` can be stored and passed as a value. | Storing requires explicit `Union<T, E>`. |
 | **Effect system** | `&self` vs `&mut self` on references. | `mut` on method declarations; receiver-only mutation. |
 
-### 11.7 Zane vs. Swift (`throws`)
+### 8.7 Zane vs. Swift (`throws`)
 
 **Swift:**
 ```swift
@@ -549,7 +445,8 @@ do {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     resolve "default"
 }
 ```
@@ -561,7 +458,7 @@ content String = fs:readFile("file.txt") ? err {
 | **Stack unwinding** | Swift exceptions use stack unwinding. | Zane uses zero-cost conditional jumps. |
 | **`??` coalescing** | `try?` silently discards the error type. | `??` coalesces cleanly; abort type still known to compiler. |
 
-### 11.8 Zane vs. Zig (Error Unions)
+### 8.8 Zane vs. Zig (Error Unions)
 
 **Zig:**
 ```zig
@@ -573,7 +470,8 @@ const content = readFile("file.txt") catch |err| blk: {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }
@@ -586,7 +484,7 @@ content String = fs:readFile("file.txt") ? err {
 | **Void abort type** | Zig infers error sets automatically. | Zane requires explicit `Void`. |
 | **Effect system** | None. | `mut` as single effect marker. |
 
-### 11.9 Summary: Zane's Position in the Landscape
+### 8.9 Summary
 
 Zane sits at a unique intersection in the error handling design space. It combines:
 
@@ -596,3 +494,9 @@ Zane sits at a unique intersection in the error handling design space. It combin
 - **The typed error contracts of Rust and Zig** — the abort type is part of the function's structural type.
 - **A single effect marker** — `mut` on methods is the only user-facing annotation; no `pure`, `readonly`, or effect lists.
 - **A unique innovation** — the `resolve` keyword, which cleanly separates "substitute a value here" from "exit this function," an ambiguity that every other language leaves to convention or labeled blocks.
+
+---
+
+## 9. Syntax Quick-Reference
+
+> See [`syntax.md`](syntax.md) §3 for function and method declaration grammar, §2.4 for function type syntax, and §5 for the complete error handling syntax quick-reference.

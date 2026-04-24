@@ -6,10 +6,15 @@ The techniques described in these documents were conceived and developed by the 
 
 ---
 
-| File                           | Description                                                                                                   |
-|--------------------------------|---------------------------------------------------------------------------------------------------------------|
-| `memory_model.md`              | Ownership model, refs, anchor system, supervisor tree, heap layout, free-stack allocator, struct/class layout |
-| `dependency_management.md`     | Package identity, manifest, symbol placeholder, global registry, versioned symbols                            |
-| `bench/zane_bench.c`           | C benchmark comparing Zane's allocator against malloc, arena, and pool                                        |
-| `bench/zane_bench_results.txt` | Benchmark results (median of 20 runs per test)                                                                |
-| `bench/benchmark.html`         | Bar graph showing the benchmark results                                                                       |
+| File                                           | Description                                                                                                   |
+|------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| `memory_model.md`                              | Ownership model, refs, anchor system, heap layout, free-stack allocator, struct/class layout, design rationale, language comparisons |
+| `dependency_management.md`                     | Package identity, manifest, symbol placeholder, global registry, versioned symbols, design rationale          |
+| `oop.md`                                       | Classes, structs, constructors, methods, free functions, overloading, packages, instanceful pattern, design rationale |
+| `purity.md`                                    | Effect model, `mut` modifier, inferred purity levels, capability wiring, concurrency implications, design rationale |
+| `error_handling.md`                            | Bifurcated return paths, `?` handler block, `??` shorthand, `resolve`/`abort`/`return` semantics, design rationale, language comparisons |
+| `syntax.md`                                    | Canonical syntax reference for all Zane constructs (declarations, types, functions, constructors, calls, error handling) |
+| `contributing/writing-spec-docs.md`            | Guide for writing and maintaining spec documents: structure, section types, formatting conventions             |
+| `bench/zane_bench.c`                           | C benchmark comparing Zane's allocator against malloc, arena, and pool                                        |
+| `bench/zane_bench_results.txt`                 | Benchmark results (median of 20 runs per test)                                                                |
+| `bench/benchmark.html`                         | Bar graph showing the benchmark results                                                                       |

@@ -1,8 +1,8 @@
-# Zane OOP Specification
+# Zane Object-Oriented Model
 
-This document specifies Zane's object-oriented model: how types are defined, how objects are constructed, how behavior is attached to types, and how all of this connects to Zane's package system and purity/effect model.
+This document specifies Zane's object-oriented model: how types are defined, how objects are constructed, how behavior is attached to types, and how packages work as namespaces.
 
-Syntax is illustrative and subject to change; semantics are normative.
+> **See also:** [`purity.md`](purity.md) for the effect model that sits on top of these constructs. [`memory_model.md`](memory_model.md) for the ownership and lifetime rules that govern class instances.
 
 ---
 
@@ -108,11 +108,13 @@ If any field is missing from `init{ }`, it is a **compile-time error**.
 
 ### 3.4 Positional constructors
 
-A positional constructor takes an ordered parameter list and is invoked with `Type(args)` syntax. Positional constructors:
+Positional constructors:
 - may be **overloaded** by arity or parameter types
 - may **not** have default parameters (prevents ambiguity with overload resolution)
 
-**Declaration:**
+> See [`syntax.md`](syntax.md) §3.6 for the declaration and call-site grammar.
+
+**Example:**
 ```zane
 package Graph
 
@@ -145,11 +147,13 @@ Void main() {
 
 ### 3.5 Named constructors
 
-A named constructor declares a field-like parameter list with optional defaults. It is invoked with `Type{ field: value }` syntax. Named constructors:
+Named constructors:
 - may **not** be overloaded (defaults handle optional fields)
 - allow fields with defaults to be omitted at the call site
 
-**Declaration:**
+> See [`syntax.md`](syntax.md) §3.7 for the declaration and call-site grammar.
+
+**Example:**
 ```zane
 package Graph
 
@@ -205,23 +209,11 @@ Int scaledId(this Node, factor Int) {
 }
 ```
 
-### 4.2 Call syntax: `:` for methods, direct for free functions
+### 4.2 Methods vs. free function calls
 
-The method call operator `:` is used exclusively for calling functions whose first parameter is `this`. Free functions are called directly by name (or via namespace reference).
+Methods (functions whose first parameter is `this`) are called with the `:` operator. Free functions are called directly by name. `:` is **only** call syntax — it cannot produce a value or reference.
 
-```zane
-package Main
-import Graph
-
-Void main() {
-    node Graph$Node(Int(1))
-
-    result Int = node:scaledId(Int(5))          // method call via :
-    s Float = Graph$getScale(node)              // free function call
-}
-```
-
-`:` is **only** call syntax. It cannot be used to access a value or produce a reference.
+> See [`syntax.md`](syntax.md) §4 for the full call syntax reference.
 
 ### 4.3 Default methods are read-only
 
@@ -294,7 +286,8 @@ import Graph
 
 Void main() {
     node Graph$Node(Int(1))
-    s Float = Graph$getScale(node)
+    s Float
+    s = Graph$getScale(node)
 }
 ```
 
@@ -366,29 +359,14 @@ Int doSomething(node Node, number Int) { ... }
 Methods are free functions that live in the package namespace. There is no special syntax for referencing a method as a value through the type. All package-scope functions — whether methods or free functions — are referenced as values using the `$` namespace separator:
 
 ```zane
-package Graph
-
-Int scaledId(this Node, factor Int) {
-    return this._id * factor
-}
-
-Void setScale(this Node, s Float) mut {
-    this.scale = s
-}
-
-Float getScale(node Node) {
-    return node.scale
-}
-```
-
-References:
-```zane
-Graph$scaledId    // type: (Graph$Node, Int) -> Int
-Graph$setScale    // type: (mut Graph$Node, Float) -> Void
+Graph$scaledId    // type: (this Graph$Node, Int) -> Int
+Graph$setScale    // type: (this Graph$Node, Float) mut -> Void
 Graph$getScale    // type: (Graph$Node) -> Float
 ```
 
 When used as a value, `this` becomes an explicit first argument. `mut` appears in the function type to signal that calling the reference may mutate the first argument.
+
+> See [`syntax.md`](syntax.md) §4.4 for the full grammar of function references and §2.4 for function type notation.
 
 ### 7.2 Passing functions as values
 
@@ -398,16 +376,18 @@ import Graph
 
 Void applyToAll(
     nodes List<Graph$Node>,
-    fn (Graph$Node, Int) -> Int,
+    fn (this Graph$Node, Int) -> Int,
     factor Int
 ) {
     for node in nodes {
-        result Int = fn(node, factor)
+        result Int
+        result = fn(node, factor)
     }
 }
 
 Void main() {
-    nodes List<Graph$Node> = ...
+    nodes List<Graph$Node>
+    nodes = ...
 
     // method reference via package namespace
     applyToAll(nodes, Graph$scaledId, Int(5))
@@ -429,7 +409,8 @@ Void main() {
     node Graph$Node(Int(1))
 
     // explicit capture in a lambda
-    bound () -> Int = () { node:scaledId(Int(5)) }
+    bound () -> Int
+    bound = () { node:scaledId(Int(5)) }
     someFunc(bound)
 }
 ```
@@ -459,10 +440,12 @@ import Physics
 
 Void main() {
     node Graph$Node(Int(1))
-    energy Float = node:kineticEnergy(Float(3))
+    energy Float
+    energy = node:kineticEnergy(Float(3))
 
     // referenced as a value via Physics namespace
-    fn (Graph$Node, Float) -> Float = Physics$kineticEnergy
+    fn (this Graph$Node, Float) -> Float
+    fn = Physics$kineticEnergy
 }
 ```
 
@@ -512,7 +495,8 @@ Void main() {
     log Log("stdout")
 
     // static function — no instance needed
-    deg Float = Math$radsToDeg(Float(1))
+    deg Float
+    deg = Math$radsToDeg(Float(1))
 
     // instanceful class
     math Math(log)
@@ -522,70 +506,67 @@ Void main() {
 
 ### 9.3 Scope isolation
 
-Constructor and method bodies cannot access package-level values directly. Any package-level state a constructor or method needs must be passed as an explicit parameter. This keeps construction deterministic and prevents hidden dependencies on package state.
+Packages provide **immutable constants** and **package-scope functions**, both of which may be used normally inside constructors and methods. What Zane does **not** allow is hidden mutable package-level state. Any state that can vary over time must live in an object and be passed explicitly or stored explicitly.
 
 ```zane
 package Graph
 
-counter Int = Int(0)
+unitScale Float(1)
 
 class Node {
     _id Int
     scale Float
 }
 
-// compile error if counter is referenced inside init{ } or the body
+// ok: constructors and methods may use package constants
 Node(id Int) {
     return init{
         _id: id,
-        scale: Float(1)
-        // counter not accessible here
+        scale: unitScale
     }
 }
 
-// correct: pass counter explicitly
-Node(id Int, count Int) {
-    return init{
-        _id: id,
-        scale: Float(count)
-    }
+// changing state must be passed explicitly
+Void rescale(this Node, scale Float) mut {
+    this.scale = scale
 }
 ```
 
 ---
 
-## 10. Connection to the Purity and Effect Model
+## 10. Connection to the Effect Model
 
-### 10.1 Read-only by default
-
-Every function and method is read-only by default. Reading `this.field` in a method is semantically equivalent to reading a parameter field in a free function — both are reading an input.
-
-```zane
-// these are semantically equivalent under the effect model
-Int doFree(node Node, number Int) {
-    return node.scale * number
-}
-
-Int doMethod(this Node, number Int) {
-    return this.scale * number
-}
-```
-
-### 10.2 `mut` is the only effect marker
-
-The only way to mutate state is through a `mut` method on a receiver. I/O is exposed by the standard library as `mut` methods on capability objects. A non-`mut` method cannot call `mut` methods on owned fields, preventing hidden mutation.
-
-### 10.3 The ownership tree and method effects
+Every function and method is **read-only by default**. Reading `this.field` in a method is semantically equivalent to reading a parameter in a free function — both are reading an input. The only way to mutate state is through a `mut` method on a receiver.
 
 Because Zane enforces single ownership, the compiler knows statically which parts of the object graph a `mut` call can affect:
 
-- Two `mut` calls on **different** instances can be safely parallelized
-- Two `mut` calls on the **same** instance must be serialized
-- Read-only calls on the same instance can be reordered freely if no `mut` call intervenes
+- Two `mut` calls on **different** instances can be safely parallelized.
+- Two `mut` calls on the **same** instance must be serialized.
+- Read-only calls on the same instance can be reordered freely if no `mut` call intervenes.
+
+> **See also:** [`purity.md`](purity.md) for the complete effect model, inferred purity levels, capability wiring, and concurrency implications.
 
 ---
 
-## 11. Summary
+## 11. Design Rationale
+
+| Decision | Rationale |
+|---|---|
+| Class body contains fields only | Keeps class definitions minimal and readable at a glance. All behavioral declarations live at package scope, making it easy to find all functions that operate on a type. |
+| Constructors are standalone declarations (no `this`) | The object does not exist when the constructor runs. There is no partial initialization. The constructor's only job is to produce a fully initialized instance via `init{ }`. |
+| `init{ }` requires every field | Forces explicit initialization of all fields. There is no default initialization — the compiler uses Control Flow Graph analysis to guarantee all paths assign every field, with zero runtime overhead. |
+| Methods are free functions with `this` as first parameter | Methods have no special status. They are ordinary functions that happen to receive a named `this` parameter granting private field access and `:` call syntax. This keeps the language model flat and consistent. |
+| Private fields use `_` prefix, not a keyword | Visibility is declared in the name, not separately. The compiler enforces `_`-prefixed fields as accessible only via `this` in the defining package. No `private`/`public` keywords; no annotations. |
+| Overload identity is parameter types only | Names, `mut`, and return type do not affect overload identity. This keeps overload resolution simple, predictable, and free from ambiguity. |
+| `mut` does not create a distinct overload | `mut` is a behavioral modifier for effect analysis, not a structural property of the type signature. A function that mutates and one that reads have the same call contract from the perspective of the caller's type checker. |
+| Extension by any package | Methods are package-scope functions, so any package can define new behavior on imported types. The only restriction is field visibility — extension methods cannot access private (`_`-prefixed) fields. |
+| Package `$` separator for function references | All package-scope functions — methods and free functions alike — are referenced with the same `Package$name` syntax. No special syntax for method references. `this` becomes an explicit first argument in the function type. |
+| Instanceful package pattern | A package that defines a class of the same name provides both static utilities (via `Package$`) and an instantiable stateful object. This keeps the namespace clean without needing separate module and class hierarchies. |
+| No hidden mutable package state | Packages may expose immutable constants and package-scope functions, but time-varying state must live in an object and be passed explicitly. This prevents hidden ambient state while keeping constants and helper functions ergonomic. |
+
+---
+
+## 12. Summary
 
 | Concept | Rule |
 |---|---|
@@ -603,4 +584,4 @@ Because Zane enforces single ownership, the compiler knows statically which part
 | Method as value | Referenced via `Package$functionName`; `this` becomes explicit first arg |
 | Bound references | Not built-in; wrap in a lambda explicitly |
 | Package | Namespace; same-named class enables instanceful pattern |
-| Scope isolation | Constructor/method bodies cannot access package-level values directly |
+| Package scope | Immutable constants and free functions are accessible; mutable state must be explicit |
