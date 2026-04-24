@@ -6,18 +6,33 @@ This document is the canonical reference for Zane's surface syntax. The individu
 
 ## 1. Declarations
 
-### 1.1 Variables
+### 1.1 Symbols (variables)
 
+New symbol — type only, no initial value:
 ```
-name Type = expr          // owning variable
-name ref Type = expr      // non-owning reference
+name Type
+name ref Type
 ```
 
-The type annotation may be omitted when it is unambiguously inferred from the right-hand side:
+New symbol with an initial value, using constructor syntax inline:
+```
+name Type(arg, ...)           // positional constructor
+name Type{key: val, ...}      // named constructor
+```
+
+Assigning or overwriting an existing symbol:
+```
+name = Type(...)
+name = Type{...}
+```
 
 ```zane
-x Int = Int(5)
-y = Int(5)        // type inferred as Int
+hp Int                          // declared, no value yet
+hp Int(100)                     // declared and initialized
+hp = Int(50)                    // overwritten
+
+myTank ref Tank                 // non-owning reference, uninitialized
+myTank ref Tank = tanks[0]      // non-owning reference to an existing object
 ```
 
 ### 1.2 Constants (package-level)
@@ -88,20 +103,24 @@ List<ref Type>              // list of non-owning references
 ### 2.4 Function types
 
 ```
-(ParamType, ParamType, ...) -> ReturnType
-(ParamType, ...) -> ReturnType ? AbortType
-(mut ReceiverType, ParamType, ...) -> ReturnType
-(mut ReceiverType, ParamType, ...) -> ReturnType ? AbortType
+(ParamType, ...) -> ReturnType                                     // free function
+(ParamType, ...) -> ReturnType ? AbortType                         // abortable free function
+(this ReceiverType, ParamType, ...) -> ReturnType                  // read-only method
+(this ReceiverType, ParamType, ...) mut -> ReturnType              // mutating method
+(this ReceiverType, ParamType, ...) -> ReturnType ? AbortType      // abortable method
+(this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType  // mutating abortable method
 ```
 
-`mut` as the first parameter modifier indicates that calling through this function value will mutate the receiver.
+`mut` is placed after the closing `)` of the parameter list, before `->`. It is **only valid when the first parameter is named `this`**. A function type with `mut` but no `this` first parameter is a compile-time error — `this` is what designates what value may be mutated; without it, `mut` has no meaning.
 
-Examples:
 ```
-(Int) -> Int                            // takes Int, returns Int, cannot abort
-(String) -> Int ? String                // takes String, returns Int, aborts with String
-(mut FileSystem, String) -> Int ? Void  // mut method reference, aborts with Void
+(this FileSystem, String) -> Int ? Void   // read-only method, aborts with Void
+(this FileSystem, String) mut -> Void     // mutating method, cannot abort
+(Int) -> Int                              // free function — no mut allowed
+(Node, Int) mut -> Int                    // ILLEGAL: mut without this
 ```
+
+Free functions and static functions cannot mutate any of their parameters. Mutation is expressed exclusively through `mut` methods on a receiver. `this` in the function type is the explicit declaration of what may be mutated.
 
 ---
 
@@ -213,11 +232,11 @@ Package$FunctionName(arg, ...)
 Package$functionName          // method or free function as a first-class value
 ```
 
-When used as a value, `this` becomes an explicit first argument in the function type:
+When used as a value, `this` appears explicitly as the first parameter in the function type, and `mut` appears after the parameter list if the method is mutating:
 
 ```zane
-Graph$scaledId    // type: (Graph$Node, Int) -> Int
-Graph$setScale    // type: (mut Graph$Node, Float) -> Void
+Graph$scaledId    // type: (this Graph$Node, Int) -> Int
+Graph$setScale    // type: (this Graph$Node, Float) mut -> Void
 Graph$getScale    // type: (Graph$Node) -> Float
 ```
 
@@ -262,8 +281,11 @@ Equivalent to `expr ? _ { resolve defaultExpr }`. Valid for any abort type inclu
 ReturnType ? AbortType name(params) [mut] { body }
 ReturnType ? AbortType name(params) [mut] => expr
 
-// Function type
-(ParamTypes) [mut] -> ReturnType ? AbortType
+// Function type (free function — no mut)
+(ParamTypes) -> ReturnType ? AbortType
+
+// Function type (method — mut only valid with this as first param)
+(this ReceiverType, ParamTypes) [mut] -> ReturnType ? AbortType
 
 // Handler block
 expr ? binder { ... resolve Value ... }

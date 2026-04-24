@@ -359,7 +359,7 @@ Methods are free functions that live in the package namespace. There is no speci
 
 ```zane
 Graph$scaledId    // type: (Graph$Node, Int) -> Int
-Graph$setScale    // type: (mut Graph$Node, Float) -> Void
+Graph$setScale    // type: (this Graph$Node, Float) mut -> Void
 Graph$getScale    // type: (Graph$Node) -> Float
 ```
 
