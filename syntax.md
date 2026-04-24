@@ -122,6 +122,12 @@ List<ref Type>              // list of non-owning references
 
 Free functions and static functions cannot mutate any of their parameters. Mutation is expressed exclusively through `mut` methods on a receiver. `this` in the function type is the explicit declaration of what may be mutated.
 
+`this` is a reserved parameter name. It may only appear as the **first** parameter; using `this` in any other position is a compile-time error.
+
+```
+(Int, this Node) -> Void    // ILLEGAL: this must be the first parameter
+```
+
 ---
 
 ## 3. Functions, Methods, and Constructors
@@ -146,6 +152,8 @@ ReturnType ? AbortType name(param Type, ...) => expr
 ReturnType name(this ReceiverType, param Type, ...) { body }
 ReturnType name(this ReceiverType, param Type, ...) => expr
 ```
+
+`this` must be the first parameter. It is a compile-time error to use `this` as the name of any parameter other than the first.
 
 ### 3.4 Mutating method
 
