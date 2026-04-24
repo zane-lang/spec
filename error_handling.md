@@ -65,11 +65,13 @@ package Math
 
 // non-mut can be assigned to a non-mut function variable
 Int square(x Int) { return x * x }
-fn (Int) -> Int = Math$square    // OK
+fn (Int) -> Int
+fn = Math$square    // OK
 
 // abort type cannot be dropped implicitly
 Int ? String parse(s String) { ... }
-fn2 (String) -> Int = Math$parse  // COMPILER ERROR: abort type 'String' is lost
+fn2 (String) -> Int
+fn2 = Math$parse  // COMPILER ERROR: abort type 'String' is lost
 ```
 
 ---
@@ -93,7 +95,8 @@ import Log
 
 // With a named binder (AbortType is String)
 Void example1(log Log) mut {
-    x Int = parse("abc") ? err {
+    x Int
+    x = parse("abc") ? err {
         log:write("Failed: " + err)
         resolve Int(0)
     }
@@ -101,20 +104,23 @@ Void example1(log Log) mut {
 
 // With no binder (AbortType is Void)
 Void example2(fs FileSystem) {
-    x Int = fs:tryRead("file.txt") ? {
+    x Int
+    x = fs:tryRead("file.txt") ? {
         resolve Int(0)
     }
 }
 
 // Propagating the abort upward (parent must declare ? String)
 Int ? String process(input String) {
-    x Int = parse(input) ? err { abort err }
+    x Int
+    x = parse(input) ? err { abort err }
     return x * Int(2)
 }
 
 // Mixed: recover some errors, propagate others
 Int ? Codes load(fs FileSystem, fileName String) {
-    content String = fs:read(fileName) ? err {
+    content String
+    content = fs:read(fileName) ? err {
         if (err == Codes$FileNotFound) { resolve "default" }
         abort err
     }
@@ -128,7 +134,8 @@ The compiler performs **exhaustiveness checking** on every `?` handler block. If
 
 ```zane
 // COMPILER ERROR: not all paths resolve/return/abort
-x Int = parse("abc") ? err {
+x Int
+x = parse("abc") ? err {
     log:write(err)
     // Missing resolve/return/abort!
 }
@@ -140,10 +147,12 @@ For the common case of "resolve with a default value if aborted", the `??` opera
 
 ```zane
 // Sugar
-x Int = parse("abc") ?? Int(0)
+x Int
+x = parse("abc") ?? Int(0)
 
 // Equivalent to
-x Int = parse("abc") ? _ { resolve Int(0) }
+x Int
+x = parse("abc") ? _ { resolve Int(0) }
 ```
 
 `??` is valid regardless of the abort type, including `Void`.
@@ -155,10 +164,12 @@ Just as a call to a `Void`-returning function must not be assigned to a variable
 ```zane
 // Primary Void: result is not assigned
 log:write("hello")
-s String = log:write("hello")    // COMPILER ERROR
+s String
+s = log:write("hello")    // COMPILER ERROR
 
 // Secondary Void: binder is omitted in the handler
-x Int = fs:tryRead("file.txt") ? {
+x Int
+x = fs:tryRead("file.txt") ? {
     resolve Int(0)
 }
 ```
@@ -181,17 +192,20 @@ import FileSystem
 
 String ? Codes process(this Feature, fileName String) mut {
     // resolve: only exits the handler, process() continues
-    content String = this.fs:read(fileName) ? err {
+    content String
+    content = this.fs:read(fileName) ? err {
         resolve "default"
     }
 
     // return: exits process() entirely via primary path
-    backup String = this.fs:read("backup.txt") ? err {
+    backup String
+    backup = this.fs:read("backup.txt") ? err {
         return "hardcoded fallback"
     }
 
     // abort: exits process() entirely via secondary path
-    final String = this.fs:read("final.txt") ? err {
+    final String
+    final = this.fs:read("final.txt") ? err {
         abort Codes$Unrecoverable
     }
 
@@ -301,7 +315,8 @@ if (f == NULL) {
 
 **Zane:**
 ```zane
-f File = fs:openFile("file.txt") ? err {
+f File
+f = fs:openFile("file.txt") ? err {
     log:write("Error: " + err)
     abort err
 }
@@ -326,7 +341,8 @@ if err != nil {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err { abort err }
+content String
+content = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane Solves It |
@@ -350,7 +366,8 @@ try {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }
@@ -375,7 +392,8 @@ except FileNotFoundError as e:
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     resolve "default"
 }
 ```
@@ -398,7 +416,8 @@ let content = read_file("file.txt").unwrap_or_else(|e| {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }
@@ -426,7 +445,8 @@ do {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     resolve "default"
 }
 ```
@@ -450,7 +470,8 @@ const content = readFile("file.txt") catch |err| blk: {
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err {
+content String
+content = fs:readFile("file.txt") ? err {
     log:write("Failed: " + err)
     resolve "default"
 }

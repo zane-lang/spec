@@ -20,14 +20,17 @@ name Type(arg, ...)           // positional constructor
 name Type{key: val, ...}      // named constructor
 ```
 
-New symbol with an initial value from an arbitrary expression:
+There is no hybrid declaration-plus-assignment form for arbitrary expressions:
 ```
-name Type = expr              // any expression whose result matches Type
-name ref Type = expr          // any expression whose result matches ref Type
+name Type = expr              // ILLEGAL
+name ref Type = expr          // ILLEGAL
 ```
 
-Assigning or overwriting an existing symbol — the type is not required; any expression that produces the right type is valid:
+If the value comes from an arbitrary expression, declare first and assign second. Assigning or overwriting an existing symbol never repeats the type:
 ```
+name Type
+name = expr
+
 name = expr           // any expression: function call, constructor, field access, etc.
 name = Type(...)      // positional constructor
 name = Type{...}      // named constructor
@@ -36,7 +39,8 @@ name = Type{...}      // named constructor
 ```zane
 hp Int                          // declared, no value yet
 hp Int(100)                     // declared and initialized
-score Int = computeScore()      // declared from an arbitrary expression
+score Int
+score = computeScore()          // declared first, then assigned
 hp = Int(50)                    // overwritten with constructor
 hp = computeHp()                // overwritten with function result
 
@@ -45,7 +49,7 @@ vec = Vec2(Int(0), Int(15))     // constructor call
 vec = getRandomVec()            // function returning Vec2
 
 myTank ref Tank                 // non-owning reference, uninitialized
-myTank ref Tank = tanks[0]      // non-owning reference to an existing object
+myTank = tanks[0]               // assigned to an existing object
 ```
 
 ### 1.2 Constants (package-level)
@@ -328,16 +332,17 @@ abort             // exit parent function via secondary path (Void abort type)
 
 ```zane
 // Owning variable — controls the object's lifetime
-tank Tank = Tank(...)
+tank Tank(...)
 
 // Non-owning reference — does not control lifetime
-myTank ref Tank = tanks[0]
+myTank ref Tank
+myTank = tanks[0]
 
 // Owning list — list owns all elements
-tanks List<Tank> = List<Tank>()
+tanks List<Tank>()
 
 // Non-owning reference list — list holds refs, elements owned elsewhere
-visible List<ref Tank> = List<ref Tank>()
+visible List<ref Tank>()
 
 // Class with owning and non-owning fields
 class World {

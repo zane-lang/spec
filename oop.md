@@ -286,7 +286,8 @@ import Graph
 
 Void main() {
     node Graph$Node(Int(1))
-    s Float = Graph$getScale(node)
+    s Float
+    s = Graph$getScale(node)
 }
 ```
 
@@ -379,12 +380,14 @@ Void applyToAll(
     factor Int
 ) {
     for node in nodes {
-        result Int = fn(node, factor)
+        result Int
+        result = fn(node, factor)
     }
 }
 
 Void main() {
-    nodes List<Graph$Node> = ...
+    nodes List<Graph$Node>
+    nodes = ...
 
     // method reference via package namespace
     applyToAll(nodes, Graph$scaledId, Int(5))
@@ -406,7 +409,8 @@ Void main() {
     node Graph$Node(Int(1))
 
     // explicit capture in a lambda
-    bound () -> Int = () { node:scaledId(Int(5)) }
+    bound () -> Int
+    bound = () { node:scaledId(Int(5)) }
     someFunc(bound)
 }
 ```
@@ -436,10 +440,12 @@ import Physics
 
 Void main() {
     node Graph$Node(Int(1))
-    energy Float = node:kineticEnergy(Float(3))
+    energy Float
+    energy = node:kineticEnergy(Float(3))
 
     // referenced as a value via Physics namespace
-    fn (this Graph$Node, Float) -> Float = Physics$kineticEnergy
+    fn (this Graph$Node, Float) -> Float
+    fn = Physics$kineticEnergy
 }
 ```
 
@@ -489,7 +495,8 @@ Void main() {
     log Log("stdout")
 
     // static function — no instance needed
-    deg Float = Math$radsToDeg(Float(1))
+    deg Float
+    deg = Math$radsToDeg(Float(1))
 
     // instanceful class
     math Math(log)

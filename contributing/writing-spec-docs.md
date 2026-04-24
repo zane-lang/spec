@@ -218,7 +218,8 @@ if err != nil { return "", err }
 
 **Zane:**
 ```zane
-content String = fs:readFile("file.txt") ? err { abort err }
+content String
+content = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane Solves It |
