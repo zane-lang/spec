@@ -23,7 +23,7 @@ When in doubt about where a piece of content belongs, ask: does it describe *wha
 
 ## 2. Required Document Shape
 
-Every spec document must follow this top-to-bottom shape exactly:
+Every **topic spec document** must follow this top-to-bottom shape exactly:
 
 ```
 # Zane <Name>
@@ -99,7 +99,11 @@ Use a bare `---` line between every top-level section (`## N.`). Never put `---`
 
 ### 2.5 Section numbering
 
-Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`, `### 1.2`, etc. Do not skip numbers. Do not restart numbering. The Overview is always `## 1.`.
+Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`, `### 1.2`, etc. Do not skip numbers. Do not restart numbering. In topic documents, the Overview is always `## 1.`.
+
+### 2.6 `syntax.md` is the one structural exception
+
+`syntax.md` is a canonical reference document, not a topic narrative. It still uses the same title style, lead-in prose, `---` separators, and numbered subsections, but it may start directly with grammar categories such as Declarations, Types, and Calls instead of a dedicated `## 1. Overview` section.
 
 ---
 
@@ -107,7 +111,7 @@ Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`
 
 ### 3.1 Overview
 
-Every document begins with `## 1. Overview`. It contains:
+Every topic document begins with `## 1. Overview`. It contains:
 
 - A short paragraph explaining what the feature is.
 - A bullet list of 2–5 core ideas, each formatted as **`keyword`**. Brief explanation.

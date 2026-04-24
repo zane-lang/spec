@@ -236,7 +236,7 @@ Void ? Codes setScaleSafe(this Node, s Float) mut {
 The abort type is part of the structural function type and travels with method references:
 
 ```zane
-Graph$safeScaledId    // type: (Graph$Node, Int) -> Int ? Codes
+Graph$safeScaledId    // type: (this Graph$Node, Int) -> Int ? Codes
 ```
 
 ---
@@ -479,4 +479,3 @@ Zane sits at a unique intersection in the error handling design space. It combin
 ## 9. Syntax Quick-Reference
 
 > See [`syntax.md`](syntax.md) §3 for function and method declaration grammar, §2.4 for function type syntax, and §5 for the complete error handling syntax quick-reference.
-

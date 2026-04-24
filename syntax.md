@@ -20,6 +20,12 @@ name Type(arg, ...)           // positional constructor
 name Type{key: val, ...}      // named constructor
 ```
 
+New symbol with an initial value from an arbitrary expression:
+```
+name Type = expr              // any expression whose result matches Type
+name ref Type = expr          // any expression whose result matches ref Type
+```
+
 Assigning or overwriting an existing symbol — the type is not required; any expression that produces the right type is valid:
 ```
 name = expr           // any expression: function call, constructor, field access, etc.
@@ -30,6 +36,7 @@ name = Type{...}      // named constructor
 ```zane
 hp Int                          // declared, no value yet
 hp Int(100)                     // declared and initialized
+score Int = computeScore()      // declared from an arbitrary expression
 hp = Int(50)                    // overwritten with constructor
 hp = computeHp()                // overwritten with function result
 

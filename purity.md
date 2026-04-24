@@ -199,8 +199,9 @@ Example:
 package Log
 
 class Log {
-    Void write(this Log, msg String) mut { ... }
 }
+
+Void write(this Log, msg String) mut { ... }
 ```
 
 ```zane
@@ -442,7 +443,7 @@ Because Zane has single ownership, the compiler can often prove that two instanc
 
 ---
 
-## 10. Summary Table
+## 10. Effect Level Matrix
 
 | Level | Reads external state | Writes external state | Cacheable | Removable if unused | Parallelizable |
 |---|---:|---:|---:|---:|---:|

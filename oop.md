@@ -358,7 +358,7 @@ Int doSomething(node Node, number Int) { ... }
 Methods are free functions that live in the package namespace. There is no special syntax for referencing a method as a value through the type. All package-scope functions — whether methods or free functions — are referenced as values using the `$` namespace separator:
 
 ```zane
-Graph$scaledId    // type: (Graph$Node, Int) -> Int
+Graph$scaledId    // type: (this Graph$Node, Int) -> Int
 Graph$setScale    // type: (this Graph$Node, Float) mut -> Void
 Graph$getScale    // type: (Graph$Node) -> Float
 ```
@@ -375,7 +375,7 @@ import Graph
 
 Void applyToAll(
     nodes List<Graph$Node>,
-    fn (Graph$Node, Int) -> Int,
+    fn (this Graph$Node, Int) -> Int,
     factor Int
 ) {
     for node in nodes {
@@ -439,7 +439,7 @@ Void main() {
     energy Float = node:kineticEnergy(Float(3))
 
     // referenced as a value via Physics namespace
-    fn (Graph$Node, Float) -> Float = Physics$kineticEnergy
+    fn (this Graph$Node, Float) -> Float = Physics$kineticEnergy
 }
 ```
 
@@ -499,33 +499,29 @@ Void main() {
 
 ### 9.3 Scope isolation
 
-Constructor and method bodies cannot access package-level values directly. Any package-level state a constructor or method needs must be passed as an explicit parameter. This keeps construction deterministic and prevents hidden dependencies on package state.
+Packages provide **immutable constants** and **package-scope functions**, both of which may be used normally inside constructors and methods. What Zane does **not** allow is hidden mutable package-level state. Any state that can vary over time must live in an object and be passed explicitly or stored explicitly.
 
 ```zane
 package Graph
 
-counter Int = Int(0)
+unitScale Float(1)
 
 class Node {
     _id Int
     scale Float
 }
 
-// compile error if counter is referenced inside init{ } or the body
+// ok: constructors and methods may use package constants
 Node(id Int) {
     return init{
         _id: id,
-        scale: Float(1)
-        // counter not accessible here
+        scale: unitScale
     }
 }
 
-// correct: pass counter explicitly
-Node(id Int, count Int) {
-    return init{
-        _id: id,
-        scale: Float(count)
-    }
+// changing state must be passed explicitly
+Void rescale(this Node, scale Float) mut {
+    this.scale = scale
 }
 ```
 
@@ -559,7 +555,7 @@ Because Zane enforces single ownership, the compiler knows statically which part
 | Extension by any package | Methods are package-scope functions, so any package can define new behavior on imported types. The only restriction is field visibility — extension methods cannot access private (`_`-prefixed) fields. |
 | Package `$` separator for function references | All package-scope functions — methods and free functions alike — are referenced with the same `Package$name` syntax. No special syntax for method references. `this` becomes an explicit first argument in the function type. |
 | Instanceful package pattern | A package that defines a class of the same name provides both static utilities (via `Package$`) and an instantiable stateful object. This keeps the namespace clean without needing separate module and class hierarchies. |
-| Scope isolation in constructors and methods | Constructor and method bodies cannot access package-level values directly. Any package-level state must be passed as an explicit parameter. This keeps construction deterministic and prevents hidden dependencies on package state. |
+| No hidden mutable package state | Packages may expose immutable constants and package-scope functions, but time-varying state must live in an object and be passed explicitly. This prevents hidden ambient state while keeping constants and helper functions ergonomic. |
 
 ---
 
@@ -581,4 +577,4 @@ Because Zane enforces single ownership, the compiler knows statically which part
 | Method as value | Referenced via `Package$functionName`; `this` becomes explicit first arg |
 | Bound references | Not built-in; wrap in a lambda explicitly |
 | Package | Namespace; same-named class enables instanceful pattern |
-| Scope isolation | Constructor/method bodies cannot access package-level values directly |
+| Package scope | Immutable constants and free functions are accessible; mutable state must be explicit |
