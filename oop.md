@@ -545,7 +545,25 @@ Because Zane enforces single ownership, the compiler knows statically which part
 
 ---
 
-## 11. Summary
+## 11. Design Rationale
+
+| Decision | Rationale |
+|---|---|
+| Class body contains fields only | Keeps class definitions minimal and readable at a glance. All behavioral declarations live at package scope, making it easy to find all functions that operate on a type. |
+| Constructors are standalone declarations (no `this`) | The object does not exist when the constructor runs. There is no partial initialization. The constructor's only job is to produce a fully initialized instance via `init{ }`. |
+| `init{ }` requires every field | Forces explicit initialization of all fields. There is no default initialization — the compiler uses Control Flow Graph analysis to guarantee all paths assign every field, with zero runtime overhead. |
+| Methods are free functions with `this` as first parameter | Methods have no special status. They are ordinary functions that happen to receive a named `this` parameter granting private field access and `:` call syntax. This keeps the language model flat and consistent. |
+| Private fields use `_` prefix, not a keyword | Visibility is declared in the name, not separately. The compiler enforces `_`-prefixed fields as accessible only via `this` in the defining package. No `private`/`public` keywords; no annotations. |
+| Overload identity is parameter types only | Names, `mut`, and return type do not affect overload identity. This keeps overload resolution simple, predictable, and free from ambiguity. |
+| `mut` does not create a distinct overload | `mut` is a behavioral modifier for effect analysis, not a structural property of the type signature. A function that mutates and one that reads have the same call contract from the perspective of the caller's type checker. |
+| Extension by any package | Methods are package-scope functions, so any package can define new behavior on imported types. The only restriction is field visibility — extension methods cannot access private (`_`-prefixed) fields. |
+| Package `$` separator for function references | All package-scope functions — methods and free functions alike — are referenced with the same `Package$name` syntax. No special syntax for method references. `this` becomes an explicit first argument in the function type. |
+| Instanceful package pattern | A package that defines a class of the same name provides both static utilities (via `Package$`) and an instantiable stateful object. This keeps the namespace clean without needing separate module and class hierarchies. |
+| Scope isolation in constructors and methods | Constructor and method bodies cannot access package-level values directly. Any package-level state must be passed as an explicit parameter. This keeps construction deterministic and prevents hidden dependencies on package state. |
+
+---
+
+## 12. Summary
 
 | Concept | Rule |
 |---|---|

@@ -2,7 +2,7 @@
 
 This document specifies Zane's effect model: how the compiler infers and enforces the purity of functions, what the `mut` modifier means, and how capabilities control access to external state.
 
-> **See also:** [`oop.md`](oop.md) for class/struct declarations, constructor syntax, method declarations, and overloading rules — this document covers only the effect-inference layer that sits on top of those constructs. [`rationale.md`](rationale.md) §3 for the reasoning behind each design decision.
+> **See also:** [`oop.md`](oop.md) for class/struct declarations, constructor syntax, method declarations, and overloading rules — this document covers only the effect-inference layer that sits on top of those constructs.
 
 ---
 
@@ -453,10 +453,15 @@ Because Zane has single ownership, the compiler can often prove that two instanc
 
 ---
 
-## 11. Design Principle
+## 11. Design Rationale
 
-> **The only way code can mutate state is through a `mut` method on a receiver.**
+| Decision | Rationale |
+|---|---|
+| `mut` as the only effect modifier | One modifier covers all mutation. The compiler derives stronger purity levels (Total Pure, Read-Only Impure, Instance-Local Mutation, Full Impure) automatically from ownership structure, `ref` usage, and call graph. No `pure`, `readonly`, or effect lists for the user to maintain. |
+| No `pure` keyword | Purity is an inferred property, not an annotation. The compiler knows when a function is Total Pure from the absence of `ref` reads, capability access, `mut` calls, and parameter-escaping writes. Annotating purity would add noise and require the compiler to verify annotations it could derive on its own. |
+| Read-only by default | Every function and method is read-only unless marked `mut`. This makes mutation visible at the declaration site without requiring an annotation on every pure function. |
+| Capabilities are ordinary objects | There is no ambient authority. Code can only perform I/O if it holds a capability object. Capabilities are passed explicitly (as parameters, constructor arguments, or ref fields), making all side-effectful paths traceable through the ownership tree. |
+| Abortability is orthogonal to effects | A function can be Total Pure and still abort. `?` is a structural type modifier on the return signature; `mut` is a behavioral modifier on the declaration. Neither implies or restricts the other. |
+| Allocation and destruction are Full Impure boundaries | Even a logically simple constructor affects allocator state. Treating construction and destruction as Full Impure boundaries ensures they are not reordered past observable side effects. |
 
-Everything else follows from structure: ownership tells the compiler what can be reached; `ref` tells it where reads/writes can escape; capabilities tell it where external effects live; `mut` tells it where mutation is allowed. There is no `pure` keyword — Total Pure is an internal compiler property used for optimization, not a user annotation.
-
-> **See also:** [`rationale.md`](rationale.md) §3 for the full reasoning behind these choices.
+> **The only way code can mutate state is through a `mut` method on a receiver.** Everything else follows from structure: ownership tells the compiler what can be reached; `ref` tells it where reads/writes can escape; capabilities tell it where external effects live; `mut` tells it where mutation is allowed. There is no `pure` keyword — Total Pure is an internal compiler property used for optimization, not a user annotation.

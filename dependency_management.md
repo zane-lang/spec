@@ -12,8 +12,6 @@ Libraries are distributed as **pre-compiled object files committed directly into
 
 Versions are **exact tags pointing to exact commits**. There is no implicit resolution, no semver range matching, and no global lockfile negotiation across packages. The exact tag is chosen by the user on the command line and written into the project manifest alongside the commit hash it must resolve to. What is in the manifest is what gets linked.
 
-> **See also:** [`rationale.md`](rationale.md) §5 for the reasoning behind each design decision.
-
 ---
 
 ## 2. Manifest
@@ -364,3 +362,24 @@ The end-to-end flow from library authorship to consumer compilation:
    Linker links against ~/.zane/packages/https/github.com/zane-lang/math/vers1.0.1/math.o.
    Binary is produced.
 ```
+
+---
+
+## 13. Design Rationale
+
+| Decision | Rationale |
+|---|---|
+| No central registry | Eliminates a single point of failure and control. The URL is the identity — two packages from different hosts can share the same short name without conflict. |
+| Binaries committed to repository | Binaries are part of the git tree and covered by the commit hash. They cannot be swapped without creating a new commit and moving the tag, which is detectable by the manifest's commit hash verification. |
+| Commit hash recorded in manifest | Tags are mutable references; the commit hash is the actual trust anchor. A mismatch between the recorded hash and the resolved hash aborts the fetch with a security error. |
+| Tag protection recommended | Prevents force-pushing a tag on the forge. Commit hash verification in the manifest catches it even without forge-level protection. |
+| Plain git clone for fetching | Works on any git host without forge-specific APIs. No release asset infrastructure, no package registry API. Any host that speaks git works out of the box. |
+| Exact version pinning | Deterministic builds. No surprise upgrades. The exact version is always explicit in the manifest. Two developers with the same manifest always link the same symbols. |
+| Symbol prefixing at pull time | The `!` placeholder in compiled library symbols is replaced with the version tag at fetch time, not at compile time. This means library authors compile once; consumers never recompile the library. |
+| Version embedded in symbol name | Multiple versions of the same library coexist in one binary as entirely distinct symbols. The linker sees no ambiguity. There is no implicit global resolution. |
+| Global shared package cache | The same package version is never downloaded or prefixed more than once across all projects on the machine. Packages are stored at `~/.zane/packages/<url>/<version>/`. |
+| Go-style URL and version path mangling | `/` as subdirectory separator mirrors the Go module cache. Capital letters are escaped with `!`. Illegal filesystem characters cause a pull-time error. |
+| Manifest key enforcement | There is no way to bypass the manifest and reference a versioned symbol directly in source. Version strings stay out of source code entirely. |
+| Source-compile opt-in (`--from-source`) | Trust escape hatch for security-conscious consumers who do not trust the pre-built artifacts. Not a normal workflow. |
+| Transitive deps auto-installed | The consumer does not need to enumerate indirect dependencies. The toolchain reads each library's `zane.coda` recursively and installs all transitive dependencies before the top-level package is considered ready. |
+| Per-library version namespace | Diamond dependency conflicts resolve trivially. Different versions of the same library produce distinct symbol namespaces. No global version negotiation algorithm needed. |

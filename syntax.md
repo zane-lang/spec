@@ -20,16 +20,22 @@ name Type(arg, ...)           // positional constructor
 name Type{key: val, ...}      // named constructor
 ```
 
-Assigning or overwriting an existing symbol:
+Assigning or overwriting an existing symbol — the type is not required; any expression that produces the right type is valid:
 ```
-name = Type(...)
-name = Type{...}
+name = expr           // any expression: function call, constructor, field access, etc.
+name = Type(...)      // positional constructor
+name = Type{...}      // named constructor
 ```
 
 ```zane
 hp Int                          // declared, no value yet
 hp Int(100)                     // declared and initialized
-hp = Int(50)                    // overwritten
+hp = Int(50)                    // overwritten with constructor
+hp = computeHp()                // overwritten with function result
+
+vec Vec2                        // declared
+vec = Vec2(Int(0), Int(15))     // constructor call
+vec = getRandomVec()            // function returning Vec2
 
 myTank ref Tank                 // non-owning reference, uninitialized
 myTank ref Tank = tanks[0]      // non-owning reference to an existing object

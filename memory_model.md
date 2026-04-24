@@ -14,8 +14,6 @@ Zane's memory model is built on three interlocking ideas:
 
 Destruction is deterministic and propagates strictly down the ownership tree. There is no garbage collector, no reference cycles, and no lifetime annotations.
 
-> **See also:** [`comparison.md`](comparison.md) §1 for a comparison of this model against Rust, C++, and GC languages. [`rationale.md`](rationale.md) §1 for the reasoning behind each design decision.
-
 ---
 
 ## 2. Ownership
@@ -486,3 +484,62 @@ List<List<Tank>>
   → Tank data inline in each inner list
   → the entire structure is contiguous on the heap
 ```
+
+---
+
+## 8. Design Rationale
+
+| Decision | Rationale |
+|---|---|
+| Single ownership by default | Eliminates ambiguity about which variable owns an object. The owner is always the variable that received the constructor call or the container/field that received it via ownership transfer. No annotation needed. |
+| `ref` as explicit opt-in for non-owning references | Ownership is the safe, default case. Non-owning access is the exception that must be declared. This makes the uncommon case visible without burdening the common case. |
+| Anchor indirection for refs | Direct pointers to heap objects become invalid after a move. Anchors give refs a stable fixed-address target to follow, enabling O(1) object moves that require only one write to the anchor rather than a scan of all refs. |
+| Lazy anchor allocation (0-sentinel) | Objects that are never ref'd pay zero anchor overhead. The 8-byte back-pointer is initialised to 0 at construction — no allocation, no setup. An anchor is only created when the first `ref` to the object is made. |
+| Leaf-only ref registration | Registering a ref with only the leaf anchor (not all ancestors) keeps ref creation and destruction O(1). Ancestor teardown recurses naturally through the ownership tree, nulling refs at each level as children are destroyed. |
+| Free stack table indexed by size | Fragmentation is eliminated by matching freed slots exactly to future allocations of the same size. There are no unusable holes — a freed slot is immediately reusable by any allocation of the same declared size. |
+| Unified heap for all allocation types | Class instances, list data, and anchors share the same heap and the same free stacks. A freed object slot of any size is reusable by any other heap allocation of the same size. No over-allocation to one type at the expense of another. |
+| All sizes rounded to multiples of 8 | Ensures every allocation is naturally aligned for any field it could contain, and ensures freed slots are always reusable by any allocation of the same declared size. Maximum waste is 7 bytes per object. |
+| Inline list element storage | Eliminates pointer chasing entirely. Iterating elements is a pure linear scan through contiguous memory. Stable element addresses also make refs to elements valid across list mutations as long as no element is removed. |
+| Boolean packing in structs and stack frames | Booleans are typically 1 bit of information. Packing them costs a read-modify-write on writes (negligible on modern hardware) and eliminates byte-level padding between booleans. The programmer declares booleans normally; the compiler does the packing invisibly. |
+| Struct-downstream enforcement | Structs are copied by flat `memcpy` — there is no destructor, no anchor, no heap interaction. Allowing class or ref fields inside a struct would silently duplicate strong or weak references, violating single ownership and the anchor registration invariant. Making this a compile-time error is the only safe option. |
+| Destruction order: children before parent | The user destructor sees a fully live subtree (children are still alive when the destructor runs). After the destructor, cleanup proceeds strictly downward — no object is ever freed while a descendant still holds a live reference to it. |
+| Fixed total region size chosen at startup | The mmap reservation is fixed. This eliminates the need for a general-purpose allocator (no `malloc`, no sbrk) and makes all memory addresses predictable from process start. The cost is that the reservation size is a deployment concern. |
+
+---
+
+## 9. Language Comparisons
+
+### 9.1 Ownership and References
+
+| Feature | Zane | C++ `unique_ptr` | C++ `shared_ptr` | Rust |
+|---|---|---|---|---|
+| Single owner | ✅ | ✅ | ❌ | ✅ |
+| Refs nulled on destroy | ✅ | ❌ | via `weak_ptr` | ❌ |
+| Ownership by default | ✅ | ❌ | ❌ | ✅ |
+| Non-ownership opt-in (`ref`) | ✅ | ❌ | ❌ | ✅ (`&`) |
+| Inline element storage | Default | ❌ | ❌ | manual |
+| Ownership cycles possible | ❌ | ❌ | ✅ | ✅ |
+| Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
+| Ref counting | ❌ | ❌ | ✅ | via `Rc`/`Arc` |
+| Garbage collector | ❌ | ❌ | ❌ | ❌ |
+| Move safety (anchor) | ✅ | ❌ | ❌ | compile-time |
+| Refs as class fields | ✅ | ✅ | ✅ | ✅ |
+
+### 9.2 Memory Layout
+
+| Property | Zane | GC language (JVM, Go) | Rust | C/C++ |
+|---|---|---|---|---|
+| Fragmentation | None | Managed by GC | Allocator-dependent | Allocator-dependent |
+| GC pauses | None | Yes | None | None |
+| Allocation cost | O(1) always | Fast (bump alloc + GC) | Allocator-dependent | Allocator overhead |
+| Deallocation cost | O(1) always | Deferred to GC | Allocator-dependent | Coalescing overhead |
+| Random free order cost | Same as sequential | Deferred | Same as sequential | Higher (coalescing) |
+| Destruction timing | Deterministic | Non-deterministic | Deterministic | Manual / RAII |
+| Dangling pointer risk | None (refs via anchors) | None | None (compile-time) | Yes |
+| Move safety | O(1) anchor update | GC-managed | compile-time (Pin) | Manual |
+| Ref nulling on destroy | O(1) via anchor stack | N/A | N/A | N/A |
+| Lifetime annotations | None | None | Required | None |
+| Struct/class layout | Declaration order, auto bool-pack | JVM-managed | Repr-controlled | Manual / compiler |
+| Bool packing | Automatic | No | Manual (`bitflags`) | Manual (bitfields) |
+| Inline list storage | Default | No | Manual (`Vec<T>` inline) | Manual |
+| Per-type memory isolation | No (shared free stacks) | No | No | No |
