@@ -262,7 +262,7 @@ Use the `zane` tag for all Zane source examples:
 
 ````markdown
 ```zane
-hp Int(100)
+maxHp Int(100)
 hp = computeHp()
 ```
 ````
@@ -275,6 +275,8 @@ name Type(arg, ...)
 name = expr
 ```
 ````
+
+When showing declaration syntax, avoid examples that look like a symbol is being re-declared. If the symbol already exists, use `name = expr` rather than `name Type`, `name Type(...)`, or `name Type{...}`.
 
 Use the appropriate language tag (`c`, `go`, `rust`, `swift`, `python`, `zig`) for examples in Language Comparison sections.
 

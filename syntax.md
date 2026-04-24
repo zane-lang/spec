@@ -20,13 +20,15 @@ name Type(arg, ...)           // positional constructor
 name Type{key: val, ...}      // named constructor
 ```
 
+These creation forms are only legal when the symbol does not already exist.
+
 There is no hybrid declaration-plus-assignment form for arbitrary expressions:
 ```
 name Type = expr              // ILLEGAL
 name ref Type = expr          // ILLEGAL
 ```
 
-If the value comes from an arbitrary expression, declare first and assign second. Assigning or overwriting an existing symbol never repeats the type:
+If the value comes from an arbitrary expression, declare first and assign second. Once a symbol exists, only assignment is legal — do not repeat the type and do not use the constructor-declaration forms again:
 ```
 name Type
 name = expr
@@ -38,7 +40,7 @@ name = Type{...}      // named constructor
 
 ```zane
 hp Int                          // declared, no value yet
-hp Int(100)                     // declared and initialized
+maxHp Int(100)                  // declared and initialized
 score Int
 score = computeScore()          // declared first, then assigned
 hp = Int(50)                    // overwritten with constructor
@@ -47,6 +49,9 @@ hp = computeHp()                // overwritten with function result
 vec Vec2                        // declared
 vec = Vec2(Int(0), Int(15))     // constructor call
 vec = getRandomVec()            // function returning Vec2
+
+vec Vec2(Int(1), Int(2))        // ILLEGAL: constructor-declaration form is only for new symbols
+vec Vec2                        // ILLEGAL: type-only declaration is only for new symbols
 
 myTank ref Tank                 // non-owning reference, uninitialized
 myTank = tanks[0]               // assigned to an existing object
