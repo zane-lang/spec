@@ -6,16 +6,9 @@ This guide describes the conventions for writing and maintaining spec documents 
 
 ## 1. Document Inventory
 
-Each file in the repository root covers one topic area. No two files overlap in purpose.
+Each file in the repository root covers one topic area. Each topic has a single *canonical* home document.
 
-| File | Purpose |
-|---|---|
-| `memory_model.md` | Ownership, destruction, heap layout, anchor/ref system |
-| `oop.md` | Classes, structs, constructors, methods, overloading, packages |
-| `purity.md` | Effect model, `mut`, inferred purity levels, capabilities |
-| `error_handling.md` | Bifurcated return paths, `?` handler, `??`, `resolve`/`abort` |
-| `dependency_management.md` | Manifest, CLI, symbol versioning, package cache, build flow |
-| `syntax.md` | Surface syntax only — grammar forms and code patterns; no semantics |
+If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
 When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc) or *how to write it* (syntax.md)?
 
@@ -23,7 +16,7 @@ When in doubt about where a piece of content belongs, ask: does it describe *wha
 
 ## 2. Required Document Shape
 
-Every **topic spec document** must follow this top-to-bottom shape exactly:
+Every **topic spec document** must follow this top-to-bottom shape:
 
 ```
 # Zane <Name>
@@ -47,21 +40,23 @@ Bullet list of the 2–5 core ideas.
 
 ...
 
-## N. Design Rationale
-
-Rationale table (see §4).
-
 ---
 
-## N+1. Language Comparisons    ← only if comparisons apply to this document
+## N. Language Comparisons    ← only if comparisons apply to this document
 
 Comparison tables and per-language breakdowns (see §5).
 
 ---
 
+## N+1. Design Rationale
+
+Rationale table (see §4).
+
+---
+
 ## N+2. Summary    ← only in topic docs with many rules
 
-One-column summary table.
+Two-column summary table (see §3.5).
 ```
 
 ### 2.1 Title line
@@ -93,13 +88,22 @@ Immediately after the lead-in, before the first `---`, if cross-references are u
 
 Use `>` blockquote with bold `**See also:**`. Link text is the filename. Description is a short phrase. Separate entries with `. ` (period space).
 
-### 2.4 Section separator
+### 2.4 Section separators (`---`)
 
-Use a bare `---` line between every top-level section (`## N.`). Never put `---` between subsections (`### N.M`).
+Use a bare `---` line:
+- Once after the lead-in (and optional “See also” block), before `## 1. Overview`.
+- Between every top-level section (`## N.`).
+
+Never put `---` between subsections (`### N.M`).
 
 ### 2.5 Section numbering
 
-Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`, `### 1.2`, etc. Do not skip numbers. Do not restart numbering. In topic documents, the Overview is always `## 1.`.
+Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`, `### 1.2`, etc.
+
+Rules:
+- Do not skip numbers.
+- Do not restart numbering.
+- In topic documents, the Overview is always `## 1.`.
 
 ### 2.6 `syntax.md` is the one structural exception
 
@@ -114,7 +118,7 @@ Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`
 Every topic document begins with `## 1. Overview`. It contains:
 
 - A short paragraph explaining what the feature is.
-- A bullet list of 2–5 core ideas, each formatted as **`keyword`**. Brief explanation.
+- A bullet list of 2–5 core ideas, each formatted as **`keyword`** with a brief explanation.
 
 ```markdown
 ## 1. Overview
@@ -132,22 +136,28 @@ Numbered `## 2.` onward. Write prose that explains *what the language does* and 
 Do not include syntax grammar forms in topic docs. Those go in `syntax.md`. Cross-reference with:
 
 ```markdown
-> See [`syntax.md`](syntax.md) §3.2 for the declaration grammar.
+> **See also:** [`syntax.md`](syntax.md) §3.2 for the declaration grammar.
 ```
 
-### 3.3 Design Rationale section
+### 3.3 Language Comparisons section
 
-Required in every topic document. Always the penultimate top-level section (one before Summary if a Summary exists, or the last section if there is no Summary).
+Include this section only when Zane's design is meaningfully different from mainstream alternatives. See §5 for format.
+
+### 3.4 Design Rationale section
+
+Required in every topic document.
+
+Placement:
+- If the document has a Summary: Design Rationale is the top-level section immediately before Summary.
+- If the document has no Summary: Design Rationale is the last top-level section.
 
 See §4 for format.
 
-### 3.4 Language Comparisons section
-
-Required only in documents where Zane's design is meaningfully different from mainstream alternatives. Currently present in `memory_model.md` and `error_handling.md`. See §5 for format.
-
 ### 3.5 Summary section
 
-Required only in documents with many small rules that a reader might want to scan quickly. Format as a two-column table: left column is the concept name, right column is the rule in one sentence.
+Include this section only in documents with many small rules that a reader might want to scan quickly.
+
+Format as a two-column table: left column is the concept name, right column is the rule in one sentence.
 
 ```markdown
 ## N. Summary
@@ -170,8 +180,11 @@ Format as a two-column markdown table: `Decision` | `Rationale`.
 | Decision | Rationale |
 |---|---|
 | Single ownership by default | Eliminates ambiguity about which variable owns an object. ... |
+| ❌ Owner is overwritable | Would introduce null refs. ... |
 | `ref` as explicit opt-in | Ownership is the safe default. Non-owning access is the exception. ... |
 ```
+
+Discarded design decisions may be included after a `❌` if they help clarify the process and the reasoning behind the final design.
 
 Rules:
 - Each row is one atomic design decision.
@@ -205,7 +218,9 @@ One subsection per language, formatted as:
 2. A side-by-side code block — the other language first, then Zane.
 3. A two-column problem/solution table.
 
-```markdown
+Example format (note: this example is fenced with four backticks so the inner code fences render correctly):
+
+````markdown
 ### N.M Zane vs. Go (Multiple Return Values)
 
 Go signals errors through a second return value that the caller is free to ignore.
@@ -225,9 +240,11 @@ content = fs:readFile("file.txt") ? err { abort err }
 | Problem in Go | How Zane Solves It |
 |---|---|
 | The compiler does not enforce that you check the error return. | Every abortable call **must** have a `?` handler. |
-```
+````
 
-The table header is always `| Problem in <Language> | How Zane Solves It |` for problem/solution framing, or `| Difference | <Language> | Zane |` for neutral feature comparisons.
+The table header is always one of:
+- `| Problem in <Language> | How Zane Solves It |` (problem/solution framing), or
+- `| Difference | <Language> | Zane |` (neutral comparison framing).
 
 ---
 
@@ -253,7 +270,7 @@ The table header is always `| Problem in <Language> | How Zane Solves It |` for 
 In a topic doc, replace inline syntax descriptions with a cross-reference:
 
 ```markdown
-> See [`syntax.md`](syntax.md) §3.2 for the complete declaration grammar.
+> **See also:** [`syntax.md`](syntax.md) §3.2 for the complete declaration grammar.
 ```
 
 ### 6.4 Code block language tags
@@ -302,19 +319,25 @@ Bad: *The refs that are registered against the anchor of the object that was des
 
 ### 7.2 Emphasis
 
-Use `**bold**` for the first occurrence of a term being defined or for a key constraint.
-Use `` `backtick` `` for all code identifiers, keywords, operators, and type names.
+Use `**bold**` for the first occurrence of a term being defined or for a key constraint.  
+Use `` `backtick` `` for all code identifiers, keywords, operators, and type names.  
 Do not use *italics* for emphasis. Italics are reserved for the names of other documents or for semantic categories the user is not expected to write (e.g., *Total Pure*).
 
 ### 7.3 Cross-references
 
-Always link by filename, never by section title text. Use a `§` number after the link:
+Always link by filename, never by section title text. Include a `§` number after the link:
 
 ```markdown
 [`memory_model.md`](memory_model.md) §3
 ```
 
-At the end of a section that is closely connected to another document, add a `> See also:` line:
+When section numbers change, update inbound and outbound references in the same change.
+
+To reduce churn:
+- Prefer adding new subsections to the end of an existing section when possible.
+- Only renumber when necessary (but if you renumber, keep numbering contiguous).
+
+At the end of a section that is closely connected to another document, add a `> **See also:**` line:
 
 ```markdown
 > **See also:** [`purity.md`](purity.md) for the complete effect model.
@@ -325,18 +348,19 @@ At the end of a section that is closely connected to another document, add a `> 
 ## 8. Adding a New Spec Document
 
 1. Create `<topic>.md` in the repository root.
-2. Follow the required shape from §2 exactly.
+2. Follow the required shape from §2.
 3. Add a row to the table in `README.md`.
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
-5. If the document has design rationale, add a Design Rationale section (§4 format).
+5. Add a Design Rationale section (§4 format).
 6. If meaningful language comparisons exist, add a Language Comparisons section (§5 format).
 
 ---
 
 ## 9. Editing an Existing Document
 
-- Do not remove section numbers — renumber instead.
+- Do not remove section numbers — renumber instead (and update references).
 - Do not add `---` between subsections.
 - Do not add semantics to `syntax.md`.
-- Do not duplicate content between files — add it in the most specific place and cross-reference from others.
-- When adding a new top-level section, insert it before Design Rationale and Language Comparisons, adjusting their numbers accordingly.
+- Do not duplicate content between files — add it in the canonical place and cross-reference from others.
+- When adding a new top-level section, insert it before Language Comparisons / Design Rationale / Summary as required by §2, adjusting section numbers accordingly.
+```
