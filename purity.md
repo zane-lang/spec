@@ -123,7 +123,7 @@ Two `mut` calls on different receiver instances may run in parallel. Two `mut` c
 | Total Pure | ❌ | ❌ | ❌ | ✅ |
 | Pure | ❌ | ❌ | ❌ | ❌ |
 | Read-Only Impure | ✅ | ❌ | ❌ | ❌ |
-| Write Impure | ✅ or ❌ | ✅ possible | ⚠️ may | ❌ |
+| Write Impure | ⚠️ may | ✅ possible | ⚠️ may | ❌ |
 
 ---
 

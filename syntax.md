@@ -196,7 +196,7 @@ A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 Example:
 
 ```zane
-(this Node, Int) mut -> Void callback = (this Node, Int) mut {
+(this Box<Int>, Int) mut -> Void callback = (this Box<Int>, Int) mut {
     ...
 }
 ```

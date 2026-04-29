@@ -28,6 +28,7 @@ package Graph
 class Node {
     _id Int
     scale Float
+    label String
 }
 ```
 
@@ -62,10 +63,11 @@ Positional constructors declare ordinary parameters and return `init{ ... }`.
 ```zane
 package Graph
 
-Node(id Int, scale Float) {
+Node(id Int, scale Float, label String) {
     return init{
         _id: id,
-        scale: scale
+        scale: scale,
+        label: label
     }
 }
 ```
