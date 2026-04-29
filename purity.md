@@ -1,83 +1,139 @@
 # Zane Effect Model
 
-This document specifies Zane's effect model: how `mut` works, how effects are inferred, and how the compiler uses effect data for optimization and concurrency.
+This document specifies Zane's effect model: `mut`, inferred effect levels, capability access, structural inference, and the compiler guarantees built on top of those rules.
 
-> **See also:** [`oop.md`](oop.md) §4 for method declarations. [`concurrency_model.md`](concurrency_model.md) §2 for parallelism rules. [`syntax.md`](syntax.md) §3 for function syntax.
+> **See also:** [`oop.md`](oop.md) §4 for method declarations. [`concurrency_model.md`](concurrency_model.md) §2 and §4 for parallelism and conflict rules. [`error_handling.md`](error_handling.md) §5 for abortability.
 
 ---
 
 ## 1. Overview
 
-Zane uses a structural effect model with a single user-facing modifier: `mut`.
+Zane uses a structural effect model with a single user-facing effect modifier: `mut`.
 
-- **`No explicit purity tags`.** The compiler infers effect levels; users do not write `pure` or `readonly` annotations.
-- **`Method-local mutation`.** `mut` only grants write access to `this` and owned descendants.
-- **`Effect signatures`.** The compiler tracks read/write effects on reachable state and capabilities.
+- **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
+- **`Receiver-local mutation`.** `mut` only grants write access to `this` and its owned subtree.
+- **`Compiler-inferred effect levels`.** The compiler classifies code by what state it can read or write.
+- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored.
 
 ---
 
 ## 2. Core Definitions
 
 ### 2.1 Side effect
-A **side effect** is any observable interaction beyond returning a value, including:
+A side effect is any observable interaction beyond returning a value, including:
 
 - writing to `this` or owned descendants
-- reading or writing through a `ref`
-- reading or writing through capability objects (I/O, system state)
+- reading through a `ref`
+- interacting with capability objects
 - allocating or destroying heap objects
 
 ### 2.2 Capability
-A **capability** is an object whose methods represent access to external state (filesystem, network, console, clock, etc.). Capabilities must be passed explicitly.
+A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier. It appears on method declarations and grants write access to `this` and objects owned by `this`. A non-`mut` method may not write to `this`.
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to `this` and values owned by `this`.
+
+### 2.4 Parameters are not mutable by default
+Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver.
 
 ---
 
-## 3. Effect Inference
+## 3. Inferred Effect Levels
 
-### 3.1 Ownership reachability
-Effects propagate through ownership: if a method can reach an owned object, it can read it; if it is `mut`, it may write to it.
+### 3.1 Level 1 — Total Pure
+Total Pure functions depend only on explicit parameters and immutable package constants. They have no side effects and are guaranteed to terminate for all inputs.
 
-### 3.2 Ref access
-Reading through a `ref` is a **read** effect on the referenced object. Writing through a `ref` is illegal; mutation must go through `mut` on `this`.
+### 3.2 Level 2 — Pure
+Pure functions have no side effects but are not proven total. They are still reorderable and parallelizable at runtime, but they are not compile-time evaluated automatically.
 
-### 3.3 Call graph propagation
-A function’s effect signature is the union of the effects of the functions it calls, plus any local effects it performs.
+### 3.3 Level 3 — Read-Only Impure
+Read-Only Impure functions read mutable state through refs or read-only capabilities but do not write.
 
----
-
-## 4. Effect Levels
-
-### 4.1 Total Pure
-No side effects and guaranteed termination for all inputs. The compiler may evaluate Total Pure functions at compile time when inputs are known.
-
-### 4.2 Pure
-No side effects, but termination is not proven. Pure functions are parallelizable but not compile-time evaluated.
-
-### 4.3 Read-Only Impure
-Reads external state (via refs or capabilities) but performs no writes. Read-only effects are parallelizable with other reads.
-
-### 4.4 Write Impure
-Writes to state (via `mut` on `this` or via writable capabilities). Write effects are serialized against conflicting reads/writes.
+### 3.4 Level 4 — Write Impure
+Write Impure functions mutate `this`, mutate capability-backed state, or otherwise perform externally observable writes.
 
 ---
 
-## 5. Compiler Guarantees
+## 4. Effect Enforcement
 
-### 5.1 Compile-time evaluation
-Total Pure calls with statically known inputs are evaluated at compile time and removed from the runtime graph.
+### 4.1 Non-`mut` methods cannot write `this`
+A method without `mut` may not assign to fields of `this` or call `mut` methods on `this` or owned descendants.
 
-### 5.2 Concurrency safety
-Effect signatures are used to enforce the single-writer rule and to serialize conflicting capability accesses. See [`concurrency_model.md`](concurrency_model.md) §4.
+### 4.2 `mut` does not authorize arbitrary writes
+Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters.
+
+### 4.3 Ref access is read-only by default
+Reading through a `ref` is an effectful read. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
 
 ---
 
-## 6. Design Rationale
+## 5. Structural Inference
+
+### 5.1 Ownership graph drives receiver effects
+The compiler uses the ownership graph of `this` to determine which fields and descendants are writable in a `mut` method and readable in any method.
+
+### 5.2 Call-graph propagation
+If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
+
+### 5.3 Refs raise effect level
+A function that reads through a `ref` is not Total Pure, even if it performs no writes, because the observed value may vary over time.
+
+---
+
+## 6. Capability Wiring and Explicit State Flow
+
+### 6.1 Capabilities must be passed or stored explicitly
+There is no ambient global I/O capability. Code can affect external state only through capability objects it receives directly or via ownership.
+
+### 6.2 Prop drilling is intentional
+Passing capabilities through constructors and methods is part of the design. It keeps effects visible in object structure rather than hidden in ambient module state.
+
+---
+
+## 7. Constructors, Allocation, and Abortability
+
+### 7.1 Constructors may allocate but are not `mut`
+Constructors create values and therefore participate in allocation, but they do not mutate an existing receiver.
+
+### 7.2 Allocation and destruction are effectful implementation events
+Heap allocation and destruction are observable to the compiler's optimizer and scheduler even when the source code does not expose them as explicit method calls.
+
+### 7.3 Abortability is orthogonal
+A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
+
+---
+
+## 8. Concurrency Implications
+
+### 8.1 Total Pure and Pure work are natural parallelization candidates
+Because they do not write mutable state, they can be reordered and parallelized subject to profitability heuristics.
+
+### 8.2 Read-only effects compose with the single-writer rule
+Multiple concurrent reads are legal. A read that conflicts with a concurrent write must be serialized by the compiler/runtime.
+
+### 8.3 Receiver-local mutation composes with ownership
+Two `mut` calls on different receiver instances may run in parallel. Two `mut` calls on the same instance must be serialized.
+
+---
+
+## 9. Effect Level Matrix
+
+| Level | Reads refs/capabilities | Writes receiver-owned state | Writes external state | Compile-time evaluation |
+|---|---|---|---|---|
+| Total Pure | ❌ | ❌ | ❌ | ✅ |
+| Pure | ❌ | ❌ | ❌ | ❌ |
+| Read-Only Impure | ✅ | ❌ | ❌ | ❌ |
+| Write Impure | ✅ or ❌ | ✅ and/or external | ✅ possible | ❌ |
+
+---
+
+## 10. Design Rationale
 
 | Decision | Rationale |
 |---|---|
-| Single `mut` modifier | Keeps the surface language small while still expressing mutation intent. |
-| Inferred effect levels | Avoids annotation burden and keeps signatures stable. |
-| Separate Total Pure vs Pure | Allows safe compile-time evaluation without assuming termination. |
-| Capability-based effects | Makes external state access explicit and analyzable. |
+| Single user-facing effect modifier | Keeps the language small while still making mutation explicit. |
+| Structural inference instead of effect annotations | Lets the compiler derive power from ownership and call structure without burdening signatures. |
+| Distinguish Total Pure from Pure | Enables safe compile-time evaluation without assuming termination. |
+| Capabilities are explicit objects | Prevents hidden ambient effects and keeps dependency flow visible. |
+| `mut` is receiver-scoped | Aligns mutation permissions with ownership rather than arbitrary parameter aliasing. |
+| Refs count as effectful reads | A ref observes state whose value can change outside the current function. |

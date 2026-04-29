@@ -1,28 +1,23 @@
 # Zane Dependency Management
 
-This document specifies how Zane resolves, fetches, versions, and links external packages.
+This document specifies how Zane identifies, fetches, versions, caches, and links external packages.
 
 ---
 
 ## 1. Overview
 
-Zane treats package URLs as the canonical identity and pins dependencies to exact tags plus commit hashes.
+Zane treats a package's full source URL as its identity and pins every dependency to an exact tag plus commit hash.
 
-- **`URL identity`.** The full repository URL is the package identity.
-- **`Exact versioning`.** Dependencies are pinned to exact tags and verified against commit hashes.
-- **`Prebuilt objects`.** Libraries are distributed as precompiled object files committed to the repository.
-
----
-
-## 2. Package Identity
-
-Packages are identified by their full source URL (e.g., a GitHub or Codeberg repository). Short names are local aliases only.
+- **`URL identity`.** The repository URL is canonical; local aliases are only conveniences.
+- **`Exact versioning`.** Each dependency records a specific tag and the commit that tag must resolve to.
+- **`Prebuilt distribution`.** Libraries are distributed as source plus prebuilt object files committed to the repository.
+- **`Global caching`.** Fetched and versioned artifacts are shared across projects on the machine.
 
 ---
 
-## 3. Manifest (`zane.coda`)
+## 2. Manifest
 
-Every project has a `zane.coda` manifest containing a `deps` block:
+Every project has a `zane.coda` manifest with a `deps` block:
 
 ```
 deps [
@@ -31,33 +26,20 @@ deps [
 ]
 ```
 
-Each entry includes:
+Each row records:
 
-- **alias**: the local import key
-- **url**: the repository URL
-- **version**: an exact tag
-- **commit**: the tag’s commit hash at resolution time
+- **alias**: the local import key used in source code
+- **url**: the canonical package identity
+- **version**: the exact tag requested by the user
+- **commit**: the exact commit that tag must resolve to
 
-The manifest is updated only by CLI commands.
-
----
-
-## 4. CLI Commands
-
-```
-zane add <alias> <url> <tag>
-zane remove <alias>
-zane update <alias> <tag>
-zane update
-```
-
-`zane add` resolves the tag to a commit hash and writes both fields to the manifest. `zane update` re-resolves tags to their current commits.
+Users update the manifest through CLI commands rather than by manual editing.
 
 ---
 
-## 5. Repository Layout
+## 3. Repository Layout
 
-Library repositories include prebuilt object files alongside source:
+Library repositories include prebuilt objects in the git tree:
 
 ```
 math/
@@ -66,20 +48,117 @@ math/
   zane.coda
 ```
 
-The toolchain links against the prebuilt objects unless explicitly configured otherwise.
+The toolchain selects the correct prebuilt artifact for the current target triple.
 
 ---
 
-## 6. Tag and Commit Verification
+## 4. Tag and Commit Verification
 
-When fetching a dependency, the toolchain resolves the tag to a commit hash and compares it to the manifest. If the hashes differ, the fetch **MUST** abort with a security error.
+When the toolchain fetches a dependency, it resolves the recorded tag to a current commit hash and compares it to the manifest.
+
+- If the hashes match, fetch proceeds.
+- If the hashes differ, the fetch **MUST** abort with a security error.
+
+This detects moved tags and repository tampering.
 
 ---
 
-## 7. Design Rationale
+## 5. Fetching
+
+Fetching is a normal git fetch/clone against the package URL. Because binaries live in the repository tree, Zane does not depend on host-specific release-asset APIs.
+
+If the required target artifact is missing from `prebuilt/`, the fetch fails for that target.
+
+---
+
+## 6. Symbol Versioning
+
+### 6.1 Placeholder-prefix rewriting
+Libraries are compiled with their own exported symbols prefixed by a placeholder marker. During `zane add`, the toolchain rewrites those symbols to include the resolved version tag.
+
+Conceptually:
+
+```
+!math$vec  →  v1.0.1math$vec
+```
+
+### 6.2 Why rewrite symbols
+Versioned symbol names allow multiple versions of the same package to coexist in one program without collisions.
+
+### 6.3 Transitive dependencies keep their resolved versions
+When a library already depends on another versioned library, the referenced transitive symbols are left as-is. Only the fetched library's own placeholder-prefixed exports are rewritten.
+
+---
+
+## 7. Global Package Cache
+
+Fetched packages are stored in a global cache shared across projects:
+
+```
+~/.zane/packages/<mangled_url>/<mangled_version>/
+```
+
+The URL is mangled into a safe path. Re-adding the same package version in another project reuses the existing cached artifact rather than downloading and rewriting it again.
+
+---
+
+## 8. Import Syntax
+
+Source code imports by manifest alias:
+
+```zane
+import math
+```
+
+And uses package members through that alias:
+
+```zane
+math$vec(...)
+```
+
+Source code never writes version-prefixed package names directly. The compiler resolves aliases through `zane.coda`.
+
+---
+
+## 9. Transitive Dependencies
+
+When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
+
+---
+
+## 10. Multiple-Version Coexistence
+
+Two packages may depend on different versions of the same upstream library. Because symbol names are version-prefixed at fetch time, both versions may coexist in one final link as long as all references are internally consistent.
+
+---
+
+## 11. Platform Artifacts
+
+Packages may ship multiple prebuilt object files for different target triples. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
+
+---
+
+## 12. Build Flow
+
+At a high level, dependency resolution proceeds in this order:
+
+1. read local `zane.coda`
+2. resolve each tag to its current commit hash
+3. verify commit hashes against the manifest
+4. fetch missing packages
+5. rewrite placeholder-prefixed exports with the resolved version
+6. install into the global cache
+7. link the locally compiled program against cached dependency artifacts
+
+---
+
+## 13. Design Rationale
 
 | Decision | Rationale |
 |---|---|
-| URL as package identity | Avoids global registry naming collisions. |
-| Exact tags + commit hashes | Guarantees reproducible builds and detects tag rewrites. |
-| Prebuilt objects in repo | Makes dependency use fast and deterministic. |
+| URL as package identity | Avoids global registry naming conflicts and matches how code is actually fetched. |
+| Exact tag plus commit hash | Keeps builds reproducible and makes moved tags detectable. |
+| Prebuilt objects in the repository | Keeps fetching host-agnostic and lets source and artifacts share one immutable commit identity. |
+| Pull-time symbol versioning | Enables multiple versions to coexist without requiring source-level version names. |
+| Global package cache | Avoids repeated downloads and rewrite work across projects. |
+| Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |

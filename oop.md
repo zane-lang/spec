@@ -1,41 +1,38 @@
 # Zane Object-Oriented Model
 
-This document specifies Zane's object model: classes, structs, constructors, methods, packages, and method-call resolution.
+This document specifies Zane's object model: classes, structs, constructors, methods, free functions, packages, and function values.
 
-> **See also:** [`memory_model.md`](memory_model.md) §2 for ownership rules. [`purity.md`](purity.md) §2 for `mut`. [`syntax.md`](syntax.md) §1 for declarations.
+> **See also:** [`memory_model.md`](memory_model.md) §2 for ownership rules. [`purity.md`](purity.md) §2 for `mut`. [`syntax.md`](syntax.md) §1 and §3 for declaration grammar.
 
 ---
 
 ## 1. Overview
 
-Zane's object model is built from a small set of orthogonal constructs.
+Zane keeps data layout, construction, and behavior as separate but composable concepts.
 
-- **`Classes and structs`.** Classes are heap-allocated and owned; structs are value types stored inline.
-- **`Free-function methods`.** Methods are package-scope functions whose first parameter is `this`.
-- **`Explicit mutation`.** Mutating methods are marked `mut` and called with `!`.
-- **`Package namespacing`.** Members are namespaced as `Package$member`, with controlled shorthand for methods.
+- **`Fields-only type bodies`.** Class and struct bodies declare storage only.
+- **`Package-scope behavior`.** Constructors, methods, and free functions are declared at package scope.
+- **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
+- **`Methods as functions`.** A method is a function whose first parameter is `this`, so methods and function values share one model.
 
 ---
 
-## 2. Types and Packages
+## 2. Classes and Structs
 
-### 2.1 Packages are explicit namespaces
-Every declaration belongs to a package. Package members are referenced as `Package$member` unless a shorter, unqualified method form is allowed (see §5).
-
-### 2.2 Classes declare fields only
-Class bodies contain only field declarations. They do not contain methods or constructors.
+### 2.1 Classes declare heap-allocated storage
+A `class` body contains only field declarations. Class instances are heap-allocated and follow the ownership rules in [`memory_model.md`](memory_model.md) §2.
 
 ```zane
 package Graph
 
 class Node {
     _id Int
-    label String
+    scale Float
 }
 ```
 
-### 2.3 Structs are value types
-Structs are stored inline and may not contain class fields or `ref` fields.
+### 2.2 Structs are inline value types
+A `struct` body also contains only field declarations, but structs are stored inline. Structs **MUST NOT** contain class fields or `ref` fields.
 
 ```zane
 package Math
@@ -46,110 +43,294 @@ struct Vec2 {
 }
 ```
 
-### 2.4 Field visibility by naming convention
-Fields beginning with `_` are private to the defining package’s methods. All other fields are public.
+### 2.3 Field visibility is name-based
+Fields whose names begin with `_` are private to methods in the defining package. All other fields are public.
+
+### 2.4 Type bodies contain no behavior
+Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
 ---
 
 ## 3. Constructors and Initialization
 
 ### 3.1 Constructors are package-scope declarations
-A constructor is a package-scope declaration named after the type. It has no `this` parameter.
+A constructor is a package-scope declaration named after the type. It has no `this` parameter because no object exists yet.
 
-### 3.2 `init{ }` injects fields directly
-Constructors return `init{ }` to build an instance. Every field must be provided.
+### 3.2 Positional constructors
+Positional constructors declare ordinary parameters and return `init{ ... }`.
 
 ```zane
 package Graph
 
-Node(id Int, label String) {
-    return init{ _id: id, label: label }
+Node(id Int, scale Float) {
+    return init{
+        _id: id,
+        scale: scale
+    }
 }
 ```
 
-### 3.3 Typed initialization from expressions
-A declaration may initialize from any expression value without using constructor syntax:
+Positional constructors **MAY** be overloaded by arity or parameter types.
+
+### 3.3 Field constructors
+A constructor may also declare fields directly in its parameter header:
 
 ```zane
-x Int = random()
+package Math
+
+struct Vector {
+    x Int
+    y Int
+}
+
+Vector{x Int, y Int} {
+    return init{x, y}
+}
 ```
+
+This form is the canonical constructor syntax when the constructor parameters map directly to fields.
+
+### 3.4 Implicit field access in constructor calls
+Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
+
+```zane
+x Int(3)
+y Int(2)
+vec Vector{x, y}
+```
+
+`Vector{x, y}` is shorthand for `Vector{x: x, y: y}`.
+
+### 3.5 Implicit field access in `init{ }`
+Inside `init{ }`, a bare field name is shorthand for `fieldName: fieldName` when a symbol of that name is in scope:
+
+```zane
+Vector{x Int, y Int} {
+    return init{x, y}
+}
+```
+
+This is shorthand for:
+
+```zane
+Vector{x Int, y Int} {
+    return init{
+        x: x,
+        y: y
+    }
+}
+```
+
+### 3.6 Constructor completeness rules
+`init{ }` is valid only as a constructor return value. Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
+
+### 3.7 Constructors do not use `mut`
+Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ---
 
-## 4. Methods and Calls
+## 4. Methods
 
-### 4.1 Methods are free functions with `this`
-A method is a package-scope function whose first parameter is named `this`. `this` **MUST** be the first parameter.
-
-```zane
-Void inspect(this Node) { ... }
-Void increment(this Node) mut { ... }
-```
-
-### 4.2 Call markers `:` and `!`
-Non-mutating methods are called with `:`. Mutating methods are called with `!` and must be declared `mut`.
+### 4.1 Methods are functions whose first parameter is `this`
+A method is any package-scope function whose first parameter is named `this`. `this` **MUST** be the first parameter.
 
 ```zane
-node:inspect()
-node!increment()
+Int scaledId(this Node, factor Int) {
+    return this._id * factor
+}
 ```
 
-Calling a `mut` method with `:` is illegal.
+### 4.2 `this` grants private-field access
+Within the defining package, `this` grants access to `_`-prefixed fields. The same parameter type written with another name is a free-function parameter and does not grant private-field access.
 
-### 4.3 Desugaring
+### 4.3 Read-only methods are the default
+A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write to `this` or owned descendants.
+
+### 4.4 Mutating methods use `mut`
+A method marked `mut` may write to `this` and objects owned by `this`.
+
+```zane
+Void setScale(this Node, scale Float) mut {
+    this.scale = scale
+}
+```
+
+### 4.5 Call markers are part of the surface syntax
+Read-only methods are called with `:`. Mutating methods are called with `!`.
+
+```zane
+node:scaledId(Int(2))
+node!setScale(Float(3))
+```
+
+Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
+
+### 4.6 Method desugaring
 
 ```
-r:m(a, b)     → ResolvedPkg$m(r, a, b)
-r:Pkg$m(a)    → Pkg$m(r, a)
+receiver:method(arg)        → ResolvedPkg$method(receiver, arg)
+receiver!method(arg)        → ResolvedPkg$method(receiver, arg)
+receiver:Pkg$method(arg)    → Pkg$method(receiver, arg)
+receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 ```
 
-The explicit form `Pkg$m(r, ...)` is always legal and unambiguous.
+### 4.7 Parameters are read-only
+Explicit parameters other than `this` are read-only. Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
 
 ---
 
-## 5. Method Name Resolution
+## 5. Free Functions
 
-### 5.1 Unqualified lookup
-For `receiver:methodName(...)`, the compiler resolves in this order:
+### 5.1 Free functions are package-scope functions without `this`
+A free function is any package-scope function whose first parameter is not named `this`.
 
-1. The receiver type’s **home package**
-2. The **current package**
+```zane
+Float getScale(node Node) {
+    return node.scale
+}
+```
 
-If no candidate matches, it is a compile error. If multiple candidates remain after overload resolution, it is a compile error and the call must be qualified.
+### 5.2 Free functions cannot access private fields
+Free functions may access only public fields unless they call a method that has the necessary package-local privileges.
 
-### 5.2 Qualified calls for extensions
-Extension methods from other packages must be called with explicit qualification:
+### 5.3 Free functions use ordinary call syntax
+Free functions are called as `name(args...)` or `Package$name(args...)`.
+
+---
+
+## 6. Overloading Rules
+
+### 6.1 Overload identity is parameter types only
+Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
+
+### 6.2 Return type does not distinguish overloads
+Declarations that differ only by return type are a compile-time error.
+
+### 6.3 `mut` does not distinguish overloads
+Declarations that differ only by `mut` are a compile-time error.
+
+### 6.4 Valid overloads differ by arity or parameter type
+Legal overload sets must differ in the number of parameters or in at least one parameter type.
+
+---
+
+## 7. Function Values and Lambdas
+
+### 7.1 Package-scope functions are referenced as `Package$name`
+Methods and free functions are both referenced as values using the package namespace:
+
+```zane
+Graph$scaledId
+Graph$setScale
+Graph$getScale
+```
+
+When referenced as a value, a method's `this` parameter remains explicit in the function type.
+
+### 7.2 Lambdas are explicitly typed
+Lambda declarations use an explicit function type and a lambda literal with a matching parameter list:
+
+```zane
+(this Node, Int) mut -> Void callback = (this Node, Int) mut {
+    ...
+}
+```
+
+The lambda literal repeats the parameter list and `mut` marker. A non-`mut` lambda omits `mut` in both places.
+
+### 7.3 Lambdas do not capture
+Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency_model.md`](concurrency_model.md) §5.2.
+
+### 7.4 No bound method references
+Zane does not provide bound method references as a separate feature. If code needs a pre-supplied receiver, it uses a lambda.
+
+---
+
+## 8. Method Name Resolution and Extension Methods
+
+### 8.1 Unqualified method lookup
+For `receiver:methodName(...)` or `receiver!methodName(...)`, the compiler resolves candidates in this order:
+
+1. the receiver type's home package
+2. the current package
+
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier.
+
+### 8.2 Qualified method calls
+Cross-package extension methods are written explicitly:
 
 ```zane
 vec:Physics$kineticEnergy()
 ```
 
+### 8.3 Extension methods may be declared in any package
+Because methods are package-scope functions, any package may define methods on imported types. Extension methods do not gain access to the target type's private fields unless they are declared in the defining package.
+
 ---
 
-## 6. Pipe Operator
+## 9. Packages and the Instanceful Package Pattern
 
-`|` pipes the expression on the right into the **last argument** of the call on the left.
+### 9.1 Packages are namespaces
+`package X` introduces a namespace. Members are referenced as `X$member`.
+
+### 9.2 A package may define a same-named class
+A package may define a class with the same name as the package, allowing both stateless namespace members and stateful instances:
 
 ```zane
-startGame(state)|{
-    ...
+package Math
+
+pi Float(3.141592)
+
+Float radsToDeg(x Float) {
+    return x / pi * Float(180)
+}
+
+class Math {
+    logger Logger
 }
 ```
 
-`spawn` may apply to a piped call because the result is still a call expression:
-
-```zane
-spawn startGame(state)|{ ... }
-```
+### 9.3 Package scope contains no hidden mutable ambient state
+Packages may expose immutable constants and package-scope functions. Time-varying state must live in objects and be passed or stored explicitly.
 
 ---
 
-## 7. Design Rationale
+## 10. Connection to the Effect Model
+
+Read-only methods and free functions are effect-free with respect to their receiver unless they touch refs or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+
+> **See also:** [`purity.md`](purity.md) for the complete effect model and concurrency implications.
+
+---
+
+## 11. Design Rationale
 
 | Decision | Rationale |
 |---|---|
-| Classes contain fields only | Keeps data layout explicit and avoids mixing behavior with storage. |
-| Methods are free functions | Preserves explicit namespacing while still enabling `:` call syntax. |
-| `:` and `!` call markers | Makes mutation explicit at the call site without ref qualifiers. |
-| Home+current package lookup | Keeps method calls locally reasonable and independent of imports. |
-| Pipe to last argument | Supports block/lambda chaining without new syntax forms. |
+| Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
+| Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
+| Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
+| Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
+| `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
+| Parameter types alone define overloads | Keeps overload resolution simple and predictable. |
+| Package-qualified function values | Uses one naming rule for methods and free functions. |
+| No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
+| Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
+| No hidden mutable package state | Prevents ambient state from undermining ownership and effect reasoning. |
+
+---
+
+## 12. Summary
+
+| Concept | Rule |
+|---|---|
+| Class body | Fields only — no methods or constructors inside the body |
+| Struct | Inline value type; cannot contain class or `ref` fields |
+| Constructor | Package-scope declaration named after the type; no `this` |
+| Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
+| Method | Package-scope function whose first parameter is `this` |
+| `mut` method | Called with `!`; may mutate `this` and its owned subtree |
+| Free function | Package-scope function without `this`; no private-field privilege |
+| Overload identity | Parameter types only; not names, return type, or `mut` |
+| Lambda | Explicitly typed function value; no capture |
+| Unqualified method lookup | Searches home package, then current package |

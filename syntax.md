@@ -1,26 +1,30 @@
 # Zane Syntax Reference
 
-This document is the canonical reference for Zane's surface syntax. Topic documents describe semantics; this document describes form only.
+This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only.
 
-> **See also:** [`oop.md`](oop.md) for object declarations. [`error_handling.md`](error_handling.md) for abort semantics. [`operators.md`](operators.md) for precedence rules.
+> **See also:** [`oop.md`](oop.md) for constructors and methods. [`error_handling.md`](error_handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
 
 ---
 
 ## 1. Declarations
 
-### 1.1 Symbols (variables)
+### 1.1 Symbols
+
 New symbol declarations:
 
 ```
 name Type
 name ref Type
 name Type(args, ...)
-name Type{key: val, ...}
+name Type{field: expr, ...}
+name Type{fieldA, fieldB, ...}
 name Type = expr
 name ref Type = expr
 ```
 
-Once a symbol exists, assignment uses:
+`Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+
+Once a symbol already exists, reassignment uses only:
 
 ```
 name = expr
@@ -66,16 +70,16 @@ import aliasKey
 
 ```
 Package$Type
-Type         // within the same package
+Type
 ```
 
-### 2.3 Reference types (storage only)
+### 2.3 Reference types
 
 ```
 ref Type
 ```
 
-`ref` appears only in storage positions (variables, fields, container element types).
+`ref` is valid only in storage positions.
 
 ### 2.4 Type parameters
 
@@ -83,7 +87,7 @@ ref Type
 struct Box<T> { ... }
 ```
 
-### 2.5 Const parameters and identifiers
+### 2.5 Const-parameterized types
 
 Definition-site binders:
 
@@ -91,13 +95,13 @@ Definition-site binders:
 struct Matrix[rows]X[cols]<T> { ... }
 ```
 
-Use-site forms:
+Use-site form:
 
 ```
 Matrix10X20<Float>
 ```
 
-Digits are illegal in identifiers unless they represent const arguments in a const-parameterized type name.
+Digits are illegal in identifiers except where they supply const arguments to a const-parameterized type name.
 
 ### 2.6 Array primitive
 
@@ -116,39 +120,96 @@ Array[size]<T>
 (this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType
 ```
 
-`mut` is only valid when the first parameter is `this`.
+`mut` is legal only when the first parameter is `this`.
 
 ---
 
-## 3. Functions and Methods
+## 3. Functions, Methods, Constructors, and Lambdas
 
-### 3.1 Free function declarations
-
-```
-ReturnType name(param Type, ...)
-ReturnType ? AbortType name(param Type, ...)
-```
-
-### 3.2 Method declarations
+### 3.1 Free functions
 
 ```
-ReturnType name(this Type, param Type, ...)
-ReturnType ? AbortType name(this Type, param Type, ...)
-ReturnType name(this Type, param Type, ...) mut
-ReturnType ? AbortType name(this Type, param Type, ...) mut
+ReturnType name(param Type, ...) { body }
+ReturnType ? AbortType name(param Type, ...) { body }
 ```
 
-### 3.3 `mut` placement
-`mut` appears after the parameter list and before the return arrow in function types.
+### 3.2 Methods
+
+```
+ReturnType name(this ReceiverType, param Type, ...) { body }
+ReturnType name(this ReceiverType, param Type, ...) mut { body }
+ReturnType ? AbortType name(this ReceiverType, param Type, ...) { body }
+ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
+```
+
+### 3.3 Positional constructors
+
+```
+TypeName(param Type, ...) {
+    return init{ field: expr, ... }
+}
+```
+
+### 3.4 Field constructors
+
+```
+TypeName{
+    fieldA Type,
+    fieldB Type,
+    ...
+} {
+    return init{fieldA, fieldB}
+}
+```
+
+Field-constructor call sites may use explicit or implicit field names:
+
+```
+name TypeName{fieldA: expr, fieldB: expr}
+name TypeName{fieldA, fieldB}
+```
+
+### 3.5 `init{ }`
+
+```
+return init{
+    field: expr,
+    otherField,
+    ...
+}
+```
+
+A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
+
+### 3.6 Lambda declarations
+
+```
+(ParamType, ...) -> ReturnType name = (paramName Type, ...) {
+    ...
+}
+
+(this ReceiverType, ParamType, ...) mut -> ReturnType name = (this ReceiverType, paramName Type, ...) mut {
+    ...
+}
+```
+
+Example:
+
+```zane
+(this Node, Int) mut -> Void callback = (this Node, Int) mut {
+    ...
+}
+```
 
 ---
 
-## 4. Calls and Concurrency
+## 4. Calls and Function Values
 
-### 4.1 Function calls
+### 4.1 Free-function calls
 
 ```
-Package$fn(args...)
+name(args...)
+Package$name(args...)
 ```
 
 ### 4.2 Method calls
@@ -160,55 +221,85 @@ receiver:Package$method(args...)
 receiver!Package$method(args...)
 ```
 
-### 4.3 Pipe to last argument
+### 4.3 Function references
+
+```
+Package$functionName
+```
+
+### 4.4 Pipe syntax
 
 ```
 callExpr|{ block }
 ```
 
-### 4.4 `spawn`
+### 4.5 `spawn`
 
 ```
 spawn Package$fn(args...)
 name Type = spawn Package$fn(args...)
 ```
 
-`spawn` is legal only on function call expressions.
+`spawn` is legal only on function-call expressions.
 
-### 4.5 No indexing operator
-`x[i]` is not valid syntax. Element access uses explicit methods (e.g., `array:at(i)`).
-
----
-
-## 5. Operators and Keywords
-
-### 5.1 Operators
-Tokens: `~`, `*`, `/`, `+`, `-`, `==`, `~=`
-
-### 5.2 Boolean keywords
-`and`, `or`
+### 4.6 No indexing operator
+`x[i]` is not valid syntax. Element access is spelled with methods such as `array:at(i)`.
 
 ---
 
-## 6. Error Handling Forms
+## 5. Error Handling
 
-### 6.1 Abortable returns
+### 5.1 Abortable return types
 
 ```
 ReturnType ? AbortType
 ```
 
-### 6.2 `?` handler block
+### 5.2 `?` handlers
 
 ```
-callExpr ? err { ... }
-callExpr ? { ... }       // when AbortType is Void
+expr ? binder { ... }
+expr ? { ... }
 ```
 
-### 6.3 `??` shorthand
+Every path inside the handler must end with one of:
 
 ```
-callExpr ?? fallbackExpr
+resolve expr
+resolve
+return expr
+abort expr
+abort
+```
+
+### 5.3 `??` shorthand
+
+```
+expr ?? fallbackExpr
 ```
 
 ---
+
+## 6. Operators and Keywords
+
+### 6.1 Operators
+`~`, `*`, `/`, `+`, `-`, `==`, `~=`
+
+### 6.2 Boolean keywords
+`and`, `or`
+
+---
+
+## 7. Packages
+
+### 7.1 Package member syntax
+
+```
+Package$member
+```
+
+### 7.2 Package declarations
+
+```
+package Name
+```
