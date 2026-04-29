@@ -74,7 +74,7 @@ If the required target artifact is missing from `prebuilt/`, the fetch fails for
 ## 6. Symbol Versioning
 
 ### 6.1 Placeholder-prefix rewriting
-Libraries are compiled with their own exported symbols prefixed by a placeholder marker. During `zane add`, the toolchain rewrites those symbols to include the resolved version tag.
+Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols to include the resolved version tag.
 
 Conceptually:
 

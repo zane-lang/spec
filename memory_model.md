@@ -165,7 +165,7 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Ref counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Refs remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Overwrite destroys ownership source | impossible | possible | possible | ⚠️ prevented by borrow checker |
+| Overwrite destroys ownership source | prohibited by language rules | possible | possible | ⚠️ prevented by borrow checker |
 
 ### 7.2 Memory behavior
 

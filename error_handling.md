@@ -41,6 +41,16 @@ Abortability and mutation are independent. A method may be:
 ### 2.4 Abort type is structural, not behavioral
 Changing a function's abort type changes its function type. Abort types cannot be silently discarded when functions are passed around as values.
 
+```zane
+Int parse(String text) ? ParseError { ... }
+
+parserOk (String) -> Int ? ParseError
+parserOk = parse // ok
+
+parserBad (String) -> Int
+parserBad = parse // ILLEGAL: abort type would be dropped
+```
+
 ---
 
 ## 3. Call-Site Handling

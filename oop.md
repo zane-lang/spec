@@ -35,6 +35,8 @@ class Node {
 ### 2.2 Structs are inline value types
 A `struct` body also contains only field declarations, but structs are stored inline. Structs **MUST NOT** contain class fields or `ref` fields.
 
+This restriction exists because structs use inline value semantics, while class ownership and ref tracking require runtime identity and anchor bookkeeping.
+
 ```zane
 package Math
 
@@ -240,7 +242,7 @@ Lambda declarations use an explicit function type and a lambda literal with a ma
 The lambda literal repeats the parameter list and `mut` marker. A non-`mut` lambda omits `mut` in both places.
 
 ### 7.3 Lambdas do not capture
-Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency_model.md`](concurrency_model.md) §5.2.
+Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency_model.md`](concurrency_model.md) §5.2 ("Lambdas do not capture").
 
 ### 7.4 No bound method references
 Zane does not provide bound method references as a separate feature. If code needs a pre-supplied receiver, it uses a lambda.

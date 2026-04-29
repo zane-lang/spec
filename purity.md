@@ -40,6 +40,8 @@ Parameters other than `this` are read-only. Mutation of another object must be e
 
 ## 3. Inferred Effect Levels
 
+The compiler assigns a function to the strongest effect level required by any operation in its body or any function it calls transitively. Reads through refs/capabilities raise a function out of the pure levels; writes to receiver-owned or external state raise it to Write Impure.
+
 ### 3.1 Level 1 — Total Pure
 Total Pure functions depend only on explicit parameters and immutable package constants. They have no side effects and are guaranteed to terminate for all inputs.
 
