@@ -164,7 +164,7 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 | Non-owning refs as explicit opt-in | ✅ | ⚠️ Raw pointers | ⚠️ `weak_ptr` | ✅ |
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Ref counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
-| Refs follow moves automatically | ✅ | ❌ | ❌ | compile-time only |
+| Refs remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
 | Overwrite destroys ownership source | impossible | possible | possible | possible via reassignment patterns |
 
 ### 7.2 Memory behavior

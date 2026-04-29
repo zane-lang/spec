@@ -118,12 +118,12 @@ Two `mut` calls on different receiver instances may run in parallel. Two `mut` c
 
 ## 9. Effect Level Matrix
 
-| Level | Reads refs/capabilities | Writes receiver-owned state | Writes external state | Compile-time evaluation |
+| Level | Reads refs/capabilities | Writes receiver-owned state | May write external state | Compile-time evaluation |
 |---|---|---|---|---|
 | Total Pure | ❌ | ❌ | ❌ | ✅ |
 | Pure | ❌ | ❌ | ❌ | ❌ |
 | Read-Only Impure | ✅ | ❌ | ❌ | ❌ |
-| Write Impure | ✅ or ❌ | ✅ and/or external | ✅ possible | ❌ |
+| Write Impure | ✅ or ❌ | ✅ possible | ⚠️ may | ❌ |
 
 ---
 

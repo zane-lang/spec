@@ -203,13 +203,10 @@ Free functions are called as `name(args...)` or `Package$name(args...)`.
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-### 6.2 Return type does not distinguish overloads
-Declarations that differ only by return type are a compile-time error.
+### 6.2 Consequences of parameter-type-only identity
+Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
 
-### 6.3 `mut` does not distinguish overloads
-Declarations that differ only by `mut` are a compile-time error.
-
-### 6.4 Valid overloads differ by arity or parameter type
+### 6.3 Valid overloads differ by arity or parameter type
 Legal overload sets must differ in the number of parameters or in at least one parameter type.
 
 ---
