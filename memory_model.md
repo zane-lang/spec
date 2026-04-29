@@ -42,7 +42,7 @@ A `ref` symbol or `ref` field **MAY** be reassigned to point at a different obje
 
 - local variable declarations
 - class fields
-- container element types (e.g., `List<ref Node>`)
+- container element types (e.g., `Array[4]<ref Node>`)
 
 `ref` **MUST NOT** appear in function or method signatures. Callers pass a value and the callee decides whether a move occurs (see §3.3).
 
@@ -50,8 +50,8 @@ A `ref` symbol or `ref` field **MAY** be reassigned to point at a different obje
 Container and field types own their elements by default. The `ref` modifier opts out of ownership:
 
 ```zane
-List<Node>       // owns Nodes
-List<ref Node>   // stores non-owning refs
+Array[4]<Node>       // owns Nodes
+Array[4]<ref Node>   // stores non-owning refs
 
 class World {
     player Player

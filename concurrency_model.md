@@ -67,6 +67,9 @@ A stalling function called without `spawn` blocks the caller. A stalling functio
 ### 3.4 Ordering is explicit
 The compiler does not reorder `spawn` calls. The order in the source is the order in which spawns are started, and any blocking read happens exactly where written.
 
+### 3.5 No serial-equivalence guarantee
+`spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
+
 ---
 
 ## 4. Safety Rules Under Concurrency

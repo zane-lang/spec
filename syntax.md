@@ -133,6 +133,7 @@ ReturnType ? AbortType name(param Type, ...)
 
 ```
 ReturnType name(this Type, param Type, ...)
+ReturnType ? AbortType name(this Type, param Type, ...)
 ReturnType name(this Type, param Type, ...) mut
 ReturnType ? AbortType name(this Type, param Type, ...) mut
 ```
@@ -175,7 +176,7 @@ name Type = spawn Package$fn(args...)
 `spawn` is legal only on function call expressions.
 
 ### 4.5 No indexing operator
-`x[i]` is not valid syntax. Element access uses explicit methods (e.g., `list:at(i)`).
+`x[i]` is not valid syntax. Element access uses explicit methods (e.g., `array:at(i)`).
 
 ---
 
