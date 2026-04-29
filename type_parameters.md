@@ -11,6 +11,7 @@ This document specifies Zane's type-parameter system, including const-parameteri
 Zane supports both type parameters and const-int parameters, with distinct syntax and roles.
 
 - **`Two parameter kinds`.** Type parameters use `<T>`; const parameters use `[name]`.
+- **`Binder vs reference contexts`.** The same `[name]` syntax binds a const parameter in declaration positions and refers to it in type bodies.
 - **`Const params are literal`.** Use-site const parameters are always integer literals baked into identifiers.
 - **`Array is primitive`.** `Array[size]<T>` is the single compiler-defined fixed-size container.
 
@@ -49,6 +50,15 @@ struct Matrix[rows]X[cols]<T> {
 
 Within the type body, the binder name refers to the compile-time integer.
 
+### 3.1 The role of `[...]` depends on context
+
+| Context | Example | Role |
+|---|---|---|
+| Type definition pattern | `struct Matrix[rows]X[cols]<T>` | binder |
+| Method `this` type | `this Matrix[rows]X[cols]<T>` | binder |
+| Type body / referenced type | `Array[rows]<...>` | reference to a bound const parameter |
+| User-facing type use | `Matrix10X20<Float>` | concrete literal baked into the type name |
+
 ---
 
 ## 4. Method Signatures and `this` Binders
@@ -60,6 +70,8 @@ Array[cols]<T> rowAt(this Matrix[rows]X[cols]<T>, i Int) { ... }
 ```
 
 `rows` and `cols` in the method body refer to the binders introduced by `this`.
+
+This keeps const-parameter binding uniform: method signatures bind symbolic const parameters in the same way that type declarations do.
 
 ---
 
@@ -95,6 +107,8 @@ Matrix[n]X[m]<Float> // ILLEGAL
 ### 6.2 No arithmetic in type arguments
 Arithmetic on const parameters in type arguments is **not specified**. Expressions such as `Array[rows*cols]<T>` are currently illegal.
 
+This is deferred because the language does not yet define how type-level arithmetic expressions should be compared for equality. Without that rule, expressions such as `N+M` and `M+N` would have ambiguous equivalence status.
+
 ---
 
 ## 7. The `Array[size]<T>` Primitive
@@ -122,7 +136,10 @@ The following are intentionally not specified in this version of the spec:
 
 | Decision | Rationale |
 |---|---|
+| `[name]` as the const-parameter syntax | Keeps numbers visually attached to the type identity without making them ordinary runtime arguments. |
 | Separate `<T>` and `[n]` | Keeps kinds explicit and avoids dependent-type complexity. |
 | Literal const arguments | Ensures all concrete types are known at compile time. |
+| Method-site `this` binders reuse `[name]` | Keeps const-parameter binding uniform between type declarations and method declarations. |
+| Arithmetic deferred | Avoids committing prematurely to a type-level equality solver for const expressions. |
 | Digits restricted to const params | Makes identifiers context-free and unambiguous. |
 | `Array` as the only primitive | Minimizes compiler surface area; other types are definable in Zane. |

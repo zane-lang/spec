@@ -14,6 +14,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 - **`Explicit concurrency`.** `spawn` starts a concurrent function call; ordering is the programmer’s responsibility.
 - **`Water-tower lifetimes`.** A scope’s owned objects live until all spawned work in that scope completes.
 - **`Single-writer rule`.** At most one concurrent `mut` accessor may exist for any object.
+- **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
 
 ---
 
@@ -30,7 +31,15 @@ After compile-time reduction, the compiler analyzes the remaining work for indep
 
 This parallelism is **unobservable**: it must not change output, only timing.
 
-### 2.3 Thread configuration
+### 2.3 Total Pure and Pure are distinct
+The compiler distinguishes:
+
+- **Total Pure**: no side effects and guaranteed termination, so compile-time evaluation is legal when inputs are known
+- **Pure**: no side effects, but termination is not proven, so the call remains runtime work even though it is still parallelizable
+
+This distinction matters for compile-time reduction, not for the legality of runtime parallelism.
+
+### 2.4 Thread configuration
 The runtime uses a work-stealing thread pool configured by `@threads`:
 
 ```zane
@@ -64,10 +73,13 @@ print(result) // blocks until listen returns
 ### 3.3 Stalling functions are parked
 A stalling function called without `spawn` blocks the caller. A stalling function called with `spawn` is parked by the runtime so it does not consume a worker thread while waiting.
 
-### 3.4 Ordering is explicit
+### 3.4 Stalling without `spawn` is ordinary blocking
+A stalling function does not require `spawn`. When called normally, it simply blocks the current execution until it returns.
+
+### 3.5 Ordering is explicit
 The compiler does not reorder `spawn` calls. The order in the source is the order in which spawns are started, and any blocking read happens exactly where written.
 
-### 3.5 No serial-equivalence guarantee
+### 3.6 No serial-equivalence guarantee
 `spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
 
 ---
@@ -100,7 +112,10 @@ The language does not provide cancellation, kill groups, or shutdown ordering. A
 Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and single-writer verification tractable.
 
 ### 5.3 No `async`/`await` syntax
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism.
+Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism. This avoids function coloring: a function does not become a different kind of thing merely because some caller chooses to run it concurrently.
+
+### 5.4 No language-level process or channel abstraction
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function calls plus explicit state flow governed by ownership and effect rules.
 
 ---
 
@@ -109,11 +124,14 @@ Zane does not define `async` or `await`. Concurrency is expressed only through `
 | Decision | Rationale |
 |---|---|
 | Separate parallelism from concurrency | Parallelism must be unobservable; concurrency changes program meaning and must be explicit. |
+| No `async`/`await` function coloring | Whether work runs concurrently is a call-site choice, not a permanent property of a function definition. |
 | `spawn` on function calls only | Keeps conflict detection purely signature-based and statically decidable. |
+| Park stalled spawned work | Lets long-waiting calls coexist with a bounded worker pool without tying up OS threads unnecessarily. |
 | Water-tower lifetimes | Extends safe lifetimes into concurrent work without GC. |
 | Spawned values block on read | Makes data dependencies explicit at the point of use. |
 | No cancellation/shutdown | Avoids hidden control flow; responsibility stays with the programmer. |
 | No lambda capture | Prevents hidden dependencies that would undermine effect analysis. |
+| No language-level process grouping | Keeps the concurrency core minimal and leaves orchestration to ordinary program structure. |
 
 ---
 
