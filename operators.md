@@ -95,6 +95,6 @@ The following are not operators in Zane:
 |---|---|
 | Fixed operator set | Operators are for math; a small stable set keeps code readable and parsing simple. |
 | `~` as the only unary operator | Unifies negation and complement without overloading `-`/`!`. |
-| Derived `-` and `~=` | Makes mathematical laws inexpressibly exact. |
+| Derived `-` and `~=` | Makes law violations inexpressible. |
 | `and`/`or` as keywords | Preserves short-circuit control flow. |
 | Non-associative equality | Prevents accidental chaining bugs. |

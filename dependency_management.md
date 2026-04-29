@@ -27,7 +27,7 @@ Every project has a `zane.coda` manifest containing a `deps` block:
 ```
 deps [
     alias url version commit
-    math https://github.com/zane-lang/math vers1.0.1 a3f8c2d
+    math https://github.com/zane-lang/math v1.0.1 a3f8c2d
 ]
 ```
 
