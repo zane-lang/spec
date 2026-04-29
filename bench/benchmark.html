@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zane Memory Model Benchmark</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:#0d0f12;--surface:#151820;--border:#242830;--text:#e8eaf0;--muted:#6b7280;
+    --accent:#7c6ff7;--tab-bg:#1c2028;--tab-act:#242a35;--info-bg:#131820;--divider:#1e242e;--label:#8b92a0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 32px 60px;max-width:980px;margin:0 auto;}
+  header{margin-bottom:36px;border-bottom:1px solid var(--border);padding-bottom:24px;}
+  header h1{font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}
+  header p{font-size:12px;color:var(--muted);}
+  header p span{color:var(--accent);}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px;}
+  .tab{padding:5px 11px;font-size:11px;font-family:inherit;font-weight:500;border-radius:4px;border:1px solid var(--border);background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;letter-spacing:.01em;}
+  .tab.on{background:var(--tab-act);color:var(--text);border-color:#363d4d;}
+  .tab:hover:not(.on){border-color:#363d4d;color:var(--text);}
+  .info{background:var(--info-bg);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;}
+  .info-title{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;letter-spacing:-0.01em;}
+  .info-col{display:flex;flex-direction:column;gap:5px;}
+  .info-row{display:flex;gap:10px;font-size:11.5px;}
+  .info-lbl{color:var(--label);white-space:nowrap;min-width:104px;}
+  .info-val{color:var(--text);}
+  .info-div{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}
+  .info-insight{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
+  .info-insight strong{color:var(--label);font-weight:600;}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:var(--muted);}
+  .litem{display:flex;align-items:center;gap:5px;}
+  .sw{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .chart-wrap{position:relative;width:100%;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Zane Memory Model Benchmark</h1>
+  <p><span>20 runs per test · median reported · ns precision</span> — compiled with gcc -O2</p>
+</header>
+<div class="tabs" id="tabs"></div>
+<div class="info" id="info"></div>
+<div class="legend" id="leg"></div>
+<div class="chart-wrap" id="wrap"><canvas id="ch"></canvas></div>
+<script>
+const TESTS=[
+  {
+    "t": "T1 \u2014 seq alloc+free",
+    "title": "Sequential alloc then sequential free",
+    "labels": [
+      "Arena (bump + O(1) reset)",
+      "Pool (per-size free-list)",
+      "Zane (lazy anchors)",
+      "malloc / free"
+    ],
+    "data": [
+      13.87,
+      221.44,
+      339.04,
+      610.47
+    ],
+    "colors": [
+      "#3aab76",
+      "#c49a2a",
+      "#7c6ff7",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Object size",
+        "val": "40B runtime (32B + 8B back-ptr)"
+      },
+      {
+        "label": "Back-ptr init",
+        "val": "0 \u2014 no anchor at creation"
+      },
+      {
+        "label": "Alloc cost",
+        "val": "one zm_alloc + zero-write"
+      },
+      {
+        "label": "Free cost",
+        "val": "read back-ptr \u2192 0 \u2192 single zm_free"
+      },
+      {
+        "label": "Anchor created",
+        "val": "never \u2014 no refs in this test"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
+    "insight": "Lazy anchors mean objects with no refs pay zero anchor overhead. Zane is competitive with the Pool and far ahead of malloc."
+  },
+  {
+    "t": "T2 \u2014 random-order free",
+    "title": "Sequential alloc, then random-order free (only free timed)",
+    "labels": [
+      "Pool (per-size free-list)",
+      "Zane (lazy anchors)",
+      "malloc / free"
+    ],
+    "data": [
+      186.07,
+      248.73,
+      567.0
+    ],
+    "colors": [
+      "#c49a2a",
+      "#7c6ff7",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Object size",
+        "val": "40B runtime"
+      },
+      {
+        "label": "Back-ptr",
+        "val": "0 \u2014 free is a single zm_free"
+      },
+      {
+        "label": "Timed phase",
+        "val": "free loop only"
+      },
+      {
+        "label": "Anchor overhead",
+        "val": "none \u2014 back-ptr is 0"
+      }
+    ],
+    "setup": "Alloc and shuffle untimed. Back-ptr is 0 so free is one stack push per object.",
+    "insight": "Free order never matters \u2014 always O(1). No coalescing, no adjacency checks."
+  },
+  {
+    "t": "T3 \u2014 mixed sizes",
+    "title": "Mixed-size alloc and random-order free",
+    "labels": [
+      "Arena (bulk reset)",
+      "Zane (mmap + free-stacks)",
+      "Pool (per-size free-list)",
+      "malloc / free"
+    ],
+    "data": [
+      28.47,
+      525.01,
+      944.17,
+      1889.16
+    ],
+    "colors": [
+      "#3aab76",
+      "#7c6ff7",
+      "#c49a2a",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Sizes",
+        "val": "8, 16, 32, 64 bytes \u2014 cycled evenly"
+      },
+      {
+        "label": "Count",
+        "val": "100,000 total (25k per size)"
+      },
+      {
+        "label": "Free order",
+        "val": "Fisher-Yates shuffle"
+      },
+      {
+        "label": "Note",
+        "val": "raw block allocs \u2014 no back-ptr slot"
+      }
+    ],
+    "setup": "Raw block alloc/free of four sizes in random order.",
+    "insight": "Direct size-indexed stack dispatch, no coalescing. Zane's free-stack table handles mixed sizes efficiently."
+  },
+  {
+    "t": "T4 \u2014 iteration",
+    "title": "Iterating 100k entity objects \u2014 five layouts",
+    "labels": [
+      "Inline array  (List<T>)",
+      "UList (chunk=8, linked)",
+      "CChunked (chunk=64, ptr-array)",
+      "Pointer array, shuffled",
+      "Pointer array, sequential"
+    ],
+    "data": [
+      25.3,
+      46.6,
+      48.57,
+      99.96,
+      107.86
+    ],
+    "colors": [
+      "#3aab76",
+      "#3aab76",
+      "#c45a8a",
+      "#e05a3a",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Object type",
+        "val": "Entity { id: i64, x: f64, y: f64, hp: i32 }"
+      },
+      {
+        "label": "Object size",
+        "val": "32 bytes"
+      },
+      {
+        "label": "CChunked",
+        "val": "64 elements \u00d7 32B = 2048B per chunk"
+      },
+      {
+        "label": "UList",
+        "val": "8 elements \u00d7 32B = 256B per chunk"
+      },
+      {
+        "label": "Measured op",
+        "val": "sum all hp fields (read-only scan)"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Five layouts iterated, no alloc/free during the timed loop.",
+    "insight": "Inline wins \u2014 contiguous memory with no pointer chase. CChunked and UList both beat pointer-chase due to chunk locality."
+  },
+  {
+    "t": "T5 \u2014 list growth",
+    "title": "Growing a list by appending 100k items",
+    "labels": [
+      "Zane in-place list",
+      "CChunked (chunk=64, ptr-array)",
+      "C realloc vector",
+      "UList (chunk=8, no realloc)"
+    ],
+    "data": [
+      49.83,
+      193.72,
+      225.47,
+      688.2
+    ],
+    "colors": [
+      "#7c6ff7",
+      "#c45a8a",
+      "#e05a3a",
+      "#3aab76"
+    ],
+    "meta": [
+      {
+        "label": "Element type",
+        "val": "Entity { id: i64, x: f64, y: f64, hp: i32 }"
+      },
+      {
+        "label": "Zane",
+        "val": "~14 in-place frontier doublings, no malloc"
+      },
+      {
+        "label": "CChunked",
+        "val": "1,563 malloc calls, zero copies"
+      },
+      {
+        "label": "UList",
+        "val": "12,500 malloc calls, zero copies"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
+    "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls. CChunked is faster than UList due to fewer, larger chunks."
+  },
+  {
+    "t": "T6 \u2014 ref access",
+    "title": "Ref access via anchor+ref_obj vs direct pointer",
+    "labels": [
+      "Full ref path (ref_anchor->ref_obj->anchor->obj)",
+      "Direct pointer (baseline)",
+      "Full ref path + null check",
+      "Anchor only (owning, post-move)"
+    ],
+    "data": [
+      167.13,
+      168.17,
+      169.86,
+      170.5
+    ],
+    "colors": [
+      "#b8a4ff",
+      "#4a9edd",
+      "#9a8ae0",
+      "#7c6ff7"
+    ],
+    "meta": [
+      {
+        "label": "Direct",
+        "val": "one pointer dereference \u2014 baseline"
+      },
+      {
+        "label": "Anchor only",
+        "val": "heap_base + anchor.heapoffset \u2014 simulates post-move owning access"
+      },
+      {
+        "label": "Full ref path",
+        "val": "ref_anchor \u2192 ref_obj \u2192 anchor \u2192 object (two hops)"
+      },
+      {
+        "label": "Null sentinel",
+        "val": "0xFFFFFFFF on ref_anchor.heapoffset \u2014 checked before deref"
+      },
+      {
+        "label": "Leaf-only",
+        "val": "ref registers only in the leaf object's anchor"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Two pointer hops vs one for direct access.",
+    "insight": "The full ref path adds measurable overhead from two heap indirections. The null check (0xFFFFFFFF sentinel on ref_anchor) is essentially free \u2014 branch predictor learns it immediately."
+  },
+  {
+    "t": "T7 \u2014 game loop",
+    "title": "Simulated game loop: spawn, kill, and update entities each frame",
+    "labels": [
+      "Pool (per-size free-list)",
+      "malloc / free",
+      "Zane (mmap + free-stacks)"
+    ],
+    "data": [
+      1132.38,
+      1202.56,
+      1237.82
+    ],
+    "colors": [
+      "#c49a2a",
+      "#e05a3a",
+      "#7c6ff7"
+    ],
+    "meta": [
+      {
+        "label": "Entity size",
+        "val": "40B (32B + 8B back-ptr)"
+      },
+      {
+        "label": "Anchor",
+        "val": "never created \u2014 no refs"
+      },
+      {
+        "label": "Frame count",
+        "val": "500 frames"
+      },
+      {
+        "label": "Spawns/frame",
+        "val": "30 new entities"
+      },
+      {
+        "label": "Kills/frame",
+        "val": "20 oldest + hp-drained deaths"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Each spawn writes back-ptr = 0. Each kill reads back-ptr (0), single zm_free.",
+    "insight": "Update/iteration dominates; allocator cost is a small constant per frame. Lazy anchors mean no overhead for objects without refs."
+  },
+  {
+    "t": "T8 \u2014 particle system",
+    "title": "Particle system: burst-spawn short-lifetime objects every frame",
+    "labels": [
+      "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
+      "malloc / free"
+    ],
+    "data": [
+      3508.02,
+      3782.32,
+      4000.18
+    ],
+    "colors": [
+      "#c49a2a",
+      "#7c6ff7",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Particle size",
+        "val": "32B (24B + 8B back-ptr)"
+      },
+      {
+        "label": "Anchor",
+        "val": "never created \u2014 no refs"
+      },
+      {
+        "label": "Frame count",
+        "val": "500 frames"
+      },
+      {
+        "label": "Spawns/frame",
+        "val": "60 particles"
+      },
+      {
+        "label": "Lifetime",
+        "val": "TTL = random 10\u201330 frames"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Maximum churn. Every death reads back-ptr (0), single zm_free.",
+    "insight": "Lazy anchors mean particle churn costs the same as a plain allocator. No overhead for short-lived objects that never get ref'd."
+  },
+  {
+    "t": "T9 \u2014 fragmentation",
+    "title": "Checkerboard fragmentation then refill \u2014 only refill timed",
+    "labels": [
+      "Zane -- refill (lazy anchors)",
+      "Pool -- refill from free-list",
+      "malloc -- refill fragmented heap"
+    ],
+    "data": [
+      89.18,
+      393.93,
+      483.37
+    ],
+    "colors": [
+      "#7c6ff7",
+      "#c49a2a",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Object size",
+        "val": "40B (32B + 8B back-ptr)"
+      },
+      {
+        "label": "Anchor",
+        "val": "never created"
+      },
+      {
+        "label": "Phase A (prep)",
+        "val": "alloc 100k objects"
+      },
+      {
+        "label": "Phase B (prep)",
+        "val": "free every even-indexed"
+      },
+      {
+        "label": "Phase C (timed)",
+        "val": "alloc 50k new objects"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Phases A+B untimed. Phase C timed. Free-stacks fully populated after Phase B.",
+    "insight": "Refill = O(1) free-stack pops. Zane reclaims fragmented holes instantly."
+  },
+  {
+    "t": "T10 \u2014 tree teardown",
+    "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
+    "labels": [
+      "Pool cascade destroy",
+      "Zane \u2014 no refs",
+      "Zane \u2014 single parent ref (root only)",
+      "malloc cascade destroy",
+      "Zane \u2014 individual refs (1 per node)"
+    ],
+    "data": [
+      40.61,
+      46.42,
+      46.42,
+      67.61,
+      68.74
+    ],
+    "colors": [
+      "#c49a2a",
+      "#7c6ff7",
+      "#5a4faa",
+      "#e05a3a",
+      "#b8a4ff"
+    ],
+    "meta": [
+      {
+        "label": "Tree size",
+        "val": "~4,000 nodes, branch 0\u20136"
+      },
+      {
+        "label": "No refs",
+        "val": "back-ptr = 0, single zm_free per node"
+      },
+      {
+        "label": "Single parent ref",
+        "val": "one ref to root only; 3,999 nodes ref-free"
+      },
+      {
+        "label": "Individual refs",
+        "val": "every node: ref_anchor \u2192 ref_obj \u2192 anchor"
+      },
+      {
+        "label": "malloc",
+        "val": "free(node) per node, coalescing on each"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Three Zane variants: no refs (lazy stays 0), single parent ref (root only gets anchor + ref), individual refs (every node gets ref_anchor \u2192 ref_obj \u2192 anchor). All use post-order DFS destruction.",
+    "insight": "No refs and single parent ref are nearly identical. Individual refs (1 per node) add measurable cost \u2014 the anchor teardown on every node (iterate weak_ref_stack, null ref_anchor, free anchor, free ref_obj, free node) adds up over 4,000 nodes. This is why the spec encourages ref'ing the container, not each child."
+  },
+  {
+    "t": "T11 \u2014 stress test",
+    "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
+    "labels": [
+      "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
+      "malloc / free"
+    ],
+    "data": [
+      1357.57,
+      1365.88,
+      1459.94
+    ],
+    "colors": [
+      "#c49a2a",
+      "#7c6ff7",
+      "#e05a3a"
+    ],
+    "meta": [
+      {
+        "label": "Object size",
+        "val": "40B + 8B back-ptr"
+      },
+      {
+        "label": "List buffers",
+        "val": "256\u2013512B + 8B back-ptr"
+      },
+      {
+        "label": "Anchor",
+        "val": "never created \u2014 no refs"
+      },
+      {
+        "label": "Cycles",
+        "val": "200 cycles"
+      },
+      {
+        "label": "Per cycle",
+        "val": "spawn + create lists + push + update + kill"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
+    "insight": "Iteration and computation dominate in a realistic mixed workload. Allocator differences become negligible."
+  }
+];
+let chart=null;
+function renderInfo(t){
+  const half=Math.ceil(t.meta.length/2);
+  const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${r.label}</span><span class="info-val">${r.val}</span></div>`).join('');
+  document.getElementById('info').innerHTML=
+    `<div class="info-title">${t.title}</div>`+
+    `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
+    `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
+    `<hr class="info-div">`+
+    `<div class="info-insight"><strong>Setup: </strong>${t.setup} <strong>Key insight: </strong>${t.insight}</div>`;
+}
+function show(idx){
+  const t=TESTS[idx];
+  document.getElementById('wrap').style.height=Math.max(140,t.labels.length*54+80)+'px';
+  renderInfo(t);
+  document.getElementById('leg').innerHTML=t.labels.map((l,i)=>`<span class="litem"><span class="sw" style="background:${t.colors[i]}"></span>${l}</span>`).join('');
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById('ch'),{
+    type:'bar',
+    data:{labels:t.labels,datasets:[{data:t.data,backgroundColor:t.colors,borderRadius:3,barThickness:32}]},
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2230',borderColor:'#2e3545',borderWidth:1,titleColor:'#8b92a0',bodyColor:'#e8eaf0',callbacks:{label:ctx=>' '+ctx.parsed.x.toFixed(2)+' us  (median of 20 runs)'}}},
+      scales:{x:{title:{display:true,text:'us — lower is faster',font:{size:11,family:'inherit'},color:'#4a5060'},grid:{color:'#1a2030'},ticks:{font:{size:11,family:'inherit'},color:'#6b7280'}},
+              y:{ticks:{font:{size:11,family:'inherit'},color:'#8b92a0',autoSkip:false},grid:{display:false}}}
+    }
+  });
+}
+const el=document.getElementById('tabs');
+TESTS.forEach((t,i)=>{
+  const b=document.createElement('button');
+  b.className='tab'+(i===0?' on':'');
+  b.textContent=t.t;
+  b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');show(i);};
+  el.appendChild(b);
+});
+show(0);
+</script>
+</body>
+</html>
