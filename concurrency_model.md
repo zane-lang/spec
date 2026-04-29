@@ -37,7 +37,7 @@ The compiler distinguishes:
 - **Total Pure**: no side effects and guaranteed termination, so compile-time evaluation is legal when inputs are known
 - **Pure**: no side effects, but termination is not proven, so the call remains runtime work even though it is still parallelizable
 
-This distinction matters for compile-time reduction, not for the legality of runtime parallelism.
+This distinction matters for compile-time reduction, not for the legality of runtime parallelism. See [`purity.md`](purity.md) §3 and §9 for the effect-level definitions and matrix.
 
 ### 2.4 Thread configuration
 The runtime uses a work-stealing thread pool configured by `@threads`:
