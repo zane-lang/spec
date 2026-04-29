@@ -72,6 +72,8 @@ Node(id Int, scale Float) {
 
 Positional constructors **MAY** be overloaded by arity or parameter types.
 
+Constructor parameters do not need to repeat private-field underscores. It is normal to map a public-facing parameter such as `id` into a private field such as `_id` explicitly inside `init{ }`.
+
 ### 3.3 Field constructors
 A constructor may also declare fields directly in its parameter header:
 

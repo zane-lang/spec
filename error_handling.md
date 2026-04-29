@@ -219,7 +219,7 @@ content = fs:readFile("file.txt") ? err {
 | `Void` is an explicit abort type | Keeps payload-free failure visible rather than implicit. |
 | `??` is only shorthand, not a new mechanism | Preserves one mental model while reducing boilerplate. |
 | Abortability is structural | Function values must preserve exact call contracts. |
-| No required user-facing `Result` wrapper at the call site | Treats abortability primarily as typed control flow at the language surface; implementations may lower it however they choose. |
+| No required user-facing `Result` wrapper at the call site | Keeps bifurcated returns as a language-level guarantee while leaving code-generation details free to lower the branch however the implementation chooses. |
 
 ---
 

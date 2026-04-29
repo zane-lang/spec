@@ -2,7 +2,7 @@
 
 This document specifies Zane's effect model: `mut`, inferred effect levels, capability access, structural inference, and the compiler guarantees built on top of those rules.
 
-> **See also:** [`oop.md`](oop.md) §4 for method declarations. [`concurrency_model.md`](concurrency_model.md) §2 and §4 for parallelism and conflict rules. [`error_handling.md`](error_handling.md) §5 for abortability.
+> **See also:** [`oop.md`](oop.md) §4 for method declarations. [`concurrency_model.md`](concurrency_model.md) §2 and §4 for parallelism and conflict rules. [`error_handling.md`](error_handling.md) §5 for the connection between effects and abortability.
 
 ---
 
