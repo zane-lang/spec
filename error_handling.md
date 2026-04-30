@@ -76,6 +76,13 @@ done = tryFinish() ? {
 
 There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...`.
 
+```zane
+value Int
+value = parse(input) ? err {
+    abort err
+}
+```
+
 ### 3.2 Handler outcomes are exhaustive
 Every path through a handler block must end in one of:
 

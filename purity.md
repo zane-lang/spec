@@ -109,7 +109,7 @@ Passing capabilities through constructors and methods is part of the design. It 
 Constructors create values and therefore participate in allocation, but they do not mutate an existing receiver.
 
 ### 7.2 Allocation and destruction do not by themselves raise effect level
-Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also reads or writes state through ownership, refs, or capabilities.
+Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also mutates owned state, reads through a `ref`, or reads/writes through capabilities.
 
 ### 7.3 Abortability is orthogonal
 A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.

@@ -34,6 +34,13 @@ This rule eliminates destruction-by-overwrite as a source of dangling refs.
 
 Container overwrite therefore depends on element type. A container element that owns a class instance is single-assignment; a container element whose type is a struct or `ref` remains overwritable.
 
+```zane
+owners Array[2]<Node>
+refs Array[2]<ref Node>
+```
+
+`owners` has owning element slots, so each element is single-assignment once initialized. `refs` has `ref` element slots, so each element may later be rewritten to point at a different live object.
+
 ### 2.3 Struct values are freely overwritable
 Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
 
@@ -58,7 +65,7 @@ A `ref` symbol or `ref` field may be assigned a different target later, as long 
 Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage site later changes only that storage site; it does not retarget other copies.
 
 ### 2.7 Refs and owners use the same surface operations
-At use sites, a `ref` is used the same way as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters at the storage site, not at the usage site.
+At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters at the storage site and in effect classification, not in the call syntax itself.
 
 ### 2.8 Named and unnamed values are equally ref-able
 Refs may target named symbols, fields, container elements, or unnamed expression results. Anchor creation is triggered by the first ref, not by whether the value has a source-level name.

@@ -75,7 +75,7 @@ If a spawned call is abortable, it must still attach `?` or `??` directly to the
 
 ```zane
 port Int = spawn listen(8080) ? err {
-    abort err
+    resolve Int(404)
 }
 
 fallback Int = spawn listen(8081) ?? Int(404)
