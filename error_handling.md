@@ -248,7 +248,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 | Signature order | `Error!Value` | `Value ? Abort` |
 | Recovery syntax | `catch` with labeled-block patterns | `?` with `resolve`/`return`/`abort` |
 | Payload-free failure | inferred error sets and union mechanics | explicit `Void` abort type |
-| Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are analyzed separately, and the call site must satisfy both the abort-handling rule and the effect rule |
+| Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are separate analyses; the call site must satisfy both sets of rules |
 
 ---
 
