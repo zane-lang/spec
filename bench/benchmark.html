@@ -286,30 +286,23 @@ const TESTS=[
   },
   {
     "t": "T6 \u2014 ref access",
-    "title": "Ref access via anchor+ref_obj vs direct pointer",
+    "title": "Ref access via anchor+ref_obj",
     "labels": [
       "Full ref path (ref_anchor->ref_obj->anchor->obj)",
-      "Full ref path + liveness guard",
       "Anchor only (owning, post-move)",
-      "Direct pointer (baseline)"
+      "Direct pointer (scattered, for context)"
     ],
     "data": [
       113.78,
-      117.97,
       118.38,
       160.73
     ],
     "colors": [
       "#b8a4ff",
-      "#b8a4ff",
       "#7c6ff7",
       "#4a9edd"
     ],
     "meta": [
-      {
-        "label": "Direct",
-        "val": "one pointer dereference \u2014 baseline"
-      },
       {
         "label": "Anchor only",
         "val": "heap_base + anchor.heapoffset \u2014 simulates post-move owning access"
@@ -319,20 +312,20 @@ const TESTS=[
         "val": "ref_anchor \u2192 ref_obj \u2192 anchor \u2192 object (two hops)"
       },
       {
-        "label": "Liveness guard",
-        "val": "0xFFFFFFFF on ref_anchor.heapoffset \u2014 runtime-only check before deref"
+        "label": "Direct (scattered)",
+        "val": "raw pointer array in a separate malloc\u2019d buffer \u2014 not a fair baseline; shown for context only"
       },
       {
         "label": "Leaf-only",
-        "val": "ref registers only in the leaf object's anchor"
+        "val": "ref registers only in the leaf object\u2019s anchor"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Two pointer hops vs one for direct access.",
-    "details": "Direct pointer access should be the lower bound, anchor-only is usually next, and the full ref path should cost more because it adds extra indirection. If the liveness-guard variant matches the full ref path, the guard itself is not the dominant cost."
+    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Zane statically guarantees all refs are non-null, so there is no runtime liveness guard.",
+    "details": "The scattered direct-pointer loop accesses the same heap objects via pointers stored in a separate malloc\u2019d array, bypassing the cache locality of the contiguous Zane heap \u2014 which is why it measures slower than the heap-offset variants. It is included for context, not as a lower-bound baseline. The anchor-only path (one heap-offset add) is faster than the full ref path (two hops), which is the expected ordering."
   },
   {
     "t": "T7 \u2014 game loop",
