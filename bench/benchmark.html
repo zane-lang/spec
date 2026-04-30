@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      13.87,
-      221.44,
-      339.04,
-      610.47
+      34.96,
+      239.89,
+      510.48,
+      1502.7
     ],
     "colors": [
       "#3aab76",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      186.07,
-      248.73,
-      567.0
+      149.21,
+      474.79,
+      1241.86
     ],
     "colors": [
       "#c49a2a",
@@ -140,20 +140,20 @@ const TESTS=[
     "title": "Mixed-size alloc and random-order free",
     "labels": [
       "Arena (bulk reset)",
-      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
       "malloc / free"
     ],
     "data": [
-      28.47,
-      525.01,
-      944.17,
-      1889.16
+      70.4,
+      1001.38,
+      1043.45,
+      3876.31
     ],
     "colors": [
       "#3aab76",
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -183,22 +183,22 @@ const TESTS=[
     "labels": [
       "Inline array  (List<T>)",
       "UList (chunk=8, linked)",
+      "Pointer array, sequential",
       "CChunked (chunk=64, ptr-array)",
-      "Pointer array, shuffled",
-      "Pointer array, sequential"
+      "Pointer array, shuffled"
     ],
     "data": [
-      25.3,
-      46.6,
-      48.57,
-      99.96,
-      107.86
+      43.86,
+      71.03,
+      71.59,
+      85.54,
+      123.53
     ],
     "colors": [
       "#3aab76",
       "#3aab76",
-      "#c45a8a",
       "#e05a3a",
+      "#c45a8a",
       "#e05a3a"
     ],
     "meta": [
@@ -235,20 +235,20 @@ const TESTS=[
     "title": "Growing a list by appending 100k items",
     "labels": [
       "Zane in-place list",
-      "CChunked (chunk=64, ptr-array)",
       "C realloc vector",
+      "CChunked (chunk=64, ptr-array)",
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      49.83,
-      193.72,
-      225.47,
-      688.2
+      71.02,
+      190.42,
+      434.86,
+      1258.03
     ],
     "colors": [
       "#7c6ff7",
-      "#c45a8a",
       "#e05a3a",
+      "#c45a8a",
       "#3aab76"
     ],
     "meta": [
@@ -280,22 +280,22 @@ const TESTS=[
     "t": "T6 \u2014 ref access",
     "title": "Ref access via anchor+ref_obj vs direct pointer",
     "labels": [
-      "Full ref path (ref_anchor->ref_obj->anchor->obj)",
       "Direct pointer (baseline)",
+      "Anchor only (owning, post-move)",
       "Full ref path + null check",
-      "Anchor only (owning, post-move)"
+      "Full ref path (ref_anchor->ref_obj->anchor->obj)"
     ],
     "data": [
-      167.13,
-      168.17,
-      169.86,
-      170.5
+      132.73,
+      150.93,
+      151.07,
+      157.11
     ],
     "colors": [
-      "#b8a4ff",
       "#4a9edd",
+      "#7c6ff7",
       "#9a8ae0",
-      "#7c6ff7"
+      "#b8a4ff"
     ],
     "meta": [
       {
@@ -330,19 +330,19 @@ const TESTS=[
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
+      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
-      "malloc / free",
-      "Zane (mmap + free-stacks)"
+      "malloc / free"
     ],
     "data": [
-      1132.38,
-      1202.56,
-      1237.82
+      2851.1,
+      2863.48,
+      3063.5
     ],
     "colors": [
+      "#7c6ff7",
       "#c49a2a",
-      "#e05a3a",
-      "#7c6ff7"
+      "#e05a3a"
     ],
     "meta": [
       {
@@ -382,9 +382,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      3508.02,
-      3782.32,
-      4000.18
+      9875.4,
+      9960.52,
+      10373.98
     ],
     "colors": [
       "#c49a2a",
@@ -429,9 +429,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      89.18,
-      393.93,
-      483.37
+      74.39,
+      450.67,
+      1238.89
     ],
     "colors": [
       "#7c6ff7",
@@ -472,22 +472,22 @@ const TESTS=[
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
       "Pool cascade destroy",
-      "Zane \u2014 no refs",
       "Zane \u2014 single parent ref (root only)",
+      "Zane \u2014 no refs",
       "malloc cascade destroy",
       "Zane \u2014 individual refs (1 per node)"
     ],
     "data": [
-      40.61,
-      46.42,
-      46.42,
-      67.61,
-      68.74
+      73.2,
+      82.74,
+      85.85,
+      144.48,
+      148.59
     ],
     "colors": [
       "#c49a2a",
-      "#7c6ff7",
       "#5a4faa",
+      "#7c6ff7",
       "#e05a3a",
       "#b8a4ff"
     ],
@@ -529,9 +529,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1357.57,
-      1365.88,
-      1459.94
+      2183.04,
+      2190.72,
+      2341.02
     ],
     "colors": [
       "#c49a2a",
