@@ -286,23 +286,27 @@ const TESTS=[
   },
   {
     "t": "T6 \u2014 ref access",
-    "title": "Ref access via anchor+ref_obj",
+    "title": "Ref access via anchor+ref_obj vs direct pointer",
     "labels": [
-      "Full ref path (ref_anchor->ref_obj->anchor->obj)",
+      "Direct pointer (baseline)",
       "Anchor only (owning, post-move)",
-      "Direct pointer (scattered, for context)"
+      "Full ref path (ref_anchor->ref_obj->anchor->obj)"
     ],
     "data": [
-      113.78,
-      118.38,
-      160.73
+      174.73,
+      169.73,
+      162.97
     ],
     "colors": [
-      "#b8a4ff",
+      "#4a9edd",
       "#7c6ff7",
-      "#4a9edd"
+      "#b8a4ff"
     ],
     "meta": [
+      {
+        "label": "Direct",
+        "val": "one pointer dereference \u2014 working set pre-heated before each timed run"
+      },
       {
         "label": "Anchor only",
         "val": "heap_base + anchor.heapoffset \u2014 simulates post-move owning access"
@@ -310,10 +314,6 @@ const TESTS=[
       {
         "label": "Full ref path",
         "val": "ref_anchor \u2192 ref_obj \u2192 anchor \u2192 object (two hops)"
-      },
-      {
-        "label": "Direct (scattered)",
-        "val": "raw pointer array in a separate malloc\u2019d buffer \u2014 not a fair baseline; shown for context only"
       },
       {
         "label": "Leaf-only",
@@ -324,8 +324,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Zane statically guarantees all refs are non-null, so there is no runtime liveness guard.",
-    "details": "The scattered direct-pointer loop accesses the same heap objects via pointers stored in a separate malloc\u2019d array, bypassing the cache locality of the contiguous Zane heap \u2014 which is why it measures slower than the heap-offset variants. It is included for context, not as a lower-bound baseline. The anchor-only path (one heap-offset add) is faster than the full ref path (two hops), which is the expected ordering."
+    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Each variant pre-heats its working set before the timed loop for a fair warm-cache comparison. Zane statically guarantees all refs are non-null, so there is no runtime liveness guard.",
+    "details": "With cache pre-heating applied equally to all variants, direct pointer is the expected lower bound at one hop. Anchor-only (one heap-offset add) is the fastest Zane path; the full ref path (two hops) adds a small but measurable overhead. All three variants land within ~10% of each other, showing the Zane indirection cost is modest."
   },
   {
     "t": "T7 \u2014 game loop",

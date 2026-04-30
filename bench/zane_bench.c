@@ -804,17 +804,16 @@ static void test5(void) {
    Leaf-only registration means the chain depth (standalone class vs list
    element) affects registration, not dereference — dereference always
    goes through the leaf object's anchor.
-     A. Anchor only — heap_base + anchor.heapoffset (simulates owning access)
-     B. Full ref path — ref_anchor → ref_obj → anchor → object (two hops)
+     A. Direct pointer — baseline, one hop (cache pre-heated before each run)
+     B. Anchor only — heap_base + anchor.heapoffset (simulates owning access)
+     C. Full ref path — ref_anchor → ref_obj → anchor → object (two hops)
    Note: Zane statically guarantees all refs are non-null, so there is no
-   runtime liveness guard. A scattered direct-pointer loop is included for
-   context but is not a fair baseline — it accesses the same objects via
-   pointers stored in a separate malloc'd array, which disrupts the cache
-   locality that the contiguous Zane heap provides.
+   runtime liveness guard. Each variant pre-heats its working set before the
+   timed loop to ensure a fair warm-cache comparison.
 ═══════════════════════════════════════════════════════════════════ */
 
 static void test6(void) {
-    section("Test 6 -- Ref access via anchor+ref_obj  [100k accesses]");
+    section("Test 6 -- Ref access via anchor+ref_obj vs direct pointer  [100k accesses]");
     double T[RUNS];
 
     /* set up N objects on the Zane heap, each with an anchor, ref object, and ref_anchor */
@@ -835,13 +834,18 @@ static void test6(void) {
         direct[i]   = objs[i];
     }
 
-    /* scattered direct pointer — same objects, separate malloc'd pointer array;
-       not a fair baseline: lacks the cache locality of the contiguous Zane heap */
-    for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=direct[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
-    print_result("Direct pointer (scattered, for context)", T);
+    /* direct pointer — single hop; preheat pointer array and target objects before each timed run */
+    for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++) sink^=(int64_t)direct[i]->hp; /* preheat pointer array + objects */
+        int64_t acc=0; double t0=now_ns();
+        for(int i=0;i<N;i++) acc+=direct[i]->hp;
+        T[r]=now_ns()-t0; sink^=acc;
+    }
+    print_result("Direct pointer (baseline)", T);
 
     /* anchor only: heap_base + anchor.heapoffset — simulates owning access to a moved object */
     for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++) sink^=(int64_t)((Entity*)(heap_base + anchors[i]->heapoffset))->hp; /* preheat anchor array + objects */
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             Entity *e=(Entity*)(heap_base + anchors[i]->heapoffset);
@@ -853,6 +857,10 @@ static void test6(void) {
 
     /* full ref path: ref_anchor → ref_obj → anchor → object */
     for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++){ /* preheat full chain + objects */
+            ZRefObj *robj = (ZRefObj*)(heap_base + ref_anchors[i].heapoffset);
+            sink^=(int64_t)((Entity*)(heap_base + ((ZAnchor*)robj->target_anchor)->heapoffset))->hp;
+        }
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             ZRefObj *robj = (ZRefObj*)(heap_base + ref_anchors[i].heapoffset);
