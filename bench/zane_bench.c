@@ -24,8 +24,9 @@
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
  *    `Array[size]<T>` is the spec-defined fixed-size inline container.
- *    The growth tests below model user-space growable storage as the
- *    closest updated-spec stand-in for the now-deferred dynamic `List<T>`.
+ *    Because `size` is compile-time constant, the growth tests below model
+ *    user-space growable storage as the closest updated-spec stand-in for the
+ *    now-deferred dynamic `List<T>`.
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
@@ -616,7 +617,7 @@ static void test4(void) {
    TEST 5 — Owned buffer append growth
    Dynamic `List<T>` is not specified on `main`, so this benchmark models the
    closest current-spec equivalent: a growable user-space buffer built from
-   contiguous owned `Array`-like storage.
+   contiguous owned `Array`-like storage with compile-time-sized chunks.
 ═══════════════════════════════════════════════════════════════════ */
 typedef struct { Entity *base; size_t len, cap; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
@@ -1273,7 +1274,7 @@ static void test12(void) {
     }
 
     const int shard_len = N / CONC_WORKERS;
-    const int64_t expected = (int64_t)(N / 100) * 5050;
+    const int64_t expected = (int64_t)(N / 100) * 5050; /* hp repeats 1..100, whose sum is 5050 */
 
     { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
     {

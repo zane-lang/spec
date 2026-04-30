@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      35.1,
-      239.12,
-      512.68,
-      1478.65
+      34.95,
+      237.56,
+      518.12,
+      1483.18
     ],
     "colors": [
       "#3aab76",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      157.96,
-      470.39,
-      1227.41
+      154.67,
+      474.72,
+      1245.54
     ],
     "colors": [
       "#c49a2a",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      72.97,
-      998.98,
-      1030.4,
-      3865.01
+      70.49,
+      1021.96,
+      1087.04,
+      3946.76
     ],
     "colors": [
       "#3aab76",
@@ -188,11 +188,11 @@ const TESTS=[
       "Pointer array, shuffled"
     ],
     "data": [
-      70.08,
-      70.87,
-      74.71,
-      85.65,
-      140.74
+      69.99,
+      71.68,
+      73.42,
+      85.83,
+      136.65
     ],
     "colors": [
       "#3aab76",
@@ -232,7 +232,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-    "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. CChunked and UList still beat pointer-chase due to chunk locality."
+    "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. Chunked layouts remain competitive with contiguous storage and avoid the worst pointer-chase penalty."
   },
   {
     "t": "T5 \u2014 buffer growth",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      71.22,
-      191.2,
-      428.31,
-      1236.98
+      71.02,
+      190.85,
+      435.83,
+      1240.24
     ],
     "colors": [
       "#7c6ff7",
@@ -281,8 +281,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
-    "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls. This is the closest current-spec stand-in for deferred dynamic containers built from contiguous owned storage."
+    "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
+    "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls."
   },
   {
     "t": "T6 \u2014 ref access",
@@ -294,10 +294,10 @@ const TESTS=[
       "Full ref path (ref_anchor->ref_obj->anchor->obj)"
     ],
     "data": [
-      131.12,
-      152.56,
-      154.59,
-      155.28
+      132.41,
+      151.91,
+      153.68,
+      158.0
     ],
     "colors": [
       "#4a9edd",
@@ -338,18 +338,18 @@ const TESTS=[
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
       "malloc / free"
     ],
     "data": [
-      2823.46,
-      2893.77,
-      3042.92
+      2873.01,
+      2908.45,
+      3025.99
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -390,9 +390,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      9055.69,
-      9198.18,
-      9716.48
+      9151.68,
+      9170.57,
+      9644.47
     ],
     "colors": [
       "#7c6ff7",
@@ -437,9 +437,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      76.39,
-      433.64,
-      1233.97
+      74.76,
+      445.02,
+      1189.8
     ],
     "colors": [
       "#7c6ff7",
@@ -480,22 +480,22 @@ const TESTS=[
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
       "Pool cascade destroy",
-      "Zane \u2014 no refs",
       "Zane \u2014 single parent ref (root only)",
+      "Zane \u2014 no refs",
       "malloc cascade destroy",
       "Zane \u2014 individual refs (1 per node)"
     ],
     "data": [
-      73.02,
-      88.55,
-      88.59,
-      141.59,
-      149.57
+      72.81,
+      88.0,
+      88.91,
+      144.13,
+      148.53
     ],
     "colors": [
       "#c49a2a",
-      "#7c6ff7",
       "#5a4faa",
+      "#7c6ff7",
       "#e05a3a",
       "#b8a4ff"
     ],
@@ -537,9 +537,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2302.67,
-      2314.74,
-      2461.7
+      2300.15,
+      2307.14,
+      2485.83
     ],
     "colors": [
       "#7c6ff7",
@@ -583,8 +583,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      43.53,
-      171.36
+      42.08,
+      168.19
     ],
     "colors": [
       "#c49a2a",

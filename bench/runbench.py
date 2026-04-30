@@ -73,7 +73,7 @@ TEST_META = {
         "short": "T4 — iteration",
         "title": "Iterating 100k entity objects — five layouts",
         "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-        "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. CChunked and UList still beat pointer-chase due to chunk locality.",
+        "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. Chunked layouts remain competitive with contiguous storage and avoid the worst pointer-chase penalty.",
         "meta": [
             ("Object type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Object size", "32 bytes"),
@@ -87,8 +87,8 @@ TEST_META = {
     "Test 5": {
         "short": "T5 — buffer growth",
         "title": "Growing an owned contiguous buffer by appending 100k items",
-        "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer. Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
-        "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls. This is the closest current-spec stand-in for deferred dynamic containers built from contiguous owned storage.",
+        "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
+        "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Spec analogue", "growable buffer layered over Array-like inline storage"),
