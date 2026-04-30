@@ -25,7 +25,6 @@ A side effect is any observable interaction beyond returning a value, including:
 - writing to `this` or owned descendants
 - reading through a `ref`
 - interacting with capability objects
-- allocating or destroying heap objects
 
 ### 2.2 Capability
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
@@ -109,8 +108,8 @@ Passing capabilities through constructors and methods is part of the design. It 
 ### 7.1 Constructors may allocate but are not `mut`
 Constructors create values and therefore participate in allocation, but they do not mutate an existing receiver.
 
-### 7.2 Allocation and destruction are effectful implementation events
-Heap allocation and destruction are observable to the compiler's optimizer and scheduler even when the source code does not expose them as explicit method calls.
+### 7.2 Allocation and destruction do not by themselves raise effect level
+Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also reads or writes state through ownership, refs, or capabilities.
 
 ### 7.3 Abortability is orthogonal
 A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
@@ -148,6 +147,7 @@ Two `mut` calls on different receiver instances may run in parallel. Two `mut` c
 | Single user-facing effect modifier | Keeps the language small while still making mutation explicit. |
 | Structural inference instead of effect annotations | Lets the compiler derive power from ownership and call structure without burdening signatures. |
 | Distinguish Total Pure from Pure | Enables safe compile-time evaluation without assuming termination. |
+| Allocation alone is not a side effect | Constructing and destroying ordinary objects should not force otherwise pure code into an impure tier. |
 | Capabilities are explicit objects | Prevents hidden ambient effects and keeps dependency flow visible. |
 | `mut` is receiver-scoped | Aligns mutation permissions with ownership rather than arbitrary parameter aliasing. |
 | Refs count as effectful reads | A ref observes state whose value can change outside the current function. |

@@ -12,7 +12,7 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 
 - **`Primary path`.** The normal return path uses the return type on the left of `?`.
 - **`Abort path`.** The failure path uses the abort type on the right of `?`.
-- **`Mandatory handling`.** Every abortable call must be handled or explicitly propagated.
+- **`Mandatory handling`.** Every abortable call must attach a `?` or `??` handler at the call site.
 
 ---
 
@@ -56,7 +56,7 @@ parserBad = parse // ILLEGAL: abort type would be dropped
 ## 3. Call-Site Handling
 
 ### 3.1 `?` handler blocks
-An abortable call must attach a handler block:
+Abortable calls are handled at the call site. One form is to attach a `?` handler block:
 
 ```zane
 value Int
@@ -73,6 +73,8 @@ done = tryFinish() ? {
     resolve false
 }
 ```
+
+There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...`.
 
 ### 3.2 Handler outcomes are exhaustive
 Every path through a handler block must end in one of:
@@ -120,7 +122,7 @@ Abortability is not itself a side effect. A function can be pure and abortable, 
 
 | Guarantee | Meaning |
 |---|---|
-| No unhandled aborts | Every abortable call must have a `?` or `??` handler, or be explicitly propagated in a parent that declares a compatible abort type. |
+| No unhandled aborts | Every abortable call must have a `?` or `??` handler attached directly to that call expression. |
 | Exhaustive handlers | Every path through a handler block must terminate with `resolve`, `return`, or `abort`. |
 | Return-path type safety | `resolve` values must match the primary return type; `abort` values must match the parent function's abort type. |
 | Abort-free functions stay abort-free | A function with no abort type is verified never to abort transitively. |

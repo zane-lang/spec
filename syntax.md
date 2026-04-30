@@ -79,7 +79,7 @@ Type
 ref Type
 ```
 
-`ref` is valid only in storage positions.
+`ref` is legal everywhere a type is written except function parameter positions. Nested storage types such as `Array[size]<ref Node>` are legal.
 
 ### 2.4 Type parameters
 
@@ -237,7 +237,13 @@ callExpr|{ block }
 
 ```
 spawn Package$fn(args...)
+spawn Package$fn(args...) ? binder { ... }
+spawn Package$fn(args...) ? { ... }
+spawn Package$fn(args...) ?? fallbackExpr
 name Type = spawn Package$fn(args...)
+name Type = spawn Package$fn(args...) ? binder { ... }
+name Type = spawn Package$fn(args...) ? { ... }
+name Type = spawn Package$fn(args...) ?? fallbackExpr
 ```
 
 `spawn` is legal only on function-call expressions.
