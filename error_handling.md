@@ -237,7 +237,7 @@ Swift treats fallibility as a throwing effect with `do`/`catch` recovery.
 | Error type in signature | `throws` does not name a concrete error type in the signature surface | `? AbortType` names the failure type directly |
 | Recovery form | `do { try ... } catch { ... }` wraps the call in a separate control structure | the handler is attached directly to the call expression |
 | Runtime model | uses exception-style unwinding | uses explicit typed branches at the call site |
-| Coalescing | `try?` discards error information | `??` replaces an aborted call with the provided fallback value while the compiler still checks the call's abortability |
+| Coalescing | `try?` discards error information | `??` replaces an aborted call with a fallback value; abortability is still checked |
 
 ### 7.7 Zane vs. Zig error unions
 
@@ -248,7 +248,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 | Signature order | `Error!Value` | `Value ? Abort` |
 | Recovery syntax | `catch` with labeled-block patterns | `?` with `resolve`/`return`/`abort` |
 | Payload-free failure | inferred error sets and union mechanics | explicit `Void` abort type |
-| Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are separate analyses; the call site must satisfy both sets of rules |
+| Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are analyzed separately; both must be satisfied at call sites |
 
 ---
 
