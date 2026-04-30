@@ -56,7 +56,7 @@ pos = Vec2(3, 4) // ok
 - a class field
 - an element type inside another storage type
 
-A `ref` type may appear anywhere a type is written except function parameter positions.
+A `ref` type is legal only in storage sites: local symbols, fields, and nested storage types. It is not legal in function parameter or return-type positions.
 
 ### 2.5 Refs are repointable
 A `ref` symbol or `ref` field may be assigned a different target later, as long as the scope rule in §3.1 is satisfied.
@@ -65,7 +65,7 @@ A `ref` symbol or `ref` field may be assigned a different target later, as long 
 Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage site later changes only that storage site; it does not retarget other copies.
 
 ### 2.7 Refs and owners use the same surface operations
-At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters at the storage site and in effect classification, not in the call syntax itself.
+At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
 
 ### 2.8 Named and unnamed values are equally ref-able
 Refs may target named symbols, fields, container elements, or unnamed expression results. Anchor creation is triggered by the first ref, not by whether the value has a source-level name.
