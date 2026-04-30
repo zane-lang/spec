@@ -109,7 +109,7 @@ static void section(const char *title) {
 
 /* ─────────────────────────────────────────────
    BENCHMARK WORK-STEALING POOL
-   Prestarted once before timed benchmarks so concurrent tests measure
+   Pre-started once before timed benchmarks so concurrent tests measure
    steady-state scheduling rather than thread creation.
 ───────────────────────────────────────────── */
 #define BENCH_POOL_WORKERS   4
@@ -302,8 +302,8 @@ static void zm_free(void *p, size_t s) {
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
      non-owning references. `Array[size]<T>` is the fixed-size inline
-     container, and growable buffers are layered on top of contiguous
-     owned storage in user space.
+     container. Growable buffers in these benchmarks are user-space layers
+     built on top of contiguous owned storage.
 
    Anchors are created on demand — only when the first ref to an
    object is made. The back-pointer slot in every class instance

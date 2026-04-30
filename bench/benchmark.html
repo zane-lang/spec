@@ -94,7 +94,7 @@ const TESTS=[
       }
     ],
     "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
-    "details": "If Zane stays close to Pool here, lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery."
+    "details": "If Zane stays in the same rough performance band as Pool here (for example within a low-double-digit percent gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery."
   },
   {
     "t": "T2 \u2014 random-order free",
@@ -425,7 +425,7 @@ const TESTS=[
       },
       {
         "label": "Concurrent variant",
-        "val": "Zane-only work-stealing update; threads prestarted before benchmarks"
+        "val": "Zane-only work-stealing update; threads pre-started before benchmarks"
       },
       {
         "label": "Runs",
@@ -616,7 +616,7 @@ const TESTS=[
       },
       {
         "label": "Scheduler",
-        "val": "persistent work-stealing pool warmed before timed runs"
+        "val": "persistent work-stealing pool pre-started and warmed before timed runs"
       },
       {
         "label": "Correctness",
