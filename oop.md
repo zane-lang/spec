@@ -245,7 +245,7 @@ The lambda literal repeats the parameter list and `mut` marker. A non-`mut` lamb
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency_model.md`](concurrency_model.md) §5.2 ("Lambdas do not capture").
 
 ### 7.4 No bound method references
-Zane does not provide bound method references as a separate feature. If code needs a pre-supplied receiver, it uses a lambda.
+Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
 
 ---
 

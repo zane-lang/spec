@@ -70,16 +70,31 @@ result String = spawn listen(8080)
 print(result) // blocks until listen returns
 ```
 
-### 3.3 Stalling functions are parked
+### 3.3 Abortable spawned calls are handled at the spawn site
+If a spawned call is abortable, it must still attach `?` or `??` directly to the `spawn` expression. There is no separate propagation form at result-read time.
+
+```zane
+port Int = spawn listen(8080) ? err {
+    resolve Int(404)
+}
+
+fallback Int = spawn listen(8081) ?? Int(404)
+```
+
+The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.
+
+### 3.4 Stalling functions are parked
 A stalling function called without `spawn` blocks the caller. A stalling function called with `spawn` is parked by the runtime so it does not consume a worker thread while waiting.
 
-### 3.4 Stalling without `spawn` is ordinary blocking
+### 3.5 Stalling without `spawn` is ordinary blocking
 A stalling function does not require `spawn`. When called normally, it simply blocks the current execution until it returns.
 
-### 3.5 Ordering is explicit
+### 3.6 Ordering is explicit
 The compiler does not reorder `spawn` calls. The order in the source is the order in which spawns are started, and any blocking read happens exactly where written.
 
-### 3.6 No serial-equivalence guarantee
+Independent work may still be parallelized only when doing so preserves those source-visible points.
+
+### 3.7 No serial-equivalence guarantee
 `spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
 
 ---
@@ -100,6 +115,9 @@ The effect system classifies resource access as **read** or **write**. Concurren
 - write/write: serialized
 
 The compiler enforces this from effect signatures; the programmer does not add locks.
+
+### 4.4 Refs passed to spawned work are copied at spawn time
+When a `ref` is passed to a spawned call, the callee receives a copy of that ref value. Rebinding the caller's `ref` symbol later changes only the caller's storage; it does not retarget the copy already held by spawned work.
 
 ---
 
@@ -129,6 +147,7 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | Park stalled spawned work | Lets long-waiting calls coexist with a bounded worker pool without tying up OS threads unnecessarily. |
 | Water-tower lifetimes | Extends safe lifetimes into concurrent work without GC. |
 | Spawned values block on read | Makes data dependencies explicit at the point of use. |
+| Abortable spawns are handled at the spawn site | Keeps `spawn` in the same mandatory-handling model as ordinary calls. |
 | No cancellation/shutdown | Avoids hidden control flow; responsibility stays with the programmer. |
 | No lambda capture | Prevents hidden dependencies that would undermine effect analysis. |
 | No language-level process grouping | Keeps the concurrency core minimal and leaves orchestration to ordinary program structure. |
@@ -141,5 +160,6 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 |---|---|
 | Implicit parallelism | Compiler may parallelize only when results are unchanged |
 | `spawn` | Starts a concurrent function call; blocks only when results are read |
+| Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
 | Mutation | At most one concurrent `mut` accessor per object |

@@ -23,7 +23,7 @@ Zane eliminates dangling references by combining single ownership, lexical lifet
 Every class instance is owned by exactly one symbol, field, or container slot at a time. Ownership is the default storage mode for class values.
 
 ### 2.2 Class owners are single-assignment
-An owning symbol or field for a class instance **MUST NOT** be overwritten after initialization.
+Any owning storage position for a class instance—a symbol, field, or container slot—**MUST NOT** be overwritten after initialization.
 
 ```zane
 tank Tank(...)
@@ -31,6 +31,15 @@ tank = Tank(...) // ILLEGAL
 ```
 
 This rule eliminates destruction-by-overwrite as a source of dangling refs.
+
+Container overwrite therefore depends on element type. A container element that owns a class instance is single-assignment; a container element whose type is a struct or `ref` remains overwritable.
+
+```zane
+owners Array[2]<Node>
+refs Array[2]<ref Node>
+```
+
+`owners` has owning element slots, so each element is single-assignment once initialized. `refs` has `ref` element slots, so each element may later be rewritten to point at a different live object.
 
 ### 2.3 Struct values are freely overwritable
 Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
@@ -47,12 +56,18 @@ pos = Vec2(3, 4) // ok
 - a class field
 - an element type inside another storage type
 
-`ref` does not appear in function signatures.
+A `ref` type is legal only in storage sites: local symbols, fields, and nested storage types. It is not legal in function parameter or return-type positions.
 
 ### 2.5 Refs are repointable
 A `ref` symbol or `ref` field may be assigned a different target later, as long as the scope rule in §3.1 is satisfied.
 
-### 2.6 Named and unnamed values are equally ref-able
+### 2.6 Refs are copied by value
+Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage site later changes only that storage site; it does not retarget other copies.
+
+### 2.7 Refs and owners use the same surface operations
+At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
+
+### 2.8 Named and unnamed values are equally ref-able
 Refs may target named symbols, fields, container elements, or unnamed expression results. Anchor creation is triggered by the first ref, not by whether the value has a source-level name.
 
 ---
@@ -183,7 +198,7 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 
 | Decision | Rationale |
 |---|---|
-| Single-assignment class owners | Prevents overwrite-triggered destruction from invalidating refs unexpectedly. |
+| Single-assignment owning storage | Prevents overwrite-triggered destruction from invalidating refs unexpectedly, including inside owning containers. |
 | Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
 | `ref` is storage-only | Keeps lifetime responsibility visible at storage sites without polluting signatures. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
@@ -199,9 +214,9 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 
 | Concept | Rule |
 |---|---|
-| Class owner | Initialized once and never overwritten |
+| Owning storage | Class-typed symbols, fields, and container elements are initialized once and never overwritten |
 | Struct value | May be overwritten freely |
-| `ref` | Non-owning storage; may be repointed |
+| `ref` | Non-owning storage; may be repointed and copied by value |
 | Ref assignment | Only from owners in the same or a higher lexical scope |
 | Move | Only into an owner in the same or a higher lexical scope |
 | Function call | Callee decides move; caller symbol remains usable |
