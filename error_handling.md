@@ -237,7 +237,7 @@ Swift treats fallibility as a throwing effect with `do`/`catch` recovery.
 | Error type in signature | `throws` does not name a concrete error type in the signature surface | `? AbortType` names the failure type directly |
 | Recovery form | `do { try ... } catch { ... }` wraps the call in a separate control structure | the handler is attached directly to the call expression |
 | Runtime model | uses exception-style unwinding | uses explicit typed branches at the call site |
-| Coalescing | `try?` discards error information | `??` resolves a default while the compiler still knows the abort type of the call |
+| Coalescing | `try?` discards error information | `??` replaces an aborted call with the provided fallback value while the compiler still checks the call's abortability |
 
 ### 7.7 Zane vs. Zig error unions
 

@@ -43,7 +43,7 @@ Users update the manifest through CLI commands rather than by manual editing.
 If a tag has moved and the user intentionally wants to trust the new commit, the update flow requires an explicit override flag rather than silently refreshing the hash, for example:
 
 ```sh
-zane update math v1.0.1 --force-recommit
+zane update math v1.0.1 --accept-tag-move
 ```
 
 ---
