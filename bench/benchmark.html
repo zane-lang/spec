@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      34.95,
-      237.56,
-      518.12,
-      1483.18
+      30.97,
+      254.49,
+      498.37,
+      1673.29
     ],
     "colors": [
       "#3aab76",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      154.67,
-      474.72,
-      1245.54
+      180.63,
+      448.21,
+      1356.12
     ],
     "colors": [
       "#c49a2a",
@@ -140,20 +140,20 @@ const TESTS=[
     "title": "Mixed-size alloc and random-order free",
     "labels": [
       "Arena (bulk reset)",
-      "Pool (per-size free-list)",
       "Zane (mmap + free-stacks)",
+      "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      70.49,
-      1021.96,
-      1087.04,
-      3946.76
+      61.96,
+      887.75,
+      943.23,
+      3894.21
     ],
     "colors": [
       "#3aab76",
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a"
     ],
     "meta": [
@@ -181,24 +181,24 @@ const TESTS=[
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
-      "Inline array  (Array[100000]<Entity>)",
       "UList (chunk=8, linked)",
-      "Pointer array, sequential",
+      "Inline array  (Array[100000]<Entity>)",
       "CChunked (chunk=64, ptr-array)",
+      "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      69.99,
-      71.68,
-      73.42,
-      85.83,
-      136.65
+      61.89,
+      72.08,
+      76.12,
+      104.21,
+      112.12
     ],
     "colors": [
       "#3aab76",
       "#3aab76",
-      "#e05a3a",
       "#c45a8a",
+      "#e05a3a",
       "#e05a3a"
     ],
     "meta": [
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      71.02,
-      190.85,
-      435.83,
-      1240.24
+      65.01,
+      208.38,
+      382.72,
+      1310.47
     ],
     "colors": [
       "#7c6ff7",
@@ -288,22 +288,22 @@ const TESTS=[
     "t": "T6 \u2014 ref access",
     "title": "Ref access via anchor+ref_obj vs direct pointer",
     "labels": [
-      "Direct pointer (baseline)",
-      "Anchor only (owning, post-move)",
+      "Full ref path (ref_anchor->ref_obj->anchor->obj)",
       "Full ref path + liveness guard",
-      "Full ref path (ref_anchor->ref_obj->anchor->obj)"
+      "Anchor only (owning, post-move)",
+      "Direct pointer (baseline)"
     ],
     "data": [
-      132.41,
-      151.91,
-      153.68,
-      158.0
+      113.78,
+      117.97,
+      118.38,
+      160.73
     ],
     "colors": [
-      "#4a9edd",
-      "#7c6ff7",
       "#b8a4ff",
-      "#b8a4ff"
+      "#b8a4ff",
+      "#7c6ff7",
+      "#4a9edd"
     ],
     "meta": [
       {
@@ -343,9 +343,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2873.01,
-      2908.45,
-      3025.99
+      2575.99,
+      2581.91,
+      2775.13
     ],
     "colors": [
       "#c49a2a",
@@ -385,19 +385,22 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
-      "malloc / free"
+      "Zane (mmap + free-stacks)",
+      "malloc / free",
+      "Zane + work-stealing update"
     ],
     "data": [
-      9151.68,
-      9170.57,
-      9644.47
+      8053.36,
+      8125.3,
+      8661.51,
+      36955.01
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
-      "#e05a3a"
+      "#7c6ff7",
+      "#e05a3a",
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -441,9 +444,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      74.76,
-      445.02,
-      1189.8
+      97.44,
+      478.25,
+      1048.67
     ],
     "colors": [
       "#7c6ff7",
@@ -490,11 +493,11 @@ const TESTS=[
       "Zane \u2014 individual refs (1 per node)"
     ],
     "data": [
-      72.81,
-      88.0,
-      88.91,
-      144.13,
-      148.53
+      63.71,
+      77.57,
+      77.78,
+      148.74,
+      165.48
     ],
     "colors": [
       "#c49a2a",
@@ -541,9 +544,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2300.15,
-      2307.14,
-      2485.83
+      1980.44,
+      1982.2,
+      2142.0
     ],
     "colors": [
       "#7c6ff7",
@@ -591,8 +594,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      42.08,
-      168.19
+      60.15,
+      153.52
     ],
     "colors": [
       "#c49a2a",
