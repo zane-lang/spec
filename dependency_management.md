@@ -40,7 +40,11 @@ Users update the manifest through CLI commands rather than by manual editing.
 
 `zane update alias version` replaces both the recorded tag and the recorded commit for that alias. A whole-project update re-resolves each dependency and refreshes both fields.
 
-If a tag has moved and the user intentionally wants to trust the new commit, the update flow must require an explicit override flag rather than silently refreshing the hash.
+If a tag has moved and the user intentionally wants to trust the new commit, the update flow must require an explicit override flag rather than silently refreshing the hash, for example:
+
+```sh
+zane update math v1.0.1 --force-recommit
+```
 
 ---
 
