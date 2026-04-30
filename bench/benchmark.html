@@ -27,8 +27,8 @@
   .info-lbl{color:var(--label);white-space:nowrap;min-width:104px;}
   .info-val{color:var(--text);}
   .info-div{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}
-  .info-insight{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
-  .info-insight strong{color:var(--label);font-weight:600;}
+  .info-details{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
+  .info-details strong{color:var(--label);font-weight:600;}
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:var(--muted);}
   .litem{display:flex;align-items:center;gap:5px;}
   .sw{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
@@ -94,7 +94,7 @@ const TESTS=[
       }
     ],
     "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
-    "insight": "Lazy anchors mean objects with no refs pay zero anchor overhead. Zane is competitive with the Pool and far ahead of malloc."
+    "details": "If Zane stays close to Pool here, lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery."
   },
   {
     "t": "T2 \u2014 random-order free",
@@ -133,7 +133,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. Back-ptr is 0 so free is one stack push per object.",
-    "insight": "Free order never matters \u2014 always O(1). No coalescing, no adjacency checks."
+    "details": "Zane and Pool are expected to stay relatively flat even when free order is shuffled. If random-order free slows an implementation sharply, that usually means the free path depends on heap history or coalescing work."
   },
   {
     "t": "T3 \u2014 mixed sizes",
@@ -175,7 +175,7 @@ const TESTS=[
       }
     ],
     "setup": "Raw block alloc/free of four sizes in random order.",
-    "insight": "Direct size-indexed stack dispatch, no coalescing. Zane's free-stack table handles mixed sizes efficiently."
+    "details": "If Zane remains stable across the four sizes, the size-indexed free stacks are handling mixed-size reuse predictably. A larger spread usually means the allocator is paying extra per-size dispatch or reuse cost."
   },
   {
     "t": "T4 \u2014 iteration",
@@ -232,7 +232,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-    "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. Chunked layouts remain competitive with contiguous storage and avoid the worst pointer-chase penalty."
+    "details": "Contiguous inline storage is the expected lower bound. If chunked layouts stay close, their locality is working well; if pointer-chase falls behind, the gap mostly reflects cache-miss and indirection cost."
   },
   {
     "t": "T5 \u2014 buffer growth",
@@ -282,7 +282,7 @@ const TESTS=[
       }
     ],
     "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
-    "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls."
+    "details": "An in-place frontier grower is expected to do well when the buffer can expand without copying. If chunked forms or realloc-based growth win instead, that suggests avoided copies or allocator behavior mattered more in that run."
   },
   {
     "t": "T6 \u2014 ref access",
@@ -332,7 +332,7 @@ const TESTS=[
       }
     ],
     "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Two pointer hops vs one for direct access.",
-    "insight": "The full ref path adds measurable overhead from two heap indirections. The runtime liveness guard (0xFFFFFFFF sentinel on ref_anchor) is essentially free \u2014 branch predictor learns it immediately."
+    "details": "Direct pointer access should be the lower bound, anchor-only is usually next, and the full ref path should cost more because it adds extra indirection. If the liveness-guard variant matches the full ref path, the guard itself is not the dominant cost."
   },
   {
     "t": "T7 \u2014 game loop",
@@ -379,7 +379,7 @@ const TESTS=[
       }
     ],
     "setup": "Each spawn writes back-ptr = 0. Each kill reads back-ptr (0), single zm_free.",
-    "insight": "Update/iteration dominates; allocator cost is a small constant per frame. Lazy anchors mean no overhead for objects without refs."
+    "details": "Once the entity pool reaches steady state, update work is expected to dominate. If allocator gaps widen, churn is contributing more; if results converge, per-frame simulation work is dominating allocator differences."
   },
   {
     "t": "T8 \u2014 particle system",
@@ -421,12 +421,16 @@ const TESTS=[
         "val": "TTL = random 10\u201330 frames"
       },
       {
+        "label": "Concurrent variant",
+        "val": "Zane-only work-stealing update; threads prestarted before benchmarks"
+      },
+      {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
     "setup": "Maximum churn. Every death reads back-ptr (0), single zm_free.",
-    "insight": "Lazy anchors mean particle churn costs the same as a plain allocator. No overhead for short-lived objects that never get ref'd."
+    "details": "The sequential baseline shows pure churn cost. If the work-stealing variant pulls ahead, the per-frame particle update has enough independent work to amortize coordination; if it falls behind, scheduler and shard overhead are larger than the frame work on this machine."
   },
   {
     "t": "T9 \u2014 fragmentation",
@@ -473,7 +477,7 @@ const TESTS=[
       }
     ],
     "setup": "Phases A+B untimed. Phase C timed. Free-stacks fully populated after Phase B.",
-    "insight": "Refill = O(1) free-stack pops. Zane reclaims fragmented holes instantly."
+    "details": "Zane and Pool are expected to refill from prepared free slots with relatively stable cost. If an implementation slows markedly after fragmentation, the refill path is doing more than exact-size reuse."
   },
   {
     "t": "T10 \u2014 tree teardown",
@@ -526,7 +530,7 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants: no refs (lazy stays 0), single parent ref (root only gets anchor + ref), individual refs (every node gets ref_anchor \u2192 ref_obj \u2192 anchor). All use post-order DFS destruction.",
-    "insight": "No refs and single parent ref are nearly identical. Individual refs (1 per node) add measurable cost \u2014 the anchor teardown on every node (iterate weak_ref_stack, null ref_anchor, free anchor, free ref_obj, free node) adds up over 4,000 nodes. This is why the spec encourages ref'ing the container, not each child."
+    "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never create anchors. If the individual-ref variant is much slower, the extra cost is coming from per-node anchor and ref teardown."
   },
   {
     "t": "T11 \u2014 stress test",
@@ -568,12 +572,16 @@ const TESTS=[
         "val": "spawn + create buffers + push + update + kill"
       },
       {
+        "label": "Concurrency",
+        "val": "not added \u2014 shared randomized mutation would distort the workload"
+      },
+      {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
     "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
-    "insight": "Iteration and computation dominate in a realistic mixed workload. The deferred dynamic-list surface syntax is approximated here with owned inline buffers."
+    "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here because the shared push/kill phases would mostly measure synchronization and ordering changes rather than the benchmark's existing workload."
   },
   {
     "t": "T12 \u2014 concurrent scan",
@@ -588,7 +596,7 @@ const TESTS=[
     ],
     "colors": [
       "#c49a2a",
-      "#6b7280"
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -604,6 +612,10 @@ const TESTS=[
         "val": "Array[100000]<Entity> split into 4 independent shards"
       },
       {
+        "label": "Scheduler",
+        "val": "persistent work-stealing pool warmed before timed runs"
+      },
+      {
         "label": "Correctness",
         "val": "aggregate hp sum asserted every run"
       },
@@ -613,7 +625,7 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-    "insight": "This is the benchmark suite's concurrent variant: independent read-only work that maps cleanly to the updated spec's explicit spawn/implicit parallelism model without introducing nondeterministic shared-state effects."
+    "details": "Sequential and concurrent totals should match every run. If the concurrent variant improves, the independent shard work is large enough to amortize the prestarted worker pool; if not, scheduling and memory bandwidth are dominating."
   }
 ];
 let chart=null;
@@ -625,7 +637,7 @@ function renderInfo(t){
     `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
     `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-insight"><strong>Setup: </strong>${t.setup} <strong>Key insight: </strong>${t.insight}</div>`;
+    `<div class="info-details"><strong>Setup: </strong>${t.setup} <strong>Details: </strong>${t.details}</div>`;
 }
 function show(idx){
   const t=TESTS[idx];

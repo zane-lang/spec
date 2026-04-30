@@ -107,6 +107,140 @@ static void section(const char *title) {
     printf("  +--------------------------------------------------------------------------------------------------+\n");
 }
 
+/* ─────────────────────────────────────────────
+   BENCHMARK WORK-STEALING POOL
+   Prestarted once before timed benchmarks so concurrent tests measure
+   steady-state scheduling rather than thread creation.
+───────────────────────────────────────────── */
+#define BENCH_POOL_WORKERS   4
+#define BENCH_POOL_MAX_JOBS  32
+
+typedef void (*BenchJobFn)(void *);
+
+typedef struct {
+    BenchJobFn fn;
+    void      *arg;
+} BenchJob;
+
+typedef struct {
+    BenchJob jobs[BENCH_POOL_MAX_JOBS];
+    int      head;
+    int      tail;
+} BenchDeque;
+
+typedef struct {
+    pthread_t       threads[BENCH_POOL_WORKERS];
+    BenchDeque      queues[BENCH_POOL_WORKERS];
+    pthread_mutex_t mu;
+    pthread_cond_t  has_work;
+    pthread_cond_t  idle;
+    int             pending_jobs;
+    int             stop;
+} BenchPool;
+
+static BenchPool bench_pool;
+
+static void bench_deque_reset(BenchDeque *q) { q->head = 0; q->tail = 0; }
+
+static void bench_deque_push(BenchDeque *q, BenchJob job) {
+    assert((q->tail - q->head) < BENCH_POOL_MAX_JOBS);
+    q->jobs[q->tail % BENCH_POOL_MAX_JOBS] = job;
+    q->tail++;
+}
+
+static int bench_deque_pop_back(BenchDeque *q, BenchJob *job) {
+    if (q->tail == q->head) return 0;
+    q->tail--;
+    *job = q->jobs[q->tail % BENCH_POOL_MAX_JOBS];
+    return 1;
+}
+
+static int bench_deque_pop_front(BenchDeque *q, BenchJob *job) {
+    if (q->tail == q->head) return 0;
+    *job = q->jobs[q->head % BENCH_POOL_MAX_JOBS];
+    q->head++;
+    return 1;
+}
+
+static int bench_pool_take_job_locked(int worker_id, BenchJob *job) {
+    if (bench_deque_pop_back(&bench_pool.queues[worker_id], job)) return 1;
+    for (int step = 1; step < BENCH_POOL_WORKERS; step++) {
+        int victim = (worker_id + step) % BENCH_POOL_WORKERS;
+        if (bench_deque_pop_front(&bench_pool.queues[victim], job)) return 1;
+    }
+    return 0;
+}
+
+static void *bench_pool_worker(void *arg) {
+    int worker_id = (int)(intptr_t)arg;
+    BenchJob job;
+
+    pthread_mutex_lock(&bench_pool.mu);
+    for (;;) {
+        while (!bench_pool.stop && !bench_pool_take_job_locked(worker_id, &job)) {
+            pthread_cond_wait(&bench_pool.has_work, &bench_pool.mu);
+        }
+        if (bench_pool.stop) {
+            pthread_mutex_unlock(&bench_pool.mu);
+            return NULL;
+        }
+
+        pthread_mutex_unlock(&bench_pool.mu);
+        job.fn(job.arg);
+        pthread_mutex_lock(&bench_pool.mu);
+
+        bench_pool.pending_jobs--;
+        if (bench_pool.pending_jobs == 0) pthread_cond_signal(&bench_pool.idle);
+        pthread_cond_broadcast(&bench_pool.has_work);
+    }
+}
+
+static void bench_pool_init(void) {
+    memset(&bench_pool, 0, sizeof(bench_pool));
+    assert(pthread_mutex_init(&bench_pool.mu, NULL) == 0);
+    assert(pthread_cond_init(&bench_pool.has_work, NULL) == 0);
+    assert(pthread_cond_init(&bench_pool.idle, NULL) == 0);
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+        bench_deque_reset(&bench_pool.queues[i]);
+        assert(pthread_create(&bench_pool.threads[i], NULL, bench_pool_worker, (void*)(intptr_t)i) == 0);
+    }
+}
+
+static void bench_pool_run(BenchJob *jobs, int njobs) {
+    assert(njobs > 0 && njobs <= BENCH_POOL_MAX_JOBS);
+
+    pthread_mutex_lock(&bench_pool.mu);
+    while (bench_pool.pending_jobs != 0) pthread_cond_wait(&bench_pool.idle, &bench_pool.mu);
+
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) bench_deque_reset(&bench_pool.queues[i]);
+    for (int i = 0; i < njobs; i++) bench_deque_push(&bench_pool.queues[i % BENCH_POOL_WORKERS], jobs[i]);
+    bench_pool.pending_jobs = njobs;
+
+    pthread_cond_broadcast(&bench_pool.has_work);
+    while (bench_pool.pending_jobs != 0) pthread_cond_wait(&bench_pool.idle, &bench_pool.mu);
+    pthread_mutex_unlock(&bench_pool.mu);
+}
+
+static void bench_noop_job(void *arg) { (void)arg; }
+
+static void bench_pool_warm(void) {
+    BenchJob jobs[BENCH_POOL_WORKERS];
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) jobs[i] = (BenchJob){ .fn = bench_noop_job, .arg = NULL };
+    bench_pool_run(jobs, BENCH_POOL_WORKERS);
+}
+
+static void bench_pool_shutdown(void) {
+    pthread_mutex_lock(&bench_pool.mu);
+    bench_pool.stop = 1;
+    pthread_cond_broadcast(&bench_pool.has_work);
+    pthread_mutex_unlock(&bench_pool.mu);
+
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) assert(pthread_join(bench_pool.threads[i], NULL) == 0);
+    pthread_cond_destroy(&bench_pool.idle);
+    pthread_cond_destroy(&bench_pool.has_work);
+    pthread_mutex_destroy(&bench_pool.mu);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    ZANE MEMORY SYSTEM
 ═══════════════════════════════════════════════════════════════════ */
@@ -162,8 +296,9 @@ static void zm_free(void *p, size_t s) {
 
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
-     non-owning references. List<T> stores T inline. List<ref T>
-     holds non-owning refs to T owned elsewhere.
+     non-owning references. `Array[size]<T>` is the fixed-size inline
+     container, and growable buffers are layered on top of contiguous
+     owned storage in user space.
 
    Anchors are created on demand — only when the first ref to an
    object is made. The back-pointer slot in every class instance
@@ -824,10 +959,12 @@ static void test7(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 8 — Particle system (burst alloc, short TTL, high turnover)
    500 frames. Each frame:
-     - BURST_SPAWN new 24-byte Particles born (TTL = 10-30 frames)
-     - All particles: tick TTL, free if dead, else move (x+=vx, y+=vy)
-   Almost every particle dies within 30 frames. This maximises
-   allocator churn on identically-sized objects.
+      - BURST_SPAWN new 24-byte Particles born (TTL = 10-30 frames)
+      - All particles: tick TTL, free if dead, else move (x+=vx, y+=vy)
+    Almost every particle dies within 30 frames. This maximises
+    allocator churn on identically-sized objects. The concurrent Zane variant
+    keeps spawn/free ordering deterministic and parallelizes only the read/write
+    update pass across prestarted work-stealing workers.
 ═══════════════════════════════════════════════════════════════════ */
 #define PART_FRAMES   500
 #define MAX_PARTICLES 6000
@@ -837,6 +974,30 @@ typedef struct { Particle **slots; int count,cap; } PPool;
 static void pp_init(PPool*p,int cap){p->slots=(Particle**)calloc((size_t)cap,sizeof(Particle*));p->count=0;p->cap=cap;}
 static void pp_free(PPool*p){free(p->slots);}
 static void pp_add(PPool*p,Particle*e){for(int i=0;i<p->cap;i++)if(!p->slots[i]){p->slots[i]=e;p->count++;return;}}
+
+#define PART_SHARD_CAP ((MAX_PARTICLES + BENCH_POOL_WORKERS - 1) / BENCH_POOL_WORKERS)
+
+typedef struct {
+    Particle **slots;
+    int        start;
+    int        end;
+    double     ax;
+    int        dead_count;
+    int        dead_idx[PART_SHARD_CAP];
+} ParticleShardJob;
+
+static void particle_update_job(void *arg) {
+    ParticleShardJob *job = (ParticleShardJob*)arg;
+    job->ax = 0.0;
+    job->dead_count = 0;
+    for (int i = job->start; i < job->end; i++) {
+        Particle *p = job->slots[i];
+        if (!p) continue;
+        p->ttl--;
+        if (p->ttl <= 0) job->dead_idx[job->dead_count++] = i;
+        else { p->x += p->vx; p->y += p->vy; job->ax += p->x; }
+    }
+}
 
 static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     if (prewarm) { pool_flush(); pool_warm(sizeof(Particle), MAX_PARTICLES); }
@@ -867,6 +1028,58 @@ static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     }
 }
 
+static void particle_run_parallel(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
+    if (prewarm) { pool_flush(); pool_warm(sizeof(Particle), MAX_PARTICLES); }
+    for (int r = 0; r < RUNS; r++) {
+        if (!prewarm && af == zm_alloc_e) zm_reset();
+        rng_state = 0xde1e7edULL + (uint64_t)r;
+        PPool pp; pp_init(&pp, MAX_PARTICLES);
+        double t0 = now_ns();
+        for (int frame = 0; frame < PART_FRAMES; frame++) {
+            for (int s = 0; s < BURST_SPAWN && pp.count < MAX_PARTICLES - 1; s++) {
+                Particle *p = (Particle*)af(sizeof(Particle));
+                p->x = (float)(rng()%800); p->y = (float)(rng()%600);
+                p->vx = (float)((int)(rng()%11)-5); p->vy = (float)((int)(rng()%11)-5);
+                p->ttl = 10 + (int32_t)(rng()%21); p->color = (int32_t)(rng()%8);
+                pp_add(&pp, p);
+            }
+
+            BenchJob jobs[BENCH_POOL_WORKERS];
+            ParticleShardJob shard_jobs[BENCH_POOL_WORKERS];
+            int base = MAX_PARTICLES / BENCH_POOL_WORKERS;
+            int rem = MAX_PARTICLES % BENCH_POOL_WORKERS;
+            int start = 0;
+            for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+                int span = base + (i < rem ? 1 : 0);
+                shard_jobs[i].slots = pp.slots;
+                shard_jobs[i].start = start;
+                shard_jobs[i].end = start + span;
+                shard_jobs[i].ax = 0.0;
+                shard_jobs[i].dead_count = 0;
+                jobs[i].fn = particle_update_job;
+                jobs[i].arg = &shard_jobs[i];
+                start += span;
+            }
+            bench_pool_run(jobs, BENCH_POOL_WORKERS);
+
+            double ax = 0.0;
+            for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+                ax += shard_jobs[i].ax;
+                for (int j = 0; j < shard_jobs[i].dead_count; j++) {
+                    int idx = shard_jobs[i].dead_idx[j];
+                    if (!pp.slots[idx]) continue;
+                    ff(pp.slots[idx], sizeof(Particle));
+                    pp.slots[idx] = NULL;
+                    pp.count--;
+                }
+            }
+            sink ^= (int64_t)ax;
+        }
+        for (int i = 0; i < pp.cap; i++) if (pp.slots[i]) ff(pp.slots[i], sizeof(Particle));
+        T[r] = now_ns() - t0; pp_free(&pp);
+    }
+}
+
 static void *po_alloc_p(size_t s){return pool_alloc(s);}
 static void  po_free_p (void*p,size_t s){pool_free(p,s);}
 
@@ -874,6 +1087,7 @@ static void test8(void) {
     section("Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]");
     double T[RUNS];
     zm_reset(); particle_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (mmap + free-stacks)", T);
+              particle_run_parallel(T, zm_alloc_e, zm_free_e, 0); print_result("Zane + work-stealing update", T);
               particle_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
               particle_run(T, po_alloc_p, po_free_p, 1); print_result("Pool (per-size free-list)", T);
 }
@@ -1240,11 +1454,9 @@ static void test11(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 12 — Deterministic concurrent shard scan
    Models `spawn`/parallel execution with four independent read-only jobs over
-   owned inline arrays. Each worker sums one shard and the main thread checks
-   the aggregate against the sequential baseline every run.
+   owned inline arrays. A prestarted work-stealing pool sums the shards and the
+   main thread checks the aggregate against the sequential baseline every run.
 ═══════════════════════════════════════════════════════════════════ */
-#define CONC_WORKERS 4
-
 typedef struct {
     const Entity *base;
     int start;
@@ -1252,18 +1464,17 @@ typedef struct {
     int64_t sum;
 } SumJob;
 
-static void *sum_entity_shard(void *arg) {
+static void sum_entity_shard(void *arg) {
     SumJob *job = (SumJob*)arg;
     int64_t acc = 0;
     for (int i = 0; i < job->len; i++) acc += job->base[job->start + i].hp;
     job->sum = acc;
-    return NULL;
 }
 
 static void test12(void) {
     section("Test 12 -- Concurrent shard scan  [4 x Array[25000]<Entity> read-only shard sums]");
     double T[RUNS];
-    assert((N % CONC_WORKERS) == 0);
+    assert((N % BENCH_POOL_WORKERS) == 0);
 
     Entity *owned = (Entity*)malloc(N * sizeof(Entity));
     for (int i = 0; i < N; i++) {
@@ -1273,20 +1484,20 @@ static void test12(void) {
         owned[i].hp = i % 100 + 1;
     }
 
-    const int shard_len = N / CONC_WORKERS;
+    const int shard_len = N / BENCH_POOL_WORKERS;
     const int64_t expected = (int64_t)(N / 100) * 5050; /* hp repeats 1..100, whose sum is 5050 */
 
     { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
     {
-        pthread_t tids[CONC_WORKERS];
-        SumJob jobs[CONC_WORKERS];
-        for (int i = 0; i < CONC_WORKERS; i++) {
+        BenchJob run[BENCH_POOL_WORKERS];
+        SumJob jobs[BENCH_POOL_WORKERS];
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
             jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
-            assert(pthread_create(&tids[i], NULL, sum_entity_shard, &jobs[i]) == 0);
+            run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
+        bench_pool_run(run, BENCH_POOL_WORKERS);
         int64_t warm = 0;
-        for (int i = 0; i < CONC_WORKERS; i++) {
-            assert(pthread_join(tids[i], NULL) == 0);
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
             warm += jobs[i].sum;
         }
         assert(warm == expected);
@@ -1296,7 +1507,7 @@ static void test12(void) {
     for (int r = 0; r < RUNS; r++) {
         int64_t acc = 0;
         double t0 = now_ns();
-        for (int shard = 0; shard < CONC_WORKERS; shard++) {
+        for (int shard = 0; shard < BENCH_POOL_WORKERS; shard++) {
             int start = shard * shard_len;
             for (int i = 0; i < shard_len; i++) acc += owned[start + i].hp;
         }
@@ -1307,16 +1518,16 @@ static void test12(void) {
     print_result("Owned Array shards, sequential", T);
 
     for (int r = 0; r < RUNS; r++) {
-        pthread_t tids[CONC_WORKERS];
-        SumJob jobs[CONC_WORKERS];
+        BenchJob run[BENCH_POOL_WORKERS];
+        SumJob jobs[BENCH_POOL_WORKERS];
         double t0 = now_ns();
-        for (int i = 0; i < CONC_WORKERS; i++) {
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
             jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
-            assert(pthread_create(&tids[i], NULL, sum_entity_shard, &jobs[i]) == 0);
+            run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
+        bench_pool_run(run, BENCH_POOL_WORKERS);
         int64_t acc = 0;
-        for (int i = 0; i < CONC_WORKERS; i++) {
-            assert(pthread_join(tids[i], NULL) == 0);
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
             acc += jobs[i].sum;
         }
         T[r] = now_ns() - t0;
@@ -1338,11 +1549,12 @@ int main(void) {
     printf("  |  N = %d  .  %d runs each  .  MEDIAN reported (ns, 2 d.p.)                                  |\n", N, RUNS);
     printf("  +===================================================================================================+\n");
 
-    zm_init(); ar_init(); pool_flush();
+    zm_init(); ar_init(); pool_flush(); bench_pool_init(); bench_pool_warm();
 
     test1(); test2(); test3(); test4(); test5();
     test6(); test7(); test8(); test9(); test10(); test11(); test12();
 
+    bench_pool_shutdown();
     printf("\n  (sink = %lld)\n\n", (long long)sink);
     return 0;
 }
