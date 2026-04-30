@@ -250,14 +250,16 @@ def get_color(impl_name):
             return color
 
     # Pointer variants
+    if lower.startswith("owned array shards, concurrent"):
+        return "#7c6ff7"
+    if lower.startswith("owned array shards, sequential"):
+        return "#3aab76"
     if "sequential" in lower:
         return "#c49a2a"
     if "shuffled" in lower:
         return "#e05a3a"
     if "work-stealing" in lower or "concurrent" in lower:
         return "#7c6ff7"
-    if "owned array shards" in lower:
-        return "#3aab76"
 
     return "#6b7280"  # fallback grey
 

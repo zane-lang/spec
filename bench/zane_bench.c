@@ -140,22 +140,25 @@ typedef struct {
 
 static BenchPool bench_pool;
 
-static void bench_deque_reset(BenchDeque *q) { q->head = 0; q->tail = 0; }
+/* All deque access is serialized by bench_pool.mu, including steals. The
+   benchmark batches are tiny, so a single mutex keeps the implementation
+   simple while still giving us work-stealing behavior across worker queues. */
+static void bench_deque_reset_locked(BenchDeque *q) { q->head = 0; q->tail = 0; }
 
-static void bench_deque_push(BenchDeque *q, BenchJob job) {
+static void bench_deque_push_locked(BenchDeque *q, BenchJob job) {
     assert((q->tail - q->head) < BENCH_POOL_MAX_JOBS);
     q->jobs[q->tail % BENCH_POOL_MAX_JOBS] = job;
     q->tail++;
 }
 
-static int bench_deque_pop_back(BenchDeque *q, BenchJob *job) {
+static int bench_deque_pop_back_locked(BenchDeque *q, BenchJob *job) {
     if (q->tail == q->head) return 0;
     q->tail--;
     *job = q->jobs[q->tail % BENCH_POOL_MAX_JOBS];
     return 1;
 }
 
-static int bench_deque_pop_front(BenchDeque *q, BenchJob *job) {
+static int bench_deque_pop_front_locked(BenchDeque *q, BenchJob *job) {
     if (q->tail == q->head) return 0;
     *job = q->jobs[q->head % BENCH_POOL_MAX_JOBS];
     q->head++;
@@ -163,10 +166,10 @@ static int bench_deque_pop_front(BenchDeque *q, BenchJob *job) {
 }
 
 static int bench_pool_take_job_locked(int worker_id, BenchJob *job) {
-    if (bench_deque_pop_back(&bench_pool.queues[worker_id], job)) return 1;
+    if (bench_deque_pop_back_locked(&bench_pool.queues[worker_id], job)) return 1;
     for (int step = 1; step < BENCH_POOL_WORKERS; step++) {
         int victim = (worker_id + step) % BENCH_POOL_WORKERS;
-        if (bench_deque_pop_front(&bench_pool.queues[victim], job)) return 1;
+        if (bench_deque_pop_front_locked(&bench_pool.queues[victim], job)) return 1;
     }
     return 0;
 }
@@ -201,7 +204,7 @@ static void bench_pool_init(void) {
     assert(pthread_cond_init(&bench_pool.has_work, NULL) == 0);
     assert(pthread_cond_init(&bench_pool.idle, NULL) == 0);
     for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
-        bench_deque_reset(&bench_pool.queues[i]);
+        bench_deque_reset_locked(&bench_pool.queues[i]);
         assert(pthread_create(&bench_pool.threads[i], NULL, bench_pool_worker, (void*)(intptr_t)i) == 0);
     }
 }
@@ -212,8 +215,10 @@ static void bench_pool_run(BenchJob *jobs, int njobs) {
     pthread_mutex_lock(&bench_pool.mu);
     while (bench_pool.pending_jobs != 0) pthread_cond_wait(&bench_pool.idle, &bench_pool.mu);
 
-    for (int i = 0; i < BENCH_POOL_WORKERS; i++) bench_deque_reset(&bench_pool.queues[i]);
-    for (int i = 0; i < njobs; i++) bench_deque_push(&bench_pool.queues[i % BENCH_POOL_WORKERS], jobs[i]);
+    /* pending_jobs == 0 means there are no queued or running jobs left, so
+       with the mutex held it is safe to clear and repopulate every queue. */
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) bench_deque_reset_locked(&bench_pool.queues[i]);
+    for (int i = 0; i < njobs; i++) bench_deque_push_locked(&bench_pool.queues[i % BENCH_POOL_WORKERS], jobs[i]);
     bench_pool.pending_jobs = njobs;
 
     pthread_cond_broadcast(&bench_pool.has_work);
