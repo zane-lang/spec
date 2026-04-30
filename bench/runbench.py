@@ -73,10 +73,11 @@ TEST_META = {
         "short": "T4 — iteration",
         "title": "Iterating 100k entity objects — five layouts",
         "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-        "insight": "Inline wins — contiguous memory with no pointer chase. CChunked and UList both beat pointer-chase due to chunk locality.",
+        "insight": "A fixed-size inline Array stays the closest current-spec analogue to contiguous owned storage. CChunked and UList still beat pointer-chase due to chunk locality.",
         "meta": [
             ("Object type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Object size", "32 bytes"),
+            ("Spec analogue", "Array[100000]<Entity> — fixed-size inline storage"),
             ("CChunked", "64 elements × 32B = 2048B per chunk"),
             ("UList", "8 elements × 32B = 256B per chunk"),
             ("Measured op", "sum all hp fields (read-only scan)"),
@@ -84,12 +85,13 @@ TEST_META = {
         ],
     },
     "Test 5": {
-        "short": "T5 — list growth",
-        "title": "Growing a list by appending 100k items",
-        "setup": "Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
-        "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls. CChunked is faster than UList due to fewer, larger chunks.",
+        "short": "T5 — buffer growth",
+        "title": "Growing an owned contiguous buffer by appending 100k items",
+        "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer. Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
+        "insight": "Zane wins because ~14 frontier bumps beats thousands of malloc calls. This is the closest current-spec stand-in for deferred dynamic containers built from contiguous owned storage.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
+            ("Spec analogue", "growable buffer layered over Array-like inline storage"),
             ("Zane", "~14 in-place frontier doublings, no malloc"),
             ("CChunked", "1,563 malloc calls, zero copies"),
             ("UList", "12,500 malloc calls, zero copies"),
@@ -100,12 +102,12 @@ TEST_META = {
         "short": "T6 — ref access",
         "title": "Ref access via anchor+ref_obj vs direct pointer",
         "setup": "Full ref dereference path: ref_anchor (stack) → ref_obj (heap) → anchor → object. Two pointer hops vs one for direct access.",
-        "insight": "The full ref path adds measurable overhead from two heap indirections. The null check (0xFFFFFFFF sentinel on ref_anchor) is essentially free — branch predictor learns it immediately.",
+        "insight": "The full ref path adds measurable overhead from two heap indirections. The runtime liveness guard (0xFFFFFFFF sentinel on ref_anchor) is essentially free — branch predictor learns it immediately.",
         "meta": [
             ("Direct", "one pointer dereference — baseline"),
             ("Anchor only", "heap_base + anchor.heapoffset — simulates post-move owning access"),
             ("Full ref path", "ref_anchor → ref_obj → anchor → object (two hops)"),
-            ("Null sentinel", "0xFFFFFFFF on ref_anchor.heapoffset — checked before deref"),
+            ("Liveness guard", "0xFFFFFFFF on ref_anchor.heapoffset — runtime-only check before deref"),
             ("Leaf-only", "ref registers only in the leaf object's anchor"),
             ("Runs", "20 — median reported"),
         ],
@@ -168,15 +170,28 @@ TEST_META = {
     },
     "Test 11": {
         "short": "T11 — stress test",
-        "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
+        "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
         "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
-        "insight": "Iteration and computation dominate in a realistic mixed workload. Allocator differences become negligible.",
+        "insight": "Iteration and computation dominate in a realistic mixed workload. The deferred dynamic-list surface syntax is approximated here with owned inline buffers.",
         "meta": [
             ("Object size", "40B + 8B back-ptr"),
-            ("List buffers", "256–512B + 8B back-ptr"),
+            ("Owned buffers", "256–512B + 8B back-ptr"),
             ("Anchor", "never created — no refs"),
             ("Cycles", "200 cycles"),
-            ("Per cycle", "spawn + create lists + push + update + kill"),
+            ("Per cycle", "spawn + create buffers + push + update + kill"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 12": {
+        "short": "T12 — concurrent scan",
+        "title": "Concurrent shard scan over four independent Array[25000]<Entity> workloads",
+        "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
+        "insight": "This is the benchmark suite's concurrent variant: independent read-only work that maps cleanly to the updated spec's explicit spawn/implicit parallelism model without introducing nondeterministic shared-state effects.",
+        "meta": [
+            ("Workers", "4"),
+            ("Shard size", "25,000 entities"),
+            ("Total layout", "Array[100000]<Entity> split into 4 independent shards"),
+            ("Correctness", "aggregate hp sum asserted every run"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -436,7 +451,7 @@ def main():
     else:
         # Compile
         print("Compiling zane_bench.c ...")
-        compile_cmd = ["gcc", "-O2", "-Wall", "-Wextra", "-std=c11",
+        compile_cmd = ["gcc", "-O2", "-Wall", "-Wextra", "-std=c11", "-pthread",
                         "-o", BINARY, C_SOURCE, "-lm"]
         result = subprocess.run(compile_cmd, capture_output=True, text=True)
         if result.returncode != 0:

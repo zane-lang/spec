@@ -23,21 +23,23 @@
  *  Memory model:
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
- *    List<T> stores T inline (contiguous, no pointer chase).
- *    List<ref T> holds non-owning refs to T owned elsewhere.
+ *    `Array[size]<T>` is the spec-defined fixed-size inline container.
+ *    The growth tests below model user-space growable storage as the
+ *    closest updated-spec stand-in for the now-deferred dynamic `List<T>`.
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
  *    2. Random-order free only                      (32B × 100k)
  *    3. Mixed sizes alloc + random-order free       (8/16/32/64B × 100k)
  *    4. Iteration — inline vs pointer-chase         [+UList +CChunked]
- *    5. List append growth                          (32B × 100k)  [+UList +CChunked]
+ *    5. Owned buffer append growth                  (32B × 100k)  [+UList +CChunked]
  *    6. Ref access overhead (anchor + ref object)
  *    7. Game loop — entity spawn/kill/update        (500 frames)
  *    8. Particle system — short-lifetime objects    (500 frames)
  *    9. Checkerboard fragmentation + refill
  *   10. Ownership tree teardown                     (cascade destroy)
  *   11. Fragmentation stress                        (200 cycles)
+ *   12. Deterministic concurrent shard scan         (4 workers)
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -50,6 +52,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 
 /* ─────────────────────────────────────────────
    CONFIG
@@ -589,7 +592,7 @@ static void test4(void) {
 
     /* --- Timed runs --- */
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=inl[i].hp;T[r]=now_ns()-t0;sink^=acc;}
-    print_result("Inline array  (List<T>)", T);
+    print_result("Inline array  (Array[100000]<Entity>)", T);
 
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=sp[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
     print_result("Pointer array, sequential", T);
@@ -610,7 +613,10 @@ static void test4(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   TEST 5 — List append growth
+   TEST 5 — Owned buffer append growth
+   Dynamic `List<T>` is not specified on `main`, so this benchmark models the
+   closest current-spec equivalent: a growable user-space buffer built from
+   contiguous owned `Array`-like storage.
 ═══════════════════════════════════════════════════════════════════ */
 typedef struct { Entity *base; size_t len, cap; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
@@ -630,12 +636,12 @@ static void cvec_push(CVec *v, Entity e) {
 }
 
 static void test5(void) {
-    section("Test 5 -- List append growth  [push 100k x 32B Entity items]");
+    section("Test 5 -- Owned buffer append growth  [push 100k x 32B Entity items]");
     double T[RUNS];
     Entity tmpl={42,1.5,2.5,99,0};
 
     for(int r=0;r<RUNS;r++){zm_reset();ZList l={(Entity*)zm_alloc(8*sizeof(Entity)),0,8};double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
-    print_result("Zane in-place list", T);
+    print_result("Zane in-place buffer", T);
 
     for(int r=0;r<RUNS;r++){CVec v={NULL,0,0};double t0=now_ns();for(int i=0;i<N;i++)cvec_push(&v,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)v.len;free(v.base);}
     print_result("C realloc vector", T);
@@ -660,7 +666,7 @@ static void test5(void) {
      A. Direct pointer — baseline, one hop
      B. Anchor only — heap_base + anchor.heapoffset (simulates owning access)
      C. Full ref path — ref_anchor → ref_obj → anchor → object (two hops)
-     D. Full ref path + null check (realistic usage)
+     D. Full ref path + runtime liveness guard
 ═══════════════════════════════════════════════════════════════════ */
 
 static void test6(void) {
@@ -712,7 +718,7 @@ static void test6(void) {
     }
     print_result("Full ref path (ref_anchor->ref_obj->anchor->obj)", T);
 
-    /* full ref path + null check (realistic Zane usage) */
+    /* full ref path + runtime liveness guard (implementation detail, not user syntax) */
     for(int r=0;r<RUNS;r++){
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
@@ -725,7 +731,7 @@ static void test6(void) {
         }
         T[r]=now_ns()-t0; sink^=acc;
     }
-    print_result("Full ref path + null check", T);
+    print_result("Full ref path + liveness guard", T);
 
     /* cleanup — destroy refs then free objects */
     for(int i=0;i<N;i++) zm_destroy_ref(&ref_anchors[i]);
@@ -1070,17 +1076,17 @@ static void test10(void) {
    TEST 11 — Fragmentation stress: everything together
    200 cycles. Each cycle in order:
      1. Spawn 40 new Entity objects into random free slots
-     2. Create 4 new List<Entity> (inline buffer, cap 8)
-     3. Push 30 times: copy a random live object into a random live list
-        (list doubles its buffer when full, capped at 16 elements = 512B)
+     2. Create 4 new owned Entity buffers (inline data, cap 8)
+     3. Push 30 times: copy a random live object into a random live buffer
+        (buffer doubles when full, capped at 16 elements = 512B)
      4. Update all live objects: move (x+=id*0.1, y+=hp*0.05), drain hp;
         objects that reach hp≤0 are freed immediately (natural death)
-     5. Read-scan all live lists: sum all inline element hp values
+     5. Read-scan all live buffers: sum all inline element hp values
      6. Explicitly kill 25 random live objects
-     7. Destroy 3 random live lists (frees their inline data buffer)
+     7. Destroy 3 random live buffers (frees their inline data buffer)
    Between runs the heap is fully reset. This models a real program:
    heterogeneous object lifetimes, mixed sizes (32B objects, 256–512B
-   list buffers), interleaved alloc/free/iteration at every step.
+    buffer storage), interleaved alloc/free/iteration at every step.
 ═══════════════════════════════════════════════════════════════════ */
 #define STRESS_CYCLES       200
 #define STRESS_MAX_OBJ      3000
@@ -1223,11 +1229,102 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
 }
 
 static void test11(void) {
-    section("Test 11 -- Fragmentation stress  [200 cycles: spawn+list-create+push+update+kill]");
+    section("Test 11 -- Fragmentation stress  [200 cycles: spawn+buffer-create+push+update+kill]");
     double T[RUNS];
     zm_reset(); stress_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (mmap + free-stacks)", T);
                stress_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
                stress_run(T, po_alloc_e, po_free_e, 1); print_result("Pool (per-size free-list)", T);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TEST 12 — Deterministic concurrent shard scan
+   Models `spawn`/parallel execution with four independent read-only jobs over
+   owned inline arrays. Each worker sums one shard and the main thread checks
+   the aggregate against the sequential baseline every run.
+═══════════════════════════════════════════════════════════════════ */
+#define CONC_WORKERS 4
+
+typedef struct {
+    const Entity *base;
+    int start;
+    int len;
+    int64_t sum;
+} SumJob;
+
+static void *sum_entity_shard(void *arg) {
+    SumJob *job = (SumJob*)arg;
+    int64_t acc = 0;
+    for (int i = 0; i < job->len; i++) acc += job->base[job->start + i].hp;
+    job->sum = acc;
+    return NULL;
+}
+
+static void test12(void) {
+    section("Test 12 -- Concurrent shard scan  [4 x Array[25000]<Entity> read-only shard sums]");
+    double T[RUNS];
+    assert((N % CONC_WORKERS) == 0);
+
+    Entity *owned = (Entity*)malloc(N * sizeof(Entity));
+    for (int i = 0; i < N; i++) {
+        owned[i].id = i;
+        owned[i].x = i * 1.1;
+        owned[i].y = i * 2.2;
+        owned[i].hp = i % 100 + 1;
+    }
+
+    const int shard_len = N / CONC_WORKERS;
+    const int64_t expected = (int64_t)(N / 100) * 5050;
+
+    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
+    {
+        pthread_t tids[CONC_WORKERS];
+        SumJob jobs[CONC_WORKERS];
+        for (int i = 0; i < CONC_WORKERS; i++) {
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            assert(pthread_create(&tids[i], NULL, sum_entity_shard, &jobs[i]) == 0);
+        }
+        int64_t warm = 0;
+        for (int i = 0; i < CONC_WORKERS; i++) {
+            assert(pthread_join(tids[i], NULL) == 0);
+            warm += jobs[i].sum;
+        }
+        assert(warm == expected);
+        sink ^= warm;
+    }
+
+    for (int r = 0; r < RUNS; r++) {
+        int64_t acc = 0;
+        double t0 = now_ns();
+        for (int shard = 0; shard < CONC_WORKERS; shard++) {
+            int start = shard * shard_len;
+            for (int i = 0; i < shard_len; i++) acc += owned[start + i].hp;
+        }
+        T[r] = now_ns() - t0;
+        assert(acc == expected);
+        sink ^= acc;
+    }
+    print_result("Owned Array shards, sequential", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        pthread_t tids[CONC_WORKERS];
+        SumJob jobs[CONC_WORKERS];
+        double t0 = now_ns();
+        for (int i = 0; i < CONC_WORKERS; i++) {
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            assert(pthread_create(&tids[i], NULL, sum_entity_shard, &jobs[i]) == 0);
+        }
+        int64_t acc = 0;
+        for (int i = 0; i < CONC_WORKERS; i++) {
+            assert(pthread_join(tids[i], NULL) == 0);
+            acc += jobs[i].sum;
+        }
+        T[r] = now_ns() - t0;
+        assert(acc == expected);
+        sink ^= acc;
+    }
+    print_result("Owned Array shards, concurrent (4 workers)", T);
+
+    free(owned);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1243,7 +1340,7 @@ int main(void) {
     zm_init(); ar_init(); pool_flush();
 
     test1(); test2(); test3(); test4(); test5();
-    test6(); test7(); test8(); test9(); test10(); test11();
+    test6(); test7(); test8(); test9(); test10(); test11(); test12();
 
     printf("\n  (sink = %lld)\n\n", (long long)sink);
     return 0;
