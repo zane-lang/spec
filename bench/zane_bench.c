@@ -146,7 +146,7 @@ static BenchPool bench_pool;
 static void bench_deque_reset_locked(BenchDeque *q) { q->head = 0; q->tail = 0; }
 
 static void bench_deque_push_locked(BenchDeque *q, BenchJob job) {
-    assert((q->tail - q->head) < BENCH_POOL_MAX_JOBS);
+    assert((q->tail - q->head + 1) <= BENCH_POOL_MAX_JOBS);
     q->jobs[q->tail % BENCH_POOL_MAX_JOBS] = job;
     q->tail++;
 }
@@ -969,7 +969,7 @@ static void test7(void) {
     Almost every particle dies within 30 frames. This maximises
     allocator churn on identically-sized objects. The concurrent Zane variant
     keeps spawn/free ordering deterministic and parallelizes only the read/write
-    update pass across prestarted work-stealing workers.
+    update pass across pre-started work-stealing workers.
 ═══════════════════════════════════════════════════════════════════ */
 #define PART_FRAMES   500
 #define MAX_PARTICLES 6000
@@ -1459,7 +1459,7 @@ static void test11(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 12 — Deterministic concurrent shard scan
    Models `spawn`/parallel execution with four independent read-only jobs over
-   owned inline arrays. A prestarted work-stealing pool sums the shards and the
+   owned inline arrays. A pre-started work-stealing pool sums the shards and the
    main thread checks the aggregate against the sequential baseline every run.
 ═══════════════════════════════════════════════════════════════════ */
 typedef struct {

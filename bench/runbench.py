@@ -35,7 +35,7 @@ TEST_META = {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
         "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
-        "details": "If Zane stays in the same rough performance band as Pool here (for example within a low-double-digit percent gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery.",
+        "details": "If Zane stays in the same rough performance band as Pool here (for example within about a 10–20% gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery.",
         "meta": [
             ("Object size", "40B runtime (32B + 8B back-ptr)"),
             ("Back-ptr init", "0 — no anchor at creation"),
@@ -173,7 +173,7 @@ TEST_META = {
         "short": "T11 — stress test",
         "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
         "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
-        "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here because the shared push/kill phases would mostly measure synchronization and ordering changes rather than the benchmark's existing workload.",
+        "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here. The shared push/kill phases would otherwise mostly measure synchronization and ordering changes rather than the benchmark's existing workload.",
         "meta": [
             ("Object size", "40B + 8B back-ptr"),
             ("Owned buffers", "256–512B + 8B back-ptr"),
@@ -188,7 +188,7 @@ TEST_META = {
         "short": "T12 — concurrent scan",
         "title": "Concurrent shard scan over four independent Array[25000]<Entity> workloads",
         "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-        "details": "Sequential and concurrent totals should match every run. If the concurrent variant improves, the independent shard work is large enough to amortize the prestarted worker pool; if not, scheduling and memory bandwidth are dominating.",
+        "details": "Sequential and concurrent totals should match every run. If the concurrent variant improves, the independent shard work is large enough to amortize the pre-started worker pool; if not, scheduling and memory bandwidth are dominating.",
         "meta": [
             ("Workers", "4"),
             ("Shard size", "25,000 entities"),
