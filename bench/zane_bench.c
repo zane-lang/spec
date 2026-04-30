@@ -804,10 +804,12 @@ static void test5(void) {
    Leaf-only registration means the chain depth (standalone class vs list
    element) affects registration, not dereference — dereference always
    goes through the leaf object's anchor.
-     A. Direct pointer — baseline, one hop
+     A. Direct pointer — baseline, one hop (cache pre-heated before each run)
      B. Anchor only — heap_base + anchor.heapoffset (simulates owning access)
      C. Full ref path — ref_anchor → ref_obj → anchor → object (two hops)
-     D. Full ref path + runtime liveness guard
+   Note: Zane statically guarantees all refs are non-null, so there is no
+   runtime liveness guard. Each variant pre-heats its working set before the
+   timed loop to ensure a fair warm-cache comparison.
 ═══════════════════════════════════════════════════════════════════ */
 
 static void test6(void) {
@@ -832,12 +834,18 @@ static void test6(void) {
         direct[i]   = objs[i];
     }
 
-    /* baseline: direct pointer, one dereference */
-    for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=direct[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
+    /* direct pointer — single hop; preheat pointer array and target objects before each timed run */
+    for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++) sink^=(int64_t)direct[i]->hp; /* preheat pointer array + objects */
+        int64_t acc=0; double t0=now_ns();
+        for(int i=0;i<N;i++) acc+=direct[i]->hp;
+        T[r]=now_ns()-t0; sink^=acc;
+    }
     print_result("Direct pointer (baseline)", T);
 
     /* anchor only: heap_base + anchor.heapoffset — simulates owning access to a moved object */
     for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++) sink^=(int64_t)((Entity*)(heap_base + anchors[i]->heapoffset))->hp; /* preheat anchor array + objects */
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             Entity *e=(Entity*)(heap_base + anchors[i]->heapoffset);
@@ -849,6 +857,10 @@ static void test6(void) {
 
     /* full ref path: ref_anchor → ref_obj → anchor → object */
     for(int r=0;r<RUNS;r++){
+        for(int i=0;i<N;i++){ /* preheat full chain + objects */
+            ZRefObj *robj = (ZRefObj*)(heap_base + ref_anchors[i].heapoffset);
+            sink^=(int64_t)((Entity*)(heap_base + ((ZAnchor*)robj->target_anchor)->heapoffset))->hp;
+        }
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             ZRefObj *robj = (ZRefObj*)(heap_base + ref_anchors[i].heapoffset);
@@ -858,21 +870,6 @@ static void test6(void) {
         T[r]=now_ns()-t0; sink^=acc;
     }
     print_result("Full ref path (ref_anchor->ref_obj->anchor->obj)", T);
-
-    /* full ref path + runtime liveness guard (implementation detail, not user syntax) */
-    for(int r=0;r<RUNS;r++){
-        int64_t acc=0; double t0=now_ns();
-        for(int i=0;i<N;i++){
-            uint32_t ref_off = ref_anchors[i].heapoffset;
-            if(ref_off != 0xFFFFFFFFu){
-                ZRefObj *robj = (ZRefObj*)(heap_base + ref_off);
-                Entity  *e    = (Entity*)(heap_base + ((ZAnchor*)robj->target_anchor)->heapoffset);
-                acc+=e->hp;
-            }
-        }
-        T[r]=now_ns()-t0; sink^=acc;
-    }
-    print_result("Full ref path + liveness guard", T);
 
     /* cleanup — destroy refs then free objects */
     for(int i=0;i<N;i++) zm_destroy_ref(&ref_anchors[i]);

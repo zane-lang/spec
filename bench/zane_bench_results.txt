@@ -47,10 +47,9 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 6 -- Ref access via anchor+ref_obj vs direct pointer  [100k accesses]                      |
   +--------------------------------------------------------------------------------------------------+
-    Direct pointer (baseline)           median    160730.50 ns  min    123982.00 ns  max    254416.00 ns  (  160.731 us)
-    Anchor only (owning, post-move)     median    118376.50 ns  min    116799.00 ns  max    136054.00 ns  (  118.376 us)
-    Full ref path (ref_anchor->ref_obj->anchor->obj)  median    113782.50 ns  min    112620.00 ns  max    130454.00 ns  (  113.782 us)
-    Full ref path + liveness guard      median    117971.00 ns  min    113392.00 ns  max    157574.00 ns  (  117.971 us)
+    Direct pointer (baseline)           median    174730.50 ns  min    166109.00 ns  max    224387.00 ns  (  174.731 us)
+    Anchor only (owning, post-move)     median    169726.00 ns  min    162412.00 ns  max    192639.00 ns  (  169.726 us)
+    Full ref path (ref_anchor->ref_obj->anchor->obj)  median    162973.00 ns  min    161510.00 ns  max    185766.00 ns  (  162.973 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 7 -- Game loop  [500 frames: 30 spawns + 20+ kills + update per frame]                     |
