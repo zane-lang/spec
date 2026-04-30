@@ -81,7 +81,8 @@ If a function calls another function, its effect classification must be at least
 A function that reads through a `ref` is not Total Pure, even if it performs no writes, because the observed value may vary over time.
 
 ### 5.4 Unknown callees are conservatively classified
-If the compiler cannot prove the effect behavior of a callee, it must classify the call site conservatively rather than assuming purity. In practice this means unknown callees are treated as requiring the strongest effect level needed to preserve safety.
+If the compiler cannot prove the effect behavior of a callee, it must classify the call site conservatively rather than assuming purity.
+In practice, unknown callees are treated as requiring the strongest effect level needed to preserve safety.
 
 ---
 
