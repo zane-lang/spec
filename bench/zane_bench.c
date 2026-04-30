@@ -23,21 +23,24 @@
  *  Memory model:
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
- *    List<T> stores T inline (contiguous, no pointer chase).
- *    List<ref T> holds non-owning refs to T owned elsewhere.
+ *    `Array[size]<T>` is the spec-defined fixed-size inline container.
+ *    Because `size` is compile-time constant, the growth tests below model
+ *    user-space growable storage as the closest updated-spec stand-in for the
+ *    now-deferred dynamic `List<T>`.
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
  *    2. Random-order free only                      (32B × 100k)
  *    3. Mixed sizes alloc + random-order free       (8/16/32/64B × 100k)
  *    4. Iteration — inline vs pointer-chase         [+UList +CChunked]
- *    5. List append growth                          (32B × 100k)  [+UList +CChunked]
+ *    5. Owned buffer append growth                  (32B × 100k)  [+UList +CChunked]
  *    6. Ref access overhead (anchor + ref object)
  *    7. Game loop — entity spawn/kill/update        (500 frames)
  *    8. Particle system — short-lifetime objects    (500 frames)
  *    9. Checkerboard fragmentation + refill
  *   10. Ownership tree teardown                     (cascade destroy)
  *   11. Fragmentation stress                        (200 cycles)
+ *   12. Deterministic concurrent shard scan         (4 workers)
  * ═══════════════════════════════════════════════════════════════════
  */
 
@@ -50,6 +53,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 
 /* ─────────────────────────────────────────────
    CONFIG
@@ -101,6 +105,145 @@ static void section(const char *title) {
     printf("\n  +--------------------------------------------------------------------------------------------------+\n");
     printf("  |  %-96s|\n", title);
     printf("  +--------------------------------------------------------------------------------------------------+\n");
+}
+
+/* ─────────────────────────────────────────────
+   BENCHMARK WORK-STEALING POOL
+   Pre-started once before timed benchmarks so concurrent tests measure
+   steady-state scheduling rather than thread creation.
+───────────────────────────────────────────── */
+#define BENCH_POOL_WORKERS   4
+#define BENCH_POOL_MAX_JOBS  32
+
+typedef void (*BenchJobFn)(void *);
+
+typedef struct {
+    BenchJobFn fn;
+    void      *arg;
+} BenchJob;
+
+typedef struct {
+    BenchJob jobs[BENCH_POOL_MAX_JOBS];
+    int      head;
+    int      tail;
+} BenchDeque;
+
+typedef struct {
+    pthread_t       threads[BENCH_POOL_WORKERS];
+    BenchDeque      queues[BENCH_POOL_WORKERS];
+    pthread_mutex_t mu;
+    pthread_cond_t  has_work;
+    pthread_cond_t  idle;
+    int             pending_jobs;
+    int             stop;
+} BenchPool;
+
+static BenchPool bench_pool;
+
+/* All deque access is serialized by bench_pool.mu, including steals. The
+   benchmark batches are tiny, so a single mutex keeps the implementation
+   simple while still giving us work-stealing behavior across worker queues. */
+static void bench_deque_reset_locked(BenchDeque *q) { q->head = 0; q->tail = 0; }
+
+static void bench_deque_push_locked(BenchDeque *q, BenchJob job) {
+    assert((q->tail - q->head + 1) <= BENCH_POOL_MAX_JOBS);
+    q->jobs[q->tail % BENCH_POOL_MAX_JOBS] = job;
+    q->tail++;
+}
+
+static int bench_deque_pop_back_locked(BenchDeque *q, BenchJob *job) {
+    if (q->tail == q->head) return 0;
+    q->tail--;
+    *job = q->jobs[q->tail % BENCH_POOL_MAX_JOBS];
+    return 1;
+}
+
+static int bench_deque_pop_front_locked(BenchDeque *q, BenchJob *job) {
+    if (q->tail == q->head) return 0;
+    *job = q->jobs[q->head % BENCH_POOL_MAX_JOBS];
+    q->head++;
+    return 1;
+}
+
+static int bench_pool_take_job_locked(int worker_id, BenchJob *job) {
+    if (bench_deque_pop_back_locked(&bench_pool.queues[worker_id], job)) return 1;
+    for (int step = 1; step < BENCH_POOL_WORKERS; step++) {
+        int victim = (worker_id + step) % BENCH_POOL_WORKERS;
+        if (bench_deque_pop_front_locked(&bench_pool.queues[victim], job)) return 1;
+    }
+    return 0;
+}
+
+static void *bench_pool_worker(void *arg) {
+    int worker_id = (int)(intptr_t)arg;
+    BenchJob job;
+
+    pthread_mutex_lock(&bench_pool.mu);
+    for (;;) {
+        while (!bench_pool.stop && !bench_pool_take_job_locked(worker_id, &job)) {
+            pthread_cond_wait(&bench_pool.has_work, &bench_pool.mu);
+        }
+        if (bench_pool.stop) {
+            pthread_mutex_unlock(&bench_pool.mu);
+            return NULL;
+        }
+
+        pthread_mutex_unlock(&bench_pool.mu);
+        job.fn(job.arg);
+        pthread_mutex_lock(&bench_pool.mu);
+
+        bench_pool.pending_jobs--;
+        if (bench_pool.pending_jobs == 0) pthread_cond_signal(&bench_pool.idle);
+        pthread_cond_broadcast(&bench_pool.has_work);
+    }
+}
+
+static void bench_pool_init(void) {
+    memset(&bench_pool, 0, sizeof(bench_pool));
+    assert(pthread_mutex_init(&bench_pool.mu, NULL) == 0);
+    assert(pthread_cond_init(&bench_pool.has_work, NULL) == 0);
+    assert(pthread_cond_init(&bench_pool.idle, NULL) == 0);
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+        bench_deque_reset_locked(&bench_pool.queues[i]);
+        assert(pthread_create(&bench_pool.threads[i], NULL, bench_pool_worker, (void*)(intptr_t)i) == 0);
+    }
+}
+
+static void bench_pool_run(BenchJob *jobs, int njobs) {
+    assert(njobs > 0 && njobs <= BENCH_POOL_MAX_JOBS);
+
+    pthread_mutex_lock(&bench_pool.mu);
+    while (bench_pool.pending_jobs != 0) pthread_cond_wait(&bench_pool.idle, &bench_pool.mu);
+
+    /* pending_jobs == 0 means there are no queued or running jobs left, so
+       with the mutex held it is safe to clear and repopulate every queue. */
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) bench_deque_reset_locked(&bench_pool.queues[i]);
+    for (int i = 0; i < njobs; i++) bench_deque_push_locked(&bench_pool.queues[i % BENCH_POOL_WORKERS], jobs[i]);
+    bench_pool.pending_jobs = njobs;
+
+    pthread_cond_broadcast(&bench_pool.has_work);
+    while (bench_pool.pending_jobs != 0) pthread_cond_wait(&bench_pool.idle, &bench_pool.mu);
+    pthread_mutex_unlock(&bench_pool.mu);
+}
+
+static void bench_noop_job(void *arg) { (void)arg; }
+
+static void bench_pool_warm(void) {
+    BenchJob jobs[BENCH_POOL_WORKERS];
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) jobs[i] = (BenchJob){ .fn = bench_noop_job, .arg = NULL };
+    bench_pool_run(jobs, BENCH_POOL_WORKERS);
+}
+
+static void bench_pool_shutdown(void) {
+    pthread_mutex_lock(&bench_pool.mu);
+    bench_pool.stop = 1;
+    pthread_cond_broadcast(&bench_pool.has_work);
+    pthread_mutex_unlock(&bench_pool.mu);
+
+    for (int i = 0; i < BENCH_POOL_WORKERS; i++) assert(pthread_join(bench_pool.threads[i], NULL) == 0);
+    pthread_cond_destroy(&bench_pool.idle);
+    pthread_cond_destroy(&bench_pool.has_work);
+    pthread_mutex_destroy(&bench_pool.mu);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -158,8 +301,9 @@ static void zm_free(void *p, size_t s) {
 
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
-     non-owning references. List<T> stores T inline. List<ref T>
-     holds non-owning refs to T owned elsewhere.
+     non-owning references. `Array[size]<T>` is the fixed-size inline
+     container. Growable buffers in these benchmarks are user-space layers
+     built on top of contiguous owned storage.
 
    Anchors are created on demand — only when the first ref to an
    object is made. The back-pointer slot in every class instance
@@ -589,7 +733,7 @@ static void test4(void) {
 
     /* --- Timed runs --- */
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=inl[i].hp;T[r]=now_ns()-t0;sink^=acc;}
-    print_result("Inline array  (List<T>)", T);
+    print_result("Inline array  (Array[100000]<Entity>)", T);
 
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=sp[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
     print_result("Pointer array, sequential", T);
@@ -610,7 +754,10 @@ static void test4(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   TEST 5 — List append growth
+   TEST 5 — Owned buffer append growth
+   Dynamic `List<T>` is not specified on `main`, so this benchmark models the
+   closest current-spec equivalent: a growable user-space buffer built from
+   contiguous owned `Array`-like storage with compile-time-sized chunks.
 ═══════════════════════════════════════════════════════════════════ */
 typedef struct { Entity *base; size_t len, cap; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
@@ -630,12 +777,12 @@ static void cvec_push(CVec *v, Entity e) {
 }
 
 static void test5(void) {
-    section("Test 5 -- List append growth  [push 100k x 32B Entity items]");
+    section("Test 5 -- Owned buffer append growth  [push 100k x 32B Entity items]");
     double T[RUNS];
     Entity tmpl={42,1.5,2.5,99,0};
 
     for(int r=0;r<RUNS;r++){zm_reset();ZList l={(Entity*)zm_alloc(8*sizeof(Entity)),0,8};double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
-    print_result("Zane in-place list", T);
+    print_result("Zane in-place buffer", T);
 
     for(int r=0;r<RUNS;r++){CVec v={NULL,0,0};double t0=now_ns();for(int i=0;i<N;i++)cvec_push(&v,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)v.len;free(v.base);}
     print_result("C realloc vector", T);
@@ -660,7 +807,7 @@ static void test5(void) {
      A. Direct pointer — baseline, one hop
      B. Anchor only — heap_base + anchor.heapoffset (simulates owning access)
      C. Full ref path — ref_anchor → ref_obj → anchor → object (two hops)
-     D. Full ref path + null check (realistic usage)
+     D. Full ref path + runtime liveness guard
 ═══════════════════════════════════════════════════════════════════ */
 
 static void test6(void) {
@@ -712,7 +859,7 @@ static void test6(void) {
     }
     print_result("Full ref path (ref_anchor->ref_obj->anchor->obj)", T);
 
-    /* full ref path + null check (realistic Zane usage) */
+    /* full ref path + runtime liveness guard (implementation detail, not user syntax) */
     for(int r=0;r<RUNS;r++){
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
@@ -725,7 +872,7 @@ static void test6(void) {
         }
         T[r]=now_ns()-t0; sink^=acc;
     }
-    print_result("Full ref path + null check", T);
+    print_result("Full ref path + liveness guard", T);
 
     /* cleanup — destroy refs then free objects */
     for(int i=0;i<N;i++) zm_destroy_ref(&ref_anchors[i]);
@@ -817,10 +964,12 @@ static void test7(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 8 — Particle system (burst alloc, short TTL, high turnover)
    500 frames. Each frame:
-     - BURST_SPAWN new 24-byte Particles born (TTL = 10-30 frames)
-     - All particles: tick TTL, free if dead, else move (x+=vx, y+=vy)
-   Almost every particle dies within 30 frames. This maximises
-   allocator churn on identically-sized objects.
+      - BURST_SPAWN new 24-byte Particles born (TTL = 10-30 frames)
+      - All particles: tick TTL, free if dead, else move (x+=vx, y+=vy)
+    Almost every particle dies within 30 frames. This maximises
+    allocator churn on identically-sized objects. The concurrent Zane variant
+    keeps spawn/free ordering deterministic and parallelizes only the read/write
+    update pass across pre-started work-stealing workers.
 ═══════════════════════════════════════════════════════════════════ */
 #define PART_FRAMES   500
 #define MAX_PARTICLES 6000
@@ -830,6 +979,30 @@ typedef struct { Particle **slots; int count,cap; } PPool;
 static void pp_init(PPool*p,int cap){p->slots=(Particle**)calloc((size_t)cap,sizeof(Particle*));p->count=0;p->cap=cap;}
 static void pp_free(PPool*p){free(p->slots);}
 static void pp_add(PPool*p,Particle*e){for(int i=0;i<p->cap;i++)if(!p->slots[i]){p->slots[i]=e;p->count++;return;}}
+
+#define PART_SHARD_CAP ((MAX_PARTICLES + BENCH_POOL_WORKERS - 1) / BENCH_POOL_WORKERS)
+
+typedef struct {
+    Particle **slots;
+    int        start;
+    int        end;
+    double     ax;
+    int        dead_count;
+    int        dead_idx[PART_SHARD_CAP];
+} ParticleShardJob;
+
+static void particle_update_job(void *arg) {
+    ParticleShardJob *job = (ParticleShardJob*)arg;
+    job->ax = 0.0;
+    job->dead_count = 0;
+    for (int i = job->start; i < job->end; i++) {
+        Particle *p = job->slots[i];
+        if (!p) continue;
+        p->ttl--;
+        if (p->ttl <= 0) job->dead_idx[job->dead_count++] = i;
+        else { p->x += p->vx; p->y += p->vy; job->ax += p->x; }
+    }
+}
 
 static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     if (prewarm) { pool_flush(); pool_warm(sizeof(Particle), MAX_PARTICLES); }
@@ -860,6 +1033,58 @@ static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     }
 }
 
+static void particle_run_parallel(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
+    if (prewarm) { pool_flush(); pool_warm(sizeof(Particle), MAX_PARTICLES); }
+    for (int r = 0; r < RUNS; r++) {
+        if (!prewarm && af == zm_alloc_e) zm_reset();
+        rng_state = 0xde1e7edULL + (uint64_t)r;
+        PPool pp; pp_init(&pp, MAX_PARTICLES);
+        double t0 = now_ns();
+        for (int frame = 0; frame < PART_FRAMES; frame++) {
+            for (int s = 0; s < BURST_SPAWN && pp.count < MAX_PARTICLES - 1; s++) {
+                Particle *p = (Particle*)af(sizeof(Particle));
+                p->x = (float)(rng()%800); p->y = (float)(rng()%600);
+                p->vx = (float)((int)(rng()%11)-5); p->vy = (float)((int)(rng()%11)-5);
+                p->ttl = 10 + (int32_t)(rng()%21); p->color = (int32_t)(rng()%8);
+                pp_add(&pp, p);
+            }
+
+            BenchJob jobs[BENCH_POOL_WORKERS];
+            ParticleShardJob shard_jobs[BENCH_POOL_WORKERS];
+            int base = MAX_PARTICLES / BENCH_POOL_WORKERS;
+            int rem = MAX_PARTICLES % BENCH_POOL_WORKERS;
+            int start = 0;
+            for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+                int span = base + (i < rem ? 1 : 0);
+                shard_jobs[i].slots = pp.slots;
+                shard_jobs[i].start = start;
+                shard_jobs[i].end = start + span;
+                shard_jobs[i].ax = 0.0;
+                shard_jobs[i].dead_count = 0;
+                jobs[i].fn = particle_update_job;
+                jobs[i].arg = &shard_jobs[i];
+                start += span;
+            }
+            bench_pool_run(jobs, BENCH_POOL_WORKERS);
+
+            double ax = 0.0;
+            for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+                ax += shard_jobs[i].ax;
+                for (int j = 0; j < shard_jobs[i].dead_count; j++) {
+                    int idx = shard_jobs[i].dead_idx[j];
+                    if (!pp.slots[idx]) continue;
+                    ff(pp.slots[idx], sizeof(Particle));
+                    pp.slots[idx] = NULL;
+                    pp.count--;
+                }
+            }
+            sink ^= (int64_t)ax;
+        }
+        for (int i = 0; i < pp.cap; i++) if (pp.slots[i]) ff(pp.slots[i], sizeof(Particle));
+        T[r] = now_ns() - t0; pp_free(&pp);
+    }
+}
+
 static void *po_alloc_p(size_t s){return pool_alloc(s);}
 static void  po_free_p (void*p,size_t s){pool_free(p,s);}
 
@@ -867,6 +1092,7 @@ static void test8(void) {
     section("Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]");
     double T[RUNS];
     zm_reset(); particle_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (mmap + free-stacks)", T);
+              particle_run_parallel(T, zm_alloc_e, zm_free_e, 0); print_result("Zane + work-stealing update", T);
               particle_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
               particle_run(T, po_alloc_p, po_free_p, 1); print_result("Pool (per-size free-list)", T);
 }
@@ -1070,17 +1296,17 @@ static void test10(void) {
    TEST 11 — Fragmentation stress: everything together
    200 cycles. Each cycle in order:
      1. Spawn 40 new Entity objects into random free slots
-     2. Create 4 new List<Entity> (inline buffer, cap 8)
-     3. Push 30 times: copy a random live object into a random live list
-        (list doubles its buffer when full, capped at 16 elements = 512B)
+     2. Create 4 new owned Entity buffers (inline data, cap 8)
+     3. Push 30 times: copy a random live object into a random live buffer
+        (buffer doubles when full, capped at 16 elements = 512B)
      4. Update all live objects: move (x+=id*0.1, y+=hp*0.05), drain hp;
         objects that reach hp≤0 are freed immediately (natural death)
-     5. Read-scan all live lists: sum all inline element hp values
+     5. Read-scan all live buffers: sum all inline element hp values
      6. Explicitly kill 25 random live objects
-     7. Destroy 3 random live lists (frees their inline data buffer)
+     7. Destroy 3 random live buffers (frees their inline data buffer)
    Between runs the heap is fully reset. This models a real program:
    heterogeneous object lifetimes, mixed sizes (32B objects, 256–512B
-   list buffers), interleaved alloc/free/iteration at every step.
+    buffer storage), interleaved alloc/free/iteration at every step.
 ═══════════════════════════════════════════════════════════════════ */
 #define STRESS_CYCLES       200
 #define STRESS_MAX_OBJ      3000
@@ -1223,11 +1449,99 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
 }
 
 static void test11(void) {
-    section("Test 11 -- Fragmentation stress  [200 cycles: spawn+list-create+push+update+kill]");
+    section("Test 11 -- Fragmentation stress  [200 cycles: spawn+buffer-create+push+update+kill]");
     double T[RUNS];
     zm_reset(); stress_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (mmap + free-stacks)", T);
                stress_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
                stress_run(T, po_alloc_e, po_free_e, 1); print_result("Pool (per-size free-list)", T);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TEST 12 — Deterministic concurrent shard scan
+   Models `spawn`/parallel execution with four independent read-only jobs over
+   owned inline arrays. A pre-started work-stealing pool sums the shards and the
+   main thread checks the aggregate against the sequential baseline every run.
+═══════════════════════════════════════════════════════════════════ */
+typedef struct {
+    const Entity *base;
+    int start;
+    int len;
+    int64_t sum;
+} SumJob;
+
+static void sum_entity_shard(void *arg) {
+    SumJob *job = (SumJob*)arg;
+    int64_t acc = 0;
+    for (int i = 0; i < job->len; i++) acc += job->base[job->start + i].hp;
+    job->sum = acc;
+}
+
+static void test12(void) {
+    section("Test 12 -- Concurrent shard scan  [4 x Array[25000]<Entity> read-only shard sums]");
+    double T[RUNS];
+    assert((N % BENCH_POOL_WORKERS) == 0);
+
+    Entity *owned = (Entity*)malloc(N * sizeof(Entity));
+    for (int i = 0; i < N; i++) {
+        owned[i].id = i;
+        owned[i].x = i * 1.1;
+        owned[i].y = i * 2.2;
+        owned[i].hp = i % 100 + 1;
+    }
+
+    const int shard_len = N / BENCH_POOL_WORKERS;
+    const int64_t expected = (int64_t)(N / 100) * 5050; /* hp repeats 1..100, whose sum is 5050 */
+
+    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
+    {
+        BenchJob run[BENCH_POOL_WORKERS];
+        SumJob jobs[BENCH_POOL_WORKERS];
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
+        }
+        bench_pool_run(run, BENCH_POOL_WORKERS);
+        int64_t warm = 0;
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+            warm += jobs[i].sum;
+        }
+        assert(warm == expected);
+        sink ^= warm;
+    }
+
+    for (int r = 0; r < RUNS; r++) {
+        int64_t acc = 0;
+        double t0 = now_ns();
+        for (int shard = 0; shard < BENCH_POOL_WORKERS; shard++) {
+            int start = shard * shard_len;
+            for (int i = 0; i < shard_len; i++) acc += owned[start + i].hp;
+        }
+        T[r] = now_ns() - t0;
+        assert(acc == expected);
+        sink ^= acc;
+    }
+    print_result("Owned Array shards, sequential", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        BenchJob run[BENCH_POOL_WORKERS];
+        SumJob jobs[BENCH_POOL_WORKERS];
+        double t0 = now_ns();
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
+        }
+        bench_pool_run(run, BENCH_POOL_WORKERS);
+        int64_t acc = 0;
+        for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
+            acc += jobs[i].sum;
+        }
+        T[r] = now_ns() - t0;
+        assert(acc == expected);
+        sink ^= acc;
+    }
+    print_result("Owned Array shards, concurrent (4 workers)", T);
+
+    free(owned);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1240,11 +1554,12 @@ int main(void) {
     printf("  |  N = %d  .  %d runs each  .  MEDIAN reported (ns, 2 d.p.)                                  |\n", N, RUNS);
     printf("  +===================================================================================================+\n");
 
-    zm_init(); ar_init(); pool_flush();
+    zm_init(); ar_init(); pool_flush(); bench_pool_init(); bench_pool_warm();
 
     test1(); test2(); test3(); test4(); test5();
-    test6(); test7(); test8(); test9(); test10(); test11();
+    test6(); test7(); test8(); test9(); test10(); test11(); test12();
 
+    bench_pool_shutdown();
     printf("\n  (sink = %lld)\n\n", (long long)sink);
     return 0;
 }
