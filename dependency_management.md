@@ -35,6 +35,13 @@ Each row records:
 
 Users update the manifest through CLI commands rather than by manual editing.
 
+### 2.1 Commit hashes are recorded and updated by commands
+`zane add` resolves the requested tag to its current commit hash and writes both the tag and commit into `zane.coda`. The user does not type the commit hash manually in the normal workflow.
+
+`zane update alias version` replaces both the recorded tag and the recorded commit for that alias. A whole-project update re-resolves each dependency and refreshes both fields.
+
+If a tag has moved and the user intentionally wants to trust the new commit, the update flow must be explicit about that decision rather than silently refreshing the hash.
+
 ---
 
 ## 3. Repository Layout
@@ -81,6 +88,8 @@ Conceptually:
 ```
 !math$vec  →  v1.0.1math$vec
 ```
+
+The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
 Versioned symbol names allow multiple versions of the same package to coexist in one program without collisions.
@@ -135,6 +144,15 @@ Two packages may depend on different versions of the same upstream library. Beca
 ## 11. Platform Artifacts
 
 Packages may ship multiple prebuilt object files for different target triples. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
+
+### 11.1 Source compilation is explicit opt-in
+The normal workflow consumes the repository's checked-in prebuilt artifact. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout instead.
+
+```sh
+zane add math https://github.com/zane-lang/math v1.0.1 --from-source
+```
+
+This is an explicit trust/debugging escape hatch, not the default package-distribution model.
 
 ---
 

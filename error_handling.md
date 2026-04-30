@@ -217,6 +217,39 @@ content = fs:readFile("file.txt") ? err {
 | Unwinding is runtime control flow | Zane uses explicit typed branches instead. |
 | Unchecked exceptions escape type systems | Abort paths are always declared. |
 
+### 7.5 Zane vs. Rust `Result<T, E>`
+
+Rust represents fallibility as an explicit value that callers transform or propagate.
+
+| Difference | Rust | Zane |
+|---|---|---|
+| Failure representation | `Result<T, E>` is a stored enum value | Abortability is primarily a control-flow split at the call site |
+| Inline recovery | combinators such as `unwrap_or_else` are available but can become expression-heavy | `?` handlers keep multi-line recovery adjacent to the call |
+| Propagation | `?` propagates implicitly | `abort err` inside the handler is explicit |
+| Storing failures | `Result<T, E>` is already a value | storing success/failure together requires an explicit wrapper such as a union |
+
+### 7.6 Zane vs. Swift `throws`
+
+Swift treats fallibility as a throwing effect with `do`/`catch` recovery.
+
+| Difference | Swift | Zane |
+|---|---|---|
+| Error type in signature | `throws` does not name a concrete error type in the signature surface | `? AbortType` names the failure type directly |
+| Recovery form | `do { try ... } catch { ... }` wraps the call in a separate control structure | the handler is attached directly to the call expression |
+| Runtime model | uses exception-style unwinding | uses explicit typed branches at the call site |
+| Coalescing | `try?` discards error information | `??` resolves a default while the compiler still knows the abort type of the call |
+
+### 7.7 Zane vs. Zig error unions
+
+Zig also keeps failure explicit and avoids stack unwinding, but the surface model differs.
+
+| Difference | Zig | Zane |
+|---|---|---|
+| Signature order | `Error!Value` | `Value ? Abort` |
+| Recovery syntax | `catch` with labeled-block patterns | `?` with `resolve`/`return`/`abort` |
+| Payload-free failure | inferred error sets and union mechanics | explicit `Void` abort type |
+| Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are analyzed separately and combined by the compiler |
+
 ---
 
 ## 8. Design Rationale

@@ -80,6 +80,9 @@ If a function calls another function, its effect classification must be at least
 ### 5.3 Refs raise effect level
 A function that reads through a `ref` is not Total Pure, even if it performs no writes, because the observed value may vary over time.
 
+### 5.4 Unknown callees are conservatively classified
+If the compiler cannot prove the effect behavior of a callee, it must classify the call site conservatively rather than assuming purity. In practice this means unknown callees are treated as requiring the strongest effect level needed to preserve safety.
+
 ---
 
 ## 6. Capability Wiring and Explicit State Flow
@@ -87,7 +90,16 @@ A function that reads through a `ref` is not Total Pure, even if it performs no 
 ### 6.1 Capabilities must be passed or stored explicitly
 There is no ambient global I/O capability. Code can affect external state only through capability objects it receives directly or via ownership.
 
-### 6.2 Prop drilling is intentional
+### 6.2 Constructor injection is ordinary capability wiring
+Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit ownership path by which later methods can reach the capability.
+
+### 6.3 `ref` fields can also expose read access paths
+Storing a `ref` field is another explicit way to make state reachable. Because refs observe mutable state outside the current ownership subtree, they raise the containing method or function out of the pure levels when read.
+
+### 6.4 Context objects are explicit, not magical
+A "context object" that groups several capabilities is just another ordinary object in the ownership graph. It may reduce parameter count, but it does not hide effects from the compiler because the reachable capabilities are still explicit in storage and call structure.
+
+### 6.5 Prop drilling is intentional
 Passing capabilities through constructors and methods is part of the design. It keeps effects visible in object structure rather than hidden in ambient module state.
 
 ---
