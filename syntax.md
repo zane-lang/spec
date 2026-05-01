@@ -182,7 +182,24 @@ name TypeName{fieldA: expr, fieldB: expr}
 name TypeName{fieldA, fieldB}
 ```
 
-### 3.5 `init{ }`
+### 3.5 Subscript definitions
+
+```
+(this ReceiverType)[index ParamType] => placeExpr
+(this ReceiverType)[left ParamType, right ParamType] => placeExpr
+```
+
+Subscript definitions have no explicit return type annotation. The body **MUST** be a place expression.
+
+The following forms are not part of the grammar:
+
+```
+ReturnType (this ReceiverType)[index ParamType] => expr
+```
+
+`[]` is not a general function call form. A subscript definition always declares a place projection onto existing storage.
+
+### 3.6 `init{ }`
 
 ```
 return init{
@@ -194,7 +211,7 @@ return init{
 
 A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 
-### 3.6 Lambda declarations
+### 3.7 Lambda declarations
 
 ```
 (ParamType, ...) -> ReturnType name = (paramName Type, ...) {
@@ -261,8 +278,23 @@ name Type = spawn Package$fn(args...) ?? fallbackExpr
 
 `spawn` is legal only on function-call expressions.
 
-### 4.6 No indexing operator
-`x[i]` is not valid syntax. Element access is spelled with methods such as `array:at(i)`.
+### 4.6 Subscript expressions
+
+```
+placeExpr[indexExpr]
+placeExpr[indexExpr, otherExpr]
+```
+
+`[]` is legal only when the receiver type defines a subscript declaration. A subscript expression is a place projection, not a general function call, so it is legal only when its base is a place expression.
+
+Examples:
+
+```zane
+list[i]
+matrix[row, col]
+```
+
+`CustomList()[0]` is not a valid place expression because the base is a temporary.
 
 ---
 

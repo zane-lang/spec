@@ -69,7 +69,18 @@ Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage s
 At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
 
 ### 2.8 Only place expressions are ref-able
-A `ref` binding may only be initialized from a **place expression**: a named symbol, a field access, a container element, or a `ref` parameter (§2.9). Unnamed expression results (temporaries) are not place expressions and cannot be bound to a `ref`.
+A **place expression** is an expression that denotes an existing, stable storage location.
+
+The following are place expressions:
+
+- a named local, field-backed, or owning/ref storage symbol such as `engine`
+- a field access whose base is a place, such as `car.engine` or `this.engine`
+- a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that receiver type
+- a `ref T` parameter inside the callee body (§2.9)
+
+Only place expressions are ref-able. A `ref` binding may only be initialized from a place expression.
+
+Temporaries and other value-only expressions are not place expressions. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places and cannot be bound to a `ref`.
 
 ```zane
 engine ref Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
@@ -87,9 +98,9 @@ engine Engine()         // legal: plain owner binding; Engine() temporary is mat
 ```
 
 ### 2.9 `ref` function parameters
-A parameter declared as `ref T` requires the caller to supply a place expression. Inside the callee body it acts as a ref binding and may be stored into a `ref` field or `ref` local.
+A parameter declared as `ref T` requires the caller to supply a place expression. Inside the callee body it is ref-capable, acts as a place expression, and may be stored into a `ref` field or `ref` local.
 
-A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression, and inside the callee the parameter cannot be stored into a `ref` field.
+A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage. Inside the callee body, a plain `T` parameter is not a place expression for ref-binding purposes.
 
 ```zane
 class Car {
@@ -103,13 +114,13 @@ Void consume(this Car, engine ref Engine) mut {
     this.engineB = engine   // legal
 }
 
-// different overload with a plain parameter
+// different function with a plain parameter
 Void inspect(this Car, engine Engine) {
     return this._value + engine.speed   // legal: reading only
 }
 ```
 
-Storing a plain parameter into a `ref` field is illegal:
+Binding a plain parameter into `ref` storage is illegal:
 
 ```zane
 Void consumeWrong(this Car, engine Engine) mut {
@@ -153,7 +164,7 @@ When a value is passed to a function, the callee decides whether a move happens 
 - storing the value in an owning slot moves it
 - not storing it leaves ownership in place
 
-For `ref` fields specifically, the callee must declare the corresponding parameter as `ref T` (§2.9). Attempting to store a plain `T` parameter into a `ref` field is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
+For `ref` fields specifically, the callee must declare the corresponding parameter as `ref T` (§2.9). Attempting to bind a plain `T` parameter into `ref` storage is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
 
 ### 3.4 Caller symbols stay valid after moves
 If a callee moves a value away from the caller, the caller's symbol silently downgrades to a `ref` through the anchor. Zane therefore has no user-visible use-after-move error class.
@@ -251,8 +262,8 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 |---|---|
 | Single-assignment owning storage | Prevents overwrite-triggered destruction from invalidating refs unexpectedly, including inside owning containers. |
 | Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
-| `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without hidden compiler-invented storage. |
-| Place-expression requirement for `ref` | A ref must denote an existing, user-visible object. Binding to a temporary would introduce compiler-invented hidden storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
+| `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without ghost refs or compiler-invented storage. |
+| Place-expression requirement for `ref` | A ref must denote an existing, user-visible storage location. Binding to a temporary would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
 | Callee-decides moves with caller downgrade | Preserves ownership while avoiding Rust-style use-after-move friction. |
 | Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
@@ -269,10 +280,10 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 | Owning storage | Class-typed symbols, fields, and container elements are initialized once and never overwritten |
 | Struct value | May be overwritten freely |
 | `ref` | Non-owning storage; may be repointed and copied by value |
-| Place expression | A named symbol, field access, container element, or `ref` parameter; required as the source for any `ref` binding |
+| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or a `ref` parameter |
 | `ref` binding | May only be initialized from a place expression; temporaries are rejected |
 | `ref` parameter | Declares that the caller must supply a place expression; the parameter is ref-capable inside the callee |
-| Plain `T` parameter | Value-only binding; caller need not supply a place expression; cannot be stored in a `ref` field |
+| Plain `T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
 | Move | Only into an owner in the same or a higher lexical scope |
 | Function call | Callee decides move; caller symbol remains usable |

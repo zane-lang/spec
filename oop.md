@@ -134,7 +134,7 @@ Vector{x Int, y Int} {
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ### 3.8 `ref` fields require `ref` constructor parameters
-A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref T`. The caller must then supply a place expression (a named symbol, field, or container element) — not a temporary.
+A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref T`. The caller must then supply a place expression (a named symbol, field access, or subscript projection) — not a temporary.
 
 ```zane
 package Vehicle
@@ -145,6 +145,13 @@ class Car {
 
 // legal: ref parameter allows storing into ref field
 Car(engine ref Engine) {
+    return init{engine: engine}
+}
+```
+
+```zane
+// ILLEGAL: parameter must be ref because the field is ref
+Car(engine Engine) {
     return init{engine: engine}
 }
 ```
@@ -225,7 +232,7 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 Explicit parameters other than `this` are read-only. Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
 
 ### 4.8 `ref` method parameters
-A method parameter declared as `ref T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `T` is value-only and may not be stored into a `ref` field.
+A method parameter declared as `ref T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage.
 
 ```zane
 class Car {
@@ -260,6 +267,26 @@ car!consume(Engine())      // ILLEGAL: temporary cannot bind to ref parameter
 car:calculate(Engine())    // legal: plain T parameter accepts a temporary
 ```
 
+### 4.9 Subscripts are place projections
+Subscripts are package-scope declarations with the receiver first:
+
+```zane
+(this CustomList)[index Int] => this._data[index]
+```
+
+The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation.
+
+```zane
+value ref Int = list[i]     // legal when list is a place
+```
+
+```zane
+(this CustomList)[index Int] => this._data.compute(index)   // ILLEGAL: body is not a place
+Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit return type not allowed
+```
+
+`list[i]` is a place expression only if `list` is a place expression. `CustomList()[0]` is therefore not a place expression because the base is a temporary.
+
 ---
 
 ## 5. Free Functions
@@ -286,13 +313,18 @@ Free functions are called as `name(args...)` or `Package$name(args...)`.
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-`ref T` and `T` are distinct parameter types for overload resolution purposes.
+Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `ref T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on parameter 2; rename one declaration or choose a single signature."
 
-### 6.2 Consequences of parameter-type-only identity
+```zane
+Void consume(this Car, engine Engine)
+Void consume(this Car, engine ref Engine)  // ERROR
+```
+
+### 6.2 Consequences of the overload identity rules
 Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
 
 ### 6.3 Valid overloads differ by arity or parameter type
-Legal overload sets must differ in the number of parameters or in at least one parameter type.
+Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `ref`-ness at the same position.
 
 ---
 
@@ -393,10 +425,10 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
-| `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without hiding storage creation. |
+| `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
 | Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
-| Parameter types alone define overloads | Keeps overload resolution simple and predictable. `ref T` and `T` are different types for this purpose. |
+| No overloads that differ only by `ref` | Call syntax stays uniform while avoiding overload ambiguity between value-only and place-required contracts. |
 | Package-qualified function values | Uses one naming rule for methods and free functions. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
@@ -413,10 +445,11 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Constructor | Package-scope declaration named after the type; no `this` |
 | Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
-| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee may not store into `ref` fields |
+| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
 | Method | Package-scope function whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate `this` and its owned subtree |
 | Free function | Package-scope function without `this`; no private-field privilege |
-| Overload identity | Parameter types only; not names, return type, or `mut`; `ref T` ≠ `T` |
+| Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
 | Lambda | Explicitly typed function value; no capture |
 | Unqualified method lookup | Searches home package, then current package |
