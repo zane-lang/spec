@@ -55,7 +55,7 @@ Library repositories include prebuilt objects in the git tree:
 ```
 math/
   src/
-  prebuilt/
+  build/
   zane.coda
 ```
 
@@ -78,7 +78,7 @@ This detects moved tags and repository tampering.
 
 Fetching is a normal git fetch/clone against the package URL. Because binaries live in the repository tree, Zane does not depend on host-specific release-asset APIs.
 
-If the required target artifact is missing from `prebuilt/`, the fetch fails for that target.
+If the required target artifact is missing from `build/`, the fetch fails for that target.
 
 ---
 
