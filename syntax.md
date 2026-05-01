@@ -189,7 +189,7 @@ name TypeName{fieldA, fieldB}
 (this ReceiverType)[left ParamType, right ParamType] => placeExpr
 ```
 
-Subscript definitions have no explicit return type annotation. The body **MUST** be a place expression.
+Subscript definitions have no explicit return type annotation. The body **MUST** be a place expression. If the body is not a place expression, the declaration is a compile-time error.
 
 The following forms are not part of the grammar:
 

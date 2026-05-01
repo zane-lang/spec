@@ -152,7 +152,7 @@ Car(engine ref Engine) {
 ```zane
 // ILLEGAL: parameter must be ref because the field is ref
 Car(engine Engine) {
-    return init{engine: engine}
+    return init{engine: engine}   // ERROR: plain parameter MUST NOT be bound into ref storage
 }
 ```
 
@@ -281,7 +281,7 @@ value ref Int = list[i]     // legal when list is a place
 ```
 
 ```zane
-(this CustomList)[index Int] => this._data.compute(index)   // ILLEGAL: body is not a place
+(this CustomList)[index Int] => this._data.compute(index)   // ILLEGAL: body is not a place expression
 Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit return type not allowed
 ```
 
