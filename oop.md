@@ -133,6 +133,47 @@ Vector{x Int, y Int} {
 ### 3.7 Constructors do not use `mut`
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
+### 3.8 `ref` fields require `ref` constructor parameters
+A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref T`. The caller must then supply a place expression (a named symbol, field, or container element) — not a temporary.
+
+```zane
+package Vehicle
+
+class Car {
+    engine ref Engine
+}
+
+// legal: ref parameter allows storing into ref field
+Car(engine ref Engine) {
+    return init{engine: engine}
+}
+```
+
+Call sites:
+
+```zane
+engine Engine()
+car Car(engine)   // legal: engine is a place expression
+```
+
+```zane
+car Car(Engine())   // ILLEGAL: temporary cannot initialize a ref field
+```
+
+A class whose fields are all plain owners does not require `ref` parameters:
+
+```zane
+class Car {
+    engine Engine
+}
+
+Car(engine Engine) {
+    return init{engine: engine}
+}
+
+car Car(Engine())   // legal: plain owner field accepts a temporary
+```
+
 ---
 
 ## 4. Methods
@@ -183,6 +224,42 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 ### 4.7 Parameters are read-only
 Explicit parameters other than `this` are read-only. Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
 
+### 4.8 `ref` method parameters
+A method parameter declared as `ref T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `T` is value-only and may not be stored into a `ref` field.
+
+```zane
+class Car {
+    engineA ref Engine
+    engineB Engine
+}
+
+// legal: engine is ref-capable; may be stored in either field
+Void consume(this Car, engine ref Engine) mut {
+    this.engineA = engine   // legal
+    this.engineB = engine   // legal
+}
+
+// legal: engine is value-only; may only be read or moved into plain fields
+Int calculate(this Car, engine Engine) {
+    return this._value + engine.speed   // legal: reading only
+}
+
+// ILLEGAL: plain parameter stored into ref field
+Void consumeWrong(this Car, engine Engine) mut {
+    this.engineA = engine   // ILLEGAL
+}
+```
+
+Call syntax is uniform regardless of whether a parameter is `ref`:
+
+```zane
+engine Engine()
+car!consume(engine)        // legal: engine is a place expression
+car:calculate(engine)      // legal: place expression works for plain T too
+car!consume(Engine())      // ILLEGAL: temporary cannot bind to ref parameter
+car:calculate(Engine())    // legal: plain T parameter accepts a temporary
+```
+
 ---
 
 ## 5. Free Functions
@@ -208,6 +285,8 @@ Free functions are called as `name(args...)` or `Package$name(args...)`.
 
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
+
+`ref T` and `T` are distinct parameter types for overload resolution purposes.
 
 ### 6.2 Consequences of parameter-type-only identity
 Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
@@ -314,8 +393,10 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
+| `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without hiding storage creation. |
+| Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
-| Parameter types alone define overloads | Keeps overload resolution simple and predictable. |
+| Parameter types alone define overloads | Keeps overload resolution simple and predictable. `ref T` and `T` are different types for this purpose. |
 | Package-qualified function values | Uses one naming rule for methods and free functions. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
@@ -331,9 +412,11 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Struct | Inline value type; cannot contain class or `ref` fields |
 | Constructor | Package-scope declaration named after the type; no `this` |
 | Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
+| `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
+| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee may not store into `ref` fields |
 | Method | Package-scope function whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate `this` and its owned subtree |
 | Free function | Package-scope function without `this`; no private-field privilege |
-| Overload identity | Parameter types only; not names, return type, or `mut` |
+| Overload identity | Parameter types only; not names, return type, or `mut`; `ref T` ≠ `T` |
 | Lambda | Explicitly typed function value; no capture |
 | Unqualified method lookup | Searches home package, then current package |
