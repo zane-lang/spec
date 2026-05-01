@@ -79,7 +79,7 @@ Type
 ref Type
 ```
 
-`ref` is legal only in storage sites: local-variable declarations, fields, and nested storage types such as `Array[size]<ref Node>`. It is not legal in function parameter or return-type positions.
+`ref` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<ref Node>`) and in function and constructor parameter positions. It is not legal in return-type positions.
 
 ### 2.4 Type parameters
 
@@ -120,6 +120,13 @@ Array[size]<T>
 (this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType
 ```
 
+Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
+
+```
+(ref ParamType, ...) -> ReturnType
+(this ReceiverType, ref ParamType, ...) -> ReturnType
+```
+
 `mut` is legal only when the first parameter is `this`.
 
 ---
@@ -130,6 +137,7 @@ Array[size]<T>
 
 ```
 ReturnType name(param Type, ...) { body }
+ReturnType name(param ref Type, ...) { body }
 ReturnType ? AbortType name(param Type, ...) { body }
 ```
 
@@ -137,7 +145,9 @@ ReturnType ? AbortType name(param Type, ...) { body }
 
 ```
 ReturnType name(this ReceiverType, param Type, ...) { body }
+ReturnType name(this ReceiverType, param ref Type, ...) { body }
 ReturnType name(this ReceiverType, param Type, ...) mut { body }
+ReturnType name(this ReceiverType, param ref Type, ...) mut { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
 ```
@@ -146,6 +156,9 @@ ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
 
 ```
 TypeName(param Type, ...) {
+    return init{ field: expr, ... }
+}
+TypeName(param ref Type, ...) {
     return init{ field: expr, ... }
 }
 ```
