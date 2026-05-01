@@ -197,7 +197,7 @@ The following forms are not part of the grammar:
 ReturnType (this ReceiverType)[index ParamType] => expr
 ```
 
-`[]` is not a general function call form. A subscript definition always declares a place projection onto existing storage.
+`[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the receiver.
 
 ### 3.6 `init{ }`
 

@@ -150,7 +150,7 @@ Car(engine ref Engine) {
 ```
 
 ```zane
-// ILLEGAL: parameter must be ref because the field is ref
+// ILLEGAL: plain parameter cannot be bound into ref storage
 Car(engine Engine) {
     return init{engine: engine}   // ERROR: plain parameter MUST NOT be bound into ref storage
 }
@@ -313,7 +313,7 @@ Free functions are called as `name(args...)` or `Package$name(args...)`.
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `ref T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on parameter 2; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `ref T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Void consume(this Car, engine Engine)
