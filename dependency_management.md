@@ -113,7 +113,17 @@ Fetched packages are stored in a global cache shared across projects:
   build/
 ```
 
-The URL and version are mangled into safe path components. The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
+The URL and version are mangled into safe path components using Go-style path mangling: each `/` in the URL produces a new subdirectory level, so `github.com/zane-lang/math` becomes `github.com/zane-lang/math` as nested directories. If the URL or version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character.
+
+The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
+
+A fully expanded cache path for the `math` example therefore looks like:
+
+```
+~/.zane/packages/github.com/zane-lang/math/v1.0.1/
+  src/
+  build/
+```
 
 ---
 
@@ -169,9 +179,10 @@ At a high level, dependency resolution proceeds in this order:
 1. read local `zane.coda`
 2. resolve each tag to its current commit hash
 3. verify commit hashes against the manifest
-4. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
-6. link the locally compiled program against the cached artifacts in `build/`
+4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
+5. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
+6. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
+7. link the locally compiled program against the cached artifacts in `build/`
 
 ---
 
@@ -184,5 +195,6 @@ At a high level, dependency resolution proceeds in this order:
 | Prebuilt objects in the repository under `build/` | Keeps fetching host-agnostic and lets source and artifacts share one immutable commit identity. |
 | Pull-time symbol versioning | Enables multiple versions to coexist without requiring source-level version names. |
 | `src/` and `build/` separation in the cache | Makes the distinction between the original `!`-prefixed objects from `src/build/` and the rewritten version-stamped objects explicit and auditable. Reuse across projects reads from `build/` without repeating the rewrite step. |
+| Go-style URL-to-path mangling with hard failure on illegal characters | Keeps cache paths human-readable and debuggable while preventing ambiguous or unsafe paths from ever being created. |
 | Global package cache | Avoids repeated downloads and rewrite work across projects. |
 | Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |
