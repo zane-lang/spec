@@ -59,7 +59,7 @@ math/
   zane.coda
 ```
 
-The toolchain selects the correct prebuilt artifact for the current target triple.
+Source files live under `src/`. Prebuilt object files for all supported target triples live under `build/`. The toolchain selects the correct prebuilt artifact for the current target triple from `build/`.
 
 ---
 
@@ -76,7 +76,7 @@ This detects moved tags and repository tampering.
 
 ## 5. Fetching
 
-Fetching is a normal git fetch/clone against the package URL. Because binaries live in the repository tree, Zane does not depend on host-specific release-asset APIs.
+Fetching is a normal git fetch/clone against the package URL. Because binaries live in the repository tree under `build/`, Zane does not depend on host-specific release-asset APIs.
 
 If the required target artifact is missing from `build/`, the fetch fails for that target.
 
@@ -85,7 +85,7 @@ If the required target artifact is missing from `build/`, the fetch fails for th
 ## 6. Symbol Versioning
 
 ### 6.1 Placeholder-prefix rewriting
-Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols to include the resolved version tag.
+Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag — and places the rewritten binaries into `build/`.
 
 Conceptually:
 
@@ -93,7 +93,7 @@ Conceptually:
 !math$vec  →  v1.0.1math$vec
 ```
 
-The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
+The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
 Versioned symbol names allow multiple versions of the same package to coexist in one program without collisions.
@@ -109,9 +109,11 @@ Fetched packages are stored in a global cache shared across projects:
 
 ```
 ~/.zane/packages/<mangled_url>/<mangled_version>/
+  src/
+  build/
 ```
 
-The URL is mangled into a safe path. Re-adding the same package version in another project reuses the existing cached artifact rather than downloading and rewriting it again.
+The URL and version are mangled into safe path components. The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
 ---
 
@@ -147,10 +149,10 @@ Two packages may depend on different versions of the same upstream library. Beca
 
 ## 11. Platform Artifacts
 
-Packages may ship multiple prebuilt object files for different target triples. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
+Packages may ship multiple prebuilt object files for different target triples under `build/`. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
 
 ### 11.1 Source compilation is explicit opt-in
-The normal workflow consumes the repository's checked-in prebuilt artifact. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout instead.
+The normal workflow consumes the repository's checked-in prebuilt artifact from `src/build/`. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
 
 ```sh
 zane add math https://github.com/zane-lang/math v1.0.1 --from-source
@@ -167,10 +169,9 @@ At a high level, dependency resolution proceeds in this order:
 1. read local `zane.coda`
 2. resolve each tag to its current commit hash
 3. verify commit hashes against the manifest
-4. fetch missing packages
-5. rewrite placeholder-prefixed exports with the resolved version
-6. install into the global cache
-7. link the locally compiled program against cached dependency artifacts
+4. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
+5. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
+6. link the locally compiled program against the cached artifacts in `build/`
 
 ---
 
@@ -180,7 +181,8 @@ At a high level, dependency resolution proceeds in this order:
 |---|---|
 | URL as package identity | Avoids global registry naming conflicts and matches how code is actually fetched. |
 | Exact tag plus commit hash | Keeps builds reproducible and makes moved tags detectable. |
-| Prebuilt objects in the repository | Keeps fetching host-agnostic and lets source and artifacts share one immutable commit identity. |
+| Prebuilt objects in the repository under `build/` | Keeps fetching host-agnostic and lets source and artifacts share one immutable commit identity. |
 | Pull-time symbol versioning | Enables multiple versions to coexist without requiring source-level version names. |
+| `src/` and `build/` separation in the cache | Makes the distinction between the original `!`-prefixed objects from `src/build/` and the rewritten version-stamped objects explicit and auditable. Reuse across projects reads from `build/` without repeating the rewrite step. |
 | Global package cache | Avoids repeated downloads and rewrite work across projects. |
 | Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |
