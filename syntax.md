@@ -79,7 +79,7 @@ Type
 ref Type
 ```
 
-`ref` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<ref Node>`) and in function and constructor parameter positions. It is not legal in return-type positions.
+`ref` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<ref Node>`), as well as in function and constructor parameter positions. It is not legal in return-type positions.
 
 ### 2.4 Type parameters
 

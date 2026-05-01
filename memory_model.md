@@ -69,10 +69,10 @@ Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage s
 At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
 
 ### 2.8 Only place expressions are ref-able
-A `ref` binding may only be initialized from a **place expression**: a named symbol, a field access, a container element, or a `ref` parameter. Unnamed expression results (temporaries) are not place expressions and cannot be bound to a `ref`.
+A `ref` binding may only be initialized from a **place expression**: a named symbol, a field access, a container element, or a `ref` parameter (§2.9). Unnamed expression results (temporaries) are not place expressions and cannot be bound to a `ref`.
 
 ```zane
-engine ref Engine()   // ILLEGAL: temporary is not a place expression
+engine ref Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
 ```
 
 ```zane
@@ -80,10 +80,10 @@ engine Engine()
 r ref Engine = engine   // legal: engine is a named, stable storage location
 ```
 
-Non-`ref` owner bindings may be initialized from any expression, including temporaries.
+Non-`ref` owner bindings may be initialized from any expression, including temporaries. The owner materializes the value into stable storage.
 
 ```zane
-engine Engine()   // legal: plain owner binding accepts a temporary
+engine Engine()         // legal: plain owner binding; Engine() temporary is materialized into engine
 ```
 
 ### 2.9 `ref` function parameters
