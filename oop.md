@@ -288,9 +288,10 @@ Subscripts are package-scope declarations with the receiver first:
 
 ```zane
 (this CustomList)[index Int] => this._data[index]
+(this Tensor3)[x Int, y Int, z Int] => this._data[x][y][z]
 ```
 
-The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation.
+The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation. A subscript may declare any number of comma-separated parameters inside `[]`; it is not limited to one or two.
 
 ```zane
 value ref Int = list[i]     // legal when list is a place

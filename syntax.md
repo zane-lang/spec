@@ -198,11 +198,12 @@ name TypeName{fieldA, fieldB}
 ### 3.5 Subscript definitions
 
 ```
-(this ReceiverType)[index ParamType] => placeExpr
-(this ReceiverType)[left ParamType, right ParamType] => placeExpr
+(this ReceiverType)[param ParamType, ...] => placeExpr
 ```
 
 Subscript definitions have no explicit return type annotation. The body **MUST** be a place expression. If the body is not a place expression, the declaration is a compile-time error.
+
+A subscript definition may declare any number of comma-separated parameters inside `[]`. The surface form is not limited to one or two parameters.
 
 The following forms are not part of the grammar:
 
@@ -255,6 +256,8 @@ Bool ==(leftParam LeftType, rightParam RightType) { body }
 Bool <(leftParam LeftType, rightParam RightType) { body }
 ```
 
+Operator definitions are package-scope function declarations whose names are operator tokens. They never declare `this`, so they are not methods and cannot use `mut`.
+
 ---
 
 ## 4. Calls and Function Values
@@ -305,8 +308,7 @@ name Type = spawn Package$fn(args...) ?? fallbackExpr
 ### 4.6 Subscript expressions
 
 ```
-placeExpr[indexExpr]
-placeExpr[indexExpr, otherExpr]
+placeExpr[argExpr, ...]
 ```
 
 `[]` is legal only when the receiver type defines a subscript declaration. A subscript expression is a place projection, not a general function call, so it is legal only when its base is a place expression.
@@ -316,6 +318,7 @@ Examples:
 ```zane
 list[i]
 matrix[row, col]
+tensor[x, y, z]
 ```
 
 `CustomList()[0]` is not a valid place expression because the base is a temporary.
