@@ -47,7 +47,7 @@ struct Vec2 {
 ```
 
 ### 2.3 Field visibility is name-based
-Fields whose names begin with `_` are private to methods on that type. A declaration gets that privilege only when its first parameter is named `this`; the same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access. All other fields are public.
+Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method. The same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access. All fields whose names do not begin with `_` are public.
 
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
@@ -195,7 +195,7 @@ Int scaledId(this Node, factor Int) {
 ```
 
 ### 4.2 `this` grants private-field access
-Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type. The same parameter type written with another name is a free function and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method. The same parameter type written with another name is a free function and does not grant private-field access.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -311,7 +311,7 @@ Float getScale(node Node) {
 ```
 
 ### 5.2 Free functions cannot access private fields
-Free functions may access only public fields. A free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
+Free functions may access only fields whose names do not begin with `_`. A free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 5.3 Free functions use ordinary call syntax
 Free functions are called as `name(args...)` or `Package$name(args...)`.

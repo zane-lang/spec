@@ -163,6 +163,8 @@ ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
+`=> expr` is legal only when the declared return type is not `Void`.
+
 ### 3.3 Positional constructors
 
 ```
