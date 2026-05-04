@@ -254,7 +254,7 @@ engine:inspect()         // legal: engine is now a ref, still readable
 truck Truck(engine)      // ILLEGAL: engine is a ref, not a move-source
 ```
 
-If a callee moves a value away from the caller, the caller's symbol silently downgrades to a `ref` through the anchor. Zane therefore has no user-visible use-after-move error class for reads.
+This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `ref`. Zane therefore has no user-visible use-after-move error class for reads.
 
 ---
 
