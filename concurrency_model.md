@@ -2,7 +2,7 @@
 
 This document specifies Zane's concurrency model: compiler-managed parallelism, the `spawn` keyword, and the safety rules that govern concurrent execution.
 
-> **See also:** [`purity.md`](purity.md) §4 for effect levels. [`memory_model.md`](memory_model.md) §4 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
+> **See also:** [`purity.md`](purity.md) §3 for effect levels. [`memory_model.md`](memory_model.md) §4 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
 
 ---
 
