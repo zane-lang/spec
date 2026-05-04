@@ -199,7 +199,7 @@ Int scaledId(this Node, factor Int) {
 ```
 
 ### 4.2 `this` grants private-field access
-Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method. The same parameter type written with another name is a free function and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a free function and does not grant private-field access.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -315,7 +315,7 @@ Float getScale(node Node) {
 ```
 
 ### 5.2 Free functions cannot access private fields
-Free functions may access only fields whose names do not begin with `_`. A free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
+Free functions may access only fields whose names do not begin with `_`. This rule is package-independent: a free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 5.3 Free functions use ordinary call syntax
 Free functions are called as `name(args...)` or `Package$name(args...)`.
@@ -402,7 +402,7 @@ vec:Physics$kineticEnergy()
 ```
 
 ### 8.3 Extension methods may be declared in any package
-Because methods are package-scope functions, any package may define methods on imported types. If the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
+Because methods are package-scope functions, any package may define methods on imported types. This follows the same rule as §2.3 and §4.2: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
 
 ---
 
