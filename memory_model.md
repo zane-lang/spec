@@ -218,7 +218,7 @@ car Car()
 ```
 
 ```zane
-Void load(this Boat, car Car) mut {
+Void loadCar(this Boat, car Car) mut {
     this.cars!append(car) // legal: parameter car is treated as declared at function body top
 }
 ```
