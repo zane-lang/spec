@@ -37,7 +37,7 @@ Operator implementations are package-scope declarations whose names are operator
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 
 ```zane
-Vec2 +(first Int, second Vec2) {
+Vec2 +(left Int, right Vec2) {
     ...
 }
 ```
