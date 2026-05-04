@@ -139,6 +139,9 @@ Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
 ReturnType name(param Type, ...) { body }
 ReturnType name(param ref Type, ...) { body }
 ReturnType ? AbortType name(param Type, ...) { body }
+ReturnType name(param Type, ...) => expr
+ReturnType name(param ref Type, ...) => expr
+ReturnType ? AbortType name(param Type, ...) => expr
 ```
 
 ### 3.2 Methods
@@ -150,7 +153,17 @@ ReturnType name(this ReceiverType, param Type, ...) mut { body }
 ReturnType name(this ReceiverType, param ref Type, ...) mut { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
+ReturnType name(this ReceiverType, param Type, ...) => expr
+ReturnType name(this ReceiverType, param ref Type, ...) => expr
+ReturnType name(this ReceiverType, param Type, ...) mut => expr
+ReturnType name(this ReceiverType, param ref Type, ...) mut => expr
+ReturnType ? AbortType name(this ReceiverType, param Type, ...) => expr
+ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
 ```
+
+`this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
+
+`=> expr` is legal only when the declared return type is not `Void`.
 
 ### 3.3 Positional constructors
 
@@ -229,6 +242,17 @@ Example:
 (this Box<Int>, Int) mut -> Void callback = (this Box<Int>, Int) mut {
     ...
 }
+```
+
+### 3.8 Operator definitions
+
+```
+ReturnType ~(value ParamType) { body }
+ReturnType *(leftParam LeftType, rightParam RightType) { body }
+ReturnType /(leftParam LeftType, rightParam RightType) { body }
+ReturnType +(leftParam LeftType, rightParam RightType) { body }
+Bool ==(leftParam LeftType, rightParam RightType) { body }
+Bool <(leftParam LeftType, rightParam RightType) { body }
 ```
 
 ---
@@ -334,7 +358,7 @@ expr ?? fallbackExpr
 ## 6. Operators and Keywords
 
 ### 6.1 Operators
-`~`, `*`, `/`, `+`, `-`, `==`, `~=`
+`~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
 
 ### 6.2 Boolean keywords
 `and`, `or`

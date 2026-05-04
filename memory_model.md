@@ -15,6 +15,8 @@ Zane eliminates dangling references by combining single ownership, lexical lifet
 - **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone.
 - **`Deterministic destruction`.** Objects are destroyed when their owning scope drains; there is no tracing garbage collector.
 
+These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves, refs stay valid because they follow the object's anchor rather than its current address.
+
 ---
 
 ## 2. Ownership and Storage
@@ -130,6 +132,33 @@ Void consumeWrong(this Car, engine Engine) mut {
 
 This rule preserves uniform call syntax. The call site writes `consume(e)` or `inspect(e)` regardless of whether the parameter is `ref`. The callee's signature determines whether a place expression is required from the caller.
 
+### 2.10 Struct-downstream enforcement (transitive struct field restrictions)
+Structs form a closed world of plain value storage. A struct field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other structs, but it **MUST NOT** contain a class or a `ref`. This rule applies transitively: a struct containing another struct that eventually contains a class or `ref` is also illegal.
+
+Here, **downstream** means "through nested struct fields." The restriction is checked recursively through the full struct graph.
+
+Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain a `ref`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
+
+```zane
+struct Vec2 {
+    x Float
+    y Float
+}
+
+struct Rect {
+    pos Vec2
+    size Vec2
+}
+
+struct BadOwner {
+    engine Engine      // ILLEGAL: class field inside a struct
+}
+
+struct BadRef {
+    target ref Engine  // ILLEGAL: ref field inside a struct
+}
+```
+
 ---
 
 ## 3. Scope Rules and Moves
@@ -229,6 +258,11 @@ Object relocation is O(1) with respect to the number of refs, because only the a
 ### 6.4 Destroying an object frees its anchor
 When the owning object is destroyed, its anchor is torn down as part of destruction. Since refs cannot outlive the owner, this does not create a dangling-user-reference state.
 
+### 6.5 Why refs never dangle
+A dangling ref would require one of three failures: destruction by overwriting an owner, a ref outliving the owner's scope, or an object move leaving refs pointed at the old address. Zane rules eliminate each case directly.
+
+Single-assignment owners remove overwrite-triggered destruction. The same-or-higher-scope rule keeps refs inside the owner's lifetime envelope. Anchor indirection turns object relocation into a single metadata update instead of a global ref rewrite. The model is therefore enforced by storage shape and lexical scope, not by runtime borrow tracking.
+
 ---
 
 ## 7. Language Comparisons
@@ -262,6 +296,7 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 |---|---|
 | Single-assignment owning storage | Prevents overwrite-triggered destruction from invalidating refs unexpectedly, including inside owning containers. |
 | Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
+| Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
 | `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without ghost refs or compiler-invented storage. |
 | Place-expression requirement for `ref` | A ref must denote an existing, user-visible storage location. Binding to a temporary would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
@@ -284,6 +319,7 @@ When the owning object is destroyed, its anchor is torn down as part of destruct
 | `ref` binding | May only be initialized from a place expression; temporaries are rejected |
 | `ref` parameter | Declares that the caller must supply a place expression; the parameter is ref-capable inside the callee |
 | Plain `T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
+| Struct-downstream enforcement | Structs may contain only primitives and other structs, transitively |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
 | Move | Only into an owner in the same or a higher lexical scope |
 | Function call | Callee decides move; caller symbol remains usable |

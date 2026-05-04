@@ -104,6 +104,10 @@ Independent work may still be parallelized only when doing so preserves those so
 ### 4.1 Water-tower lifetime extension
 A scope does not complete until all `spawn`ed calls inside it have completed. Owned objects in that scope are destroyed only when the scope is **drained**.
 
+The analogy is a vertical water tower with water at the top and one horizontal plate for each still-running spawned call in that scope. The water cannot fall past a plate that is still in place, so destruction cannot pass that still-live concurrent work either.
+
+Each time one spawned call finishes, one plate is removed. The water level drops to the next remaining plate. Only when the last plate is gone does the water reach the bottom of the tower. That moment is when the scope drains and ordinary destruction runs.
+
 ### 4.2 Single-writer rule for object mutation
 For any object, at most one concurrent `mut` accessor is allowed. Two `spawn`ed calls that both require `mut` access to the same object are a compile-time error.
 
