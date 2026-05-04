@@ -47,7 +47,11 @@ struct Vec2 {
 ```
 
 ### 2.3 Field visibility is name-based
-Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method. The same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access. All fields whose names do not begin with `_` are public.
+Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
+
+The same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access.
+
+All fields whose names do not begin with `_` are public.
 
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
