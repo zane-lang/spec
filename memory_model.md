@@ -176,18 +176,68 @@ r ref Node
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
-### 3.2 Ownership moves also use lexical scope
+### 3.2 Only direct owning symbols are move-sources
+A move-source must be a **direct owning symbol**: an owning local binding or owning parameter named directly by an identifier expression.
+
+The following are **not** move-sources:
+- a `ref` (refs are non-owning and cannot transfer ownership)
+- a field access such as `car.engine`
+- a container element access such as `cars[0]`
+- any other access path, including method call results
+
+```zane
+engine Engine()
+car Car(engine)          // legal: engine is a direct owning symbol
+
+truck Truck(car.engine)  // ILLEGAL: field access is not a direct symbol
+garage Garage(cars[0])   // ILLEGAL: container element is not a direct symbol
+```
+
+This rule makes containers stable ownership subtrees. Once a value is owned by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a direct owning symbol.
+
+### 3.3 Moves are restricted to the declaration block
+A direct owning symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Owning parameters are treated as declared at the top of the function body block.
+
+```zane
+engine Engine()
+car Car(engine)          // legal: same block as engine's declaration
+
+{
+    node Node()
+    owner Node = node    // legal: same block as node's declaration
+}
+```
+
+Moving an outer symbol from a nested block is illegal:
+
+```zane
+car Car()
+{
+    garage Garage(car)   // ILLEGAL: car was declared in outer block
+}
+```
+
+```zane
+Void load(this Boat, car Car) mut {
+    this.cars!append(car) // legal: car (parameter) is treated as declared
+                           // at the top of this function body block
+}
+```
+
+This restriction prevents conditional moves and flow-dependent ownership changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
+
+### 3.4 Destination scope must contain or match source scope
 A value may move into a new owner only when the destination owner is declared in the same or a higher lexical scope than the source owner.
 
 ```zane
 node Node()
 {
     owner Node
-    owner = node // ILLEGAL
+    owner = node // ILLEGAL: destination is in a nested block
 }
 ```
 
-### 3.3 Callee-decides move semantics
+### 3.5 Callee-decides move semantics
 When a value is passed to a function, the callee decides whether a move happens by what it does internally:
 
 - storing the value in an owning slot moves it
@@ -195,14 +245,17 @@ When a value is passed to a function, the callee decides whether a move happens 
 
 For `ref` fields specifically, the callee must declare the corresponding parameter as `ref T` (§2.9). Attempting to bind a plain `T` parameter into `ref` storage is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
 
-### 3.4 Caller symbols stay valid after moves
-If a callee moves a value away from the caller, the caller's symbol silently downgrades to a `ref` through the anchor. Zane therefore has no user-visible use-after-move error class.
+### 3.6 Moved symbols downgrade to refs and are no longer movable
+After a direct owning symbol is moved, that symbol is downgraded to a `ref` through the anchor. The symbol remains readable but cannot be moved again.
 
 ```zane
 engine Engine()
-car Car(engine)
-engine:inspect() // valid: engine is now a ref
+car Car(engine)          // engine is moved; downgrades to ref
+engine:inspect()         // legal: engine is now a ref, still readable
+truck Truck(engine)      // ILLEGAL: engine is a ref, not a move-source
 ```
+
+If a callee moves a value away from the caller, the caller's symbol silently downgrades to a `ref` through the anchor. Zane therefore has no user-visible use-after-move error class for reads.
 
 ---
 
@@ -299,6 +352,10 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
 | `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without ghost refs or compiler-invented storage. |
 | Place-expression requirement for `ref` | A ref must denote an existing, user-visible storage location. Binding to a temporary would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
+| Only direct owning symbols are move-sources | Makes containers stable ownership subtrees. Once a value is inside a field or container element, it cannot be individually extracted and re-parented. Ownership trees remain predictable and do not depend on runtime control flow. |
+| Refs are never move-sources | Refs are non-owning aliases. Allowing moves from refs would enable re-parenting through alias paths and break the owner-uniqueness property. |
+| Moves restricted to declaration block | Prevents conditional moves and flow-dependent ownership changes. A symbol's ownership transfer happens at most once, in a predictable location. This eliminates the need for flow-sensitive "maybe moved" analysis. |
+| Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through anchor-based ref downgrade. This preserves ergonomics while preventing double-moves and re-parenting. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
 | Callee-decides moves with caller downgrade | Preserves ownership while avoiding Rust-style use-after-move friction. |
 | Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
@@ -321,7 +378,10 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Plain `T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
 | Struct-downstream enforcement | Structs may contain only primitives and other structs, transitively |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
-| Move | Only into an owner in the same or a higher lexical scope |
+| Move-source | Only a direct owning symbol (local or parameter); not a ref, field, container element, or access path |
+| Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters are treated as declared at function body top |
+| Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
+| Post-move downgrade | After a move, the source symbol downgrades to a `ref` and remains readable but is no longer a move-source |
 | Function call | Callee decides move; caller symbol remains usable |
 | Anchor | Lazy, stable indirection for refs across moves |
 | Destruction | Deterministic and delayed until the owning scope drains |
