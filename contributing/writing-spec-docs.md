@@ -136,7 +136,7 @@ Numbered `## 2.` onward. Write prose that explains *what the language does* and 
 Do not include syntax grammar forms in topic docs. Those go in `syntax.md`. Cross-reference with:
 
 ```markdown
-> **See also:** [`syntax.md`](syntax.md) §3.2 for the declaration grammar.
+> **See also:** [`syntax.md`](syntax.md) §1 and §3 for declaration forms.
 ```
 
 ### 3.3 Language Comparisons section
@@ -270,7 +270,7 @@ The table header is always one of:
 In a topic doc, replace inline syntax descriptions with a cross-reference:
 
 ```markdown
-> **See also:** [`syntax.md`](syntax.md) §3.2 for the complete declaration grammar.
+> **See also:** [`syntax.md`](syntax.md) §1 and §3 for the complete declaration forms.
 ```
 
 ### 6.4 Code block language tags

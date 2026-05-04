@@ -118,7 +118,7 @@ Programs **MUST NOT** define new operator symbols or precedence levels. Overload
 ### 5.2 Reserved symbols
 The following are not operators in Zane:
 
-- `!` (reserved for mutating calls; see [`oop.md`](oop.md) §4.2)
+- `!` (reserved for mutating calls; see [`oop.md`](oop.md) §4.5)
 - `++`, `--`, `+=`, `-=` and other mutation operators
 - `!=` (replaced by `~=` as a derived operator)
 
