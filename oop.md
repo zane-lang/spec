@@ -53,6 +53,8 @@ The same receiver type written under any other parameter name is a free-function
 
 All fields whose names do not begin with `_` are public.
 
+This is intentional: private-field access in Zane is method-based, not package-based.
+
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 

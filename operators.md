@@ -32,7 +32,7 @@ Primitive operators are implementable and define the operator surface area:
 | `<` | binary | `Bool <(left T, right T)` |
 
 ### 2.2 Where operators may be defined
-Operator implementations are package-scope declarations whose names are operator tokens. A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`.
+Operator implementations are package-scope declarations whose names are operator tokens. A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. See [`oop.md`](oop.md) §8.1 for the home-package concept used by method resolution.
 
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 

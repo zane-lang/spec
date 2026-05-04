@@ -133,7 +133,7 @@ Void consumeWrong(this Car, engine Engine) mut {
 This rule preserves uniform call syntax. The call site writes `consume(e)` or `inspect(e)` regardless of whether the parameter is `ref`. The callee's signature determines whether a place expression is required from the caller.
 
 ### 2.10 Struct-downstream enforcement (transitive struct field restrictions)
-Structs form a closed world of plain value storage. A struct field may contain primitives and other structs, but it **MUST NOT** contain a class or a `ref`. This rule applies transitively: a struct containing another struct that eventually contains a class or `ref` is also illegal.
+Structs form a closed world of plain value storage. A struct field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other structs, but it **MUST NOT** contain a class or a `ref`. This rule applies transitively: a struct containing another struct that eventually contains a class or `ref` is also illegal.
 
 Here, **downstream** means "through nested struct fields." The restriction is checked recursively through the full struct graph.
 
