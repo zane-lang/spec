@@ -122,9 +122,6 @@ The following are not operators in Zane:
 - `++`, `--`, `+=`, `-=` and other mutation operators
 - `!=` (replaced by `~=` as a derived operator)
 
-### 5.3 No out-of-package operator definitions
-Programs **MUST NOT** declare an operator in a package unrelated to its operand types. If neither operand's home package is the current package, the declaration is illegal.
-
 ---
 
 ## 6. Design Rationale

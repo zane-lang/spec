@@ -135,6 +135,8 @@ This rule preserves uniform call syntax. The call site writes `consume(e)` or `i
 ### 2.10 Struct-downstream enforcement (transitive struct field restrictions)
 Structs form a closed world of plain value storage. A struct field may contain primitives and other structs, but it **MUST NOT** contain a class or a `ref`. This rule applies transitively: a struct containing another struct that eventually contains a class or `ref` is also illegal.
 
+Here, **downstream** means "through nested struct fields." The restriction is checked recursively through the full struct graph.
+
 Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain a `ref`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
 
 ```zane
