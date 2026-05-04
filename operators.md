@@ -1,8 +1,8 @@
 # Zane Operator System
 
-This document specifies Zane's operator system: the fixed operator set, derived operators, precedence, and boolean keywords.
+This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, and boolean keywords.
 
-> **See also:** [`syntax.md`](syntax.md) §5 for operator tokens and expression forms. [`purity.md`](purity.md) §2 for `mut` and side effects.
+> **See also:** [`syntax.md`](syntax.md) §3.8 and §6 for operator declarations and surface forms. [`purity.md`](purity.md) §2 for `mut` and side effects.
 
 ---
 
@@ -29,16 +29,35 @@ Primitive operators are implementable and define the operator surface area:
 | `/` | binary | `T /(left T, right T)` |
 | `+` | binary | `T +(left T, right T)` |
 | `==` | binary | `Bool ==(left T, right T)` |
+| `<` | binary | `Bool <(left T, right T)` |
 
-### 2.2 Derived operators
+### 2.2 Definition site
+Operator implementations are package-scope declarations whose names are operator tokens. An operator is legal only in the home package of at least one operand type. For `(left T, right U)`, the declaration **MUST** appear in the home package of `T` or `U`. For unary `~`, the declaration **MUST** appear in the home package of the operand type.
+
+Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
+
+```zane
+Vec2 +(first Int, second Vec2) {
+    ...
+}
+```
+
+The example above is legal only in the home package of `Int` or `Vec2`.
+
+### 2.3 Derived operators
 Derived operators are fixed desugarings and are **not** independently implementable:
 
 | Operator | Desugars to |
 |---|---|
 | `a - b` | `a + ~b` |
 | `a ~= b` | `~(a == b)` |
+| `a > b` | `b < a` |
+| `a <= b` | `~(b < a)` |
+| `a >= b` | `~(a < b)` |
 
-### 2.3 Boolean keywords
+If a type provides `<` for an operand pair, users automatically get `>`, `<=`, and `>=` for that same pair.
+
+### 2.4 Boolean keywords
 `and` and `or` are **keywords**, not operators. They are short-circuiting and therefore not implementable as regular functions.
 
 ```zane
@@ -48,7 +67,7 @@ if ok or fallback() { ... }
 
 `or` is defined as a law: `a or b = ~(~a and ~b)`.
 
-### 2.4 Reserved meanings for `!` and `~`
+### 2.5 Reserved meanings for `!` and `~`
 `!` is reserved for mutating method calls and is not boolean NOT in Zane. `~` is the unary complement/flip operator instead:
 
 - `~Bool` is logical complement
@@ -66,9 +85,9 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 | 1 | `~` | — |
 | 2 | `*` `/` | left |
 | 3 | `+` `-` | left |
-| 4 | `==` `~=` | non-associative |
+| 4 | `<` `>` `<=` `>=` `==` `~=` | non-associative |
 
-`==` and `~=` are non-associative. Chaining `a == b == c` is a compile-time error.
+Comparison operators are non-associative. Chaining `a < b < c` or `a == b == c` is a compile-time error.
 
 ### 3.1 Precedence is fixed syntax
 Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups.
@@ -103,6 +122,9 @@ The following are not operators in Zane:
 - `++`, `--`, `+=`, `-=` and other mutation operators
 - `!=` (replaced by `~=` as a derived operator)
 
+### 5.3 No out-of-package operator definitions
+Programs **MUST NOT** declare an operator in a package unrelated to its operand types. If neither operand's home package is the current package, the declaration is illegal.
+
 ---
 
 ## 6. Design Rationale
@@ -113,7 +135,8 @@ The following are not operators in Zane:
 | Fixed precedence in syntax | Parsing must be determined by tokens alone so refactors and tooling do not need type information to know grouping. |
 | `~` as the only unary operator | Unifies negation and complement without overloading `-`/`!`. |
 | `!` reserved for mutating calls | Keeps mutation explicit at method call sites instead of overloading `!` for boolean negation. |
-| Derived `-` and `~=` | Makes law violations inexpressible. |
+| Home-package operator definitions | Keeps imported helper packages from silently changing operator meaning. |
+| Derived `-`, `~=`, `>`, `<=`, and `>=` | Makes law violations inexpressible and keeps comparison surfaces consistent once `<` exists. |
 | `/` remains primitive | Multiplicative inverse is not universally available, and `a / b` is not definitionally identical to `a * (1/b)` across all types. |
 | `and`/`or` as keywords | Preserves short-circuit control flow. |
 | Non-associative equality | Prevents accidental chaining bugs. |

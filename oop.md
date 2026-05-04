@@ -47,7 +47,7 @@ struct Vec2 {
 ```
 
 ### 2.3 Field visibility is name-based
-Fields whose names begin with `_` are private to methods in the defining package. All other fields are public.
+Fields whose names begin with `_` are private to methods on that type. A declaration gets that privilege only when its first parameter is named `this`; the same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access. All other fields are public.
 
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
@@ -186,7 +186,7 @@ car Car(Engine())   // legal: plain owner field accepts a temporary
 ## 4. Methods
 
 ### 4.1 Methods are functions whose first parameter is `this`
-A method is any package-scope function whose first parameter is named `this`. `this` **MUST** be the first parameter.
+A method is any package-scope function whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -195,7 +195,17 @@ Int scaledId(this Node, factor Int) {
 ```
 
 ### 4.2 `this` grants private-field access
-Within the defining package, `this` grants access to `_`-prefixed fields. The same parameter type written with another name is a free-function parameter and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type. The same parameter type written with another name is a free function and does not grant private-field access.
+
+```zane
+Int scaledId(this Node, factor Int) {
+    return this._id * factor
+}
+
+Int scaledIdWrong(node Node, factor Int) {
+    return node._id * factor   // ILLEGAL: node is not `this`
+}
+```
 
 ### 4.3 Read-only methods are the default
 A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write to `this` or owned descendants.
@@ -301,10 +311,20 @@ Float getScale(node Node) {
 ```
 
 ### 5.2 Free functions cannot access private fields
-Free functions may access only public fields unless they call a method that has the necessary package-local privileges.
+Free functions may access only public fields. A free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 5.3 Free functions use ordinary call syntax
 Free functions are called as `name(args...)` or `Package$name(args...)`.
+
+### 5.4 Expression-bodied functions and methods
+Both free functions and methods may use `=>` when they return a value:
+
+```zane
+Int double(value Int) => value * 2
+Int scaledId(this Node, factor Int) => this._id * factor
+```
+
+`=> expr` desugars to `{ return expr }`. Because the shorthand always returns its expression, it is illegal for declarations whose return type is `Void`.
 
 ---
 
@@ -378,7 +398,7 @@ vec:Physics$kineticEnergy()
 ```
 
 ### 8.3 Extension methods may be declared in any package
-Because methods are package-scope functions, any package may define methods on imported types. Extension methods do not gain access to the target type's private fields unless they are declared in the defining package.
+Because methods are package-scope functions, any package may define methods on imported types. If the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
 
 ---
 
