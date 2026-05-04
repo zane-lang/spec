@@ -204,7 +204,7 @@ car Car(engine)          // legal: same block as engine's declaration
 
 {
     node Node()
-    owner Node = node    // legal: same block as node's declaration
+    nodeOwner Node = node // legal: same block as node's declaration
 }
 ```
 
@@ -219,8 +219,7 @@ car Car()
 
 ```zane
 Void load(this Boat, car Car) mut {
-    this.cars!append(car) // legal: car (parameter) is treated as declared
-                           // at the top of this function body block
+    this.cars!append(car) // legal: parameter car is treated as declared at function body top
 }
 ```
 
