@@ -174,7 +174,11 @@ TypeName(param Type, ...) {
 TypeName(param ref Type, ...) {
     return init{ field: expr, ... }
 }
+TypeName(param Type, ...) => init{ field: expr, ... }
+TypeName(param ref Type, ...) => init{ field: expr, ... }
 ```
+
+Constructors use the same package-scope declaration shapes as other functions, except that the return type is implicit and the body constructs the value with `init{ ... }`.
 
 ### 3.4 Field constructors
 
@@ -186,6 +190,11 @@ TypeName{
 } {
     return init{fieldA, fieldB}
 }
+TypeName{
+    fieldA Type,
+    fieldB Type,
+    ...
+} => init{fieldA, fieldB}
 ```
 
 Field-constructor call sites may use explicit or implicit field names:
@@ -287,7 +296,7 @@ Package$functionName
 ### 4.4 Pipe syntax
 
 ```
-callExpr|{ block }
+expr|{ block }
 ```
 
 ### 4.5 `spawn`

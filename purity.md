@@ -29,7 +29,7 @@ A side effect is any observable interaction beyond returning a value, including:
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to `this` and values owned by `this`.
+`mut` is the only effect modifier in the language. It appears on methods whose receiver is a class type and grants write access to `this` and values owned by `this`.
 
 ### 2.4 Parameters are not mutable by default
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver.
@@ -60,7 +60,7 @@ Write Impure functions mutate `this`, mutate capability-backed state, or otherwi
 A method without `mut` may not assign to fields of `this` or call `mut` methods on `this` or owned descendants.
 
 ### 4.2 `mut` does not authorize arbitrary writes
-Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters.
+Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters. Struct updates are expressed by returning a replacement struct value rather than mutating a struct receiver in place.
 
 ### 4.3 `ref` use sites follow ordinary call rules
 Reading through a `ref` is not a side effect by itself. At use sites, `ref` values follow the same field-access and method-call rules as owners. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
