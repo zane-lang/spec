@@ -511,16 +511,42 @@ Graph$getScale
 
 When referenced as a value, a method's `this` parameter remains explicit in the function type.
 
-### 7.2 Lambdas are explicitly typed
-Lambda declarations use an explicit function type and a lambda literal with a matching parameter list:
+### 7.2 Lambdas use contextual typing
+Lambda literals write only parameter names. The surrounding function-value context supplies the parameter types, return type, and abort type:
 
 ```zane
-(this Node, Int) mut -> Void callback = (this Node, Int) mut {
+Void onClick(this Element, (EventData) -> Void callback) mut {
     ...
 }
+
+element!onClick((eventData) {
+    ...
+})
 ```
 
-The lambda literal repeats the parameter list and `mut` marker. A non-`mut` lambda omits `mut` in both places.
+`mut` is not inferred. A lambda that needs the receiver-mutation contract writes `mut` explicitly:
+
+```zane
+mutableCallback (this Node, EventData) mut -> Void
+mutableCallback = (this, data) {
+    ...
+} // OK: a non-`mut` lambda may be used where a `mut` callback is expected
+
+mutableCallback = (this, data) mut {
+    ...
+}
+
+readonlyCallback (this Node, EventData) -> Void
+readonlyCallback = (this, data) {
+    ...
+}
+
+readonlyCallback = (this, data) mut {
+    ...
+} // ILLEGAL: expected a non-`mut` function value
+```
+
+Because a lambda literal relies on contextual typing, it cannot be written and called directly in the same expression. The call must go through a name or another surrounding context that already fixes the function type.
 
 ### 7.3 Lambdas do not capture
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency_model.md`](concurrency_model.md) §5.2 ("Lambdas do not capture").
@@ -632,5 +658,5 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Free function | Package-scope function without `this`; no private-field privilege |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
-| Lambda | Explicitly typed function value; no capture |
+| Lambda | Contextually typed function value; `mut` stays explicit; no capture |
 | Unqualified method lookup | Searches home package, then current package |

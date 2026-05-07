@@ -277,24 +277,35 @@ return init{
 
 A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 
-### 3.8 Lambda declarations
+### 3.8 Lambda literals
 
 ```
-(ParamType, ...) -> ReturnType name = (paramName Type, ...) {
-    ...
-}
-
-(this ReceiverType, ParamType, ...) mut -> ReturnType name = (this ReceiverType, paramName Type, ...) mut {
-    ...
-}
+() { body }
+(name, ...) { body }
+() => expr
+(name, ...) => expr
+(this) { body }
+(this) mut { body }
+(this, name, ...) { body }
+(this, name, ...) mut { body }
+(this) => expr
+(this) mut => expr
+(this, name, ...) => expr
+(this, name, ...) mut => expr
 ```
 
-Example:
+Lambda literals omit the function name, parameter types, return type, and abort type. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
+
+Examples:
 
 ```zane
-(this Box<Int>, Int) mut -> Void callback = (this Box<Int>, Int) mut {
+element!onClick((eventData) {
     ...
-}
+})
+
+element!onClick((this, data) mut {
+    ...
+})
 ```
 
 ### 3.9 Operator definitions
