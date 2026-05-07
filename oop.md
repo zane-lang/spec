@@ -202,6 +202,112 @@ Car(engine Engine) {
 car Car(Engine())   // legal: plain owner field accepts a temporary
 ```
 
+### 3.9 Implicit constructors
+A constructor marked with the `implicit` modifier declares a single-parameter conversion. Implicit constructors **MUST** declare exactly one parameter and **MUST NOT** use field-constructor form.
+
+```zane
+package Units
+
+struct Meters {
+    value Float
+}
+
+struct Feet {
+    value Float
+}
+
+// implicit conversion from Feet to Meters
+implicit Meters(feet Feet) => init{value: feet.value * Float(0.3048)}
+```
+
+At a **coercion site** where the destination type is already known, if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
+
+```zane
+distance Meters = Feet(Float(10))   // coercion site: Meters expected, Feet provided
+// desugars to: distance Meters = Meters(Feet(Float(10)))
+```
+
+#### 3.9.1 Coercion sites
+A coercion site is a position where the destination type is already known:
+- Symbol declarations with an explicit type annotation: `name Type = expr`
+- Assignments to already-declared symbols: `name = expr`
+- Constructor arguments where the parameter type is known
+- Method and free-function arguments where the parameter type is known
+
+#### 3.9.2 Overload resolution with implicit constructors
+Overload resolution proceeds in three phases, stopping at the first phase that produces a match:
+
+1. **Direct match:** the expression type exactly matches the destination type, or a regular (non-implicit) constructor call matches directly.
+2. **Generic match:** type parameters are instantiated to satisfy the destination type.
+3. **Implicit match:** exactly one applicable implicit constructor exists from the source type to the destination type.
+
+If the implicit match phase finds zero applicable implicit constructors, the compiler emits a type error. If it finds multiple applicable implicit constructors, the compiler emits an ambiguity error.
+
+#### 3.9.3 No chaining
+Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
+
+#### 3.9.4 Source and destination type constraints
+The **source type** (parameter type) of an implicit constructor **MUST** be a struct or a compiler concept type (`@concepts$Number`, `@concepts$Text`, etc.). It **MUST NOT** be a class or a `ref`.
+
+The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a struct or a class.
+
+```zane
+struct Celsius { value Float }
+struct Fahrenheit { value Float }
+
+implicit Celsius(f Fahrenheit) => init{value: (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
+```
+
+```zane
+class Logger { message String }
+struct LogConfig { verbosity Int }
+
+implicit Logger(cfg LogConfig) {   // legal: struct → class
+    return init{message: cfg.verbosity:toString()}
+}
+```
+
+```zane
+class Source { data String }
+class Destination { payload String }
+
+implicit Destination(s Source) {   // ILLEGAL: source type is a class
+    return init{payload: s.data}
+}
+```
+
+#### 3.9.5 Coherence and the orphan rule
+An implicit constructor from type `U` to type `T` **MUST** be declared in the home package of either `T` or `U`. A third-party package **MUST NOT** declare an implicit constructor between two imported types.
+
+This rule prevents conflicts when multiple packages independently define the same implicit conversion and ensures that the owner of at least one type controls the conversion behavior.
+
+```zane
+package Units
+
+struct Meters { value Float }
+
+// legal: declared in home package of Meters
+implicit Meters(feet Feet) => init{value: feet.value * Float(0.3048)}
+```
+
+```zane
+package Conversions
+import units
+
+// ILLEGAL: neither Meters nor Feet is defined in Conversions
+implicit units$Meters(feet units$Feet) => init{value: feet.value * Float(0.3048)}
+```
+
+#### 3.9.6 Method receivers are never implicitly converted
+The receiver expression (`this`) in a method call is never subject to implicit conversion. If the receiver type does not match, the call is a type error.
+
+```zane
+Void logDistance(this Meters) { ... }
+
+feet Feet(Float(10))
+feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
+```
+
 ---
 
 ## 4. Methods
@@ -475,6 +581,14 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Structs update by replacement, not in-place mutation | Preserves plain value semantics for structs while still allowing ordinary reassignment of struct-typed storage. |
 | Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
+| Implicit constructors for coercion | Allows ergonomic conversions at assignment sites without operator overloading or hidden multi-step chaining. |
+| Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
+| No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
+| Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
+| No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
+| Source type must be struct or compiler concept | Classes have ownership and identity; implicitly converting a class would hide ownership transfer. Compiler concepts (like numeric literals) are designed for ergonomic lowering. |
+| Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
+| Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
 | `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
 | Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
@@ -495,6 +609,8 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Struct | Inline value type; cannot contain class or `ref` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
 | Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
+| Overload resolution phases | Direct match, then generic match, then implicit match; stops at first successful phase |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
 | Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
 | Method | Package-scope function whose first parameter is `this` |

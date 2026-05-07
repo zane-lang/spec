@@ -151,17 +151,32 @@ When a package is fetched, the toolchain recursively reads its `zane.coda` and i
 
 ---
 
-## 10. Multiple-Version Coexistence
+## 10. Package Dependency Graph
+
+The package dependency graph **MUST** be a directed acyclic graph (DAG). Cyclic imports across package boundaries are not allowed.
+
+If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages.
+
+The compiler **MUST** detect and reject cyclic package dependencies at build time with an error message that identifies the cycle.
+
+### 10.1 Single-package mutual references
+Within a single package, source files may freely reference each other's declarations. A package is compiled as one unit, so mutual references among declarations in the same package are legal and do not constitute a cycle.
+
+The acyclicity requirement applies only to the package-level dependency graph, not to intra-package references.
+
+---
+
+## 11. Multiple-Version Coexistence
 
 Two packages may depend on different versions of the same upstream library. Because symbol names are version-prefixed at fetch time, both versions may coexist in one final link as long as all references are internally consistent.
 
 ---
 
-## 11. Platform Artifacts
+## 12. Platform Artifacts
 
 Packages may ship multiple prebuilt object files for different target triples under `build/`. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
 
-### 11.1 Source compilation is explicit opt-in
+### 12.1 Source compilation is explicit opt-in
 The normal workflow consumes the repository's checked-in prebuilt artifact from `src/build/`. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
 
 ```sh
@@ -172,7 +187,7 @@ This is an explicit trust/debugging escape hatch, not the default package-distri
 
 ---
 
-## 12. Build Flow
+## 13. Build Flow
 
 At a high level, dependency resolution proceeds in this order:
 
@@ -186,7 +201,7 @@ At a high level, dependency resolution proceeds in this order:
 
 ---
 
-## 13. Design Rationale
+## 14. Design Rationale
 
 | Decision | Rationale |
 |---|---|
@@ -198,3 +213,4 @@ At a high level, dependency resolution proceeds in this order:
 | Go-style URL-to-path mangling with hard failure on illegal characters | Keeps cache paths human-readable and debuggable while preventing ambiguous or unsafe paths from ever being created. |
 | Global package cache | Avoids repeated downloads and rewrite work across projects. |
 | Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |
+| Package dependency graph is a DAG | Simplifies compilation order, prevents initialization deadlocks, and makes dependency reasoning straightforward. Packages within the same repository may reference each other freely. |
