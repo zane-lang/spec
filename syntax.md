@@ -2,7 +2,7 @@
 
 This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only.
 
-> **See also:** [`oop.md`](oop.md) for constructors and methods. [`error_handling.md`](error_handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
+> **See also:** [`oop.md`](oop.md) for constructors and methods. [`control_flow.md`](control_flow.md) for branching and loop semantics. [`error_handling.md`](error_handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
 
 ---
 
@@ -383,19 +383,48 @@ matrix[row, col]
 tensor[x, y, z]
 ```
 
-`CustomList()[0]` is not a valid place expression because the base is a temporary.
+`CustomList()[1]` is not a valid place expression because the base is a temporary.
 
 ---
 
-## 5. Error Handling
+## 5. Control Flow
 
-### 5.1 Abortable return types
+### 5.1 `if` / `elif` / `else`
+
+```
+if conditionExpr { ... }
+if conditionExpr { ... } elif conditionExpr { ... }
+if conditionExpr { ... } else { ... }
+if conditionExpr { ... } elif conditionExpr { ... } else { ... }
+```
+
+An `if` chain may contain zero or more `elif` branches followed by an optional `else` branch.
+
+### 5.2 `guard`
+
+```
+guard conditionExpr
+guard conditionExpr { ... }
+```
+
+### 5.3 `loop`
+
+```
+loop name from startExpr to endExpr { ... }
+loop name to endExpr { ... }
+```
+
+---
+
+## 6. Error Handling
+
+### 6.1 Abortable return types
 
 ```
 ReturnType ? AbortType
 ```
 
-### 5.2 `?` handlers
+### 6.2 `?` handlers
 
 ```
 expr ? binder { ... }
@@ -412,7 +441,7 @@ abort expr
 abort
 ```
 
-### 5.3 `??` shorthand
+### 6.3 `??` shorthand
 
 ```
 expr ?? fallbackExpr
@@ -420,25 +449,28 @@ expr ?? fallbackExpr
 
 ---
 
-## 6. Operators and Keywords
+## 7. Operators and Keywords
 
-### 6.1 Operators
+### 7.1 Operators
 `~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
 
-### 6.2 Boolean keywords
+### 7.2 Boolean keywords
 `and`, `or`
+
+### 7.3 Control-flow keywords
+`if`, `elif`, `else`, `guard`, `loop`, `from`, `to`
 
 ---
 
-## 7. Packages
+## 8. Packages
 
-### 7.1 Package member syntax
+### 8.1 Package member syntax
 
 ```
 Package$member
 ```
 
-### 7.2 Package declarations
+### 8.2 Package declarations
 
 ```
 package Name

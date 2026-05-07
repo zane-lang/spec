@@ -182,7 +182,7 @@ A move-source must be a **direct owning symbol**: an owning local binding or own
 The following are **not** move-sources:
 - a `ref` (refs are non-owning and cannot transfer ownership)
 - a field access such as `car.engine`
-- a container element access such as `cars[0]`
+- a container element access such as `cars[1]`
 - any other access path, including method call results
 
 ```zane
@@ -190,7 +190,7 @@ engine Engine()
 car Car(engine)          // legal: engine is a direct owning symbol
 
 truck Truck(car.engine)  // ILLEGAL: field access is not a direct symbol
-garage Garage(cars[0])   // ILLEGAL: container element is not a direct symbol
+garage Garage(cars[1])   // ILLEGAL: container element is not a direct symbol
 ```
 
 This rule makes containers stable ownership subtrees. Once a value is owned by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a direct owning symbol.
