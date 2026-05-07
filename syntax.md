@@ -66,7 +66,7 @@ import aliasKey
 ### 2.1 Core surface types
 `Int`, `Float`, `Bool`, `String`, `Void`
 
-These are public language-level types, not storage primitives. `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is also a core surface type rather than a storage primitive.
+These are public language-level types, not storage primitives. `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is the exception: it is a core surface type with no storage payload.
 
 ### 2.2 Named types
 
