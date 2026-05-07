@@ -332,16 +332,6 @@ name(args...)
 Package$name(args...)
 ```
 
-General `callableExpr(args...)` syntax is not part of the language. A parenthesized expression cannot be used as a call head.
-
-Illegal form:
-
-```zane
-(() {
-    return "hi"
-})() // ILLEGAL: parenthesized expressions are not call heads
-```
-
 ### 4.2 Method calls
 
 ```
