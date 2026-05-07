@@ -2,7 +2,7 @@
 
 This document specifies Zane's type-parameter system, including const-parameterized types and the `Array[size]<T>` storage primitive.
 
-> **See also:** [`syntax.md`](syntax.md) §2 for parameter syntax. [`memory_model.md`](memory_model.md) §6 for memory layout context.
+> **See also:** [`syntax.md`](syntax.md) §2 for parameter syntax. [`memory_model.md`](memory_model.md) §5 for memory layout context.
 
 ---
 
