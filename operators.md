@@ -87,7 +87,7 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 | Level (high → low) | Syntax / operators | Associativity |
 |---|---|---|
 | 1 | `~` | — |
-| 2 | `\|` pipe syntax | left |
+| 2 | <code>|</code> pipe syntax | left |
 | 3 | `*` `/` | left |
 | 4 | `+` `-` | left |
 | 5 | `<` `>` `<=` `>=` `==` `~=` | non-associative |
