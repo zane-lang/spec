@@ -10,7 +10,7 @@ Each file in the repository root covers one topic area. Each topic has a single 
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
-When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc) or *how to write it* (syntax.md)?
+When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc), *how to write it* (`syntax.md`), or *what the spec calls it* (`terminology.md`)?
 
 ---
 
@@ -105,9 +105,16 @@ Rules:
 - Do not restart numbering.
 - In topic documents, the Overview is always `## 1.`.
 
-### 2.6 `syntax.md` is the one structural exception
+### 2.6 Structural exceptions
 
 `syntax.md` is a canonical reference document, not a topic narrative. It still uses the same title style, lead-in prose, `---` separators, and numbered subsections, but it may start directly with grammar categories such as Declarations, Types, and Calls instead of a dedicated `## 1. Overview` section.
+
+`terminology.md` is also a reference document rather than a topic narrative. It should still use the same title style, lead-in prose, `---` separators, and numbered groups / per-term subsections, but it does **not** need a topic-style Overview / Language Comparisons / Design Rationale layout. Instead, it should organize terms into clear groups and, for each term, record:
+
+- the preferred term
+- a short meaning
+- why that name was chosen
+- the canonical home document for the full rule
 
 ---
 
@@ -146,6 +153,8 @@ Include this section only when Zane's design is meaningfully different from main
 ### 3.4 Design Rationale section
 
 Required in every topic document.
+
+Do **not** add a Design Rationale section to `syntax.md` or `terminology.md`. Those files are reference documents, not topic narratives.
 
 Placement:
 - If the document has a Summary: Design Rationale is the top-level section immediately before Summary.
@@ -353,6 +362,8 @@ At the end of a section that is closely connected to another document, add a `> 
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
 5. Add a Design Rationale section (§4 format).
 6. If meaningful language comparisons exist, add a Language Comparisons section (§5 format).
+
+Exception: if the document is `terminology.md`, follow the terminology-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add Language Comparisons or Design Rationale sections.
 
 ---
 
