@@ -228,7 +228,26 @@ name TypeName{fieldA: expr, fieldB: expr}
 name TypeName{fieldA, fieldB}
 ```
 
-### 3.5 Subscript definitions
+### 3.5 Implicit constructors
+
+```
+implicit TypeName(param Type) {
+    return init{ field: expr, ... }
+}
+implicit TypeName(param Type) => init{ field: expr, ... }
+```
+
+Implicit constructors use the `implicit` modifier and are written only in positional form with exactly one parameter.
+
+Illegal forms:
+
+```zane
+implicit TypeName() { ... }           // ILLEGAL: exactly one parameter is required
+implicit TypeName(a A, b B) { ... }   // ILLEGAL: implicit constructors are single-parameter only
+implicit TypeName{field Type} { ... } // ILLEGAL: field-constructor form is not allowed
+```
+
+### 3.6 Subscript definitions
 
 ```
 (this ReceiverType)[param ParamType, ...] => placeExpr
@@ -246,7 +265,7 @@ ReturnType (this ReceiverType)[index ParamType] => expr
 
 `[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the receiver.
 
-### 3.6 `init{ }`
+### 3.7 `init{ }`
 
 ```
 return init{
@@ -258,7 +277,7 @@ return init{
 
 A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 
-### 3.7 Lambda declarations
+### 3.8 Lambda declarations
 
 ```
 (ParamType, ...) -> ReturnType name = (paramName Type, ...) {
@@ -278,7 +297,7 @@ Example:
 }
 ```
 
-### 3.8 Operator definitions
+### 3.9 Operator definitions
 
 ```
 ReturnType ~(value ParamType) { body }

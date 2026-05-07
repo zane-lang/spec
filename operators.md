@@ -2,7 +2,7 @@
 
 This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, and boolean keywords.
 
-> **See also:** [`syntax.md`](syntax.md) §3.8 and §6 for operator declarations and surface forms. [`purity.md`](purity.md) §2 for `mut` and side effects.
+> **See also:** [`syntax.md`](syntax.md) §3.9 and §6 for operator declarations and surface forms. [`purity.md`](purity.md) §2 for `mut` and side effects.
 
 ---
 
