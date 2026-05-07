@@ -174,7 +174,11 @@ TypeName(param Type, ...) {
 TypeName(param ref Type, ...) {
     return init{ field: expr, ... }
 }
+TypeName(param Type, ...) => init{ field: expr, ... }
+TypeName(param ref Type, ...) => init{ field: expr, ... }
 ```
+
+Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
 ### 3.4 Field constructors
 
@@ -186,6 +190,11 @@ TypeName{
 } {
     return init{fieldA, fieldB}
 }
+TypeName{
+    fieldA Type,
+    fieldB Type,
+    ...
+} => init{fieldA, fieldB}
 ```
 
 Field-constructor call sites may use explicit or implicit field names:
@@ -287,7 +296,17 @@ Package$functionName
 ### 4.4 Pipe syntax
 
 ```
-callExpr|{ block }
+callableExpr|expr
+```
+
+The left-hand side of a pipe must be a callable expression, such as a function, constructor, or method target. The right-hand side may be any expression value. Pipe has lower precedence than unary `~` (binds less tightly) and higher precedence than `*`, `/`, `+`, `-`, and the comparison operators (binds more tightly).
+
+Examples of grouping:
+
+```zane
+someFunc|~3      // groups as someFunc|(~3)
+someFunc|3 + 3   // groups as (someFunc|3) + 3
+Vec2(2)|100      // groups as Vec2(2)|100
 ```
 
 ### 4.5 `spawn`

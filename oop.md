@@ -37,6 +37,8 @@ A `struct` body also contains only field declarations, but structs are stored in
 
 This restriction exists because structs use inline value semantics, while class ownership and ref tracking require runtime identity and anchor bookkeeping.
 
+After construction, a struct's fields are immutable: code cannot mutate a struct instance in place. The storage position that holds a struct value remains overwritable, however, so a symbol, field, or container slot of struct type may later be assigned a replacement struct value.
+
 ```zane
 package Math
 
@@ -44,6 +46,9 @@ struct Vec2 {
     x Float
     y Float
 }
+
+pos Vec2(1, 2)
+pos = Vec2(3, 4)   // legal: replaces the whole value
 ```
 
 ### 2.3 Field visibility is name-based
@@ -63,7 +68,9 @@ Methods, constructors, overload rules, and function values live at package scope
 ## 3. Constructors and Initialization
 
 ### 3.1 Constructors are package-scope declarations
-A constructor is a package-scope declaration named after the type. It has no `this` parameter because no object exists yet.
+A constructor is a package-scope function declaration named after the type. It has no `this` parameter because no object exists yet.
+
+Constructors use the same block-bodied or expression-bodied surface forms as other package-scope functions, except that the written type name is the return type and the body constructs the result with `init{ ... }`.
 
 ### 3.2 Positional constructors
 Positional constructors declare ordinary parameters and return `init{ ... }`.
@@ -78,6 +85,14 @@ Node(id Int, scale Float, label String) {
         label: label
     }
 }
+```
+
+Expression-bodied constructors are equivalent:
+
+```zane
+package Math
+
+Vec2(x Float, y Float) => init{x, y}
 ```
 
 Positional constructors **MAY** be overloaded by arity or parameter types.
@@ -219,10 +234,18 @@ A method without `mut` may read `this`, its parameters, and reachable read-only 
 ### 4.4 Mutating methods use `mut`
 A method marked `mut` may write to `this` and objects owned by `this`.
 
+The receiver of a `mut` method **MUST** be a class type. Struct receivers are value receivers, so their fields cannot be changed in place. Code that wants an updated struct returns a replacement value instead of mutating the original.
+
 ```zane
 Void setScale(this Node, scale Float) mut {
     this.scale = scale
 }
+```
+
+```zane
+Vec2 setY(this Vec2, y Float) => Vec2(this.x, y)
+
+pos = pos:setY(Float(3))
 ```
 
 ### 4.5 Call markers are part of the surface syntax
@@ -450,6 +473,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 |---|---|
 | Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
+| Structs update by replacement, not in-place mutation | Preserves plain value semantics for structs while still allowing ordinary reassignment of struct-typed storage. |
 | Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
 | `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
@@ -468,13 +492,13 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Concept | Rule |
 |---|---|
 | Class body | Fields only — no methods or constructors inside the body |
-| Struct | Inline value type; cannot contain class or `ref` fields |
-| Constructor | Package-scope declaration named after the type; no `this` |
+| Struct | Inline value type; cannot contain class or `ref` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
+| Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
 | Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
 | Method | Package-scope function whose first parameter is `this` |
-| `mut` method | Called with `!`; may mutate `this` and its owned subtree |
+| `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Free function | Package-scope function without `this`; no private-field privilege |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
