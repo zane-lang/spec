@@ -493,7 +493,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 |---|---|
 | Class body | Fields only — no methods or constructors inside the body |
 | Struct | Inline value type; cannot contain class or `ref` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
-| Constructor | Package-scope function declaration named after the type; that written type name is the return type; no `this`; may use block or `=> init{...}` form |
+| Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
 | Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
