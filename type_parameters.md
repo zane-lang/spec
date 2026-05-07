@@ -117,7 +117,7 @@ This is deferred because the language does not yet define how type-level arithme
 `Array[size]<T>` is a compiler-provided storage primitive representing `size` contiguous elements of `T`. Its size is `size * sizeof(T)` bytes with no header.
 
 ### 7.2 Array is the fixed-size storage base case
-Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support. Dynamic container types such as `List<T>` are defined as nominal wrapper classes over opaque runtime primitives in the `@primitives$` namespace.
+Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support. Dynamic container types such as `List<T>` are not specified in this document; when they are specified, they are separate runtime-managed wrapper types over opaque `@primitives$...` storage primitives rather than extensions of `Array`.
 
 ---
 

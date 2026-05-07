@@ -66,7 +66,7 @@ import aliasKey
 ### 2.1 Core surface types
 `Int`, `Float`, `Bool`, `String`, `Void`
 
-These are nominal wrapper types over storage primitives in the `@primitives$` namespace. `Int`, `Float`, and `Bool` are wrapper structs over machine-word primitives. `String` is a wrapper class over an opaque runtime primitive. `Void` is a zero-size nominal type.
+These are public language-level types, not storage primitives. `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is also a core surface type rather than a storage primitive.
 
 ### 2.2 Named types
 
@@ -120,19 +120,18 @@ Array[size]<T>
 @concepts$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word integer and float types and opaque runtime primitives used by core wrapper types. The `@concepts$` namespace contains compiler concept types that represent literal forms in signatures but cannot be used as storage types.
+The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by core wrapper types. The `@concepts$` namespace contains compiler concept types used for source literals.
 
 ### 2.8 Compiler concept types for literals
 
 ```
-@concepts$IntLit
-@concepts$FloatLit
-@concepts$StringLit
-@concepts$TupleLit
-@concepts$CollectionLit
+@concepts$Number
+@concepts$Text
+@concepts$Tuple
+@concepts$Collection
 ```
 
-These compiler-provided concept types represent the type of literal expressions at their origin site. Concept types may appear in function signatures but **MUST NOT** be used as storage types (local variables, fields, or nested storage positions). A literal-typed parameter binds a literal expression and may invoke a literal-lowering constructor to produce the storage type the function body requires.
+These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding core surface type.
 
 ### 2.9 Function types
 
