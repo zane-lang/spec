@@ -1,6 +1,6 @@
 # Zane Type Parameters
 
-This document specifies Zane's type-parameter system, including const-parameterized types and the `Array[size]<T>` primitive.
+This document specifies Zane's type-parameter system, including const-parameterized types and the `Array[size]<T>` storage primitive.
 
 > **See also:** [`syntax.md`](syntax.md) §2 for parameter syntax. [`memory_model.md`](memory_model.md) §6 for memory layout context.
 
@@ -13,7 +13,7 @@ Zane supports both type parameters and const-int parameters, with distinct synta
 - **`Two parameter kinds`.** Type parameters use `<T>`; const parameters use `[name]`.
 - **`Binder vs reference contexts`.** The same `[name]` syntax binds a const parameter in declaration positions and refers to it in type bodies.
 - **`Const params are literal`.** Use-site const parameters are always integer literals baked into identifiers.
-- **`Array is primitive`.** `Array[size]<T>` is the single compiler-defined fixed-size container.
+- **`Array is the storage primitive`.** `Array[size]<T>` is the single compiler-provided fixed-size storage primitive.
 
 ---
 
@@ -111,13 +111,13 @@ This is deferred because the language does not yet define how type-level arithme
 
 ---
 
-## 7. The `Array[size]<T>` Primitive
+## 7. The `Array[size]<T>` Storage Primitive
 
-### 7.1 Compiler-defined layout
-`Array[size]<T>` is a compiler primitive representing `size` contiguous elements of `T`. Its size is `size * sizeof(T)` bytes with no header.
+### 7.1 Compiler-provided layout
+`Array[size]<T>` is a compiler-provided storage primitive representing `size` contiguous elements of `T`. Its size is `size * sizeof(T)` bytes with no header.
 
-### 7.2 Array is the base case
-Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support.
+### 7.2 Array is the fixed-size storage base case
+Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support. Dynamic container types such as `List<T>` are defined as nominal wrapper classes over opaque runtime primitives in the `@primitives$` namespace.
 
 ---
 
@@ -142,4 +142,4 @@ The following are intentionally not specified in this version of the spec:
 | Method-site `this` binders reuse `[name]` | Keeps const-parameter binding uniform between type declarations and method declarations. |
 | Arithmetic deferred | Avoids committing prematurely to a type-level equality solver for const expressions. |
 | Digits restricted to const params | Makes identifiers context-free and unambiguous. |
-| `Array` as the only primitive | Minimizes compiler surface area; other types are definable in Zane. |
+| `Array` as the only storage primitive | Minimizes compiler surface area; other types are definable in Zane. |

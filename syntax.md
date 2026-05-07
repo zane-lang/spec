@@ -63,8 +63,10 @@ import aliasKey
 
 ## 2. Types
 
-### 2.1 Primitive types
+### 2.1 Core surface types
 `Int`, `Float`, `Bool`, `String`, `Void`
+
+These are nominal wrapper types over storage primitives in the `@primitives$` namespace. `Int`, `Float`, and `Bool` are wrapper structs over machine-word primitives. `String` is a wrapper class over an opaque runtime primitive. `Void` is a zero-size nominal type.
 
 ### 2.2 Named types
 
@@ -103,13 +105,36 @@ Matrix10X20<Float>
 
 Digits are illegal in identifiers except where they supply const arguments to a const-parameterized type name.
 
-### 2.6 Array primitive
+### 2.6 Array storage primitive
 
 ```
 Array[size]<T>
 ```
 
-### 2.7 Function types
+`Array[size]<T>` is a compiler-provided storage primitive representing `size` contiguous elements of type `T`.
+
+### 2.7 Reserved compiler namespaces
+
+```
+@primitives$name
+@concepts$name
+```
+
+The `@primitives$` namespace contains storage primitives such as machine-word integer and float types and opaque runtime primitives used by core wrapper types. The `@concepts$` namespace contains compiler concept types that represent literal forms in signatures but cannot be used as storage types.
+
+### 2.8 Compiler concept types for literals
+
+```
+@concepts$IntLit
+@concepts$FloatLit
+@concepts$StringLit
+@concepts$TupleLit
+@concepts$CollectionLit
+```
+
+These compiler-provided concept types represent the type of literal expressions at their origin site. Concept types may appear in function signatures but **MUST NOT** be used as storage types (local variables, fields, or nested storage positions). A literal-typed parameter binds a literal expression and may invoke a literal-lowering constructor to produce the storage type the function body requires.
+
+### 2.9 Function types
 
 ```
 (ParamType, ...) -> ReturnType
