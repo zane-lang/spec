@@ -434,6 +434,8 @@ Subscripts are package-scope declarations with the receiver first:
 
 The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation. A subscript may declare any number of comma-separated parameters inside `[]`; it is not limited to one or two.
 
+When a receiver interprets an `Int` subscript as an ordinal position in an ordered sequence, that position is 1-based. The first element is at `1`, and a sequence with `n` elements uses `1` through `n` as its positional range.
+
 ```zane
 value ref Int = list[i]     // legal when list is a place
 ```
@@ -443,7 +445,7 @@ value ref Int = list[i]     // legal when list is a place
 Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit return type not allowed
 ```
 
-`list[i]` is a place expression only if `list` is a place expression. `CustomList()[0]` is therefore not a place expression because the base is a temporary.
+`list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
 ---
 

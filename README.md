@@ -14,4 +14,5 @@ This repository is a **prior art publication** for the Zane programming language
 | `type_parameters.md` | Const-parameterized types, identifier rules, and the `Array[size]<T>` primitive |
 | `error_handling.md` | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
 | `dependency_management.md` | Package identity, manifests, version pinning, and fetch rules |
+| `control_flow.md` | Conditional branching, `guard`, counted loops, and 1-based ordinal rules |
 | `syntax.md` | Canonical surface syntax reference for all constructs |
