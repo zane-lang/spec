@@ -299,14 +299,14 @@ Package$functionName
 expr|expr
 ```
 
-The right-hand side of a pipe may be any expression. Pipe precedence is lower than unary `~` and higher than `*`, `/`, `+`, `-`, and the comparison operators.
+The right-hand side of a pipe may be any expression. Pipe has lower precedence than unary `~` (binds less tightly) and higher precedence than `*`, `/`, `+`, `-`, and the comparison operators (binds more tightly).
 
 Examples of grouping:
 
 ```zane
 someFunc|~3      // groups as someFunc|(~3)
 someFunc|3 + 3   // groups as (someFunc|3) + 3
-Vec2(2)|100
+Vec2(2)|100      // legal: the piped value may be used with a left-hand expression that still expects another argument
 ```
 
 ### 4.5 `spawn`
