@@ -530,7 +530,7 @@ element!onClick((eventData) {
 mutableCallback (this Node, EventData) mut -> Void
 mutableCallback = (this, data) {
     ...
-}
+} // OK: a non-`mut` lambda may be used where a `mut` callback is expected
 
 mutableCallback = (this, data) mut {
     ...
