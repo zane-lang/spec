@@ -296,7 +296,17 @@ Package$functionName
 ### 4.4 Pipe syntax
 
 ```
-expr|{ block }
+expr|expr
+```
+
+The right-hand side of a pipe may be any expression. Pipe precedence is lower than unary `~` and higher than `*`, `/`, `+`, `-`, and the comparison operators.
+
+Examples of grouping:
+
+```zane
+someFunc|~3      // groups as someFunc|(~3)
+someFunc|3 + 3   // groups as (someFunc|3) + 3
+Vec2(2)|100
 ```
 
 ### 4.5 `spawn`

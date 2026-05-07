@@ -82,17 +82,20 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 
 ## 3. Precedence and Associativity
 
-| Level (high → low) | Operators | Associativity |
+`|` pipe syntax is not part of the operator set in §2, but it participates in expression grouping.
+
+| Level (high → low) | Syntax / operators | Associativity |
 |---|---|---|
 | 1 | `~` | — |
-| 2 | `*` `/` | left |
-| 3 | `+` `-` | left |
-| 4 | `<` `>` `<=` `>=` `==` `~=` | non-associative |
+| 2 | `\|` pipe syntax | left |
+| 3 | `*` `/` | left |
+| 4 | `+` `-` | left |
+| 5 | `<` `>` `<=` `>=` `==` `~=` | non-associative |
 
 Comparison operators are non-associative. Chaining `a < b < c` or `a == b == c` is a compile-time error.
 
 ### 3.1 Precedence is fixed syntax
-Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups.
+Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering.
 
 ---
 
