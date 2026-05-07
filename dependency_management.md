@@ -155,7 +155,7 @@ When a package is fetched, the toolchain recursively reads its `zane.coda` and i
 
 The package dependency graph **MUST** be a directed acyclic graph (DAG). Cyclic imports across package boundaries are not allowed.
 
-If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages.
+If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages. A package therefore **MUST NOT** import itself, directly or indirectly.
 
 The compiler **MUST** detect and reject cyclic package dependencies at build time with an error message that identifies the cycle.
 
@@ -195,9 +195,10 @@ At a high level, dependency resolution proceeds in this order:
 2. resolve each tag to its current commit hash
 3. verify commit hashes against the manifest
 4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
-5. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-6. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
-7. link the locally compiled program against the cached artifacts in `build/`
+5. read transitive manifests and reject the dependency if the package graph contains a cycle
+6. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
+7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
+8. link the locally compiled program against the cached artifacts in `build/`
 
 ---
 
@@ -213,4 +214,4 @@ At a high level, dependency resolution proceeds in this order:
 | Go-style URL-to-path mangling with hard failure on illegal characters | Keeps cache paths human-readable and debuggable while preventing ambiguous or unsafe paths from ever being created. |
 | Global package cache | Avoids repeated downloads and rewrite work across projects. |
 | Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |
-| Package dependency graph is a DAG | Simplifies compilation order, prevents initialization deadlocks, and makes dependency reasoning straightforward. Packages within the same repository may reference each other freely. |
+| Package dependency graph is a DAG | Simplifies compilation order, prevents initialization deadlocks, and makes dependency reasoning straightforward. Declarations within one package may still reference each other freely because the package is compiled as one unit. |

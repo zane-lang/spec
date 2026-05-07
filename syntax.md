@@ -234,14 +234,18 @@ name TypeName{fieldA, fieldB}
 implicit TypeName(param Type) {
     return init{ field: expr, ... }
 }
-implicit TypeName(param ref Type) {
-    return init{ field: expr, ... }
-}
 implicit TypeName(param Type) => init{ field: expr, ... }
-implicit TypeName(param ref Type) => init{ field: expr, ... }
 ```
 
-Implicit constructors use the `implicit` modifier and must declare exactly one parameter. Field-constructor form is not allowed for implicit constructors.
+Implicit constructors use the `implicit` modifier and are written only in positional form with exactly one parameter.
+
+Illegal forms:
+
+```zane
+implicit TypeName() { ... }           // ILLEGAL: exactly one parameter is required
+implicit TypeName(a A, b B) { ... }   // ILLEGAL: implicit constructors are single-parameter only
+implicit TypeName{field Type} { ... } // ILLEGAL: field-constructor form is not allowed
+```
 
 ### 3.6 Subscript definitions
 
