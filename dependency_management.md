@@ -195,7 +195,7 @@ At a high level, dependency resolution proceeds in this order:
 2. resolve each tag to its current commit hash
 3. verify commit hashes against the manifest
 4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
-5. read transitive manifests and reject the dependency if the package graph contains a cycle
+5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle
 6. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
 7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
 8. link the locally compiled program against the cached artifacts in `build/`

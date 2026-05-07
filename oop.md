@@ -271,11 +271,11 @@ implicit Celsius(f Fahrenheit) => init{value: (f.value - Float(32)) * Float(5) /
 ```
 
 ```zane
-class Logger { message String }
+class Logger { verbosity Int }
 struct LogConfig { verbosity Int }
 
 implicit Logger(cfg LogConfig) {   // legal: struct → class
-    return init{message: cfg.verbosity:toString()}
+    return init{verbosity: cfg.verbosity}
 }
 ```
 
