@@ -306,7 +306,7 @@ Examples of grouping:
 ```zane
 someFunc|~3      // groups as someFunc|(~3)
 someFunc|3 + 3   // groups as (someFunc|3) + 3
-Vec2(2)|100      // legal: the piped value may be used with a left-hand expression that still expects another argument
+Vec2(2)|100      // groups as Vec2(2)|100
 ```
 
 ### 4.5 `spawn`
