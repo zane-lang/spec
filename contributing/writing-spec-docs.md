@@ -109,7 +109,7 @@ Rules:
 
 `syntax.md` is a canonical reference document, not a topic narrative. It still uses the same title style, lead-in prose, `---` separators, and numbered subsections, but it may start directly with grammar categories such as Declarations, Types, and Calls instead of a dedicated `## 1. Overview` section.
 
-`terminology.md` is also a reference document rather than a topic narrative. It should still use the same title style, lead-in prose, `---` separators, and numbered sections, but it does **not** need a topic-style Overview / Language Comparisons / Design Rationale layout. Instead, it should organize terms into clear groups and, for each term, record:
+`terminology.md` is also a reference document rather than a topic narrative. It should still use the same title style, lead-in prose, `---` separators, and numbered groups / per-term subsections, but it does **not** need a topic-style Overview / Language Comparisons / Design Rationale layout. Instead, it should organize terms into clear groups and, for each term, record:
 
 - the preferred term
 - a short meaning

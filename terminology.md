@@ -11,6 +11,7 @@ This document records the canonical names used across the Zane specification for
 This file gives short, reusable names to concepts that appear across multiple spec documents.
 
 - **`Preferred label`.** Each entry records the name the spec should reuse when the same concept appears again.
+- **`Preferred casing`.** Terms keep the casing that best matches their role in the spec: formal named models may use capitals, while ordinary reusable noun phrases may stay lowercase.
 - **`Meaning`.** Each entry gives only a short summary, not the full rule.
 - **`Why this name`.** Each entry explains the connection between the label and the underlying rule.
 - **`Canonical home`.** Each entry names the document section where the full rule is specified.
