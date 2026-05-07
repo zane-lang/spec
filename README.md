@@ -15,4 +15,5 @@ This repository is a **prior art publication** for the Zane programming language
 | `error_handling.md` | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
 | `dependency_management.md` | Package identity, manifests, version pinning, and fetch rules |
 | `control_flow.md` | Conditional branching, `guard`, counted loops, and 1-based ordinal rules |
+| `terminology.md` | Canonical terminology index for cross-document Zane concepts and coined spec terms |
 | `syntax.md` | Canonical surface syntax reference for all constructs |
