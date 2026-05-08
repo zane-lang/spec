@@ -21,7 +21,7 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 ### 2.1 Abort types are part of the signature
 An abortable function declares:
 
-```
+```zane
 ReturnType ? AbortType
 ```
 

@@ -284,7 +284,7 @@ In a topic doc, replace inline syntax descriptions with a cross-reference:
 
 ### 6.4 Code block language tags
 
-Use the `zane` tag for all Zane source examples:
+Use the `zane` tag for all Zane source examples and pseudo-grammar forms:
 
 ````markdown
 ```zane
@@ -293,10 +293,10 @@ hp = computeHp()
 ```
 ````
 
-Use no tag (plain fence) for pseudo-grammar forms:
+Pseudo-grammar forms also use the `zane` tag:
 
 ````markdown
-```
+```zane
 name Type(arg, ...)
 name = expr
 ```

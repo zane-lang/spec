@@ -19,7 +19,7 @@ Zane treats a package's full source URL as its identity and pins every dependenc
 
 Every project has a `zane.coda` manifest with a `deps` block:
 
-```
+```zane
 deps [
     alias url version commit
     math https://github.com/zane-lang/math v1.0.1 a3f8c2d
@@ -52,7 +52,7 @@ zane update math v1.0.1 --accept-tag-move
 
 Library repositories include prebuilt objects in the git tree:
 
-```
+```zane
 math/
   src/
   build/
@@ -89,7 +89,7 @@ Libraries are compiled with their own exported symbols prefixed by the placehold
 
 Conceptually:
 
-```
+```zane
 !math$vec  →  v1.0.1math$vec
 ```
 
@@ -107,7 +107,7 @@ When a library already depends on another versioned library, the referenced tran
 
 Fetched packages are stored in a global cache shared across projects:
 
-```
+```zane
 ~/.zane/packages/<mangled_url>/<mangled_version>/
   src/
   build/
@@ -119,7 +119,7 @@ The `src/` subdirectory holds the full cloned repository, including the reposito
 
 A fully expanded cache path for the `math` example therefore looks like:
 
-```
+```zane
 ~/.zane/packages/github.com/zane-lang/math/v1.0.1/
   src/
   build/

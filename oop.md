@@ -117,6 +117,26 @@ Vector{x Int, y Int} {
 
 This form is the canonical constructor syntax when the constructor parameters map directly to fields.
 
+Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
+
+```zane
+class Weapon {
+    name String
+    fireRate Float
+    damage Float
+}
+
+Weapon{
+    name String = "Pistol",
+    fireRate Float(1),
+    damage Float = 10
+} {
+    return init{name, fireRate, damage}
+}
+
+starter Weapon{fireRate: Float(2)}
+```
+
 ### 3.4 Implicit field access in constructor calls
 Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
 
@@ -148,8 +168,20 @@ Vector{x Int, y Int} {
 }
 ```
 
-### 3.6 Constructor completeness rules
-`init{ }` is valid only as a constructor return value. Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
+### 3.6 `init{ }` is a constructor-only expression
+`init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
+
+```zane
+Vector{x Int, y Int} {
+    temp Vector = init{
+        x: x,
+        y: y
+    }
+    return temp
+}
+```
+
+Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
 
 ### 3.7 Constructors do not use `mut`
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
@@ -378,7 +410,7 @@ Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` 
 
 ### 4.6 Method desugaring
 
-```
+```zane
 receiver:method(arg)        → ResolvedPkg$method(receiver, arg)
 receiver!method(arg)        → ResolvedPkg$method(receiver, arg)
 receiver:Pkg$method(arg)    → Pkg$method(receiver, arg)
@@ -620,7 +652,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Structs update by replacement, not in-place mutation | Preserves plain value semantics for structs while still allowing ordinary reassignment of struct-typed storage. |
-| Field constructors and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while keeping field assignment explicit in structure. |
+| Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
 | Implicit constructors for coercion | Allows ergonomic conversions at assignment sites without operator overloading or hidden multi-step chaining. |
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
@@ -648,7 +680,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Class body | Fields only — no methods or constructors inside the body |
 | Struct | Inline value type; cannot contain class or `ref` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
 | Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
-| Field constructor | Declares field parameters directly and may use `init{field}` shorthand |
+| Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |

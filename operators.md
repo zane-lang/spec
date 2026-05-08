@@ -84,6 +84,12 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 
 `|` pipe syntax is not part of the operator set in §2, but it participates in expression grouping.
 
+A parenthesized expression `(expr)` groups `expr` explicitly. Parentheses bind the enclosed expression as a single unit before the precedence table below is applied to the surrounding syntax.
+
+```zane
+number Int = (3 + 2) * 2
+```
+
 | Level (high → low) | Syntax / operators | Associativity |
 |---|---|---|
 | 1 | `~` | — |
