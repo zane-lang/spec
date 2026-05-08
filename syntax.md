@@ -86,15 +86,17 @@ ref Type
 ### 2.4 Type parameters
 
 ```
-struct Box<T> { ... }
+struct Box<'T> { ... }
 ```
+
+Type-parameter names are prefixed with `'` to distinguish generic binders and references from concrete type names.
 
 ### 2.5 Const-parameterized types
 
 Definition-site binders:
 
 ```
-struct Matrix[rows]X[cols]<T> { ... }
+struct Matrix[rows]X[cols]<'T> { ... }
 ```
 
 Use-site form:
@@ -108,10 +110,10 @@ Digits are illegal in identifiers except where they supply const arguments to a 
 ### 2.6 Array storage primitive
 
 ```
-Array[size]<T>
+Array[size]<'T>
 ```
 
-`Array[size]<T>` is a compiler-provided storage primitive representing `size` contiguous elements of type `T`.
+`Array[size]<'T>` is a compiler-provided storage primitive representing `size` contiguous elements of type `'T`.
 
 ### 2.7 Reserved compiler namespaces
 
@@ -470,6 +472,15 @@ expr ?? fallbackExpr
 
 ### 7.3 Control-flow keywords
 `if`, `elif`, `else`, `guard`, `loop`, `from`, `to`
+
+### 7.4 Comments
+
+```
+// single-line comment
+/// doc comment
+```
+
+Zane has no block-comment syntax. `//` starts a single-line comment. `///` starts a documentation comment line. Adjacent `///` lines are merged into one documentation block.
 
 ---
 

@@ -1,6 +1,6 @@
 # Zane Type Parameters
 
-This document specifies Zane's type-parameter system, including const-parameterized types and the `Array[size]<T>` storage primitive.
+This document specifies Zane's type-parameter system, including const-parameterized types and the `Array[size]<'T>` storage primitive.
 
 > **See also:** [`syntax.md`](syntax.md) §2 for parameter syntax. [`memory_model.md`](memory_model.md) §5 for memory layout context.
 
@@ -10,27 +10,27 @@ This document specifies Zane's type-parameter system, including const-parameteri
 
 Zane supports both type parameters and const-int parameters, with distinct syntax and roles.
 
-- **`Two parameter kinds`.** Type parameters use `<T>`; const parameters use `[name]`.
+- **`Two parameter kinds`.** Type parameters use `<'T>`; const parameters use `[name]`.
 - **`Binder vs reference contexts`.** The same `[name]` syntax binds a const parameter in declaration positions and refers to it in type bodies.
 - **`Const params are literal`.** Use-site const parameters are always integer literals baked into identifiers.
-- **`Array is the storage primitive`.** `Array[size]<T>` is the single compiler-provided fixed-size storage primitive.
+- **`Array is the storage primitive`.** `Array[size]<'T>` is the single compiler-provided fixed-size storage primitive.
 
 ---
 
 ## 2. Parameter Kinds
 
 ### 2.1 Type parameters
-Type parameters are declared with angle brackets and range over types:
+Type parameters are declared with angle brackets and a leading `'`, and range over types:
 
 ```zane
-struct Box<T> { value T }
+struct Box<'T> { value 'T }
 ```
 
 ### 2.2 Const parameters
 Const parameters are declared with square brackets and range over compile-time integers:
 
 ```zane
-struct Matrix[rows]X[cols]<T> { ... }
+struct Matrix[rows]X[cols]<'T> { ... }
 ```
 
 ### 2.3 Kinds are distinct
@@ -43,8 +43,8 @@ Type parameters and const parameters live in different kinds. A const parameter 
 Const parameters are bound in the type name itself:
 
 ```zane
-struct Matrix[rows]X[cols]<T> {
-    data Array[rows]<Array[cols]<T>>
+struct Matrix[rows]X[cols]<'T> {
+    data Array[rows]<Array[cols]<'T>>
 }
 ```
 
@@ -54,8 +54,8 @@ Within the type body, the binder name refers to the compile-time integer.
 
 | Context | Example | Role |
 |---|---|---|
-| Type definition pattern | `struct Matrix[rows]X[cols]<T>` | binder |
-| Method `this` type | `this Matrix[rows]X[cols]<T>` | binder |
+| Type definition pattern | `struct Matrix[rows]X[cols]<'T>` | binder |
+| Method `this` type | `this Matrix[rows]X[cols]<'T>` | binder |
 | Type body / referenced type | `Array[rows]<...>` | reference to a bound const parameter |
 | User-facing type use | `Matrix10X20<Float>` | concrete literal baked into the type name |
 
@@ -66,7 +66,7 @@ Within the type body, the binder name refers to the compile-time integer.
 When a method binds const parameters in its `this` type, the method is implicitly generic over those parameters:
 
 ```zane
-Array[cols]<T> rowAt(this Matrix[rows]X[cols]<T>, i Int) { ... }
+Array[cols]<'T> rowAt(this Matrix[rows]X[cols]<'T>, i Int) { ... }
 ```
 
 `rows` and `cols` in the method body refer to the binders introduced by `this`.
@@ -105,19 +105,19 @@ Matrix[n]X[m]<Float> // ILLEGAL
 ```
 
 ### 6.2 No arithmetic in type arguments
-Arithmetic on const parameters in type arguments is **not specified**. Expressions such as `Array[rows*cols]<T>` are currently illegal.
+Arithmetic on const parameters in type arguments is **not specified**. Expressions such as `Array[rows*cols]<'T>` are currently illegal.
 
 This is deferred because the language does not yet define how type-level arithmetic expressions should be compared for equality. Without that rule, expressions such as `N+M` and `M+N` would have ambiguous equivalence status.
 
 ---
 
-## 7. The `Array[size]<T>` Storage Primitive
+## 7. The `Array[size]<'T>` Storage Primitive
 
 ### 7.1 Compiler-provided layout
-`Array[size]<T>` is a compiler-provided storage primitive representing `size` contiguous elements of `T`. Its size is `size * sizeof(T)` bytes with no header.
+`Array[size]<'T>` is a compiler-provided storage primitive representing `size` contiguous elements of `'T`. Its size is `size * sizeof('T)` bytes with no header.
 
 ### 7.2 Array is the fixed-size storage base case
-Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support. Dynamic container types such as `List<T>` are not specified in this document; when they are specified, they are separate runtime-managed wrapper types over opaque `@primitives$...` storage primitives rather than extensions of `Array`.
+Other fixed-size container types (e.g., vectors, matrices) are defined in terms of `Array` and do not require compiler support. Dynamic container types such as `List<'T>` are not specified in this document; when they are specified, they are separate runtime-managed wrapper types over opaque `@primitives$...` storage primitives rather than extensions of `Array`.
 
 ---
 
@@ -126,7 +126,7 @@ Other fixed-size container types (e.g., vectors, matrices) are defined in terms 
 The following are intentionally not specified in this version of the spec:
 
 - arithmetic on const parameters in type positions
-- dynamic container types such as `List<T>` and `Map<K,V>`
+- dynamic container types such as `List<'T>` and `Map<'K, 'V>`
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 
@@ -137,7 +137,7 @@ The following are intentionally not specified in this version of the spec:
 | Decision | Rationale |
 |---|---|
 | `[name]` as the const-parameter syntax | Keeps numbers visually attached to the type identity without making them ordinary runtime arguments. |
-| Separate `<T>` and `[n]` | Keeps kinds explicit and avoids dependent-type complexity. |
+| Separate `<'T>` and `[n]` | Keeps kinds explicit and avoids dependent-type complexity. |
 | Literal const arguments | Ensures all concrete types are known at compile time. |
 | Method-site `this` binders reuse `[name]` | Keeps const-parameter binding uniform between type declarations and method declarations. |
 | Arithmetic deferred | Avoids committing prematurely to a type-level equality solver for const expressions. |
