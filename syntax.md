@@ -12,7 +12,7 @@ This document is the canonical reference for Zane's surface syntax. Topic docume
 
 New symbol declarations:
 
-```
+```zane
 name Type
 name ref Type
 name Type(args, ...)
@@ -26,19 +26,19 @@ name ref Type = expr
 
 Once a symbol already exists, reassignment uses only:
 
-```
+```zane
 name = expr
 ```
 
 ### 1.2 Package constants
 
-```
+```zane
 name Type(value)
 ```
 
 ### 1.3 Class fields
 
-```
+```zane
 class Name {
     field Type
     field ref Type
@@ -47,7 +47,7 @@ class Name {
 
 ### 1.4 Struct fields
 
-```
+```zane
 struct Name {
     field Type
 }
@@ -55,7 +55,7 @@ struct Name {
 
 ### 1.5 Imports
 
-```
+```zane
 import aliasKey
 ```
 
@@ -70,14 +70,14 @@ These are public language-level types, not storage primitives. `Int`, `Float`, a
 
 ### 2.2 Named types
 
-```
+```zane
 Package$Type
 Type
 ```
 
 ### 2.3 Reference types
 
-```
+```zane
 ref Type
 ```
 
@@ -85,7 +85,7 @@ ref Type
 
 ### 2.4 Type parameters
 
-```
+```zane
 struct Box<'T> { ... }
 ```
 
@@ -95,13 +95,13 @@ Type-parameter names are prefixed with `'` to distinguish generic binders and re
 
 Definition-site binders:
 
-```
+```zane
 struct Matrix[rows]X[cols]<'T> { ... }
 ```
 
 Use-site form:
 
-```
+```zane
 Matrix10X20<Float>
 ```
 
@@ -109,7 +109,7 @@ Digits are illegal in identifiers except where they supply const arguments to a 
 
 ### 2.6 Array storage primitive
 
-```
+```zane
 Array[size]<'T>
 ```
 
@@ -117,7 +117,7 @@ Array[size]<'T>
 
 ### 2.7 Reserved compiler namespaces
 
-```
+```zane
 @primitives$name
 @concepts$name
 ```
@@ -126,7 +126,7 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 
 ### 2.8 Compiler concept types for literals
 
-```
+```zane
 @concepts$Number
 @concepts$Text
 @concepts$Tuple
@@ -137,7 +137,7 @@ These compiler-provided concept types represent source literals before they are 
 
 ### 2.9 Function types
 
-```
+```zane
 (ParamType, ...) -> ReturnType
 (ParamType, ...) -> ReturnType ? AbortType
 (this ReceiverType, ParamType, ...) -> ReturnType
@@ -148,7 +148,7 @@ These compiler-provided concept types represent source literals before they are 
 
 Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
 
-```
+```zane
 (ref ParamType, ...) -> ReturnType
 (this ReceiverType, ref ParamType, ...) -> ReturnType
 ```
@@ -161,7 +161,7 @@ Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
 
 ### 3.1 Free functions
 
-```
+```zane
 ReturnType name(param Type, ...) { body }
 ReturnType name(param ref Type, ...) { body }
 ReturnType ? AbortType name(param Type, ...) { body }
@@ -172,7 +172,7 @@ ReturnType ? AbortType name(param Type, ...) => expr
 
 ### 3.2 Methods
 
-```
+```zane
 ReturnType name(this ReceiverType, param Type, ...) { body }
 ReturnType name(this ReceiverType, param ref Type, ...) { body }
 ReturnType name(this ReceiverType, param Type, ...) mut { body }
@@ -193,7 +193,7 @@ ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
 
 ### 3.3 Positional constructors
 
-```
+```zane
 TypeName(param Type, ...) {
     return init{ field: expr, ... }
 }
@@ -208,31 +208,37 @@ Constructors use the same package-scope declaration shapes as other functions, e
 
 ### 3.4 Field constructors
 
-```
+```zane
 TypeName{
     fieldA Type,
-    fieldB Type,
+    fieldB Type(args...),
+    fieldC Type = expr,
     ...
 } {
-    return init{fieldA, fieldB}
+    return init{fieldA, fieldB, fieldC}
 }
 TypeName{
     fieldA Type,
-    fieldB Type,
+    fieldB Type(args...),
+    fieldC Type = expr,
     ...
-} => init{fieldA, fieldB}
+} => init{fieldA, fieldB, fieldC}
 ```
+
+Each field entry uses the same declaration forms as ordinary storage declarations.
 
 Field-constructor call sites may use explicit or implicit field names:
 
-```
+```zane
 name TypeName{fieldA: expr, fieldB: expr}
 name TypeName{fieldA, fieldB}
 ```
 
+A field-constructor call may omit any field whose constructor entry includes an initializer.
+
 ### 3.5 Implicit constructors
 
-```
+```zane
 implicit TypeName(param Type) {
     return init{ field: expr, ... }
 }
@@ -251,7 +257,7 @@ implicit TypeName{field Type} { ... } // ILLEGAL: field-constructor form is not 
 
 ### 3.6 Subscript definitions
 
-```
+```zane
 (this ReceiverType)[param ParamType, ...] => placeExpr
 ```
 
@@ -261,7 +267,7 @@ A subscript definition may declare any number of comma-separated parameters insi
 
 The following forms are not part of the grammar:
 
-```
+```zane
 ReturnType (this ReceiverType)[index ParamType] => expr
 ```
 
@@ -269,8 +275,8 @@ ReturnType (this ReceiverType)[index ParamType] => expr
 
 ### 3.7 `init{ }`
 
-```
-return init{
+```zane
+init{
     field: expr,
     otherField,
     ...
@@ -281,7 +287,7 @@ A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 
 ### 3.8 Lambda literals
 
-```
+```zane
 () { body }
 (name, ...) { body }
 () => expr
@@ -312,7 +318,7 @@ element!onClick((this, data) mut {
 
 ### 3.9 Operator definitions
 
-```
+```zane
 ReturnType ~(value ParamType) { body }
 ReturnType *(leftParam LeftType, rightParam RightType) { body }
 ReturnType /(leftParam LeftType, rightParam RightType) { body }
@@ -329,14 +335,14 @@ Operator definitions are package-scope function declarations whose names are ope
 
 ### 4.1 Free-function calls
 
-```
+```zane
 name(args...)
 Package$name(args...)
 ```
 
 ### 4.2 Method calls
 
-```
+```zane
 receiver:method(args...)
 receiver!method(args...)
 receiver:Package$method(args...)
@@ -345,13 +351,13 @@ receiver!Package$method(args...)
 
 ### 4.3 Function references
 
-```
+```zane
 Package$functionName
 ```
 
 ### 4.4 Pipe syntax
 
-```
+```zane
 callableExpr|expr
 ```
 
@@ -367,7 +373,7 @@ Vec2(2)|100      // groups as Vec2(2)|100
 
 ### 4.5 `spawn`
 
-```
+```zane
 spawn Package$fn(args...)
 spawn Package$fn(args...) ? binder { ... }
 spawn Package$fn(args...) ? { ... }
@@ -382,7 +388,7 @@ name Type = spawn Package$fn(args...) ?? fallbackExpr
 
 ### 4.6 Subscript expressions
 
-```
+```zane
 placeExpr[argExpr, ...]
 ```
 
@@ -398,13 +404,27 @@ tensor[x, y, z]
 
 `CustomList()[1]` is not a valid place expression because the base is a temporary.
 
+### 4.7 Parenthesized expressions
+
+```zane
+(expr)
+```
+
+Parentheses group an inner expression explicitly. See [`operators.md`](operators.md) §3 for precedence.
+
+Example:
+
+```zane
+number Int = (3 + 2) * 2
+```
+
 ---
 
 ## 5. Control Flow
 
 ### 5.1 `if` / `elif` / `else`
 
-```
+```zane
 if conditionExpr { ... }
 if conditionExpr { ... } elif conditionExpr { ... }
 if conditionExpr { ... } else { ... }
@@ -415,14 +435,14 @@ An `if` chain may contain zero or more `elif` branches followed by an optional `
 
 ### 5.2 `guard`
 
-```
+```zane
 guard conditionExpr
 guard conditionExpr { ... }
 ```
 
 ### 5.3 `loop`
 
-```
+```zane
 loop name from startExpr to endExpr { ... }
 loop name to endExpr { ... }
 ```
@@ -433,20 +453,20 @@ loop name to endExpr { ... }
 
 ### 6.1 Abortable return types
 
-```
+```zane
 ReturnType ? AbortType
 ```
 
 ### 6.2 `?` handlers
 
-```
+```zane
 expr ? binder { ... }
 expr ? { ... }
 ```
 
 Every path inside the handler must end with one of:
 
-```
+```zane
 resolve expr
 resolve
 return expr
@@ -456,7 +476,7 @@ abort
 
 ### 6.3 `??` shorthand
 
-```
+```zane
 expr ?? fallbackExpr
 ```
 
@@ -475,7 +495,7 @@ expr ?? fallbackExpr
 
 ### 7.4 Comments
 
-```
+```zane
 // single-line comment
 /// doc comment
 ```
@@ -488,12 +508,12 @@ Zane has no block-comment syntax. `//` starts a single-line comment. `///` start
 
 ### 8.1 Package member syntax
 
-```
+```zane
 Package$member
 ```
 
 ### 8.2 Package declarations
 
-```
+```zane
 package Name
 ```
