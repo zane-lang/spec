@@ -78,7 +78,7 @@ The following are place expressions:
 - a named local, field-backed, or owning/ref storage symbol such as `engine`
 - a field access whose base is a place, such as `car.engine` or `this.engine`
 - a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that receiver type
-- a `ref 'T` parameter inside the callee body (§2.9)
+- a `ref T` parameter inside the callee body (§2.9)
 
 Only place expressions are ref-able. A `ref` binding may only be initialized from a place expression.
 
@@ -100,9 +100,9 @@ engine Engine()         // legal: plain owner binding; Engine() temporary is mat
 ```
 
 ### 2.9 `ref` function parameters
-A parameter declared as `ref 'T` requires the caller to supply a place expression. Inside the callee body it is ref-capable, acts as a place expression, and may be stored into a `ref` field or `ref` local.
+A parameter declared as `ref T` requires the caller to supply a place expression. Inside the callee body it is ref-capable, acts as a place expression, and may be stored into a `ref` field or `ref` local.
 
-A parameter declared as plain `'T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `'T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage. Inside the callee body, a plain `'T` parameter is not a place expression for ref-binding purposes.
+A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage. Inside the callee body, a plain `T` parameter is not a place expression for ref-binding purposes.
 
 ```zane
 class Car {
@@ -242,7 +242,7 @@ When a value is passed to a function, the callee decides whether a move happens 
 - storing the value in an owning slot moves it
 - not storing it leaves ownership in place
 
-For `ref` fields specifically, the callee must declare the corresponding parameter as `ref 'T` (§2.9). Attempting to bind a plain `'T` parameter into `ref` storage is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
+For `ref` fields specifically, the callee must declare the corresponding parameter as `ref T` (§2.9). Attempting to bind a plain `T` parameter into `ref` storage is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
 
 ### 3.6 Moved symbols downgrade to refs and are no longer movable
 After a direct owning symbol is moved, that symbol is downgraded to a `ref` through the anchor. The symbol remains readable but cannot be moved again.
@@ -374,7 +374,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or a `ref` parameter |
 | `ref` binding | May only be initialized from a place expression; temporaries are rejected |
 | `ref` parameter | Declares that the caller must supply a place expression; the parameter is ref-capable inside the callee |
-| Plain `'T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
+| Plain `T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
 | Struct-downstream enforcement | Structs may contain only primitives and other structs, transitively |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
 | Move-source | Only a direct owning symbol (local or parameter); not a ref, field, container element, or access path |

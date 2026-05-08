@@ -155,7 +155,7 @@ Vector{x Int, y Int} {
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ### 3.8 `ref` fields require `ref` constructor parameters
-A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref 'T`. The caller must then supply a place expression (a named symbol, field access, or subscript projection) — not a temporary.
+A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref T`. The caller must then supply a place expression (a named symbol, field access, or subscript projection) — not a temporary.
 
 ```zane
 package Vehicle
@@ -236,11 +236,11 @@ A coercion site is a position where the destination type is already known:
 - Method and free-function arguments where the parameter type is known
 - `return` expressions in a declaration with an explicit return type
 
-At one coercion site requiring destination type `'T`, given an expression with static type `'U`, the compiler resolves the site locally:
+At one coercion site requiring destination type `T`, given an expression with static type `U`, the compiler resolves the site locally:
 
-1. If `'U` is exactly `'T`, accept the expression with no insertion.
-2. Otherwise, collect all visible applicable implicit constructors from `'U` to `'T`.
-3. If exactly one applicable implicit constructor exists, rewrite the expression as `'T(expr)`.
+1. If `U` is exactly `T`, accept the expression with no insertion.
+2. Otherwise, collect all visible applicable implicit constructors from `U` to `T`.
+3. If exactly one applicable implicit constructor exists, rewrite the expression as `T(expr)`.
 4. If multiple applicable implicit constructors exist, the site is an ambiguity error.
 5. If none exist, the site is a normal type error.
 
@@ -256,7 +256,7 @@ If no phase yields a viable candidate, the call is a normal no-match type error.
 Implicit constructors are therefore a last resort. They never participate in discovering an otherwise unknown destination type for generic inference.
 
 #### 3.9.3 No chaining
-Implicit conversions are never chained. If no single-step implicit constructor exists from source type `'U` to destination type `'T`, the compiler does not search for a path `'U → 'V → 'T`. The call is a type error.
+Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
 
 #### 3.9.4 Source and destination type constraints
 The **source type** (parameter type) of an implicit constructor **MUST** be a struct or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a class or a `ref`.
@@ -289,7 +289,7 @@ implicit Destination(s Source) {   // ILLEGAL: source type is a class
 ```
 
 #### 3.9.5 Coherence and the orphan rule
-An implicit constructor from type `'U` to type `'T` **MUST** be declared in the home package of either `'T` or `'U`. A third-party package **MUST NOT** declare an implicit constructor between two imported types.
+An implicit constructor from type `U` to type `T` **MUST** be declared in the home package of either `T` or `U`. A third-party package **MUST NOT** declare an implicit constructor between two imported types.
 
 This rule prevents conflicts when multiple packages independently define the same implicit conversion and ensures that the owner of at least one type controls the conversion behavior.
 
@@ -389,7 +389,7 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 Explicit parameters other than `this` are read-only. Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
 
 ### 4.8 `ref` method parameters
-A method parameter declared as `ref 'T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `'T` is value-only. A plain `'T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage.
+A method parameter declared as `ref T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage.
 
 ```zane
 class Car {
@@ -419,9 +419,9 @@ Call syntax is uniform regardless of whether a parameter is `ref`:
 ```zane
 engine Engine()
 car!consume(engine)        // legal: engine is a place expression
-car:calculate(engine)      // legal: place expression works for plain 'T too
+car:calculate(engine)      // legal: place expression works for plain T too
 car!consume(Engine())      // ILLEGAL: temporary cannot bind to ref parameter
-car:calculate(Engine())    // legal: plain 'T parameter accepts a temporary
+car:calculate(Engine())    // legal: plain T parameter accepts a temporary
 ```
 
 ### 4.9 Subscripts are place projections
@@ -483,7 +483,7 @@ Int scaledId(this Node, factor Int) => this._id * factor
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by whether the same parameter position is `'T` versus `ref 'T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `ref T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Void consume(this Car, engine Engine)
@@ -631,7 +631,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
 | `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
-| Plain `'T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
+| Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
 | No overloads that differ only by `ref` | Call syntax stays uniform while avoiding overload ambiguity between value-only and place-required contracts. |
 | Package-qualified function values | Uses one naming rule for methods and free functions. |
@@ -652,11 +652,11 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
-| Plain `'T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
+| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
 | Method | Package-scope function whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Free function | Package-scope function without `this`; no private-field privilege |
-| Subscript | Package-scope place projection written `(this 'T)[...] => placeExpr`; no explicit return type |
+| Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
 | Lambda | Contextually typed function value; `mut` stays explicit; no capture |
 | Unqualified method lookup | Searches home package, then current package |
