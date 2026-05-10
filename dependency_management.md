@@ -22,13 +22,13 @@ Every project has a `zane.coda` manifest with a `deps` block:
 ```zane
 deps [
     alias url version commit
-    math https://github.com/zane-lang/math v1.0.1 a3f8c2d
+    Math https://github.com/zane-lang/math v1.0.1 a3f8c2d
 ]
 ```
 
 Each row records:
 
-- **alias**: the local import key used in source code
+- **alias**: the local PascalCase package name used in source code
 - **url**: the canonical package identity
 - **version**: the exact tag requested by the user
 - **commit**: the exact commit that tag must resolve to
@@ -43,7 +43,7 @@ Users update the manifest through CLI commands rather than by manual editing.
 If a tag has moved and the user intentionally wants to trust the new commit, the update flow requires an explicit override flag rather than silently refreshing the hash, for example:
 
 ```sh
-zane update math v1.0.1 --accept-tag-move
+zane update Math v1.0.1 --accept-tag-move
 ```
 
 ---
@@ -90,7 +90,7 @@ Libraries are compiled with their own exported symbols prefixed by the placehold
 Conceptually:
 
 ```zane
-!math$vec  →  v1.0.1math$vec
+!Math$vec  →  v1.0.1Math$vec
 ```
 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
@@ -117,7 +117,7 @@ The URL and version are mangled into safe path components using Go-style path ma
 
 The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
-A fully expanded cache path for the `math` example therefore looks like:
+A fully expanded cache path for the `Math` example therefore looks like:
 
 ```zane
 ~/.zane/packages/github.com/zane-lang/math/v1.0.1/
@@ -132,13 +132,13 @@ A fully expanded cache path for the `math` example therefore looks like:
 Source code imports by manifest alias:
 
 ```zane
-import math
+import Math
 ```
 
 And uses package members through that alias:
 
 ```zane
-math$vec(...)
+Math$vec(...)
 ```
 
 Source code never writes version-prefixed package names directly. The compiler resolves aliases through `zane.coda`.
@@ -180,7 +180,7 @@ Packages may ship multiple prebuilt object files for different target triples un
 The normal workflow consumes the repository's checked-in prebuilt artifact from `src/build/`. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
 
 ```sh
-zane add math https://github.com/zane-lang/math v1.0.1 --from-source
+zane add Math https://github.com/zane-lang/math v1.0.1 --from-source
 ```
 
 This is an explicit trust/debugging escape hatch, not the default package-distribution model.
@@ -213,5 +213,5 @@ At a high level, dependency resolution proceeds in this order:
 | `src/` and `build/` separation in the cache | Makes the distinction between the original `!`-prefixed objects from `src/build/` and the rewritten version-stamped objects explicit and auditable. Reuse across projects reads from `build/` without repeating the rewrite step. |
 | Go-style URL-to-path mangling with hard failure on illegal characters | Keeps cache paths human-readable and debuggable while preventing ambiguous or unsafe paths from ever being created. |
 | Global package cache | Avoids repeated downloads and rewrite work across projects. |
-| Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution. |
+| Alias-based imports | Keeps source code readable while the manifest remains the single source of truth for version resolution, with local package names written in PascalCase like other package/type names. |
 | Package dependency graph is a DAG | Simplifies compilation order, prevents initialization deadlocks, and makes dependency reasoning straightforward. Declarations within one package may still reference each other freely because the package is compiled as one unit. |

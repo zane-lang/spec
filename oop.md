@@ -336,10 +336,10 @@ implicit Meters(feet Feet) => init{value: feet.value * Float(0.3048)}
 
 ```zane
 package Conversions
-import units
+import Units
 
 // ILLEGAL: neither Meters nor Feet is defined in Conversions
-implicit units$Meters(feet units$Feet) => init{value: feet.value * Float(0.3048)}
+implicit Units$Meters(feet Units$Feet) => init{value: feet.value * Float(0.3048)}
 ```
 
 #### 3.9.6 Method receivers are never implicitly converted
@@ -496,7 +496,7 @@ Float getScale(node Node) {
 Free functions may access only fields whose names do not begin with `_`. This rule is package-independent: a free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 5.3 Free functions use ordinary call syntax
-Free functions are called as `name(args...)` or `Package$name(args...)`.
+Free functions are called as `name(args...)` or `PackageName$name(args...)`.
 
 ### 5.4 Expression-bodied functions and methods
 Both free functions and methods may use `=>` when they return a value:
@@ -532,7 +532,7 @@ Legal overload sets must differ in the number of parameters or in at least one p
 
 ## 7. Function Values and Lambdas
 
-### 7.1 Package-scope functions are referenced as `Package$name`
+### 7.1 Package-scope functions are referenced as `PackageName$name`
 Methods and free functions are both referenced as values using the package namespace:
 
 ```zane
@@ -612,8 +612,8 @@ Because methods are package-scope functions, any package may define methods on i
 
 ## 9. Packages and the Instanceful Package Pattern
 
-### 9.1 Packages are namespaces
-`package X` introduces a namespace. Members are referenced as `X$member`.
+### 9.1 Packages are PascalCase namespaces
+`package PackageName` introduces a namespace. Package names use PascalCase, like type names. Members are referenced as `PackageName$member`.
 
 ### 9.2 A package may define a same-named class
 A package may define a class with the same name as the package, allowing both stateless namespace members and stateful instances:
@@ -628,11 +628,46 @@ Float radsToDeg(x Float) {
 }
 
 class Math {
-    logger Logger
+    _deterministicRandomCounter Int
+}
+
+Math() => init{_deterministicRandomCounter: 0}
+
+Int deterministicRandom(this Math) mut {
+    ...
 }
 ```
 
-### 9.3 Package scope contains no hidden mutable ambient state
+### 9.3 Same-named package classes are instantiated through the package name
+If package `Math` defines class `Math`, a caller instantiates it exactly like any other class constructor:
+
+```zane
+package Main
+
+import Math
+
+Void main() {
+    math Math()
+    print(math!deterministicRandom())
+}
+```
+
+The package name and the exported class name are the same identifier. The package still names namespace members such as `Math$radsToDeg`, and that same identifier also names the class constructor `Math()`.
+
+### 9.4 Imported package names reserve that type name in the current package
+If the current package imports `Math`, it **MUST NOT** also declare a top-level type named `Math`. The imported package name already occupies that type/namespace spelling:
+
+```zane
+package Main
+
+import Math
+
+class Math {   // ILLEGAL: duplicate type "Math"
+    value Int
+}
+```
+
+### 9.5 Package scope contains no hidden mutable ambient state
 Packages may expose immutable constants and package-scope functions. Time-varying state must live in objects and be passed or stored explicitly.
 
 ---
@@ -669,6 +704,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Package-qualified function values | Uses one naming rule for methods and free functions. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
+| PascalCase package names | Aligns package names with type names so a same-named package class uses one spelling for the namespace and the instantiated object type. |
 | No hidden mutable package state | Prevents ambient state from undermining ownership and effect reasoning. |
 
 ---
@@ -692,3 +728,5 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
 | Lambda | Contextually typed function value; `mut` stays explicit; no capture |
 | Unqualified method lookup | Searches home package, then current package |
+| Package name | PascalCase namespace name; may match a same-named class |
+| Instanceful package | A package may export a same-named class; importing that package reserves that type name locally and allows constructor calls such as `Math()` |

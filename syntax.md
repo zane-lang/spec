@@ -56,7 +56,7 @@ struct Name {
 ### 1.5 Imports
 
 ```zane
-import aliasKey
+import PackageName
 ```
 
 ---
@@ -71,7 +71,7 @@ These are public language-level types, not storage primitives. `Int`, `Float`, a
 ### 2.2 Named types
 
 ```zane
-Package$Type
+PackageName$Type
 Type
 ```
 
@@ -337,7 +337,7 @@ Operator definitions are package-scope function declarations whose names are ope
 
 ```zane
 name(args...)
-Package$name(args...)
+PackageName$name(args...)
 ```
 
 ### 4.2 Method calls
@@ -345,14 +345,14 @@ Package$name(args...)
 ```zane
 receiver:method(args...)
 receiver!method(args...)
-receiver:Package$method(args...)
-receiver!Package$method(args...)
+receiver:PackageName$method(args...)
+receiver!PackageName$method(args...)
 ```
 
 ### 4.3 Function references
 
 ```zane
-Package$functionName
+PackageName$functionName
 ```
 
 ### 4.4 Pipe syntax
@@ -374,14 +374,14 @@ Vec2(2)|100      // groups as Vec2(2)|100
 ### 4.5 `spawn`
 
 ```zane
-spawn Package$fn(args...)
-spawn Package$fn(args...) ? binder { ... }
-spawn Package$fn(args...) ? { ... }
-spawn Package$fn(args...) ?? fallbackExpr
-name Type = spawn Package$fn(args...)
-name Type = spawn Package$fn(args...) ? binder { ... }
-name Type = spawn Package$fn(args...) ? { ... }
-name Type = spawn Package$fn(args...) ?? fallbackExpr
+spawn PackageName$fn(args...)
+spawn PackageName$fn(args...) ? binder { ... }
+spawn PackageName$fn(args...) ? { ... }
+spawn PackageName$fn(args...) ?? fallbackExpr
+name Type = spawn PackageName$fn(args...)
+name Type = spawn PackageName$fn(args...) ? binder { ... }
+name Type = spawn PackageName$fn(args...) ? { ... }
+name Type = spawn PackageName$fn(args...) ?? fallbackExpr
 ```
 
 `spawn` is legal only on function-call expressions.
@@ -509,11 +509,11 @@ Zane has no block-comment syntax. `//` starts a single-line comment. `///` start
 ### 8.1 Package member syntax
 
 ```zane
-Package$member
+PackageName$member
 ```
 
 ### 8.2 Package declarations
 
 ```zane
-package Name
+package PackageName
 ```
