@@ -229,8 +229,8 @@ A value may move into a new owner only when the destination owner is declared in
 ```zane
 node Node()
 {
-    owner Node()
-    owner = node // ILLEGAL: destination is in a nested block
+    destination Node()
+    destination = node // ILLEGAL: destination is in a nested block
 }
 ```
 
