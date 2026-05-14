@@ -67,8 +67,8 @@ An `&` type is legal in storage sites (local symbols, fields, nested storage typ
 ### 2.5 Refs are repointable
 An `&` symbol or `&` field may be assigned a different target later, as long as the scope rule in §3.1 is satisfied.
 
-### 2.6 Refs are copied by value
-Assigning or passing an `&` value copies the ref value. Rebinding one `&` storage site later changes only that storage site; it does not retarget other copies.
+### 2.6 Refs are independent `&` values
+Assigning or passing an `&` value gives the destination its own `&` value to the same owner. Rebinding one `&` storage site later changes only that storage site; it does not retarget other `&` values that already point to that owner.
 
 ### 2.7 Refs and owners use the same surface operations
 At use sites, an `&` value is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `&` matters only at the storage site: an `&` value stores a non-owning link, while an owner stores the object itself or its owning slot.
@@ -111,8 +111,10 @@ current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
 first Weapon()
 second Weapon()
 weapons List<&Weapon> = [first, second]
-current &Weapon = weapons[1]   // legal: copies the stored `&Weapon` value
+current &Weapon = weapons[1]   // legal: uses the existing stored `&Weapon`
 ```
+
+This works because `weapons[1]` reads an `&Weapon` value that is already stored in the list. It does not create a new `&` from an owning element. Those stored `&` values are stable because the language does not let `[]` create `&` values from owner storage in the first place.
 
 Non-`&` owner bindings may be initialized from any expression, including temporaries. The owner materializes the value into stable storage.
 
