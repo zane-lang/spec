@@ -62,8 +62,8 @@ A method without `mut` may not assign to fields of `this` or call `mut` methods 
 ### 4.2 `mut` does not authorize arbitrary writes
 Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters. Struct updates are expressed by returning a replacement struct value rather than mutating a struct receiver in place.
 
-### 4.3 `ref` use sites follow ordinary call rules
-Reading through a `ref` is not a side effect by itself. At use sites, `ref` values follow the same field-access and method-call rules as owners. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
+### 4.3 `&` use sites follow ordinary call rules
+Reading through an `&` value is not a side effect by itself. At use sites, `&` values follow the same field-access and method-call rules as owners. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
 
 ---
 
@@ -76,7 +76,7 @@ The compiler uses the ownership graph of `this` to determine which fields and de
 If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
 
 ### 5.3 Refs do not by themselves raise effect level
-A function does not leave the pure levels merely because it reads through a `ref`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is owning or non-owning.
+A function does not leave the pure levels merely because it reads through an `&`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is owning or non-owning.
 
 ### 5.4 Unknown callees are conservatively classified
 If the compiler cannot prove the effect behavior of a callee, it must treat the call as requiring the strongest effect level needed to preserve safety.
@@ -91,8 +91,8 @@ There is no ambient global I/O capability. Code can affect external state only t
 ### 6.2 Constructor injection is ordinary capability wiring
 Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit ownership path by which later methods can reach the capability.
 
-### 6.3 `ref` fields can also expose read access paths
-Storing a `ref` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; the effect level still comes from what the reachable operations do.
+### 6.3 `&` fields can also expose read access paths
+Storing an `&` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; the effect level still comes from what the reachable operations do.
 
 ### 6.4 Context objects are explicit, not magical
 A "context object" that groups several capabilities is just another ordinary object in the ownership graph. It may reduce parameter count, but it does not hide effects from the compiler because the reachable capabilities are still explicit in storage and call structure.
@@ -149,4 +149,4 @@ Two `mut` calls on different receiver instances may run in parallel. Two `mut` c
 | Allocation alone is not a side effect | Constructing and destroying ordinary objects should not force otherwise pure code into an impure tier. |
 | Capabilities are explicit objects | Prevents hidden ambient effects and keeps dependency flow visible. |
 | `mut` is receiver-scoped | Aligns mutation permissions with ownership rather than arbitrary parameter aliasing. |
-| `ref` differs only at storage sites | Non-owning links should not create a separate use-site effect rule from direct owners. |
+| `&` differs only at storage sites | Non-owning links should not create a separate use-site effect rule from direct owners. |

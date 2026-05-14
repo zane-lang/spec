@@ -10,12 +10,12 @@ This document specifies Zane's memory model: ownership, refs, anchors, lexical l
 
 Zane eliminates dangling references by combining single ownership, lexical lifetime rules, and anchor-based tracking of non-owning references.
 
-- **`Single-assignment owners`.** A class owner is initialized once and never overwritten.
-- **`Repointable refs`.** A `ref` is non-owning storage that can point at different objects over time.
+- **`Overwritable owners`.** A class owner is directly initialized and may later be overwritten.
+- **`Repointable refs`.** An `&` value is non-owning storage that can point at different owners over time.
 - **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone.
 - **`Deterministic destruction`.** Objects are destroyed when their owning scope drains; there is no tracing garbage collector.
 
-These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves, refs stay valid because they follow the object's anchor rather than its current address.
+These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves or an owner is overwritten, refs stay valid because they follow the owner/anchor path rather than a fixed object address.
 
 ---
 
@@ -24,24 +24,26 @@ These rules fit together mechanically. Owners are the only storage that controls
 ### 2.1 Every class instance has exactly one owner
 Every class instance is owned by exactly one symbol, field, or container slot at a time. Ownership is the default storage mode for class values.
 
-### 2.2 Class owners are single-assignment
-Any owning storage position for a class instance—a symbol, field, or container slot—**MUST NOT** be overwritten after initialization.
+### 2.2 Class owners are overwritable after initialization
+Any owning storage position for a class instance—a symbol, field, or container slot—**MUST** be directly initialized, and **MAY** later be overwritten.
 
 ```zane
 tank Tank(...)
-tank = Tank(...) // ILLEGAL
+tank = Tank(...) // legal
 ```
 
-This rule eliminates destruction-by-overwrite as a source of dangling refs.
+Overwriting an owner does not invalidate existing refs. Refs follow the owner/anchor path, so later reads observe the owner's current value.
 
-Container overwrite therefore depends on element type. A container element that owns a class instance is single-assignment; a container element whose type is a struct or `ref` remains overwritable.
+Container overwrite therefore does not depend on whether the element slot stores an owner or an `&` value. Both kinds of slots may be rewritten after initialization.
 
 ```zane
-owners Array[2]<Node>
-refs Array[2]<ref Node>
+first Node()
+second Node()
+owners List<Node> = [Node(), Node()]
+refs List<&Node> = [first, second]
 ```
 
-`owners` has owning element slots, so each element is single-assignment once initialized. `refs` has `ref` element slots, so each element may later be rewritten to point at a different live object.
+Rewriting `owners[1]` replaces the owned class instance in that slot. Rewriting `refs[1]` retargets the stored `&Node` value.
 
 ### 2.3 Struct values are freely overwritable
 Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
@@ -51,69 +53,89 @@ pos Vec2(1, 2)
 pos = Vec2(3, 4) // ok
 ```
 
-### 2.4 `ref` is non-owning storage
-`ref` creates non-owning storage. A `ref` may be declared as:
+### 2.4 `&` is non-owning storage
+`&` creates non-owning storage. An `&` value may be declared as:
 
 - a local symbol
 - a class field
 - an element type inside another storage type
 - a function or constructor parameter
+- a function return type
 
-A `ref` type is legal in storage sites (local symbols, fields, nested storage types) and in function parameter positions. It is not legal in return-type positions.
+An `&` type is legal in storage sites (local symbols, fields, nested storage types), function parameter positions, and function return-type positions.
 
 ### 2.5 Refs are repointable
-A `ref` symbol or `ref` field may be assigned a different target later, as long as the scope rule in §3.1 is satisfied.
+An `&` symbol or `&` field may be assigned a different target later, as long as the scope rule in §3.1 is satisfied.
 
-### 2.6 Refs are copied by value
-Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage site later changes only that storage site; it does not retarget other copies.
+### 2.6 Refs are independent `&` values
+Assigning or passing an `&` value gives the destination its own `&` value to the same owner. Rebinding one `&` storage site later changes only that storage site; it does not retarget other `&` values that already point to that owner.
 
 ### 2.7 Refs and owners use the same surface operations
-At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
+At use sites, an `&` value is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `&` matters only at the storage site: an `&` value stores a non-owning link, while an owner stores the object itself or its owning slot.
 
-### 2.8 Only place expressions are ref-able
+### 2.8 Place expressions and new `&` values
 A **place expression** is an expression that denotes an existing, stable storage location.
 
 The following are place expressions:
 
-- a named local, field-backed, or owning/ref storage symbol such as `engine`
+- a named local, field-backed, or owning/`&` storage symbol such as `engine`
 - a field access whose base is a place, such as `car.engine` or `this.engine`
 - a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that receiver type
-- a `ref T` parameter inside the callee body (§2.9)
+- an `&T` parameter inside the callee body (§2.9)
 
-Only place expressions are ref-able. A `ref` binding may only be initialized from a place expression.
+Only some place expressions may create a new `&` value. A new `&` binding may be initialized from:
 
-Temporaries and other value-only expressions are not place expressions. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places and cannot be bound to a `ref`.
+- a named symbol
+- a field access whose base is a place
+- an `&T` parameter
+
+A `[]` expression is never a source for creating a new `&`, even when it is a place expression.
+
+Temporaries and other value-only expressions are not place expressions. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places and cannot be bound to an `&`.
 
 ```zane
-engine ref Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
+engine &Engine = Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
 ```
 
 ```zane
 engine Engine()
-r ref Engine = engine   // legal: engine is a named, stable storage location
+r &Engine = engine   // legal: engine is a named, stable storage location
 ```
 
-Non-`ref` owner bindings may be initialized from any expression, including temporaries. The owner materializes the value into stable storage.
+```zane
+weapons List<Weapon> = [Weapon(), Weapon()]
+current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
+```
+
+```zane
+first Weapon()
+second Weapon()
+weapons List<&Weapon> = [first, second]
+current &Weapon = weapons[1]   // legal: uses the existing stored `&Weapon`
+```
+
+This works because `weapons[1]` reads an `&Weapon` value that is already stored in the list. It does not create a new `&` from an owning element. Those stored `&` values are stable because the language does not let `[]` create `&` values from owner storage in the first place.
+
+Non-`&` owner bindings may be initialized from any expression, including temporaries. The owner materializes the value into stable storage.
 
 ```zane
 engine Engine()         // legal: plain owner binding; Engine() temporary is materialized into engine
 ```
 
-### 2.9 `ref` function parameters
-A parameter declared as `ref T` requires the caller to supply a place expression. Inside the callee body it is ref-capable, acts as a place expression, and may be stored into a `ref` field or `ref` local.
+### 2.9 `&` function parameters
+A parameter declared as `&T` requires the caller to supply a source that may create a new `&` under §2.8. Inside the callee body it acts as a place expression and may be stored into `&` storage or returned as `&T` under §3.7.
 
-A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage. Inside the callee body, a plain `T` parameter is not a place expression for ref-binding purposes.
+A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage or returned as a new `&T`. Inside the callee body, a plain `T` parameter is not a place expression for `&`-binding purposes.
 
 ```zane
 class Car {
-    engineA ref Engine
-    engineB Engine
+    engine &Engine
+    _value Int
 }
 
-// legal: ref parameter allows storing into ref field
-Void consume(this Car, engine ref Engine) mut {
-    this.engineA = engine   // legal
-    this.engineB = engine   // legal
+// legal: `&` parameter allows storing into `&` field
+Void consume(this Car, engine &Engine) mut {
+    this.engine = engine   // legal
 }
 
 // different function with a plain parameter
@@ -122,22 +144,22 @@ Void inspect(this Car, engine Engine) {
 }
 ```
 
-Binding a plain parameter into `ref` storage is illegal:
+Binding a plain parameter into `&` storage is illegal:
 
 ```zane
 Void consumeWrong(this Car, engine Engine) mut {
-    this.engineA = engine   // ILLEGAL: plain parameter is not ref-able
+    this.engine = engine   // ILLEGAL: plain parameter is not `&`-rootable
 }
 ```
 
-This rule preserves uniform call syntax. The call site writes `consume(e)` or `inspect(e)` regardless of whether the parameter is `ref`. The callee's signature determines whether a place expression is required from the caller.
+This rule preserves uniform call syntax. The call site writes `consume(e)` or `inspect(e)` regardless of whether the parameter is `&`. The callee's signature determines whether an `&`-creating source is required from the caller.
 
 ### 2.10 Struct-downstream enforcement (transitive struct field restrictions)
-Structs form a closed world of plain value storage. A struct field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other structs, but it **MUST NOT** contain a class or a `ref`. This rule applies transitively: a struct containing another struct that eventually contains a class or `ref` is also illegal.
+Structs form a closed world of plain value storage. A struct field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other structs, but it **MUST NOT** contain a class or an `&`. This rule applies transitively: a struct containing another struct that eventually contains a class or `&` is also illegal.
 
 Here, **downstream** means "through nested struct fields." The restriction is checked recursively through the full struct graph.
 
-Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain a `ref`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
+Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain an `&`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
 
 ```zane
 struct Vec2 {
@@ -155,7 +177,21 @@ struct BadOwner {
 }
 
 struct BadRef {
-    target ref Engine  // ILLEGAL: ref field inside a struct
+    target &Engine  // ILLEGAL: `&` field inside a struct
+}
+```
+
+### 2.11 Symbols require direct initialization
+Every symbol declaration **MUST** provide its initial value in the declaration itself. Zane does not permit bare symbol declarations followed by conditional or delayed first assignment.
+
+```zane
+text String   // ILLEGAL: symbols require direct initialization
+```
+
+```zane
+text String = ""   // LEGAL: directly initialized
+if runtimeBool() {
+    text = "hi"
 }
 ```
 
@@ -163,14 +199,15 @@ struct BadRef {
 
 ## 3. Scope Rules and Moves
 
-### 3.1 Ref assignment uses owner scope
-A `ref` assignment is legal only when the target's owner is declared in the same or a higher lexical scope than the ref itself.
+### 3.1 `&` assignment uses owner scope
+An `&` assignment is legal only when the target's owner is declared in the same or a higher lexical scope than the `&` itself.
 
 ```zane
-r ref Node
+outer Node()
+r &Node = outer
 {
-    node Node()
-    r = node // ILLEGAL
+    innerNode Node()
+    r = innerNode // ILLEGAL: owner's scope is nested relative to the ref
 }
 ```
 
@@ -180,7 +217,7 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 A move-source must be a **direct owning symbol**: an owning local binding or owning parameter named directly by an identifier expression.
 
 The following are **not** move-sources:
-- a `ref` (refs are non-owning and cannot transfer ownership)
+- an `&` value (refs are non-owning and cannot transfer ownership)
 - a field access such as `car.engine`
 - a container element access such as `cars[1]`
 - any other access path, including method call results
@@ -231,8 +268,8 @@ A value may move into a new owner only when the destination owner is declared in
 ```zane
 node Node()
 {
-    owner Node
-    owner = node // ILLEGAL: destination is in a nested block
+    nestedOwner Node()
+    nestedOwner = node // ILLEGAL: cannot move into an owner declared in a nested scope
 }
 ```
 
@@ -242,19 +279,33 @@ When a value is passed to a function, the callee decides whether a move happens 
 - storing the value in an owning slot moves it
 - not storing it leaves ownership in place
 
-For `ref` fields specifically, the callee must declare the corresponding parameter as `ref T` (§2.9). Attempting to bind a plain `T` parameter into `ref` storage is a compile-time error. This means the callee's signature signals whether a place expression is required at the call site.
+For `&` fields specifically, the callee must declare the corresponding parameter as `&T` (§2.9). Attempting to bind a plain `T` parameter into `&` storage is a compile-time error. This means the callee's signature signals whether an `&`-creating source is required at the call site.
 
-### 3.6 Moved symbols downgrade to refs and are no longer movable
-After a direct owning symbol is moved, that symbol is downgraded to a `ref` through the anchor. The symbol remains readable but cannot be moved again.
+### 3.6 Moved symbols downgrade to `&` values and are no longer movable
+After a direct owning symbol is moved, that symbol is downgraded to an `&` value through the anchor. The symbol remains readable but cannot be moved again.
 
 ```zane
 engine Engine()
-car Car(engine)          // engine is moved; downgrades to ref
-engine:inspect()         // legal: engine is now a ref, still readable
-truck Truck(engine)      // ILLEGAL: engine is a ref, not a move-source
+car Car(engine)          // engine is moved; downgrades to `&`
+engine:inspect()         // legal: engine is now an `&`, still readable
+truck Truck(engine)      // ILLEGAL: engine is an `&`, not a move-source
 ```
 
-This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `ref`. Zane therefore has no user-visible use-after-move error class for reads.
+This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `&`. Zane therefore has no user-visible use-after-move error class for reads.
+
+### 3.7 Returned `&` values must be rooted in a parameter
+A function may return an `&T` only when the returned reference is rooted in one of the function's parameters. `this` counts as a parameter for this rule.
+
+```zane
+&Weapon getWeapon(this &Player) => this.weapon
+```
+
+```zane
+&Int bad() {
+    value Int = 1
+    return value   // ILLEGAL: returned `&` is not rooted in a parameter
+}
+```
 
 ---
 
@@ -302,18 +353,18 @@ The compiler may pack booleans in structs and stack frames when doing so does no
 Objects that are never ref'd pay no anchor-allocation cost. The first ref creation allocates and initializes the anchor.
 
 ### 6.2 Anchors are stable indirection points
-A ref follows an anchor rather than pointing directly at an object. If an object moves, the anchor is updated and all refs observe the new location.
+A ref follows an owner/anchor path rather than pointing directly at an object. If an object moves or its owner slot is overwritten, the anchor path is updated and all refs observe the owner's current value.
 
-### 6.3 Moves update anchors, not all refs
-Object relocation is O(1) with respect to the number of refs, because only the anchor location record changes.
+### 6.3 Moves and overwrites update anchors, not all refs
+Object relocation and owner overwrite are O(1) with respect to the number of refs, because only the anchor location record changes.
 
 ### 6.4 Destroying an object frees its anchor
 When the owning object is destroyed, its anchor is torn down as part of destruction. Since refs cannot outlive the owner, this does not create a dangling-user-reference state.
 
 ### 6.5 Why refs never dangle
-A dangling ref would require one of three failures: destruction by overwriting an owner, a ref outliving the owner's scope, or an object move leaving refs pointed at the old address. Zane rules eliminate each case directly.
+A dangling ref would require one of three failures: an owner overwrite breaking existing refs, a ref outliving the owner's scope, or an object move leaving refs pointed at the old address. Zane rules eliminate each case directly.
 
-Single-assignment owners remove overwrite-triggered destruction. The same-or-higher-scope rule keeps refs inside the owner's lifetime envelope. Anchor indirection turns object relocation into a single metadata update instead of a global ref rewrite. The model is therefore enforced by storage shape and lexical scope, not by runtime borrow tracking.
+Owner/anchor indirection makes overwrite follow the current owner value instead of a dead object. The same-or-higher-scope rule keeps refs inside the owner's lifetime envelope. Anchor indirection turns object relocation into a single metadata update instead of a global ref rewrite. The model is therefore enforced by storage shape and lexical scope, not by runtime borrow tracking.
 
 ---
 
@@ -328,7 +379,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Ref counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Refs remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Overwrite destroys ownership source | prohibited by language rules | possible | possible | ⚠️ prevented by borrow checker |
+| Owner overwrite keeps existing refs valid | ✅ via owner/anchor indirection | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
 
 ### 7.2 Memory behavior
 
@@ -346,15 +397,17 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 
 | Decision | Rationale |
 |---|---|
-| Single-assignment owning storage | Prevents overwrite-triggered destruction from invalidating refs unexpectedly, including inside owning containers. |
+| Overwritable owning storage | Owner/anchor indirection lets ordinary reassignment coexist with stable refs, including inside owning containers. |
 | Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
 | Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
-| `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without ghost refs or compiler-invented storage. |
-| Place-expression requirement for `ref` | A ref must denote an existing, user-visible storage location. Binding to a temporary would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
+| `&` in parameter and return positions | Allows ordinary APIs to accept and return refs without inventing a separate getter mechanism. |
+| Rooted-source requirement for new `&` | A ref must come from an existing owner-rooted path. Binding to a temporary or plain value-only parameter would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
+| No new `&` from `[]` | Prevents element-reference invalidation rules from leaking out of containers that own their elements. |
 | Only direct owning symbols are move-sources | Makes containers stable ownership subtrees. Once a value is inside a field or container element, it cannot be individually extracted and re-parented. Ownership trees remain predictable and do not depend on runtime control flow. |
 | Refs are never move-sources | Refs are non-owning aliases. Allowing moves from refs would enable re-parenting through alias paths and break the owner-uniqueness property. |
 | Moves restricted to declaration block | Prevents conditional moves and flow-dependent ownership changes. A symbol's ownership transfer happens at most once, in a predictable location. This eliminates the need for flow-sensitive "maybe moved" analysis. |
 | Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through anchor-based ref downgrade. This preserves ergonomics while preventing double-moves and re-parenting. |
+| Direct initialization for symbols | Eliminates maybe-uninitialized storage paths now that symbols may be reassigned later. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
 | Callee-decides moves with caller downgrade | Preserves ownership while avoiding Rust-style use-after-move friction. |
 | Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
@@ -368,19 +421,21 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 
 | Concept | Rule |
 |---|---|
-| Owning storage | Class-typed symbols, fields, and container elements are initialized once and never overwritten |
+| Owning storage | Class-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
 | Struct value | May be overwritten freely |
-| `ref` | Non-owning storage; may be repointed and copied by value |
-| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or a `ref` parameter |
-| `ref` binding | May only be initialized from a place expression; temporaries are rejected |
-| `ref` parameter | Declares that the caller must supply a place expression; the parameter is ref-capable inside the callee |
-| Plain `T` parameter | Value-only binding; caller need not supply a place expression; MUST NOT be bound into `ref` storage |
+| `&` | Non-owning storage; may be repointed, copied by value, and returned from functions |
+| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
+| New `&` value | May be initialized only from a named symbol, a field access of a place, or an `&` parameter; temporaries and `[]` expressions are rejected |
+| `&` parameter | Declares that the caller must supply an `&`-creating source; the parameter is place-like inside the callee |
+| Plain `T` parameter | Value-only binding; caller need not supply an `&`-creating source; MUST NOT be bound into `&` storage or returned as a new `&T` |
 | Struct-downstream enforcement | Structs may contain only primitives and other structs, transitively |
+| Symbol declaration | Must be directly initialized |
+| `&` return | Returned `&T` must be rooted in a parameter; `this` counts |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
-| Move-source | Only a direct owning symbol (local or parameter); not a ref, field, container element, or access path |
+| Move-source | Only a direct owning symbol (local or parameter); not an `&`, field, container element, or access path |
 | Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters are treated as declared at function body top |
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
-| Post-move downgrade | After a move, the source symbol downgrades to a `ref` and remains readable but is no longer a move-source |
+| Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Function call | Callee decides move; caller symbol remains usable |
 | Anchor | Lazy, stable indirection for refs across moves |
 | Destruction | Deterministic and delayed until the owning scope drains |

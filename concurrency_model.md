@@ -120,8 +120,8 @@ The effect system classifies resource access as **read** or **write**. Concurren
 
 The compiler enforces this from effect signatures; the programmer does not add locks.
 
-### 4.4 Refs passed to spawned work are copied at spawn time
-When a `ref` is passed to a spawned call, the callee receives a copy of that ref value. Rebinding the caller's `ref` symbol later changes only the caller's storage; it does not retarget the copy already held by spawned work.
+### 4.4 Refs passed to spawned work remain independent
+When an `&` value is passed to a spawned call, the callee receives its own `&` value to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the `&` value already held by spawned work.
 
 ---
 

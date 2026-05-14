@@ -33,7 +33,7 @@ class Node {
 ```
 
 ### 2.2 Structs are inline value types
-A `struct` body also contains only field declarations, but structs are stored inline. Structs **MUST NOT** contain class fields or `ref` fields.
+A `struct` body also contains only field declarations, but structs are stored inline. Structs **MUST NOT** contain class fields or `&` fields.
 
 This restriction exists because structs use inline value semantics, while class ownership and ref tracking require runtime identity and anchor bookkeeping.
 
@@ -186,26 +186,26 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 ### 3.7 Constructors do not use `mut`
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
-### 3.8 `ref` fields require `ref` constructor parameters
-A constructor that assigns a value to a `ref` field must declare the corresponding parameter as `ref T`. The caller must then supply a place expression (a named symbol, field access, or subscript projection) — not a temporary.
+### 3.8 `&` fields require `&` constructor parameters
+A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory_model.md`](memory_model.md) §2.8 — not a temporary or `[]` expression.
 
 ```zane
 package Vehicle
 
 class Car {
-    engine ref Engine
+    engine &Engine
 }
 
-// legal: ref parameter allows storing into ref field
-Car(engine ref Engine) {
+// legal: `&` parameter allows storing into `&` field
+Car(engine &Engine) {
     return init{engine: engine}
 }
 ```
 
 ```zane
-// ILLEGAL: plain parameter cannot be bound into ref storage
+// ILLEGAL: plain parameter cannot be bound into `&` storage
 Car(engine Engine) {
-    return init{engine: engine}   // ERROR: plain parameter MUST NOT be bound into ref storage
+    return init{engine: engine}   // ERROR: plain parameter MUST NOT be bound into `&` storage
 }
 ```
 
@@ -213,14 +213,14 @@ Call sites:
 
 ```zane
 engine Engine()
-car Car(engine)   // legal: engine is a place expression
+car Car(engine)   // legal: engine may create a new `&`
 ```
 
 ```zane
-car Car(Engine())   // ILLEGAL: temporary cannot initialize a ref field
+car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
 ```
 
-A class whose fields are all plain owners does not require `ref` parameters:
+A class whose fields are all plain owners does not require `&` parameters:
 
 ```zane
 class Car {
@@ -291,7 +291,7 @@ Implicit constructors are therefore a last resort. They never participate in dis
 Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
 
 #### 3.9.4 Source and destination type constraints
-The **source type** (parameter type) of an implicit constructor **MUST** be a struct or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a class or a `ref`.
+The **source type** (parameter type) of an implicit constructor **MUST** be a struct or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a class or an `&`.
 
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a struct or a class.
 
@@ -420,39 +420,38 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 ### 4.7 Parameters are read-only
 Explicit parameters other than `this` are read-only. Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
 
-### 4.8 `ref` method parameters
-A method parameter declared as `ref T` requires the caller to supply a place expression and permits the callee to store that argument into a `ref` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable ref-able source location, therefore it MUST NOT be bound into `ref` storage.
+### 4.8 `&` method parameters
+A method parameter declared as `&T` requires the caller to supply a source that may create a new `&` under [`memory_model.md`](memory_model.md) §2.8 and permits the callee to store that argument into an `&` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage.
 
 ```zane
 class Car {
-    engineA ref Engine
-    engineB Engine
+    engine &Engine
+    _value Int
 }
 
-// legal: engine is ref-capable; may be stored in either field
-Void consume(this Car, engine ref Engine) mut {
-    this.engineA = engine   // legal
-    this.engineB = engine   // legal
+// legal: engine may be stored into an `&` field
+Void consume(this Car, engine &Engine) mut {
+    this.engine = engine   // legal
 }
 
-// legal: engine is value-only; may only be read or moved into plain fields
+// legal: engine is value-only; it may only be read
 Int calculate(this Car, engine Engine) {
     return this._value + engine.speed   // legal: reading only
 }
 
-// ILLEGAL: plain parameter stored into ref field
+// ILLEGAL: plain parameter stored into `&` field
 Void consumeWrong(this Car, engine Engine) mut {
-    this.engineA = engine   // ILLEGAL
+    this.engine = engine   // ILLEGAL
 }
 ```
 
-Call syntax is uniform regardless of whether a parameter is `ref`:
+Call syntax is uniform regardless of whether a parameter is `&`:
 
 ```zane
 engine Engine()
-car!consume(engine)        // legal: engine is a place expression
-car:calculate(engine)      // legal: place expression works for plain T too
-car!consume(Engine())      // ILLEGAL: temporary cannot bind to ref parameter
+car!consume(engine)        // legal: engine may create a new `&`
+car:calculate(engine)      // legal: plain `T` accepts the same argument
+car!consume(Engine())      // ILLEGAL: temporary cannot bind to `&` parameter
 car:calculate(Engine())    // legal: plain T parameter accepts a temporary
 ```
 
@@ -468,9 +467,7 @@ The body of a subscript definition **MUST** be a place expression. `[]` is not a
 
 When a receiver interprets an `Int` subscript as an ordinal position in an ordered sequence, that position is 1-based. The first element is at `1`, and a sequence with `n` elements uses `1` through `n` as its positional range.
 
-```zane
-value ref Int = list[i]     // legal when list is a place
-```
+> **See also:** [`memory_model.md`](memory_model.md) §2.8 for when a place expression may create a new `&`.
 
 ```zane
 (this CustomList)[index Int] => this._data.compute(index)   // ILLEGAL: body is not a place expression
@@ -515,18 +512,18 @@ Int scaledId(this Node, factor Int) => this._id * factor
 ### 6.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `ref T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `ref` on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `&` on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Void consume(this Car, engine Engine)
-Void consume(this Car, engine ref Engine)  // ERROR
+Void consume(this Car, engine &Engine)  // ERROR
 ```
 
 ### 6.2 Consequences of the overload identity rules
 Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
 
 ### 6.3 Valid overloads differ by arity or parameter type
-Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `ref`-ness at the same position.
+Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `&`-ness at the same position.
 
 ---
 
@@ -559,17 +556,15 @@ element!onClick((eventData) {
 `mut` is not inferred. A lambda that needs the receiver-mutation contract writes `mut` explicitly:
 
 ```zane
-mutableCallback (this Node, EventData) mut -> Void
-mutableCallback = (this, data) {
+onEventCallback (this Node, EventData) mut -> Void = (this, data) {
     ...
-} // OK: a non-`mut` lambda may be used where a `mut` callback is expected
+} // OK: non-`mut` lambda assigned to a `mut` callback type
 
-mutableCallback = (this, data) mut {
+onEventCallback = (this, data) mut {
     ...
 }
 
-readonlyCallback (this Node, EventData) -> Void
-readonlyCallback = (this, data) {
+readonlyCallback (this Node, EventData) -> Void = (this, data) {
     ...
 }
 
@@ -697,10 +692,10 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
-| `ref` parameters in constructors and methods | A `ref` field must be initialized from a place expression; requiring `ref` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
-| Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `ref` fields prevents hidden dependency on call-site expression form. |
+| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
+| Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
-| No overloads that differ only by `ref` | Call syntax stays uniform while avoiding overload ambiguity between value-only and place-required contracts. |
+| No overloads that differ only by `&` | Call syntax stays uniform while avoiding overload ambiguity between value-only and place-required contracts. |
 | Package-qualified function values | Uses one naming rule for methods and free functions. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
@@ -714,18 +709,18 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Concept | Rule |
 |---|---|
 | Class body | Fields only — no methods or constructors inside the body |
-| Struct | Inline value type; cannot contain class or `ref` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
+| Struct | Inline value type; cannot contain class or `&` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
 | Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
-| `ref` constructor/method parameter | Caller must supply a place expression; callee may store into `ref` fields |
-| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee MUST NOT bind it into `ref` storage |
+| `&` constructor/method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
+| Plain `T` constructor/method parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | Method | Package-scope function whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Free function | Package-scope function without `this`; no private-field privilege |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `ref` at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `&` at one position are illegal |
 | Lambda | Contextually typed function value; `mut` stays explicit; no capture |
 | Unqualified method lookup | Searches home package, then current package |
 | Package name | PascalCase namespace name; may match a same-named class |

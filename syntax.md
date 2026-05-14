@@ -13,16 +13,20 @@ This document is the canonical reference for Zane's surface syntax. Topic docume
 New symbol declarations:
 
 ```zane
-name Type
-name ref Type
 name Type(args, ...)
 name Type{field: expr, ...}
 name Type{fieldA, fieldB, ...}
 name Type = expr
-name ref Type = expr
+name &Type = expr
 ```
 
 `Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+
+Every symbol declaration is directly initialized. Bare forms such as `name Type` and `name &Type` are not declaration forms.
+
+```zane
+name Type   // ILLEGAL: symbols require direct initialization
+```
 
 Once a symbol already exists, reassignment uses only:
 
@@ -41,7 +45,7 @@ name Type(value)
 ```zane
 class Name {
     field Type
-    field ref Type
+    field &Type
 }
 ```
 
@@ -78,10 +82,10 @@ Type
 ### 2.3 Reference types
 
 ```zane
-ref Type
+&Type
 ```
 
-`ref` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<ref Node>`), as well as in function and constructor parameter positions. It is not legal in return-type positions.
+`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<&Node>`), as well as in function and constructor parameter positions and return-type positions.
 
 ### 2.4 Type parameters
 
@@ -142,15 +146,16 @@ These compiler-provided concept types represent source literals before they are 
 (ParamType, ...) -> ReturnType ? AbortType
 (this ReceiverType, ParamType, ...) -> ReturnType
 (this ReceiverType, ParamType, ...) mut -> ReturnType
+(this ReceiverType, ParamType, ...) -> &ReturnType
 (this ReceiverType, ParamType, ...) -> ReturnType ? AbortType
 (this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType
 ```
 
-Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
+Reference-typed parameters and returns use the ordinary type form:
 
 ```zane
-(ref ParamType, ...) -> ReturnType
-(this ReceiverType, ref ParamType, ...) -> ReturnType
+(&ParamType, ...) -> ReturnType
+(this ReceiverType, &ParamType, ...) -> &ReturnType
 ```
 
 `mut` is legal only when the first parameter is `this`.
@@ -163,10 +168,10 @@ Parameters may be prefixed with `ref` to indicate a ref-capable parameter:
 
 ```zane
 ReturnType name(param Type, ...) { body }
-ReturnType name(param ref Type, ...) { body }
+ReturnType name(param &Type, ...) { body }
 ReturnType ? AbortType name(param Type, ...) { body }
 ReturnType name(param Type, ...) => expr
-ReturnType name(param ref Type, ...) => expr
+ReturnType name(param &Type, ...) => expr
 ReturnType ? AbortType name(param Type, ...) => expr
 ```
 
@@ -174,15 +179,15 @@ ReturnType ? AbortType name(param Type, ...) => expr
 
 ```zane
 ReturnType name(this ReceiverType, param Type, ...) { body }
-ReturnType name(this ReceiverType, param ref Type, ...) { body }
+ReturnType name(this ReceiverType, param &Type, ...) { body }
 ReturnType name(this ReceiverType, param Type, ...) mut { body }
-ReturnType name(this ReceiverType, param ref Type, ...) mut { body }
+ReturnType name(this ReceiverType, param &Type, ...) mut { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) { body }
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
 ReturnType name(this ReceiverType, param Type, ...) => expr
-ReturnType name(this ReceiverType, param ref Type, ...) => expr
+ReturnType name(this ReceiverType, param &Type, ...) => expr
 ReturnType name(this ReceiverType, param Type, ...) mut => expr
-ReturnType name(this ReceiverType, param ref Type, ...) mut => expr
+ReturnType name(this ReceiverType, param &Type, ...) mut => expr
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) => expr
 ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
 ```
@@ -197,11 +202,11 @@ ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
 TypeName(param Type, ...) {
     return init{ field: expr, ... }
 }
-TypeName(param ref Type, ...) {
+TypeName(param &Type, ...) {
     return init{ field: expr, ... }
 }
 TypeName(param Type, ...) => init{ field: expr, ... }
-TypeName(param ref Type, ...) => init{ field: expr, ... }
+TypeName(param &Type, ...) => init{ field: expr, ... }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
@@ -225,7 +230,7 @@ TypeName{
 } => init{fieldA, fieldB, fieldC}
 ```
 
-Each field entry uses the same declaration forms as ordinary storage declarations.
+Each field entry uses either the bare required-field form `field Type` or an initialized storage form such as `field Type = expr`. This is a constructor-header-specific exception to the symbol-declaration rule above: the bare form declares a required constructor input that the call site must supply, not a standalone symbol declaration with its own storage.
 
 Field-constructor call sites may use explicit or implicit field names:
 
