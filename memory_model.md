@@ -36,12 +36,7 @@ Overwriting destroys the previously owned instance in that slot and replaces it 
 
 Container overwrite therefore no longer depends on whether the element owns a class instance. Owning elements, struct elements, and `ref` elements may all be reassigned. The difference is that only owning elements control destruction.
 
-```zane
-owners Array[2]<Node>
-refs Array[2]<ref Node>
-```
-
-`owners` has owning element slots, so overwriting one element destroys the previously owned instance in that slot and replaces it. `refs` has `ref` element slots, so overwriting one element simply retargets that non-owning link.
+For example, `Array[2]<Node>` has owning element slots, so overwriting one element destroys the previously owned instance in that slot and replaces it. `Array[2]<ref Node>` has `ref` element slots, so overwriting one element simply retargets that non-owning link.
 
 ### 2.3 Struct values are freely overwritable
 Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly. Class owners are also overwritable, but class reassignment still goes through the owner/anchor machinery because class values preserve heap identity and destruction semantics.
