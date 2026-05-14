@@ -44,11 +44,9 @@ Changing a function's abort type changes its function type. Abort types cannot b
 ```zane
 Int parse(String text) ? ParseError { ... }
 
-parserOk (String) -> Int ? ParseError
-parserOk = parse // ok
+parserOk (String) -> Int ? ParseError = parse // ok
 
-parserBad (String) -> Int
-parserBad = parse // ILLEGAL: abort type would be dropped
+parserBad (String) -> Int = parse // ILLEGAL: abort type would be dropped
 ```
 
 ---
@@ -59,8 +57,7 @@ parserBad = parse // ILLEGAL: abort type would be dropped
 Abortable calls are handled at the call site. One form is to attach a `?` handler block:
 
 ```zane
-value Int
-value = parse("42") ? err {
+value Int = parse("42") ? err {
     resolve Int(0)
 }
 ```
@@ -68,8 +65,7 @@ value = parse("42") ? err {
 When the abort type is `Void`, the binder is omitted:
 
 ```zane
-done Bool
-done = tryFinish() ? {
+done Bool = tryFinish() ? {
     resolve false
 }
 ```
@@ -77,8 +73,7 @@ done = tryFinish() ? {
 There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...`.
 
 ```zane
-value Int
-value = parse(input) ? err {
+value Int = parse(input) ? err {
     abort err
 }
 ```
@@ -96,8 +91,7 @@ Falling through a handler block is a compile-time error.
 `expr ?? fallback` desugars to a `?` block that only resolves a default value.
 
 ```zane
-count Int
-count = parse("abc") ?? Int(0)
+count Int = parse("abc") ?? Int(0)
 ```
 
 ### 3.4 `Void` primary returns are not assignable
@@ -163,8 +157,7 @@ if (f == NULL) {
 
 **Zane:**
 ```zane
-file File
-file = fs:open("file.txt") ? err {
+file File = fs:open("file.txt") ? err {
     abort err
 }
 ```
@@ -189,8 +182,7 @@ if err != nil {
 
 **Zane:**
 ```zane
-content String
-content = fs:readFile("file.txt") ? err { abort err }
+content String = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane solves it |
@@ -214,8 +206,7 @@ try {
 
 **Zane:**
 ```zane
-content String
-content = fs:readFile("file.txt") ? err {
+content String = fs:readFile("file.txt") ? err {
     resolve "default"
 }
 ```

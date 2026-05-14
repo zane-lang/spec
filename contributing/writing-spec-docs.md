@@ -133,7 +133,7 @@ Every topic document begins with `## 1. Overview`. It contains:
 Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
 
 - **Single ownership.** Every heap object has exactly one owner at all times.
-- **Anchor-based refs.** A `ref` points through a stable anchor, never directly at an object.
+- **Anchor-based refs.** An `&` points through a stable anchor, never directly at an object.
 ```
 
 ### 3.2 Core topic sections
@@ -189,8 +189,8 @@ Format as a two-column markdown table: `Decision` | `Rationale`.
 | Decision | Rationale |
 |---|---|
 | Single ownership by default | Eliminates ambiguity about which variable owns an object. ... |
-| ❌ Owner is overwritable | Would introduce null refs. ... |
-| `ref` as explicit opt-in | Ownership is the safe default. Non-owning access is the exception. ... |
+| Overwritable owners | Owner/anchor indirection keeps refs valid across reassignment. ... |
+| `&` as explicit opt-in | Ownership is the safe default. Non-owning access is the exception. ... |
 ```
 
 Discarded design decisions may be included after a `❌` if they help clarify the process and the reasoning behind the final design.
@@ -242,8 +242,7 @@ if err != nil { return "", err }
 
 **Zane:**
 ```zane
-content String
-content = fs:readFile("file.txt") ? err { abort err }
+ content String = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane Solves It |

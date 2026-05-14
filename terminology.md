@@ -65,12 +65,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location and is therefore legal as a source for `ref` binding.
+- **Meaning:** A place expression denotes an existing, stable storage location. Some place expressions may create new `&` values, while `[]` expressions remain excluded from that rule.
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory_model.md`](memory_model.md) §2.8
 
 ### 3.2 struct-downstream enforcement
-- **Meaning:** A struct may contain only primitives and other legal structs, never a class or `ref` field anywhere downstream in nested struct fields.
+- **Meaning:** A struct may contain only primitives and other legal structs, never a class or `&` field anywhere downstream in nested struct fields.
 - **Why this name:** The rule is checked recursively through fields downstream from the outer struct, not just at the first field layer.
 - **Canonical home:** [`memory_model.md`](memory_model.md) §2.10
 
@@ -93,6 +93,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** `_` fields are private to methods whose first parameter is `this` for that type, rather than to a package boundary.
 - **Why this name:** Privacy is granted by the method/receiver relationship, not by where the function is declared.
 - **Canonical home:** [`oop.md`](oop.md) §2.3
+
+### 3.7 direct initialization
+- **Meaning:** Every symbol declaration provides its initial value in the declaration itself; bare declarations without an initializer are illegal.
+- **Why this name:** The rule is about initialization happening directly at the binding site, not later through control flow.
+- **Canonical home:** [`memory_model.md`](memory_model.md) §2.11
 
 ---
 
