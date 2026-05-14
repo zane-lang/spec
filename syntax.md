@@ -13,8 +13,6 @@ This document is the canonical reference for Zane's surface syntax. Topic docume
 New symbol declarations:
 
 ```zane
-name Type
-name ref Type
 name Type(args, ...)
 name Type{field: expr, ...}
 name Type{fieldA, fieldB, ...}
@@ -23,6 +21,8 @@ name ref Type = expr
 ```
 
 `Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+
+Every symbol declaration includes its initial value directly. Deferred local initialization is not part of the surface syntax.
 
 Once a symbol already exists, reassignment uses only:
 

@@ -10,12 +10,12 @@ This document specifies Zane's memory model: ownership, refs, anchors, lexical l
 
 Zane eliminates dangling references by combining single ownership, lexical lifetime rules, and anchor-based tracking of non-owning references.
 
-- **`Single-assignment owners`.** A class owner is initialized once and never overwritten.
-- **`Repointable refs`.** A `ref` is non-owning storage that can point at different objects over time.
+- **`Overwritable owners`.** A class owner may be reassigned after initialization while still owning exactly one instance at a time.
+- **`Owner-rooted refs`.** A `ref` is non-owning storage that tracks an owner slot rather than a raw object address.
 - **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone.
 - **`Deterministic destruction`.** Objects are destroyed when their owning scope drains; there is no tracing garbage collector.
 
-These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves, refs stay valid because they follow the object's anchor rather than its current address.
+These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When an owner is overwritten or ownership moves, refs stay valid because they follow the owner slot through its anchor rather than a stale object address.
 
 ---
 
@@ -24,27 +24,27 @@ These rules fit together mechanically. Owners are the only storage that controls
 ### 2.1 Every class instance has exactly one owner
 Every class instance is owned by exactly one symbol, field, or container slot at a time. Ownership is the default storage mode for class values.
 
-### 2.2 Class owners are single-assignment
-Any owning storage position for a class instance—a symbol, field, or container slot—**MUST NOT** be overwritten after initialization.
+### 2.2 Class owners are overwritable
+Any owning storage position for a class instance—a symbol, field, or container slot—**MAY** be overwritten after initialization.
 
 ```zane
 tank Tank(...)
-tank = Tank(...) // ILLEGAL
+tank = Tank(...) // legal
 ```
 
-This rule eliminates destruction-by-overwrite as a source of dangling refs.
+Overwriting destroys the previously owned instance in that slot and replaces it with the new one. Refs remain valid because they follow the owner slot rather than the old object payload directly.
 
-Container overwrite therefore depends on element type. A container element that owns a class instance is single-assignment; a container element whose type is a struct or `ref` remains overwritable.
+Container overwrite therefore no longer depends on whether the element owns a class instance. Owning elements, struct elements, and `ref` elements may all be reassigned. The difference is that only owning elements control destruction.
 
 ```zane
 owners Array[2]<Node>
 refs Array[2]<ref Node>
 ```
 
-`owners` has owning element slots, so each element is single-assignment once initialized. `refs` has `ref` element slots, so each element may later be rewritten to point at a different live object.
+`owners` has owning element slots, so overwriting one element destroys the previously owned instance in that slot and replaces it. `refs` has `ref` element slots, so overwriting one element simply retargets that non-owning link.
 
 ### 2.3 Struct values are freely overwritable
-Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
+Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly. Class owners are also overwritable, but class reassignment still goes through the owner/anchor machinery because class values preserve heap identity and destruction semantics.
 
 ```zane
 pos Vec2(1, 2)
@@ -68,7 +68,7 @@ A `ref` symbol or `ref` field may be assigned a different target later, as long 
 Assigning or passing a `ref` copies the ref value. Rebinding one `ref` storage site later changes only that storage site; it does not retarget other copies.
 
 ### 2.7 Refs and owners use the same surface operations
-At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link, while an owner stores the object itself or its owning slot.
+At use sites, a `ref` is used with the same surface syntax as a direct owner. Method calls, field access, and `mut` calls use the ordinary syntax. The distinction between owner and `ref` matters only at the storage site: a `ref` stores a non-owning link to an owner slot, while an owner stores the current class instance for that slot.
 
 ### 2.8 Only place expressions are ref-able
 A **place expression** is an expression that denotes an existing, stable storage location.
@@ -167,7 +167,8 @@ struct BadRef {
 A `ref` assignment is legal only when the target's owner is declared in the same or a higher lexical scope than the ref itself.
 
 ```zane
-r ref Node
+root Node()
+r ref Node = root
 {
     node Node()
     r = node // ILLEGAL
@@ -231,7 +232,7 @@ A value may move into a new owner only when the destination owner is declared in
 ```zane
 node Node()
 {
-    owner Node
+    owner Node()
     owner = node // ILLEGAL: destination is in a nested block
 }
 ```
@@ -302,18 +303,18 @@ The compiler may pack booleans in structs and stack frames when doing so does no
 Objects that are never ref'd pay no anchor-allocation cost. The first ref creation allocates and initializes the anchor.
 
 ### 6.2 Anchors are stable indirection points
-A ref follows an anchor rather than pointing directly at an object. If an object moves, the anchor is updated and all refs observe the new location.
+A ref follows an anchor for an owner slot rather than pointing directly at an object payload. If ownership moves or a slot is overwritten, the anchor is updated and all refs observe the slot's current value.
 
-### 6.3 Moves update anchors, not all refs
-Object relocation is O(1) with respect to the number of refs, because only the anchor location record changes.
+### 6.3 Moves and overwrites update anchors, not all refs
+Owner-slot updates are O(1) with respect to the number of refs, because only the anchor location record changes.
 
-### 6.4 Destroying an object frees its anchor
-When the owning object is destroyed, its anchor is torn down as part of destruction. Since refs cannot outlive the owner, this does not create a dangling-user-reference state.
+### 6.4 Destroying an owner slot frees its anchor
+When an owning storage slot itself dies, its anchor is torn down as part of destruction. Overwriting the slot updates the existing anchor instead of tearing it down. Since refs cannot outlive the owner slot, this does not create a dangling-user-reference state.
 
 ### 6.5 Why refs never dangle
-A dangling ref would require one of three failures: destruction by overwriting an owner, a ref outliving the owner's scope, or an object move leaving refs pointed at the old address. Zane rules eliminate each case directly.
+A dangling ref would require one of three failures: an owner slot dying while refs still target it, a ref outliving the owner's scope, or an ownership update leaving refs pointed at an old address. Zane rules eliminate each case directly.
 
-Single-assignment owners remove overwrite-triggered destruction. The same-or-higher-scope rule keeps refs inside the owner's lifetime envelope. Anchor indirection turns object relocation into a single metadata update instead of a global ref rewrite. The model is therefore enforced by storage shape and lexical scope, not by runtime borrow tracking.
+Same-or-higher-scope rules keep refs inside the owner slot's lifetime envelope. Anchor indirection turns moves and overwrites into single metadata updates instead of global ref rewrites. The model is therefore enforced by storage shape and lexical scope, not by runtime borrow tracking.
 
 ---
 
@@ -328,7 +329,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Ref counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Refs remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Overwrite destroys ownership source | prohibited by language rules | possible | possible | ⚠️ prevented by borrow checker |
+| Overwriting an owner keeps refs valid | ✅ via owner-slot anchors | ❌ | ❌ | ⚠️ only through move/borrow patterns the checker accepts |
 
 ### 7.2 Memory behavior
 
@@ -346,7 +347,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 
 | Decision | Rationale |
 |---|---|
-| Single-assignment owning storage | Prevents overwrite-triggered destruction from invalidating refs unexpectedly, including inside owning containers. |
+| Overwritable owning storage | Lets symbols, fields, and container elements keep ordinary reassignment syntax while refs stay valid by following owner slots instead of stale object payloads. |
 | Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
 | Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
 | `ref` in parameter positions | Allows callee signatures to express "this argument must be a stable storage location," enabling `ref` field assignment without ghost refs or compiler-invented storage. |
@@ -354,7 +355,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Only direct owning symbols are move-sources | Makes containers stable ownership subtrees. Once a value is inside a field or container element, it cannot be individually extracted and re-parented. Ownership trees remain predictable and do not depend on runtime control flow. |
 | Refs are never move-sources | Refs are non-owning aliases. Allowing moves from refs would enable re-parenting through alias paths and break the owner-uniqueness property. |
 | Moves restricted to declaration block | Prevents conditional moves and flow-dependent ownership changes. A symbol's ownership transfer happens at most once, in a predictable location. This eliminates the need for flow-sensitive "maybe moved" analysis. |
-| Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through anchor-based ref downgrade. This preserves ergonomics while preventing double-moves and re-parenting. |
+| Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through the same owner-slot anchor machinery that also preserves refs across overwrites. This preserves ergonomics while preventing double-moves and re-parenting. |
 | Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
 | Callee-decides moves with caller downgrade | Preserves ownership while avoiding Rust-style use-after-move friction. |
 | Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
@@ -368,7 +369,7 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 
 | Concept | Rule |
 |---|---|
-| Owning storage | Class-typed symbols, fields, and container elements are initialized once and never overwritten |
+| Owning storage | Class-typed symbols, fields, and container elements own exactly one class instance at a time and may be overwritten |
 | Struct value | May be overwritten freely |
 | `ref` | Non-owning storage; may be repointed and copied by value |
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or a `ref` parameter |
@@ -382,5 +383,5 @@ Single-assignment owners remove overwrite-triggered destruction. The same-or-hig
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
 | Post-move downgrade | After a move, the source symbol downgrades to a `ref` and remains readable but is no longer a move-source |
 | Function call | Callee decides move; caller symbol remains usable |
-| Anchor | Lazy, stable indirection for refs across moves |
+| Anchor | Lazy, stable indirection for refs across moves and owner overwrites |
 | Destruction | Deterministic and delayed until the owning scope drains |

@@ -189,7 +189,7 @@ Format as a two-column markdown table: `Decision` | `Rationale`.
 | Decision | Rationale |
 |---|---|
 | Single ownership by default | Eliminates ambiguity about which variable owns an object. ... |
-| ❌ Owner is overwritable | Would introduce null refs. ... |
+| Overwritable owners | Keeps ordinary reassignment syntax while refs stay valid by following owner slots. ... |
 | `ref` as explicit opt-in | Ownership is the safe default. Non-owning access is the exception. ... |
 ```
 
@@ -242,8 +242,7 @@ if err != nil { return "", err }
 
 **Zane:**
 ```zane
-content String
-content = fs:readFile("file.txt") ? err { abort err }
+content String = fs:readFile("file.txt") ? err { abort err }
 ```
 
 | Problem in Go | How Zane Solves It |
