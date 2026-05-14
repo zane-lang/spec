@@ -163,7 +163,7 @@ A `ref` assignment is legal only when the target's owner is declared in the same
 
 ```zane
 root Node()
-r ref Node = root
+r ref Node = root   // initialized here because symbols require direct initialization
 {
     node Node()
     r = node // ILLEGAL
@@ -228,7 +228,7 @@ A value may move into a new owner only when the destination owner is declared in
 node Node()
 {
     owner Node()
-    owner = node // ILLEGAL: destination is in a nested block
+    owner = node // ILLEGAL: destination is in a nested block even though owners are overwritable
 }
 ```
 
