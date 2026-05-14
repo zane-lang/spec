@@ -170,7 +170,7 @@ r ref Node = root
 }
 ```
 
-`r` is initialized with `root` only because symbol declarations require direct initialization. The scope error is the later attempt to point `r` at `node`.
+In this example, `r` is initialized with `root` to satisfy the direct-initialization rule. The scope error is the later attempt to point `r` at `node`.
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
@@ -224,7 +224,7 @@ Void loadCar(this Boat, car Car) mut {
 This restriction prevents conditional moves and flow-dependent ownership changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
 
 ### 3.4 Destination scope must contain or match source scope
-A value may move into a new owner only when the destination owner is declared in the same or a higher lexical scope than the source owner.
+A value may move into a new owner only when the destination owner is declared in the same or a higher lexical scope than the source owner. Owner overwritability does not relax this rule.
 
 ```zane
 node Node()
@@ -233,8 +233,6 @@ node Node()
     owner = node // ILLEGAL: destination is in a nested block
 }
 ```
-
-Owner overwritability does not change this rule: the destination owner still must be declared in the same or a higher lexical scope than the source owner.
 
 ### 3.5 Callee-decides move semantics
 When a value is passed to a function, the callee decides whether a move happens by what it does internally:
