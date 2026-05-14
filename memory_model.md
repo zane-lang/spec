@@ -163,12 +163,14 @@ A `ref` assignment is legal only when the target's owner is declared in the same
 
 ```zane
 root Node()
-r ref Node = root   // initialized here because symbols require direct initialization
+r ref Node = root
 {
     node Node()
     r = node // ILLEGAL
 }
 ```
+
+`r` is initialized with `root` only because symbol declarations require direct initialization. The scope error is the later attempt to point `r` at `node`.
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
@@ -228,9 +230,11 @@ A value may move into a new owner only when the destination owner is declared in
 node Node()
 {
     owner Node()
-    owner = node // ILLEGAL: destination is in a nested block even though owners are overwritable
+    owner = node // ILLEGAL: destination is in a nested block
 }
 ```
+
+Owner overwritability does not change this rule: the destination owner still must be declared in the same or a higher lexical scope than the source owner.
 
 ### 3.5 Callee-decides move semantics
 When a value is passed to a function, the callee decides whether a move happens by what it does internally:
