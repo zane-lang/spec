@@ -75,9 +75,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory_model.md`](memory_model.md) §2.10
 
 ### 3.3 binder/reference split
-- **Meaning:** `[...]` binds a const parameter in definition positions but refers to an already bound const in type bodies and method `this` types. Type parameters have no binder/reference split: a `'`-prefixed name in a type position is simultaneously the introduction and the reference, because the language provides no separate binder syntax.
-- **Why this name:** The same syntax has two roles, so the term highlights the split between binding a name and referring back to one. Type parameters deliberately avoid the split by collapsing both roles into a single `'`-prefixed name.
-- **Canonical home:** [`type_parameters.md`](type_parameters.md) §2.2 (const) and §3 (type)
+- **Meaning:** `[name]` binds a type parameter in definition positions but refers to an already bound type parameter in type bodies and method `this` types. Type generics have no binder/reference split: a `'`-prefixed name in a type position is simultaneously the introduction and the reference, because the language provides no separate binder syntax.
+- **Why this name:** The same syntax has two roles, so the term highlights the split between binding a name and referring back to one. Type generics deliberately avoid the split by collapsing both roles into a single `'`-prefixed name.
+- **Canonical home:** [`type_parameters.md`](type_parameters.md) §2.2 (type parameter) and §3 (type generic)
 
 ### 3.4 compiler concept types
 - **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage.

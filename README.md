@@ -11,7 +11,7 @@ This repository is a **prior art publication** for the Zane programming language
 | `oop.md` | Classes, structs, constructors, methods, packages, and call resolution |
 | `purity.md` | Effect model, `mut`, inferred effect levels, and compiler guarantees |
 | `operators.md` | Operator set, derived operators, precedence, and boolean keywords |
-| `type_parameters.md` | Inferred type parameters, const-parameterized types, identifier rules, and the `Array[size]` primitive |
+| `type_parameters.md` | Inferred type generics, type-parameterized types, identifier rules, and the `Array[size]` primitive |
 | `error_handling.md` | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
 | `dependency_management.md` | Package identity, manifests, version pinning, and fetch rules |
 | `control_flow.md` | Conditional branching, `guard`, counted loops, and 1-based ordinal rules |

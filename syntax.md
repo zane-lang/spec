@@ -87,9 +87,9 @@ Type
 
 `&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]` of `&Node`), as well as in function and constructor parameter positions and return-type positions.
 
-### 2.4 Inferred type parameters
+### 2.4 Inferred type generics
 
-A type parameter is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
+A type generic is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
 
 ```zane
 struct Box {
@@ -97,11 +97,11 @@ struct Box {
 }
 ```
 
-The set of unique `'`-prefixed names in the body is the named type-parameter set of the declaration. The compiler infers the type-parameter set at use sites from call-argument types and type ascriptions. There is no use-site syntax for type arguments; callers **MUST NOT** write angle brackets or any other form to supply type parameters.
+The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. There is no use-site syntax for type arguments; callers **MUST NOT** write angle brackets or any other form to supply type generics.
 
-### 2.5 Const-parameterized types
+### 2.5 Type-parameterized types
 
-Definition-site const binders:
+Definition-site type-parameter binders:
 
 ```zane
 struct Matrix[rows]X[cols] {
@@ -109,13 +109,13 @@ struct Matrix[rows]X[cols] {
 }
 ```
 
-Use-site form (const arguments are baked into the type name; the type is inferred):
+Use-site form (type parameters are baked into the type name; the type generics of the body are inferred):
 
 ```zane
 Matrix10X20
 ```
 
-Digits are illegal in identifiers except where they supply const arguments to a const-parameterized type name.
+Digits are illegal in identifiers except where they supply type parameters to a type-parameterized type name.
 
 ### 2.6 Array storage primitive
 
@@ -123,7 +123,7 @@ Digits are illegal in identifiers except where they supply const arguments to a 
 Array[size]
 ```
 
-`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is inferred from the surrounding context, just like any other generic type in the language.
+`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is a type generic and is inferred from the surrounding context, just like any other type generic in the language.
 
 ### 2.7 Reserved compiler namespaces
 

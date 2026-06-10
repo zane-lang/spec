@@ -280,7 +280,7 @@ At one coercion site requiring destination type `T`, given an expression with st
 For free-function calls, constructor calls, and desugared method calls, overload resolution proceeds in three phases:
 
 1. **Direct match.** A candidate is viable only if the call type-checks with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
-2. **Generic match.** If the direct phase finds no viable candidate, type parameters are inferred from the call-argument types (and from any type ascription on the call) under the inferred-type-parameter rule of [`type_parameters.md`](type_parameters.md) §5, still with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
+2. **Generic match.** If the direct phase finds no viable candidate, type generics are inferred from the call-argument types (and from any type ascription on the call) under the inferred-type-generic rule of [`type_parameters.md`](type_parameters.md) §5, still with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
 3. **Implicit match.** If the direct and generic phases find no viable candidate, implicit constructors may be inserted at coercion sites. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
 
 If no phase yields a viable candidate, the call is a normal no-match type error.
@@ -687,7 +687,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
 | Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
-| Generic match uses inferred type parameters only | Callers never write type arguments, so the generic-match phase is purely an inference step driven by argument types and type ascriptions (see [`type_parameters.md`](type_parameters.md) §5). |
+| Generic match uses inferred type generics only | Callers never write type arguments, so the generic-match phase is purely an inference step driven by argument types and type ascriptions (see [`type_parameters.md`](type_parameters.md) §5). |
 | No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
 | Source type must be struct or compiler concept | Classes have ownership and identity; implicitly converting a class would hide ownership transfer. Compiler concept types in `@concepts$...` are designed for ergonomic lowering. |
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
