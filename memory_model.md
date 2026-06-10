@@ -107,7 +107,7 @@ current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
 ```zane
 first Weapon()
 second Weapon()
-weapons List = [first, second]   // List is a deferred dynamic container; see type_parameters.md §8
+weapons List = [first, second]
 current &Weapon = weapons[1]   // legal: uses the existing stored `&Weapon`
 ```
 
