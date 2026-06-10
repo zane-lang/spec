@@ -85,39 +85,49 @@ Type
 &Type
 ```
 
-`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<&Node>`), as well as in function and constructor parameter positions and return-type positions.
-
-### 2.4 Type parameters
+`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
-struct Box<'T> { ... }
+Array[size] of &Node
 ```
 
-Type-parameter names are prefixed with `'` to distinguish generic binders and references from concrete type names.
+### 2.4 Inferred type generics
 
-### 2.5 Const-parameterized types
-
-Definition-site binders:
+A type generic is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
 
 ```zane
-struct Matrix[rows]X[cols]<'T> { ... }
+struct Box {
+    value 'T
+}
 ```
 
-Use-site form:
+The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`type_parameters.md`](type_parameters.md) §5.1 for the rule.
+
+### 2.5 Type-parameterized types
+
+Definition-site type-parameter binders:
 
 ```zane
-Matrix10X20<Float>
+struct Matrix[rows]X[cols] {
+    ...
+}
 ```
 
-Digits are illegal in identifiers except where they supply const arguments to a const-parameterized type name.
+Use-site form (type parameters are baked into the type name; the type generics of the body are inferred):
+
+```zane
+Matrix10X20
+```
+
+Digits are illegal in identifiers except where they supply type parameters to a type-parameterized type name.
 
 ### 2.6 Array storage primitive
 
 ```zane
-Array[size]<'T>
+Array[size]
 ```
 
-`Array[size]<'T>` is a compiler-provided storage primitive representing `size` contiguous elements of type `'T`.
+`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is a type generic and is inferred from the surrounding context, just like any other type generic in the language.
 
 ### 2.7 Reserved compiler namespaces
 

@@ -108,7 +108,7 @@ Operator precedence is part of the surface grammar. Programs **MUST NOT** declar
 ## 4. Derivation and Algebraic Laws
 
 ### 4.1 `~` is an involution
-For any type that implements `~`, the implementation **SHOULD** satisfy `~~x == x`. `~` implementations **MUST** be pure and terminating.
+For any concrete type the call site instantiates the unary `~` operator for, the implementation **SHOULD** satisfy `~~x == x`. `~` implementations **MUST** be pure and terminating.
 
 ### 4.2 Subtraction is definitional
 Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide independent `-` behavior.

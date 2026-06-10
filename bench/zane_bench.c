@@ -23,10 +23,10 @@
  *  Memory model:
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
- *    `Array[size]<T>` is the spec-defined fixed-size inline container.
+ *    `Array[size]` is the spec-defined fixed-size inline container.
  *    Because `size` is compile-time constant, the growth tests below model
  *    user-space growable storage as the closest updated-spec stand-in for the
- *    now-deferred dynamic `List<T>`.
+ *    now-deferred dynamic list containers (see type_parameters.md §8).
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
@@ -301,7 +301,7 @@ static void zm_free(void *p, size_t s) {
 
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
-     non-owning references. `Array[size]<T>` is the fixed-size inline
+     non-owning references. `Array[size]` is the fixed-size inline
      container. Growable buffers in these benchmarks are user-space layers
      built on top of contiguous owned storage.
 
@@ -733,7 +733,7 @@ static void test4(void) {
 
     /* --- Timed runs --- */
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=inl[i].hp;T[r]=now_ns()-t0;sink^=acc;}
-    print_result("Inline array  (Array[100000]<Entity>)", T);
+    print_result("Inline array  (Array[100000] of Entity)", T);
 
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=sp[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
     print_result("Pointer array, sequential", T);
@@ -755,9 +755,10 @@ static void test4(void) {
 
 /* ═══════════════════════════════════════════════════════════════════
    TEST 5 — Owned buffer append growth
-   Dynamic `List<T>` is not specified on `main`, so this benchmark models the
-   closest current-spec equivalent: a growable user-space buffer built from
-   contiguous owned `Array`-like storage with compile-time-sized chunks.
+   Dynamic list containers are not specified on `main` (see
+   type_parameters.md §8), so this benchmark models the closest current-spec
+   equivalent: a growable user-space buffer built from contiguous owned
+   `Array`-like storage with compile-time-sized chunks.
 ═══════════════════════════════════════════════════════════════════ */
 typedef struct { Entity *base; size_t len, cap; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
@@ -1474,7 +1475,7 @@ static void sum_entity_shard(void *arg) {
 }
 
 static void test12(void) {
-    section("Test 12 -- Concurrent shard scan  [4 x Array[25000]<Entity> read-only shard sums]");
+    section("Test 12 -- Concurrent shard scan  [4 x Array[25000] of Entity read-only shard sums]");
     double T[RUNS];
     assert((N % BENCH_POOL_WORKERS) == 0);
 
