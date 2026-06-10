@@ -85,7 +85,11 @@ Type
 &Type
 ```
 
-`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]` of `&Node`), as well as in function and constructor parameter positions and return-type positions.
+`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+
+```zane
+Array[size] of &Node
+```
 
 ### 2.4 Inferred type generics
 
@@ -97,7 +101,7 @@ struct Box {
 }
 ```
 
-The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. There is no use-site syntax for type arguments; callers **MUST NOT** write angle brackets or any other form to supply type generics.
+The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`type_parameters.md`](type_parameters.md) §5.1 for the rule.
 
 ### 2.5 Type-parameterized types
 

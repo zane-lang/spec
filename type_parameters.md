@@ -57,20 +57,24 @@ Type generics and type parameters live in different kinds. A type parameter **MU
 
 ### 2.4 Type-parameter symbol forms
 
-A type-parameter symbol has three syntactic forms.
+A type-parameter symbol has three syntactic forms and one lexical rule.
 
 | Form | Syntax | Role | Example |
 |---|---|---|---|
-| **Binder** | `[name]` in a type header | Introduces a fresh type-parameter symbol in scope | `struct Buffer[n] { ... }` |
+| **Binder** | `[name]` in a type header or in a method `this` parameter type | Introduces a fresh type-parameter symbol in scope | `struct Buffer[n] { ... }` |
 | **Reference** | `[name]` in any other type expression in the same scope | Refers to an in-scope type-parameter symbol | `data Array[n]` (refers to the header's `n`) |
 | **Root** | integer literal baked into the type identifier | A type-parameter symbol with no source — the start of a chain | `Array3`, `Matrix10X20` |
-| **Adjacency** | Two type-parameter slots in the same type name | A non-type-parameter delimiter is required between adjacent slots so the lexer can determine where each slot begins and ends | `Buffer[n]X[m]` ok; `Buffer[n][m]` ILLEGAL |
+| **Adjacency** (lexical rule) | Two type-parameter slots in the same type name | A non-type-parameter delimiter is required between adjacent slots so the lexer can determine where each slot begins and ends | `Buffer[n]X[m]` ok; `Buffer[n][m]` ILLEGAL |
+
+The first three rows are the three *syntactic forms* of a type-parameter symbol: binder, reference, and root. The fourth row — **Adjacency** — is a *lexical rule* that governs how multiple slot forms may be combined in a single type name; it is not a fourth form of the symbol itself.
 
 The bracket form always means "binder or reference." It is never legal to put a bare integer literal inside `[]`; an integer literal is a *value*, not a name. If `10` appears inside brackets where no symbol named `10` is in scope, the program is rejected: an integer literal is not a type-parameter symbol. The integer must instead be baked into the type name as the root form (`Array10`).
 
 Two type-parameter slots written next to each other (for example `Buffer[n][m]`) require at least one non-type-parameter character between them. The bracket sequence is not a self-delimiting form: a delimiter character is needed to mark where one slot ends and the next begins. The convention used throughout this spec is an uppercase letter (`Matrix[rows]X[cols]`, `Buffer[n]X[m]`), but any non-type-parameter identifier character serves.
 
 A type-parameter symbol referenced inside a body position (not inside `[]`) resolves to its `Int` value. This is how the body of a method on `Buffer[n]` can read `n` as an integer.
+
+A type-parameter symbol or type generic introduced in any declaration in a package is in scope in every other declaration in the same package, because the package compiles as one unit.
 
 ---
 
@@ -248,6 +252,8 @@ colors Array3 = Array3([145, 134, 47])
 ```
 
 `Array3` is a complete type with a baked-in type-parameter value of 3; no outer reference is needed to make sense of it.
+
+This rule applies in particular to the `data Array[10]` shape seen in §3.4.
 
 ### 6.2 Literal-only at use site (root form)
 

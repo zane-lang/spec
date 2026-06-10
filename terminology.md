@@ -74,9 +74,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The rule is checked recursively through fields downstream from the outer struct, not just at the first field layer.
 - **Canonical home:** [`memory_model.md`](memory_model.md) §2.10
 
-### 3.3 binder/reference split
-- **Meaning:** `[name]` binds a type-parameter symbol in definition positions but refers to an already bound symbol in type bodies and method `this` types. Type generics have no binder/reference split: a `'`-prefixed name in a type position is simultaneously the introduction and the reference, because the language provides no separate binder syntax. Type parameters have a *third* form too — the *root* form (`Array10`) — that bakes an integer literal directly into the type identifier and lets a chain start without referencing an outer binder.
-- **Why this name:** The same syntax has two roles, so the term highlights the split between binding a name and referring back to one. Type generics deliberately avoid the split by collapsing both roles into a single `'`-prefixed name. Type parameters extend the split to three forms (binder, reference, root) because the values they represent cannot be supplied at runtime.
+### 3.3 type-parameter symbol forms
+- **Meaning:** A type-parameter symbol has three syntactic forms: *binder* (`[name]` in a type header or method `this` parameter type), *reference* (`[name]` in any other type expression in the same scope), and *root* (an integer literal baked into the type identifier, e.g. `Array10`). Type generics do not share this three-form structure: a `'`-prefixed name in a type position is simultaneously the introduction and the reference, because the language provides no separate binder syntax.
+- **Why this name:** The three-form structure highlights the three distinct syntactic roles a type-parameter symbol can play — introducing a fresh symbol, referring to one already in scope, or starting a chain without an outer reference. Type generics deliberately collapse binder and reference into a single `'`-prefixed name because the inferred-generics design has no separate binder syntax.
 - **Canonical home:** [`type_parameters.md`](type_parameters.md) §2.4 (type parameter) and §3 (type generic)
 
 ### 3.4 compiler concept types
