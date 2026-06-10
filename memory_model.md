@@ -37,13 +37,10 @@ Overwriting an owner does not invalidate existing refs. Refs follow the owner/an
 Container overwrite therefore does not depend on whether the element slot stores an owner or an `&` value. Both kinds of slots may be rewritten after initialization.
 
 ```zane
-first Node()
-second Node()
-owners List = [Node(), Node()]
-refs List<&Node> = [first, second]
+owners Array[2] = [Node(), Node()]
 ```
 
-Rewriting `owners[1]` replaces the owned class instance in that slot. Rewriting `refs[1]` retargets the stored `&Node` value.
+Rewriting `owners[1]` replaces the owned class instance in that slot. Refs to that slot observe the new value because refs follow the owner/anchor path, not the original object.
 
 ### 2.3 Struct values are freely overwritable
 Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
@@ -110,7 +107,7 @@ current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
 ```zane
 first Weapon()
 second Weapon()
-weapons List<&Weapon> = [first, second]
+weapons List = [first, second]   // List is a deferred dynamic container; see type_parameters.md §8
 current &Weapon = weapons[1]   // legal: uses the existing stored `&Weapon`
 ```
 

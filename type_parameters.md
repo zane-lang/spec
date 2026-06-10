@@ -274,7 +274,7 @@ The integer-literal and arithmetic rules apply only to type-parameter symbols. T
 
 ### 7.1 Compiler-provided layout
 
-`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. Its byte size is `size * sizeof(elementType)`. It has no header. The element type is inferred from the surrounding context, just like any other type generic in the language. The `size` itself is a type-parameter symbol — either an in-scope reference (e.g., the header's `n` in `data Array[n]`) or absent (in which case the use is a binder, which only makes sense at the type header, not in a body field position).
+`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. Its byte size is `size * sizeof(elementType)`. It has no header. The element type is inferred from the surrounding context, just like any other type generic in the language. The `size` itself is a type-parameter symbol — either an in-scope reference (e.g., the header's `n` in `data Array[n]`), a baked-in root form (`Array3`), or absent in a body field position (in which case the size is an unnamed type-parameter value that the call site fixes together with the element type; see §3.4).
 
 ### 7.2 Array is the fixed-size storage base case
 
