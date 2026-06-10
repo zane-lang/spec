@@ -37,7 +37,7 @@ Overwriting an owner does not invalidate existing refs. Refs follow the owner/an
 Container overwrite therefore does not depend on whether the element slot stores an owner or an `&` value. Both kinds of slots may be rewritten after initialization.
 
 ```zane
-owners Array[2] = [Node(), Node()]
+owners Array2 = [Node(), Node()]
 ```
 
 Rewriting `owners[1]` replaces the owned class instance in that slot. Refs to that slot observe the new value because refs follow the owner/anchor path, not the original object.
