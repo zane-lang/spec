@@ -2,7 +2,7 @@
 
 This document specifies Zane's effect model: `mut`, inferred effect levels, capability access, structural inference, and the compiler guarantees built on top of those rules.
 
-> **See also:** [`oop.md`](oop.md) §4 for method declarations. [`concurrency_model.md`](concurrency_model.md) §2 and §4 for parallelism and conflict rules. [`error_handling.md`](error_handling.md) §5 for the connection between effects and abortability.
+> **See also:** [`functions.md`](functions.md) §2 for method declarations. [`concurrency.md`](concurrency.md) §2 and §4 for parallelism and conflict rules. [`error-handling.md`](error-handling.md) §5 for the connection between effects and abortability.
 
 ---
 
@@ -32,7 +32,7 @@ A capability is an object whose methods model access to external state, such as 
 `mut` is the only effect modifier in the language. It appears on methods whose receiver is a class type and grants write access to `this` and values owned by `this`.
 
 ### 2.4 Parameters are not mutable by default
-Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A type-parameter symbol that resolves to an `Int` value in body positions (see [`type_parameters.md`](type_parameters.md) §2.4) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
+Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A type-parameter symbol that resolves to an `Int` value in body positions (see [`generics.md`](generics.md) §2.4) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
 
 ---
 

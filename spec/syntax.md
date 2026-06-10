@@ -2,7 +2,7 @@
 
 This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only.
 
-> **See also:** [`oop.md`](oop.md) for constructors and methods. [`control_flow.md`](control_flow.md) for branching and loop semantics. [`error_handling.md`](error_handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
+> **See also:** [`types.md`](types.md) for constructors. [`functions.md`](functions.md) for methods. [`control-flow.md`](control-flow.md) for branching and loop semantics. [`error-handling.md`](error-handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
 
 ---
 
@@ -101,7 +101,7 @@ struct Box {
 }
 ```
 
-The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`type_parameters.md`](type_parameters.md) §5.1 for the rule.
+The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`generics.md`](generics.md) §5.1 for the rule.
 
 ### 2.5 Type-parameterized types
 

@@ -2,7 +2,7 @@
 
 This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, and boolean keywords.
 
-> **See also:** [`syntax.md`](syntax.md) §3.9 and §7 for operator declarations and surface forms. [`purity.md`](purity.md) §2 for `mut` and side effects.
+> **See also:** [`syntax.md`](syntax.md) §3.9 and §7 for operator declarations and surface forms. [`effects.md`](effects.md) §2 for `mut` and side effects.
 
 ---
 
@@ -34,7 +34,7 @@ Primitive operators are implementable and define the operator surface area:
 ### 2.2 Where operators may be defined
 Operator implementations are package-scope function declarations whose names are operator tokens. They are ordinary non-`mut` functions with special names, not methods: an operator declaration never has a `this` receiver parameter.
 
-A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. See [`oop.md`](oop.md) §8.1 for the home-package concept used by method resolution.
+A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. See [`functions.md`](functions.md) §6.1 for the home-package concept used by method resolution.
 
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 
@@ -129,7 +129,7 @@ Programs **MUST NOT** define new operator symbols or precedence levels. Overload
 ### 5.2 Reserved symbols
 The following are not operators in Zane:
 
-- `!` (reserved for mutating calls; see [`oop.md`](oop.md) §4.5)
+- `!` (reserved for mutating calls; see [`functions.md`](functions.md) §2.5)
 - `++`, `--`, `+=`, `-=` and other mutation operators
 - `!=` (replaced by `~=` as a derived operator)
 

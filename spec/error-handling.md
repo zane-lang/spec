@@ -2,7 +2,7 @@
 
 This document specifies Zane's error handling model: bifurcated return paths, `?` handler blocks, `??` shorthand, and compiler guarantees around abortability.
 
-> **See also:** [`purity.md`](purity.md) §7 for the relationship between effects and abortability. [`syntax.md`](syntax.md) §6 for the canonical surface syntax.
+> **See also:** [`effects.md`](effects.md) §7 for the relationship between effects and abortability. [`syntax.md`](syntax.md) §6 for the canonical surface syntax.
 
 ---
 

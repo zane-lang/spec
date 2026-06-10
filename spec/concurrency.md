@@ -2,7 +2,7 @@
 
 This document specifies Zane's concurrency model: compiler-managed parallelism, the `spawn` keyword, and the safety rules that govern concurrent execution.
 
-> **See also:** [`purity.md`](purity.md) §3 for effect levels. [`memory_model.md`](memory_model.md) §4 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
+> **See also:** [`effects.md`](effects.md) §3 for effect levels. [`memory.md`](memory.md) §4 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
 
 ---
 
@@ -37,7 +37,7 @@ The compiler distinguishes:
 - **Total Pure**: no side effects and guaranteed termination, so compile-time evaluation is legal when inputs are known
 - **Pure**: no side effects, but termination is not proven, so the call remains runtime work even though it is still parallelizable
 
-This distinction matters for compile-time reduction, not for the legality of runtime parallelism. See [`purity.md`](purity.md) §3 and §9 for the effect-level definitions and matrix.
+This distinction matters for compile-time reduction, not for the legality of runtime parallelism. See [`effects.md`](effects.md) §3 and §9 for the effect-level definitions and matrix.
 
 ### 2.4 Thread configuration
 The runtime uses a work-stealing thread pool configured by `@threads`:

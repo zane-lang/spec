@@ -6,11 +6,13 @@ This guide describes the conventions for writing and maintaining spec documents 
 
 ## 1. Document Inventory
 
-Each file in the repository root covers one topic area. Each topic has a single *canonical* home document.
+Every spec document lives in [`spec/`](../spec/), and each file covers one topic area. Each topic has a single *canonical* home document.
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
-When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc), *how to write it* (`syntax.md`), or *what the spec calls it* (`terminology.md`)?
+When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc), *how to write it* (`syntax.md`), or *what the spec calls it* (`glossary.md`)?
+
+See [`README.md`](../README.md) for the canonical index of every spec document and its purpose.
 
 ---
 
@@ -83,10 +85,10 @@ This document specifies Zane's memory model: how objects are owned and destroyed
 Immediately after the lead-in, before the first `---`, if cross-references are useful:
 
 ```markdown
-> **See also:** [`oop.md`](oop.md) for class/struct declarations and method syntax. [`purity.md`](purity.md) for the effect model.
+> **See also:** [`types.md`](types.md) for class/struct declarations. [`effects.md`](effects.md) for the effect model.
 ```
 
-Use `>` blockquote with bold `**See also:**`. Link text is the filename. Description is a short phrase. Separate entries with `. ` (period space).
+Use `>` blockquote with bold `**See also:**`. Link text is the filename. Description is a short phrase. Separate entries with `. ` (period space). Spec documents always link to siblings inside `spec/` using a bare filename — for example, `types.md` rather than `spec/types.md` — since they live in the same directory.
 
 ### 2.4 Section separators (`---`)
 
@@ -109,7 +111,7 @@ Rules:
 
 `syntax.md` is a canonical reference document, not a topic narrative. It still uses the same title style, lead-in prose, `---` separators, and numbered subsections, but it may start directly with grammar categories such as Declarations, Types, and Calls instead of a dedicated `## 1. Overview` section.
 
-`terminology.md` is also a reference document rather than a topic narrative. It should still use the same title style, lead-in prose, `---` separators, and numbered groups / per-term subsections, but it does **not** need a topic-style Overview / Language Comparisons / Design Rationale layout. Instead, it should organize terms into clear groups and, for each term, record:
+`glossary.md` is also a reference document rather than a topic narrative. It should still use the same title style, lead-in prose, `---` separators, and numbered groups / per-term subsections, but it does **not** need a topic-style Overview / Language Comparisons / Design Rationale layout. Instead, it should organize terms into clear groups and, for each term, record:
 
 - the preferred term
 - a short meaning
@@ -154,7 +156,7 @@ Include this section only when Zane's design is meaningfully different from main
 
 Required in every topic document.
 
-Do **not** add a Design Rationale section to `syntax.md` or `terminology.md`. Those files are reference documents, not topic narratives.
+Do **not** add a Design Rationale section to `syntax.md` or `glossary.md`. Those files are reference documents, not topic narratives.
 
 Placement:
 - If the document has a Summary: Design Rationale is the top-level section immediately before Summary.
@@ -336,7 +338,7 @@ Do not use *italics* for emphasis. Italics are reserved for the names of other d
 Always link by filename, never by section title text. Include a `§` number after the link:
 
 ```markdown
-[`memory_model.md`](memory_model.md) §3
+[`memory.md`](memory.md) §3
 ```
 
 When section numbers change, update inbound and outbound references in the same change.
@@ -348,21 +350,21 @@ To reduce churn:
 At the end of a section that is closely connected to another document, add a `> **See also:**` line:
 
 ```markdown
-> **See also:** [`purity.md`](purity.md) for the complete effect model.
+> **See also:** [`effects.md`](effects.md) for the complete effect model.
 ```
 
 ---
 
 ## 8. Adding a New Spec Document
 
-1. Create `<topic>.md` in the repository root.
+1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match what readers will type when looking for it).
 2. Follow the required shape from §2.
-3. Add a row to the table in `README.md`.
+3. Add a row to the appropriate table in [`README.md`](../README.md).
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
 5. Add a Design Rationale section (§4 format).
 6. If meaningful language comparisons exist, add a Language Comparisons section (§5 format).
 
-Exception: if the document is `terminology.md`, follow the terminology-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add Language Comparisons or Design Rationale sections.
+Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add Language Comparisons or Design Rationale sections.
 
 ---
 
@@ -373,4 +375,3 @@ Exception: if the document is `terminology.md`, follow the terminology-specific 
 - Do not add semantics to `syntax.md`.
 - Do not duplicate content between files — add it in the canonical place and cross-reference from others.
 - When adding a new top-level section, insert it before Language Comparisons / Design Rationale / Summary as required by §2, adjusting section numbers accordingly.
-```

@@ -2,7 +2,7 @@
 
 This document specifies Zane's two parameter kinds that attach to type declarations: **type generics** (formerly written in `<'T>` slots) and **type parameters** (formerly written in `[name]` slots). Zane's type-generic system is fully inferred: the language provides no syntax for declaring type generics at the declaration header or for supplying them at call sites. Type parameters use a binder/reference/root form — they are neither a type nor a value, but a third kind of symbol that resolves to a value (`Int`) in body positions.
 
-> **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`oop.md`](oop.md) §3.9.2 for the generic-match phase of overload resolution, which is where inference happens at call sites.
+> **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution, which is where inference happens at call sites.
 
 ---
 
@@ -148,7 +148,7 @@ struct Tag {
 
 Phantom type generics are rejected because the inferred-generics design offers no use-site syntax to specify them. A future spec revision may add support for phantom type generics via a separate type-ascription rule; that rule is not part of this revision.
 
-> **See also:** [`oop.md`](oop.md) §3.9.2 for the generic-match phase of overload resolution, which is where the compiler unifies call-argument types with declared parameter types.
+> **See also:** [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution, which is where the compiler unifies call-argument types with declared parameter types.
 
 ---
 

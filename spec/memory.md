@@ -2,7 +2,7 @@
 
 This document specifies Zane's memory model: ownership, refs, anchors, lexical lifetime rules, heap layout, and deterministic destruction.
 
-> **See also:** [`oop.md`](oop.md) §2 for classes and structs. [`purity.md`](purity.md) §2 for `mut`. [`concurrency_model.md`](concurrency_model.md) §4 for water-tower lifetimes. [`syntax.md`](syntax.md) §1 and §2 for storage forms.
+> **See also:** [`types.md`](types.md) §2 for classes and structs. [`effects.md`](effects.md) §2 for `mut`. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`syntax.md`](syntax.md) §1 and §2 for storage forms.
 
 ---
 

@@ -7,7 +7,7 @@ model: gpt-5.4
 ## 0) Non-negotiables (read first)
 - **Do not invent language behavior or syntax.**
     - The **source of truth for Zane language design is the spec repo**: https://github.com/zane-lang/spec
-    - When you need language details, cite / follow the spec documents (especially `syntax.md`) instead of guessing.
+    - When you need language details, cite / follow the spec documents under `spec/` (especially `spec/syntax.md`) instead of guessing.
 - Keep changes **mechanical and reversible** (especially in CI/workflows).
 
 ## 1) Repo standards come from `contributing/` (always check first)

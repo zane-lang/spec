@@ -4,16 +4,46 @@ This repository is a **prior art publication** for the Zane programming language
 
 ---
 
-| File | Description |
+## Repository layout
+
+```
+spec/             ← the specification itself (start here)
+contributing/     ← style guide for writing and editing spec docs
+bench/            ← reference C harness used for runtime experiments
+```
+
+## Specification documents
+
+The specification lives in [`spec/`](spec/) and is organized by topic. Each document has a single canonical home for its rules; everything else cross-references.
+
+### Reference documents
+
+| Document | Purpose |
 |---|---|
-| `memory_model.md` | Ownership model, refs, anchors, scope rules, lifetime, and memory layout |
-| `concurrency_model.md` | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety rules |
-| `oop.md` | Classes, structs, constructors, methods, packages, and call resolution |
-| `purity.md` | Effect model, `mut`, inferred effect levels, and compiler guarantees |
-| `operators.md` | Operator set, derived operators, precedence, and boolean keywords |
-| `type_parameters.md` | Inferred type generics, type-parameterized types, identifier rules, and the `Array[size]` primitive |
-| `error_handling.md` | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
-| `dependency_management.md` | Package identity, manifests, version pinning, and fetch rules |
-| `control_flow.md` | Conditional branching, `guard`, counted loops, and 1-based ordinal rules |
-| `terminology.md` | Canonical terminology index for cross-document Zane concepts and coined spec terms |
-| `syntax.md` | Canonical surface syntax reference for all constructs |
+| [`spec/syntax.md`](spec/syntax.md) | Canonical surface syntax for every construct |
+| [`spec/glossary.md`](spec/glossary.md) | Canonical names for recurring concepts and coined spec terms |
+
+### Type system and runtime model
+
+| Document | Purpose |
+|---|---|
+| [`spec/types.md`](spec/types.md) | Classes, structs, fields, constructors, and implicit conversions |
+| [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
+| [`spec/generics.md`](spec/generics.md) | Inferred type generics, type parameters, and the `Array[size]` primitive |
+| [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, lifetimes, and heap layout |
+| [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
+| [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
+
+### Programs and program structure
+
+| Document | Purpose |
+|---|---|
+| [`spec/control-flow.md`](spec/control-flow.md) | `if`/`elif`/`else`, `guard`, counted loops, and 1-based ordinal rules |
+| [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, and boolean keywords |
+| [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
+| [`spec/packages.md`](spec/packages.md) | Package declarations, member access, and the instanceful package pattern |
+| [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
+
+## Contributing
+
+Style and structural conventions for spec documents live in [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md). Read that file before editing or adding a topic doc.
