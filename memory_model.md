@@ -39,7 +39,7 @@ Container overwrite therefore does not depend on whether the element slot stores
 ```zane
 first Node()
 second Node()
-owners List<Node> = [Node(), Node()]
+owners List = [Node(), Node()]
 refs List<&Node> = [first, second]
 ```
 
@@ -103,7 +103,7 @@ r &Engine = engine   // legal: engine is a named, stable storage location
 ```
 
 ```zane
-weapons List<Weapon> = [Weapon(), Weapon()]
+weapons List = [Weapon(), Weapon()]
 current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
 ```
 

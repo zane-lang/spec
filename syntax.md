@@ -85,28 +85,34 @@ Type
 &Type
 ```
 
-`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]<&Node>`), as well as in function and constructor parameter positions and return-type positions.
+`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as `Array[size]` of `&Node`), as well as in function and constructor parameter positions and return-type positions.
 
-### 2.4 Type parameters
+### 2.4 Inferred type parameters
+
+A type parameter is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
 
 ```zane
-struct Box<'T> { ... }
+struct Box {
+    value 'T
+}
 ```
 
-Type-parameter names are prefixed with `'` to distinguish generic binders and references from concrete type names.
+The set of unique `'`-prefixed names in the body is the named type-parameter set of the declaration. The compiler infers the type-parameter set at use sites from call-argument types and type ascriptions. There is no use-site syntax for type arguments; callers **MUST NOT** write angle brackets or any other form to supply type parameters.
 
 ### 2.5 Const-parameterized types
 
-Definition-site binders:
+Definition-site const binders:
 
 ```zane
-struct Matrix[rows]X[cols]<'T> { ... }
+struct Matrix[rows]X[cols] {
+    ...
+}
 ```
 
-Use-site form:
+Use-site form (const arguments are baked into the type name; the type is inferred):
 
 ```zane
-Matrix10X20<Float>
+Matrix10X20
 ```
 
 Digits are illegal in identifiers except where they supply const arguments to a const-parameterized type name.
@@ -114,10 +120,10 @@ Digits are illegal in identifiers except where they supply const arguments to a 
 ### 2.6 Array storage primitive
 
 ```zane
-Array[size]<'T>
+Array[size]
 ```
 
-`Array[size]<'T>` is a compiler-provided storage primitive representing `size` contiguous elements of type `'T`.
+`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is inferred from the surrounding context, just like any other generic type in the language.
 
 ### 2.7 Reserved compiler namespaces
 
