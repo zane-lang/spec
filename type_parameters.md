@@ -64,8 +64,11 @@ A type-parameter symbol has three syntactic forms.
 | **Binder** | `[name]` in a type header | Introduces a fresh type-parameter symbol in scope | `struct Buffer[n] { ... }` |
 | **Reference** | `[name]` in any other type expression in the same scope | Refers to an in-scope type-parameter symbol | `data Array[n]` (refers to the header's `n`) |
 | **Root** | integer literal baked into the type identifier | A type-parameter symbol with no source — the start of a chain | `Array3`, `Matrix10X20` |
+| **Adjacency** | Two type-parameter slots in the same type name | A non-type-parameter delimiter is required between adjacent slots so the lexer can determine where each slot begins and ends | `Buffer[n]X[m]` ok; `Buffer[n][m]` ILLEGAL |
 
 The bracket form always means "binder or reference." It is never legal to put a bare integer literal inside `[]`; an integer literal is a *value*, not a name. If `10` appears inside brackets where no symbol named `10` is in scope, the program is rejected: an integer literal is not a type-parameter symbol. The integer must instead be baked into the type name as the root form (`Array10`).
+
+Two type-parameter slots written next to each other (for example `Buffer[n][m]`) require at least one non-type-parameter character between them. The bracket sequence is not a self-delimiting form: a delimiter character is needed to mark where one slot ends and the next begins. The convention used throughout this spec is an uppercase letter (`Matrix[rows]X[cols]`, `Buffer[n]X[m]`), but any non-type-parameter identifier character serves.
 
 A type-parameter symbol referenced inside a body position (not inside `[]`) resolves to its `Int` value. This is how the body of a method on `Buffer[n]` can read `n` as an integer.
 
@@ -306,6 +309,7 @@ The following are intentionally not specified in this version of the spec:
 | Type parameters are a third kind of symbol with three forms | They are not types (so they don't go in type-generic slots) and not values (so they can't be runtime arguments). The binder/reference/root form is the smallest syntax that supports in-scope references, header binders, and concrete root types. |
 | Brackets `[name]` are binder-or-reference; literals are not names | An integer literal is a value, so it cannot be a name. The root form (`Array10`) is the only way to write a type-parameter symbol without an in-scope reference. |
 | `Array[10]` in a struct body is illegal | The `10` is a literal with no in-scope binder named `10`. The body must reference a header-binder (`Array[n]`) or accept an unnamed type-generic element. |
+| Adjacent type-parameter slots require a delimiter | A bracket sequence is not self-delimiting, so the lexer cannot tell where one slot ends and the next begins without a non-type-parameter character between them. |
 | Concept-typed literals require explicit destination type at call sites | The compiler cannot choose between `Int`, `Float`, and other concrete number types from a bare literal. The `Int(2)` wrap is a small explicit cost that replaces deeper `<...>` argument lists elsewhere. |
 
 ---
@@ -319,6 +323,7 @@ The following are intentionally not specified in this version of the spec:
 | Type-parameter binder | `[name]` in a type header; introduces a fresh type-parameter symbol in scope |
 | Type-parameter reference | `[name]` in a nested type expression in the same scope; refers to an in-scope type-parameter symbol |
 | Type-parameter root | An integer literal baked into the type identifier (`Array10`); a type-parameter symbol with no source |
+| Adjacent type-parameter slots | A non-type-parameter delimiter is required between them so the lexer can split the name |
 | Inside `[]` | Must be a name (binder or reference); an integer literal is rejected |
 | Type-parameter symbol in body | Resolves to the `Int` value the caller supplied |
 | Definition site (type generic) | No `<'T>` list; type generics are collected from the body |
