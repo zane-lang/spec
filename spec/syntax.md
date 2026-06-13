@@ -18,9 +18,46 @@ name Type{field: expr, ...}
 name Type{fieldA, fieldB, ...}
 name Type = expr
 name &Type = expr
+name (ParamType, ...) -> ReturnType(param Name Type, ...) { body }
 ```
 
 `Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+
+The last form is the lambda-variable shorthand: a fusion of a variable name, a function-type ascription, and a lambda body header in the shape of a function or method declaration. The function-type ascription uses the **old** `(T) -> R` form on the ascription side; the body header is the same parenthesized declaration-form parameter list used by free-function and method declarations in §3.1 and §3.2. `this` is legal only in the first body-header position; `mut` is legal only when the first body-header parameter is `this`. The body is a normal body.
+
+```zane
+callback (Int) -> Float(x Int) {
+    return Float(x.value) * 2
+}
+```
+
+is shorthand for
+
+```zane
+callback (Int) -> Float = (x) {
+    return Float(x.value) * 2
+}
+```
+
+A mutating-method lambda variable carries the `mut` marker on the function-type ascription (in the old form, `mut` lives inside the ascription's parentheses, before the `->`; the new bracket form for the same type is `Float[this Player] mut` per §2.9):
+
+```zane
+callback (this Player) mut -> Float(this Player) {
+    this.shooting = false
+}
+```
+
+is shorthand for
+
+```zane
+callback (this Player) mut -> Float = (this) mut {
+    this.shooting = false
+}
+```
+
+The variable's type is fixed at first declaration. Once `callback` is declared as `(Int) -> Float`, the ascription side of the declaration never changes; only the body is reassigned through `callback = (...) { ... }`. The shorthand is recognized only when a function-type ascription follows the variable name. Without an ascription, the parser cannot distinguish the construct from a function declaration.
+
+> **See also:** [`functions.md`](functions.md) §7 for the contextual-typing rule and the no-capture rule that still apply to the underlying lambda literal. §2.9 for the function-type ascription syntax. §3.8 for the underlying lambda-literal form.
 
 Every symbol declaration is directly initialized. Bare forms such as `name Type` and `name &Type` are not declaration forms.
 
@@ -152,23 +189,26 @@ These compiler-provided concept types represent source literals before they are 
 ### 2.9 Function types
 
 ```zane
-(ParamType, ...) -> ReturnType
-(ParamType, ...) -> ReturnType ? AbortType
-(this ReceiverType, ParamType, ...) -> ReturnType
-(this ReceiverType, ParamType, ...) mut -> ReturnType
-(this ReceiverType, ParamType, ...) -> &ReturnType
-(this ReceiverType, ParamType, ...) -> ReturnType ? AbortType
-(this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType
+ReturnType[]
+ReturnType[ParamType, ...]
+ReturnType[&ParamType, ...]
+ReturnType[this ReceiverType, ...]
+ReturnType[this ReceiverType, ...] mut
+&ReturnType[&ParamType, ...]
+ReturnType[ParamType, ...] ? AbortType
 ```
 
-Reference-typed parameters and returns use the ordinary type form:
+The shape is `ReturnType [paramTypes] mut? ?AbortType?`. The brackets are required even when the parameter list is empty, so `Void[]` is the function type of a parameterless free function. `mut` is legal only when the first parameter is `this`; it is written after the brackets, never inside them. The `? AbortType` abortable-return marker keeps its position after the brackets.
+
+Methods that bind type-parameter symbols in their `this` type (see [`generics.md`](generics.md) §4.3) nest the receiver's type-parameter slot directly before the function-type parameter list:
 
 ```zane
-(&ParamType, ...) -> ReturnType
-(this ReceiverType, &ParamType, ...) -> &ReturnType
+Array[n] rowAt(this Buffer[n], i Int)   // function type: Array[n][this Buffer[n], i Int]
 ```
 
-`mut` is legal only when the first parameter is `this`.
+The shape `Array[n][this Buffer[n], i Int]` is legal under the type-parameter adjacency rule from [`generics.md`](generics.md) §2.4: a type-parameter slot contains a *name* (a binder or a reference), while a function-type parameter list contains a `this` keyword, a type name, or an `&` prefix. The lexer disambiguates the two by what the bracket contains. The *bracket-content delimiter* convention is: **a bracket that contains `this`, a type name, or `&` is a function-type parameter list; a bracket that contains a bare name is a type-parameter slot**. Adjacent type-parameter slots continue to require a non-type-parameter delimiter (an uppercase letter or another non-name character).
+
+> **See also:** [`generics.md`](generics.md) §2.4 for the type-parameter adjacency rule. [`functions.md`](functions.md) §7 for the lambda-variable shorthand and the explicit-typed lambda literal that use this function-type form. [`error-handling.md`](error-handling.md) §2 for the `? AbortType` abortable-return rule.
 
 ---
 
@@ -303,21 +343,16 @@ A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 ### 3.8 Lambda literals
 
 ```zane
-() { body }
+ReturnType(params DeclForm) { body }
+ReturnType(this ReceiverType, params DeclForm) mut { body }
 (name, ...) { body }
-() => expr
-(name, ...) => expr
-(this) { body }
-(this) mut { body }
 (this, name, ...) { body }
 (this, name, ...) mut { body }
-(this) => expr
-(this) mut => expr
-(this, name, ...) => expr
-(this, name, ...) mut => expr
 ```
 
-Lambda literals omit the function name, parameter types, return type, and abort type. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
+A lambda literal may write the return type and the parameter types explicitly. The explicit-typed form parallels the declaration form: the return type and parameter types are written directly, and the body header is the same parenthesized declaration-form parameter list used by free-function and method declarations. `this` is legal only in the first body-header position; `mut` is legal only when the first body-header parameter is `this`. The contextual-typing form (the last three lines) is legal only in a position with a known destination function type: a single parameter whose type is a function type, a typed variable whose type is a function type, or a return slot whose type is a function type. The contextual form relies on that destination to supply the parameter types, return type, and abort type.
+
+The contextual form is also legal as the body of the lambda-variable shorthand (see §1.1) and as the right-hand side of `name = (params) { body }` for a function-typed variable.
 
 Examples:
 
@@ -325,11 +360,25 @@ Examples:
 element!onClick((eventData) {
     ...
 })
+```
 
-element!onClick((this, data) mut {
+is the contextual-typing form; the surrounding `onClick` parameter type supplies the function type. The same literal with explicit types reads:
+
+```zane
+element!onClick(Void(eventData EventData) {
     ...
 })
 ```
+
+A mutating-method lambda with an explicit `this` type:
+
+```zane
+element!onClick(Void(this Widget, data EventData) mut {
+    ...
+})
+```
+
+In the mutating-method literal, the `mut` keyword sits between the body header and the body block; it marks the underlying function type as a mutating-method type (`Void[this Widget, data EventData] mut` per §2.9). The body header inside the parentheses uses declaration form: a `this` parameter named with its receiver type, then any additional parameters with their names and types.
 
 ### 3.9 Operator definitions
 
@@ -366,9 +415,9 @@ receiver!PackageName$method(args...)
 
 ### 4.3 Function references
 
-```zane
-PackageName$functionName
-```
+`PackageName$name` is not a value in Zane. The only way to produce a function value is a lambda literal (see §3.8) or a lambda variable (see §1.1).
+
+> **See also:** [`functions.md`](functions.md) §4.4 for the rule that function names are grammar, not values. §7 for the lambda forms that produce function values.
 
 ### 4.4 Pipe syntax
 
