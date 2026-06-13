@@ -72,6 +72,8 @@ The bracket form always means "binder or reference." It is never legal to put a 
 
 Two type-parameter slots written next to each other (for example `Buffer[n][m]`) require at least one non-type-parameter character between them. The bracket sequence is not a self-delimiting form: a delimiter character is needed to mark where one slot ends and the next begins. The convention used throughout this spec is an uppercase letter (`Matrix[rows]X[cols]`, `Buffer[n]X[m]`), but any non-type-parameter identifier character serves.
 
+> **See also:** The new function-type form in [`syntax.md`](syntax.md) §2.9 uses the same bracket form with a *non-name* inside (`this`, a type name, or `&`), so a bracket that follows a type name and contains a function-type parameter list is a legal "non-type-parameter" delimiter and is **not** a violation of the adjacency rule. For example, the method `Array[n] rowAt(this Buffer[n], i Int)` has function type `Array[n][this Buffer[n], i Int]`; the second bracket contains `this` and a type name, not a bare name, so the lexer recognizes it as a function-type parameter list rather than a type-parameter slot.
+
 A type-parameter symbol referenced inside a body position (not inside `[]`) resolves to its `Int` value. This is how the body of a method on `Buffer[n]` can read `n` as an integer.
 
 A type-parameter symbol or type generic introduced in any declaration in a package is in scope in every other declaration in the same package, because the package compiles as one unit.
@@ -179,6 +181,16 @@ The type ascription `Int` fixes the type generic to `Int`. A bare call without a
 ### 4.3 Method-site `this` binders
 
 `this` types may bind type-parameter symbols; this is unchanged by the inferred-type-generic rule. A method that binds type-parameter symbols in its `this` type is implicitly parameterized over those symbols, and the symbols may be referenced or read as `Int` values inside the method body.
+
+The function type produced by such a method nests the type-parameter slot of the receiver inside the same brackets as the function-type parameter list. For example, the method
+
+```zane
+Array[n] rowAt(this Buffer[n], i Int) { ... }
+```
+
+has function type `Array[n][this Buffer[n], i Int]`. The first bracket closes the return type `Array[n]`; the second bracket opens the function-type parameter list. The shape is legal under the adjacency rule in §2.4 because the second bracket contains `this` and a type name, never a bare name.
+
+> **See also:** [`syntax.md`](syntax.md) §2.9 for the full function-type form. [`functions.md`](functions.md) §4.1 and §7.4 for the function-type rule and the bracket-content delimiter.
 
 ---
 
@@ -316,6 +328,7 @@ The following are intentionally not specified in this version of the spec:
 | Brackets `[name]` are binder-or-reference; literals are not names | An integer literal is a value, so it cannot be a name. The root form (`Array10`) is the only way to write a type-parameter symbol without an in-scope reference. |
 | `Array[10]` in a struct body is illegal | The `10` is a literal with no in-scope binder named `10`. The body must reference a header-binder (`Array[n]`) or accept an unnamed type-generic element. |
 | Adjacent type-parameter slots require a delimiter | A bracket sequence is not self-delimiting, so the lexer cannot tell where one slot ends and the next begins without a non-type-parameter character between them. |
+| Bracket-content delimiter (function-type form) | A bracket that contains `this`, a type name, or `&` is a function-type parameter list, not a type-parameter slot — both because its content is not a name and because the existing adjacency rule already permits it as a non-type-parameter delimiter. The new function-type syntax therefore introduces no new constraint on type-parameter slots; it reuses the existing one. |
 | Concept-typed literals require explicit destination type at call sites | The compiler cannot choose between `Int`, `Float`, and other concrete number types from a bare literal. The `Int(2)` wrap is a small explicit cost that replaces deeper `<...>` argument lists elsewhere. |
 
 ---
