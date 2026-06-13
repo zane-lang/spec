@@ -26,7 +26,7 @@
  *    `Array<T, n>` is the spec-defined fixed-size inline container.
  *    Because `n` is a compile-time constant, the growth tests below model
  *    user-space growable storage as the closest updated-spec stand-in for the
- *    now-deferred dynamic list containers (see type_parameters.md §8).
+ *    now-deferred dynamic list containers (see generics.md §9).
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
@@ -756,7 +756,7 @@ static void test4(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 5 — Owned buffer append growth
    Dynamic list containers are not specified on `main` (see
-   type_parameters.md §8), so this benchmark models the closest current-spec
+   generics.md §9), so this benchmark models the closest current-spec
    equivalent: a growable user-space buffer built from contiguous owned
    `Array`-like storage with compile-time-sized chunks.
 ═══════════════════════════════════════════════════════════════════ */

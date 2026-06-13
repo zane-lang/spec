@@ -277,7 +277,7 @@ Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees e
 
 ### 8.1 Compiler-provided layout
 
-`Array<T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `T`. Its byte size is `n * sizeof(T)`. It has no header. Both parameters may be supplied as concrete arguments (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([1, 2, 3])`).
+`Array<T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `T`. Its byte size is `n * sizeof(T)`. It has no header. Both parameters may be supplied as concrete arguments (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`).
 
 ### 8.2 Array is the fixed-size storage base case
 

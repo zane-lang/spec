@@ -97,8 +97,11 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 The `<>` type-expression syntax shares its characters with the `<` and `>` comparison operators. Casing resolves the overlap without lookahead: the operand on the left of `<` in a type expression is always a type, and a type is always uppercase-initial.
 
 ```zane
-data Array<Int, 9>   // type expression: Array is uppercase, so < opens a type argument list
-ok Bool = a < b      // comparison: a is lowercase, so < is the comparison operator
+type Holder = struct {
+    data Array<Int, 9>   // type expression: Array is uppercase, so < opens a type argument list
+}
+
+ok Bool = a < b          // comparison: a is lowercase, so < is the comparison operator
 ```
 
 A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The casing rule therefore tells the two apart by inspecting a single token's first letter.
