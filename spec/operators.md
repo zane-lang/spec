@@ -10,6 +10,7 @@ This document specifies Zane's operator system: the fixed operator set, where op
 
 Zane treats operators as mathematical notation with a small, fixed vocabulary.
 
+- **`Operators are grammar, not values`.** Operators cannot be referenced as values; they exist only as surface syntax in expressions. Every operator use site carries the operand *values* with their static types, and resolution picks the matching implementation from those types, which is what makes operator overloading unambiguous. See §2.6 below and the parallel rule for function names in [`functions.md`](functions.md) §4.4.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
@@ -78,6 +79,17 @@ if ok or fallback() { ... }
 
 Zane does not specify a separate bitwise-complement meaning for `~`.
 
+### 2.6 Operators are not values
+Operators exist only as surface syntax in expressions. There is no surface form that yields an operator as a value, and an operator token cannot appear on the right-hand side of an assignment or in any other value position. The only way an operator is mentioned in source is at a use site, written in its infix or prefix position together with its operands.
+
+This is what makes the operator overloading rules in §2.2 unambiguous. The set of candidate implementations for an operator use site is determined by the static types of the operand *values* at that use site; the operator token itself never carries identity as a name. Because operators are not values, the language has no notion of "the `+` for `Int` and `Float`" as a referenceable thing.
+
+```zane
+func Float[Int, Int] = +   // ILLEGAL: operators are not values, only lambda literals can produce a function value
+```
+
+The same property extends to function names: a package-scope function is also a grammar token, not a value, so the only way to obtain a function value is a lambda literal or a lambda variable. See [`functions.md`](functions.md) §4.4 for the parallel rule.
+
 ---
 
 ## 3. Precedence and Associativity
@@ -139,6 +151,7 @@ The following are not operators in Zane:
 
 | Decision | Rationale |
 |---|---|
+| Operators are grammar, not values | Operators are referenced only at their use site, and resolution is driven by the operand *types* at that site, which is what lets operator overloading stay unambiguous. The same property extends to function names in [`functions.md`](functions.md) §4.4. |
 | Fixed operator set | Operators are for math; a small stable set keeps code readable and parsing simple. |
 | Fixed precedence in syntax | Parsing must be determined by tokens alone so refactors and tooling do not need type information to know grouping. |
 | `~` as the only unary operator | Unifies negation and complement without overloading `-`/`!`. |
