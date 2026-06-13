@@ -159,15 +159,15 @@ A function type leads with its return type, then lists parameter types inside `[
 
 ```zane
 ReturnType[ParamType, ...]
-ReturnType ? AbortType[ParamType, ...]
+ReturnType?AbortType[ParamType, ...]
 ReturnType[this ReceiverType, ParamType, ...]
 ReturnType[this ReceiverType, ParamType, ...] mut
 &ReturnType[this ReceiverType, ParamType, ...]
-ReturnType ? AbortType[this ReceiverType, ParamType, ...]
-ReturnType ? AbortType[this ReceiverType, ParamType, ...] mut
+ReturnType?AbortType[this ReceiverType, ParamType, ...]
+ReturnType?AbortType[this ReceiverType, ParamType, ...] mut
 ```
 
-The abort type stays attached to the return type, exactly as in a declaration's `ReturnType ? AbortType name(...)` header.
+The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
 
 Reference-typed parameters and returns use the ordinary type form:
 
@@ -192,10 +192,10 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```zane
 ReturnType name(param Type, ...) { body }
 ReturnType name(param &Type, ...) { body }
-ReturnType ? AbortType name(param Type, ...) { body }
+ReturnType?AbortType name(param Type, ...) { body }
 ReturnType name(param Type, ...) => expr
 ReturnType name(param &Type, ...) => expr
-ReturnType ? AbortType name(param Type, ...) => expr
+ReturnType?AbortType name(param Type, ...) => expr
 ```
 
 ### 3.2 Methods
@@ -205,14 +205,14 @@ ReturnType name(this ReceiverType, param Type, ...) { body }
 ReturnType name(this ReceiverType, param &Type, ...) { body }
 ReturnType name(this ReceiverType, param Type, ...) mut { body }
 ReturnType name(this ReceiverType, param &Type, ...) mut { body }
-ReturnType ? AbortType name(this ReceiverType, param Type, ...) { body }
-ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut { body }
+ReturnType?AbortType name(this ReceiverType, param Type, ...) { body }
+ReturnType?AbortType name(this ReceiverType, param Type, ...) mut { body }
 ReturnType name(this ReceiverType, param Type, ...) => expr
 ReturnType name(this ReceiverType, param &Type, ...) => expr
 ReturnType name(this ReceiverType, param Type, ...) mut => expr
 ReturnType name(this ReceiverType, param &Type, ...) mut => expr
-ReturnType ? AbortType name(this ReceiverType, param Type, ...) => expr
-ReturnType ? AbortType name(this ReceiverType, param Type, ...) mut => expr
+ReturnType?AbortType name(this ReceiverType, param Type, ...) => expr
+ReturnType?AbortType name(this ReceiverType, param Type, ...) mut => expr
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
@@ -322,7 +322,7 @@ ReturnType() { body }
 ReturnType(param Type, ...) { body }
 ReturnType() => expr
 ReturnType(param Type, ...) => expr
-ReturnType ? AbortType(param Type, ...) { body }
+ReturnType?AbortType(param Type, ...) { body }
 ReturnType(this ReceiverType) { body }
 ReturnType(this ReceiverType) mut { body }
 ReturnType(this ReceiverType, param Type, ...) { body }
@@ -350,7 +350,7 @@ A lambda-variable declaration binds a lambda literal to a symbol. The shorthand 
 ```zane
 name ReturnType(param Type, ...) { body }
 name ReturnType(param Type, ...) => expr
-name ReturnType ? AbortType(param Type, ...) { body }
+name ReturnType?AbortType(param Type, ...) { body }
 name ReturnType(this ReceiverType, param Type, ...) mut { body }
 ```
 
@@ -510,7 +510,7 @@ loop name to endExpr { ... }
 ### 6.1 Abortable return types
 
 ```zane
-ReturnType ? AbortType
+ReturnType?AbortType
 ```
 
 ### 6.2 `?` handlers
