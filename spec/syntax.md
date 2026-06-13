@@ -18,9 +18,13 @@ name Type{field: expr, ...}
 name Type{fieldA, fieldB, ...}
 name Type = expr
 name &Type = expr
+name ReturnType(param Type, ...) { body }
+name ReturnType(param Type, ...) => expr
 ```
 
 `Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+
+The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name Type(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
 Every symbol declaration is directly initialized. Bare forms such as `name Type` and `name &Type` are not declaration forms.
 
@@ -151,24 +155,33 @@ These compiler-provided concept types represent source literals before they are 
 
 ### 2.9 Function types
 
+A function type leads with its return type, then lists parameter types inside `[ ]`, then any trailing `mut`. There is no `->` arrow. This mirrors the order of function declarations (§3.1–§3.2) and lambda literals (§3.8): the return contract is written first.
+
 ```zane
-(ParamType, ...) -> ReturnType
-(ParamType, ...) -> ReturnType ? AbortType
-(this ReceiverType, ParamType, ...) -> ReturnType
-(this ReceiverType, ParamType, ...) mut -> ReturnType
-(this ReceiverType, ParamType, ...) -> &ReturnType
-(this ReceiverType, ParamType, ...) -> ReturnType ? AbortType
-(this ReceiverType, ParamType, ...) mut -> ReturnType ? AbortType
+ReturnType[ParamType, ...]
+ReturnType ? AbortType[ParamType, ...]
+ReturnType[this ReceiverType, ParamType, ...]
+ReturnType[this ReceiverType, ParamType, ...] mut
+&ReturnType[this ReceiverType, ParamType, ...]
+ReturnType ? AbortType[this ReceiverType, ParamType, ...]
+ReturnType ? AbortType[this ReceiverType, ParamType, ...] mut
 ```
+
+The abort type stays attached to the return type, exactly as in a declaration's `ReturnType ? AbortType name(...)` header.
 
 Reference-typed parameters and returns use the ordinary type form:
 
 ```zane
-(&ParamType, ...) -> ReturnType
-(this ReceiverType, &ParamType, ...) -> &ReturnType
+ReturnType[&ParamType, ...]
+&ReturnType[this ReceiverType, &ParamType, ...]
 ```
 
 `mut` is legal only when the first parameter is `this`.
+
+```zane
+Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
+Void[Int, this Node]  // ILLEGAL: this must be the first parameter
+```
 
 ---
 
@@ -300,35 +313,57 @@ init{
 
 A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
 
-### 3.8 Lambda literals
+### 3.8 Lambda literals and lambda-variable declarations
+
+A lambda literal is a function declaration with the name removed. It writes its own return type, parameter types, abort type, and `mut`, exactly like a named function:
 
 ```zane
-() { body }
-(name, ...) { body }
-() => expr
-(name, ...) => expr
-(this) { body }
-(this) mut { body }
-(this, name, ...) { body }
-(this, name, ...) mut { body }
-(this) => expr
-(this) mut => expr
-(this, name, ...) => expr
-(this, name, ...) mut => expr
+ReturnType() { body }
+ReturnType(param Type, ...) { body }
+ReturnType() => expr
+ReturnType(param Type, ...) => expr
+ReturnType ? AbortType(param Type, ...) { body }
+ReturnType(this ReceiverType) { body }
+ReturnType(this ReceiverType) mut { body }
+ReturnType(this ReceiverType, param Type, ...) { body }
+ReturnType(this ReceiverType, param Type, ...) mut { body }
+ReturnType(this ReceiverType, param Type, ...) => expr
+ReturnType(this ReceiverType, param Type, ...) mut => expr
 ```
 
-Lambda literals omit the function name, parameter types, return type, and abort type. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
+A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. `=> expr` is legal only when the declared return type is not `Void`.
 
 Examples:
 
 ```zane
-element!onClick((eventData) {
+element!onClick(Void(eventData EventData) {
     ...
 })
 
-element!onClick((this, data) mut {
+element!onClick(Void(this Element, data EventData) mut {
     ...
 })
+```
+
+A lambda-variable declaration binds a lambda literal to a symbol. The shorthand writes the symbol name in front of the lambda literal and drops the separate `= literal`, mirroring the constructor-call instantiation form `name Type(args, ...)`:
+
+```zane
+name ReturnType(param Type, ...) { body }
+name ReturnType(param Type, ...) => expr
+name ReturnType ? AbortType(param Type, ...) { body }
+name ReturnType(this ReceiverType, param Type, ...) mut { body }
+```
+
+The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
+
+```zane
+callback Float[this Player] mut = Float(this Player) mut {
+    this.shooting = false
+}
+
+callback Float(this Player) mut {        // shorthand for the line above
+    this.shooting = false
+}
 ```
 
 ### 3.9 Operator definitions
@@ -364,11 +399,17 @@ receiver:PackageName$method(args...)
 receiver!PackageName$method(args...)
 ```
 
-### 4.3 Function references
+### 4.3 Callables are call-only
+
+Methods, free functions, and operators have no value form. A package-scope callable name may appear only in call position; it cannot be written as a bare value.
 
 ```zane
-PackageName$functionName
+PackageName$functionName(args...)   // legal: call position
+PackageName$functionName            // ILLEGAL: callables cannot be referenced as values
++                                   // ILLEGAL: operators cannot be referenced as values
 ```
+
+To obtain a function value, declare a lambda-variable (§3.8). A lambda-variable is an ordinary symbol with a single function type, so it carries no overload set.
 
 ### 4.4 Pipe syntax
 

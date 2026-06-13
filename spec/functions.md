@@ -230,56 +230,61 @@ Because methods are package-scope functions, any package may define methods on i
 
 ## 7. Function Values and Lambdas
 
-### 7.1 Package-scope functions are referenced as `PackageName$name`
-Methods and free functions are both referenced as values using the package namespace:
+### 7.1 Callables cannot be referenced as values
+Methods, free functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. This is exactly the rule that already governs operators: `+` can be called, but `+` cannot be written as a value.
 
 ```zane
-Graph$scaledId
-Graph$setScale
-Graph$getScale
+Graph$scaledId(node, Int(2))   // legal: call position
+Graph$scaledId                 // ILLEGAL: callables cannot be referenced as values
 ```
 
-When referenced as a value, a method's `this` parameter remains explicit in the function type.
+The reason is the same one that makes operators safe to overload. An overloaded name is not a single value; it is a set of candidates that only collapses to one when arguments are supplied at a call site. In value position there are no arguments, so nothing selects a member of the set. Passing an overloaded callable into an overloaded parameter would have to choose on both sides at once with no information to choose from. Making callables call-only removes that whole class of ambiguity by construction.
 
-### 7.2 Lambdas use contextual typing
-Lambda literals write only parameter names. The surrounding function-value context supplies the parameter types, return type, and abort type:
+> **See also:** [`operators.md`](operators.md) §5.3 for the parallel rule on operators.
+
+### 7.2 Lambdas are self-typed function values
+A lambda literal is a function declaration with the name removed. It writes its own parameter types, return type, abort type, and `mut` (see [`syntax.md`](syntax.md) §3.8). Nothing is inferred from context.
 
 ```zane
-Void onClick(this Element, (EventData) -> Void callback) mut {
-    ...
-}
-
-element!onClick((eventData) {
-    ...
+receiver(Float(x Int) {
+    if x < Int(10) {
+        return Float(0)
+    } else {
+        return Float(1) / Float(x)
+    }
 })
 ```
 
-`mut` is not inferred. A lambda that needs the receiver-mutation contract writes `mut` explicitly:
+Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** receiver without ambiguity: the lambda fixes its own type, so overload resolution on the receiver proceeds with ordinary argument types and no circularity. Self-typed lambdas can also be written and passed directly in the same expression, since they no longer depend on a surrounding context to fix their type.
+
+`mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned to a non-`mut` function type:
 
 ```zane
-onEventCallback (this Node, EventData) mut -> Void = (this, data) {
+onEventCallback Void[this Node, EventData] mut = Void(this Node, data EventData) {
     ...
-} // OK: non-`mut` lambda assigned to a `mut` callback type
+} // OK: non-`mut` lambda assigned to a `mut` function type
 
-onEventCallback = (this, data) mut {
-    ...
-}
-
-readonlyCallback (this Node, EventData) -> Void = (this, data) {
-    ...
-}
-
-readonlyCallback = (this, data) mut {
+readonlyCallback Void[this Node, EventData] = Void(this Node, data EventData) mut {
     ...
 } // ILLEGAL: expected a non-`mut` function value
 ```
 
-Because a lambda literal relies on contextual typing, it cannot be written and called directly in the same expression. The call must go through a name or another surrounding context that already fixes the function type.
+### 7.3 Lambda-variables hold function values
+To name a function value, declare a **lambda-variable**: a symbol bound to a lambda literal. The shorthand mirrors constructor-call instantiation, swapping the name and return type relative to a function declaration:
 
-### 7.3 Lambdas do not capture
+```zane
+Float callback(x Int) { ... }   // function declaration
+callback Float(x Int) { ... }   // lambda-variable declaration
+```
+
+A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This is what makes `receiver(callback)` well-defined where referencing an overloaded callable would not be.
+
+> **See also:** [`syntax.md`](syntax.md) §2.9 for function types and §3.8 for lambda literals and lambda-variable declarations.
+
+### 7.4 Lambdas do not capture
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency.md`](concurrency.md) §5.2 ("Lambdas do not capture").
 
-### 7.4 No bound method references
+### 7.5 No bound method references
 Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
 
 ---
@@ -306,7 +311,9 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
 | Generic match uses inferred type generics only | Callers never write type arguments, so the generic-match phase is purely an inference step driven by argument types and type ascriptions (see [`generics.md`](generics.md) §5). |
 | Generic match also unifies type-parameter symbols | Type-parameter symbols inside the called declaration are inferred from the type-parameter part of each call argument's static type in the same pass, so a single generic-match phase handles both kinds. The *type-parameter part* of a static type is the integer value baked into the type identifier (see [`generics.md`](generics.md) §2.4 and §7.1). |
-| Package-qualified function values | Uses one naming rule for methods and free functions. |
+| Callables are call-only | An overloaded name is a candidate set, not a value; it only collapses when arguments are supplied at a call site. Keeping methods, free functions, and operators call-only removes the ambiguity of passing an overloaded name into an overloaded parameter, exactly as operators already avoid it. |
+| Self-typed lambdas | A lambda carries its own complete type, so it is a single value that overload resolution can match without circularity even when the receiver is overloaded. |
+| Lambda-variables for function values | A named lambda-variable has one function type and cannot accumulate an overload set, so it is always unambiguous in value position. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
 
@@ -325,6 +332,8 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `&` at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
-| Lambda | Contextually typed function value; `mut` stays explicit; no capture |
+| Callable reference | Illegal; methods, free functions, and operators are call-only and have no value form |
+| Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
+| Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Unqualified method lookup | Searches home package, then current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |
