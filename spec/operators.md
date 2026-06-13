@@ -133,6 +133,11 @@ The following are not operators in Zane:
 - `++`, `--`, `+=`, `-=` and other mutation operators
 - `!=` (replaced by `~=` as a derived operator)
 
+### 5.3 Operators are call-only
+An operator token may appear only in operator position; it has no value form. There is no syntax that references `+` or `<` as a value. This is the same rule that makes methods and free functions call-only, and it is why an overloaded operator never has to be resolved without operands. To pass behavior as a value, use a lambda-variable.
+
+> **See also:** [`functions.md`](functions.md) §7.1 for the general call-only rule on callables.
+
 ---
 
 ## 6. Design Rationale
@@ -148,3 +153,4 @@ The following are not operators in Zane:
 | `/` remains primitive | Multiplicative inverse is not universally available, and `a / b` is not definitionally identical to `a * (1/b)` across all types. |
 | `and`/`or` as keywords | Preserves short-circuit control flow. |
 | Non-associative equality | Prevents accidental chaining bugs. |
+| Operators are call-only | An operator with no value form is never resolved without operands, so an overloaded operator is always disambiguated by its operands. |

@@ -99,6 +99,16 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The rule is about initialization happening directly at the binding site, not later through control flow.
 - **Canonical home:** [`memory.md`](memory.md) §2.11
 
+### 3.8 call-only callable
+- **Meaning:** Methods, free functions, and operators may appear only in call position; they have no value form and cannot be referenced as values.
+- **Why this name:** The name states the single permitted use site — a call — and contrasts it with the value form that callables deliberately lack.
+- **Canonical home:** [`functions.md`](functions.md) §7.1
+
+### 3.9 lambda-variable
+- **Meaning:** A symbol bound to a lambda literal. It has one function type and is the only way to hold a function value, since callables themselves are call-only.
+- **Why this name:** The term pairs the lambda value with the variable that names it, distinguishing it from an anonymous lambda literal and from a call-only callable.
+- **Canonical home:** [`functions.md`](functions.md) §7.3
+
 ---
 
 ## 4. Packages, Operators, and Versioning

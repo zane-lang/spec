@@ -22,10 +22,10 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 An abortable function declares:
 
 ```zane
-ReturnType ? AbortType
+ReturnType?AbortType
 ```
 
-A declaration with no `? AbortType` cannot abort.
+A declaration with no `?AbortType` cannot abort.
 
 ### 2.2 `Void` abort type
 If failure carries no payload, the abort type is `Void`. In that case `abort` is written without an argument.
@@ -39,14 +39,12 @@ Abortability and mutation are independent. A method may be:
 - `mut`, aborting
 
 ### 2.4 Abort type is structural, not behavioral
-Changing a function's abort type changes its function type. Abort types cannot be silently discarded when functions are passed around as values.
+Changing a function's abort type changes its function type. Abort types cannot be silently discarded when function values are passed around. Because callables are call-only, a function value is always a lambda-variable, and its declared function type must preserve the abort type of the lambda it holds.
 
 ```zane
-Int parse(String text) ? ParseError { ... }
+parserOk Int?ParseError[String] = Int?ParseError(text String) { ... } // ok
 
-parserOk (String) -> Int ? ParseError = parse // ok
-
-parserBad (String) -> Int = parse // ILLEGAL: abort type would be dropped
+parserBad Int[String] = Int?ParseError(text String) { ... } // ILLEGAL: abort type would be dropped
 ```
 
 ---
@@ -234,7 +232,7 @@ Swift treats fallibility as a throwing effect with `do`/`catch` recovery.
 
 | Difference | Swift | Zane |
 |---|---|---|
-| Error type in signature | `throws` does not name a concrete error type in the signature surface | `? AbortType` names the failure type directly |
+| Error type in signature | `throws` does not name a concrete error type in the signature surface | `?AbortType` names the failure type directly |
 | Recovery form | `do { try ... } catch { ... }` wraps the call in a separate control structure | the handler is attached directly to the call expression |
 | Runtime model | uses exception-style unwinding | uses explicit typed branches at the call site |
 | Coalescing | `try?` discards error information | `??` replaces an aborted call with a fallback value; abortability is still checked |
@@ -245,7 +243,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 
 | Difference | Zig | Zane |
 |---|---|---|
-| Signature order | `Error!Value` | `Value ? Abort` |
+| Signature order | `Error!Value` | `Value?Abort` |
 | Recovery syntax | `catch` with labeled-block patterns | `?` with `resolve`/`return`/`abort` |
 | Payload-free failure | inferred error sets and union mechanics | explicit `Void` abort type |
 | Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are analyzed separately; both must be satisfied at call sites |
@@ -270,7 +268,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 
 | Concept | Rule |
 |---|---|
-| Abortable function | Declares `ReturnType ? AbortType` |
+| Abortable function | Declares `ReturnType?AbortType` |
 | `?` handler | Mandatory for every abortable call |
 | Handler paths | Must end with `resolve`, `return`, or `abort` |
 | `??` | Shorthand for resolve-with-default |

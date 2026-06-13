@@ -312,8 +312,8 @@ Use the appropriate language tag (`c`, `go`, `rust`, `swift`, `python`, `zig`) f
 Mark clearly illegal syntax or semantics with a `// ILLEGAL` or `// compile error` comment:
 
 ```zane
-(Node, Int) mut -> Int   // ILLEGAL: mut requires this as first parameter
-(Int, this Node) -> Void // ILLEGAL: this must be the first parameter
+Int[Node, Int] mut   // ILLEGAL: mut requires this as first parameter
+Void[Int, this Node] // ILLEGAL: this must be the first parameter
 ```
 
 ---
