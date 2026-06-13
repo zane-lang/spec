@@ -117,3 +117,27 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A package's canonical identity is its full source URL, while local aliases are only import conveniences.
 - **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
+
+---
+
+## 5. Functions, Lambdas, and Function Types
+
+### 5.1 function value
+- **Meaning:** A function value is a lambda literal or a lambda variable. Function values are the only values in Zane that have a function type; there is no surface form that produces a function value from a function *name* (free function, method, or constructor).
+- **Why this name:** The label is the parallel of the "operator value" concept that is rejected in [`operators.md`](operators.md) §2.6. The only values that have a function type are lambda-derived, so calling them "function values" makes their source explicit and rules out name-references as a separate source.
+- **Canonical home:** [`functions.md`](functions.md) §4.4, §7.1, and §7.2
+
+### 5.2 lambda
+- **Meaning:** A lambda is the surface form that produces a function value. It comes in two shapes: a **lambda literal** (`(params) { body }` contextually, or `ReturnType(params DeclForm) { body }` explicitly) and a **lambda variable** (a typed lambda held in a single-type variable, with a long form `name FunctionType = (params) { body }` and a shorthand `name FunctionType(params DeclForm) { body }`). Lambdas do not capture outer state.
+- **Why this name:** The label is the same word as in mainstream functional programming and carries the same role: an anonymous callable value. Zane's lambda has additional restrictions (no capture) that distinguish it from closures in those languages.
+- **Canonical home:** [`functions.md`](functions.md) §7
+
+### 5.3 function type
+- **Meaning:** The type of a function value. Zane writes function types in return-type-first bracket form: `ReturnType [paramTypes] mut? ?AbortType?`. The brackets are required even when empty (`Void[]`); a method's `this` parameter is the first element of the bracket; `mut` follows the brackets when the first parameter is `this`; `? AbortType` follows the brackets for an abortable return. `&` parameter and return forms use the existing `&` type syntax inside the bracket and as a return-type prefix.
+- **Why this name:** The bracket form is the same shape every other parameterized type in Zane uses (`Array[size]`, `Matrix[rows]X[cols]`, type-parameter binders). Putting the return type first reads as *"return type, parameterized by these input types"*, which is the natural reading order for a value the caller is going to use.
+- **Canonical home:** [`syntax.md`](syntax.md) §2.9 and [`functions.md`](functions.md) §7.4
+
+### 5.4 function reference
+- **Meaning:** This concept does not exist in Zane. A function name is not a value, so there is no surface form for a "function reference" — neither a free function, a method, nor a constructor may be written in a value position. The only way to obtain a callable is a lambda literal or a lambda variable.
+- **Why this name:** The label is recorded so the *absence* of the feature is explicit and the parallel to [`operators.md`](operators.md) §2.6 (operators are grammar, not values) is searchable. Readers who reach for the term in another language should be redirected to the lambda forms in [`functions.md`](functions.md) §7.
+- **Canonical home:** [`functions.md`](functions.md) §4.4 and §7.1
