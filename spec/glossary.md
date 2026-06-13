@@ -74,10 +74,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The rule is checked recursively through fields downstream from the outer struct, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
-### 3.3 type-parameter symbol forms
-- **Meaning:** A type-parameter symbol has three syntactic forms: *binder* (`[name]` in a type header or method `this` parameter type), *reference* (`[name]` in any other type expression in the same scope), and *root* (an integer literal baked into the type identifier, e.g. `Array10`). Type generics do not share this three-form structure: a `'`-prefixed name in a type position is simultaneously the introduction and the reference, because the language provides no separate binder syntax.
-- **Why this name:** The three-form structure highlights the three distinct syntactic roles a type-parameter symbol can play — introducing a fresh symbol, referring to one already in scope, or starting a chain without an outer reference. Type generics deliberately collapse binder and reference into a single `'`-prefixed name because the inferred-generics design has no separate binder syntax.
-- **Canonical home:** [`generics.md`](generics.md) §2.4 (type parameter) and §3 (type generic)
+### 3.3 unified type parameters
+- **Meaning:** A type is parameterized by a single positional `<>` slot system. Each parameter is either a *type parameter* (a `'`-prefixed uppercase name such as `'T`, ranging over types) or a *number parameter* (a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). The two kinds differ only by marker, not by syntactic position.
+- **Why this name:** The system unifies what were previously two separate mechanisms — apostrophe generics and bracketed size parameters in different positions — into one slot system distinguished only by the parameter's marker.
+- **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
 - **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage.
@@ -108,6 +108,26 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A symbol bound to a lambda literal. It has one function type and is the only way to hold a function value, since callables themselves are call-only.
 - **Why this name:** The term pairs the lambda value with the variable that names it, distinguishing it from an anonymous lambda literal and from a call-only callable.
 - **Canonical home:** [`functions.md`](functions.md) §7.3
+
+### 3.10 types as templated functions
+- **Meaning:** A type definition takes parameters and is executed to produce a concrete layout, the way a function takes parameters and produces a value. Templating is a direct consequence of types being executable rather than a separate feature.
+- **Why this name:** The label states the model directly: a type is a function over its parameters, and applying arguments evaluates it into a concrete type.
+- **Canonical home:** [`generics.md`](generics.md) §2
+
+### 3.11 type expression vs constructor call
+- **Meaning:** `Type<...>` is a compile-time type expression that applies arguments to a parameterized type and describes architecture; `Type(...)` is a runtime constructor call that builds a value. A constructor call is always by bare name and never carries a `<>` list.
+- **Why this name:** The two forms mention the same type name but belong to different systems — the type system versus the value system — so the contrast names the boundary.
+- **Canonical home:** [`generics.md`](generics.md) §4 and §5
+
+### 3.12 distinct type vs alias
+- **Meaning:** `type Name = T` introduces a new distinct type that is structurally equal to `T` but not interchangeable with it; `alias Name = T` introduces a fully interchangeable name. The keyword carries the distinction.
+- **Why this name:** The pairing names the only difference between the two declaration forms — whether the result is a new type or just another name.
+- **Canonical home:** [`types.md`](types.md) §5
+
+### 3.13 casing-determined kind
+- **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial name is a type, a lowercase-initial name is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
+- **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
+- **Canonical home:** [`lexical.md`](lexical.md) §3
 
 ---
 

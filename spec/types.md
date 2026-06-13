@@ -1,6 +1,6 @@
 # Zane Types
 
-This document specifies Zane's data types: classes, structs, fields, constructors, and the `init{ }` expression. Methods and other behavior live in [`functions.md`](functions.md).
+This document specifies Zane's data types: classes, structs, fields, constructors, `type` and `alias` declarations, and the `init{ }` expression. Methods and other behavior live in [`functions.md`](functions.md).
 
 > **See also:** [`memory.md`](memory.md) §2 for ownership rules. [`functions.md`](functions.md) for methods and free functions. [`syntax.md`](syntax.md) §1 and §3 for declaration grammar.
 
@@ -14,6 +14,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`Two type kinds`.** `class` is heap-allocated with single ownership; `struct` is inline value storage.
 - **`Package-scope constructors`.** Construction is a function declaration at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
+- **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
 
 ---
 
@@ -234,6 +235,26 @@ Car(engine Engine) {
 car Car(Engine())   // legal: plain owner field accepts a temporary
 ```
 
+### 3.9 Type and number parameters
+A constructor may declare parameters that carry a type or a compile-time number rather than an ordinary value. A `type` parameter accepts a type as its argument; a `number` parameter accepts a compile-time number. These kinds are how a constructor for a parameterized type receives its parameters, since a constructor call never carries a `<>` type-argument list.
+
+```zane
+Vector(T type) {
+    return init{
+        x: T(0),
+        y: T(0)
+    }
+}
+
+Array(T type, n number) {
+    // zero-initialise n elements of type T
+}
+```
+
+A constructor is always called by its bare name. A type reaches it either inferred from the value arguments (`Vector(Int(2), Int(3))`) or passed explicitly to a `type` parameter (`Vector(Int)`); a number reaches a `number` parameter the same way (`Array(Int, 10000)`).
+
+> **See also:** [`generics.md`](generics.md) §5 for the complete rules on how types and numbers reach a constructor, and §3 for the unified parameter system.
+
 ---
 
 ## 4. Implicit Constructors
@@ -349,7 +370,46 @@ feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
 
 ---
 
-## 5. Design Rationale
+## 5. Type Definitions and Aliases
+
+Zane names types with two declaration keywords. `type` introduces a new distinct type; `alias` introduces an interchangeable name. Both use `=` as the delimiter, so the keyword alone carries the distinction.
+
+### 5.1 `type` declares a distinct type
+A `type` declaration introduces a new, distinct named type. The new type is structurally equal to its right-hand side but is **not** interchangeable with it.
+
+```zane
+type VectorInt = Vector<Int>   // distinct type; NOT interchangeable with Vector<Int>
+```
+
+A value of `VectorInt` and a value of `Vector<Int>` do not substitute for each other implicitly, even though their layouts match.
+
+### 5.2 `alias` declares an interchangeable name
+An `alias` declaration introduces a true alias: the new name and its right-hand side are fully interchangeable everywhere.
+
+```zane
+alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
+```
+
+### 5.3 The right-hand side is a type expression
+The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<'T, n>`, or an inline `struct { ... }` or `class { ... }` body.
+
+```zane
+type Wrapper = struct {
+    vec Vector<Int>
+    arr Array<Int, 10000>
+}
+```
+
+The field-declaring forms `struct Name { ... }` and `class Name { ... }` (§2) are shorthand for `type Name = struct { ... }` and `type Name = class { ... }`.
+
+### 5.4 The keyword carries the distinction
+Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
+
+> **See also:** [`generics.md`](generics.md) §4 for type expressions and [`syntax.md`](syntax.md) §1 for the declaration grammar.
+
+---
+
+## 6. Design Rationale
 
 | Decision | Rationale |
 |---|---|
@@ -367,10 +427,12 @@ feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
 | Source type must be struct or compiler concept | Classes have ownership and identity; implicitly converting a class would hide ownership transfer. Compiler concept types in `@concepts$...` are designed for ergonomic lowering. |
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
+| `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
+| `type` / `number` constructor parameters | A constructor call carries no `<>` list, so a constructor for a parameterized type receives its template parameters as ordinary arguments; the `type` and `number` kinds let it accept a type or a size directly. |
 
 ---
 
-## 6. Summary
+## 7. Summary
 
 | Concept | Rule |
 |---|---|
@@ -382,3 +444,6 @@ feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
+| `type` / `number` constructor parameter | Accepts a type or a compile-time number as an argument; how a constructor for a parameterized type receives its parameters |
+| `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
+| `alias` declaration | Introduces an interchangeable alternate name for a type expression |

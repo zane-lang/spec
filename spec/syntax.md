@@ -67,6 +67,18 @@ struct Name {
 import PackageName
 ```
 
+### 1.6 Type and alias declarations
+
+```zane
+type Name = TypeExpr
+alias Name = TypeExpr
+type Name<'T, n> = TypeExpr
+type Name = struct { field Type, ... }
+type Name = class { field Type, ... }
+```
+
+`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct` or `class` body. A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+
 ---
 
 ## 2. Types
@@ -92,46 +104,46 @@ Type
 `&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
-Array[size] of &Node
+Array<&Node, n>
 ```
 
-### 2.4 Inferred type generics
+### 2.4 Type expressions
 
-A type generic is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
+A type expression applies arguments to a parameterized type with `<>`. Arguments are positional.
 
 ```zane
-struct Box {
-    value 'T
+Type<Arg, ...>
+Vector<Int>
+Array<Int, 10000>
+Matrix<Float, 3>
+```
+
+A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. See [`generics.md`](generics.md) §4 and §5.
+
+### 2.5 Type and number parameters
+
+A parameterized type declares its parameters in a `<>` header. A type parameter is a `'`-prefixed uppercase name; a number parameter is a lowercase name.
+
+```zane
+type Vector<'T> = struct {
+    x 'T
+    y 'T
+}
+
+type Buffer<'T, n> = struct {
+    data Array<'T, n>
 }
 ```
 
-The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`generics.md`](generics.md) §5.1 for the rule.
-
-### 2.5 Type-parameterized types
-
-Definition-site type-parameter binders:
-
-```zane
-struct Matrix[rows]X[cols] {
-    ...
-}
-```
-
-Use-site form (type parameters are baked into the type name; the type generics of the body are inferred):
-
-```zane
-Matrix10X20
-```
-
-Digits are illegal in identifiers except where they supply type parameters to a type-parameterized type name.
+Use sites supply arguments positionally through a type expression (§2.4). The casing of each `<>` slot marks its kind: `'T` is a type parameter, `n` is a number parameter. See [`lexical.md`](lexical.md) §3 and [`generics.md`](generics.md) §3.
 
 ### 2.6 Array storage primitive
 
 ```zane
-Array[size]
+Array<'T, n>
 ```
 
-`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is a type generic and is inferred from the surrounding context, just like any other type generic in the language.
+`Array<'T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `'T`. Both parameters may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<'T, n>`), or inferred by a constructor from a literal (`Array([1, 2, 3])`). See [`generics.md`](generics.md) §8.
 
 ### 2.7 Reserved compiler namespaces
 
@@ -230,9 +242,13 @@ TypeName(param &Type, ...) {
 }
 TypeName(param Type, ...) => init{ field: expr, ... }
 TypeName(param &Type, ...) => init{ field: expr, ... }
+TypeName(param type, ...) { return init{ field: expr, ... } }
+TypeName(param number, ...) { return init{ field: expr, ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
+
+A `type` parameter accepts a type as its argument; a `number` parameter accepts a compile-time number. A constructor is always called by its bare name and **MUST NOT** carry a `<>` list. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
 
 ### 3.4 Field constructors
 

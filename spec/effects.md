@@ -32,7 +32,7 @@ A capability is an object whose methods model access to external state, such as 
 `mut` is the only effect modifier in the language. It appears on methods whose receiver is a class type and grants write access to `this` and values owned by `this`.
 
 ### 2.4 Parameters are not mutable by default
-Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A type-parameter symbol that resolves to an `Int` value in body positions (see [`generics.md`](generics.md) §2.4) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
+Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.4) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
 
 ---
 
