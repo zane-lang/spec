@@ -28,7 +28,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | Document | Purpose |
 |---|---|
 | [`spec/types.md`](spec/types.md) | Classes, structs, fields, constructors, and implicit conversions |
-| [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
+| [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, and lambdas (function values come only from lambda literals and lambda variables) |
 | [`spec/generics.md`](spec/generics.md) | Inferred type generics, type parameters, and the `Array[size]` primitive |
 | [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, lifetimes, and heap layout |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
