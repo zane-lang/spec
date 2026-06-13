@@ -61,7 +61,7 @@ All fields whose names do not begin with `_` are public.
 This is intentional: private-field access in Zane is method-based, not package-based.
 
 ### 2.4 Type bodies contain no behavior
-Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
+Methods, constructors, and overload rules live at package scope. Function *names* are also package-scope — they are grammar tokens, not values (see [`functions.md`](functions.md) §4.4) — and the only function values Zane produces are lambda literals and lambda variables (see [`functions.md`](functions.md) §7). A reader can inspect a type body to learn layout without scanning for behavior.
 
 ---
 
