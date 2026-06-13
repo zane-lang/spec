@@ -225,7 +225,7 @@ Array<T Type, n Number>(values Array<T, n>) {
     // T and n inferred from the literal
 }
 
-arr Array([1, 2, 3])         // T = Int and n = 3 inferred from the literal
+arr Array([Int(1), Int(2), Int(3)])         // T = Int and n = 3 inferred from the literal
 ```
 
 The header binds `T` and `n`; the value-parameter type `Array<T, n>` lets the compiler read both from the literal's element type and length.
