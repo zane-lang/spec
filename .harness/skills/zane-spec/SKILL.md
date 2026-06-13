@@ -26,19 +26,19 @@ description: |
 2. **Read the target document in full before editing.** Every topic doc follows the structure in `contributing/writing-spec-docs.md` (overview, numbered sections, design rationale, summary). Skim the rationale and summary tables last — they are condensed views of the section bodies, and the section bodies are what the rationale is reasoning about.
    Why: edits to one section often break the rationale row that summarizes it; reading both keeps them aligned.
 
-3. **Use the unified type-parameter system correctly.** A type is a templated function: it declares parameters in a `<>` header and is executed to produce a layout. There is one positional `<>` slot system with two parameter kinds, distinguished by marker, not position:
-   - **Type parameter** — a `'`-prefixed uppercase name (e.g. `'T`). Ranges over types.
-   - **Number parameter** — a lowercase name (e.g. `n`). Ranges over compile-time numbers; resolves to a number value in body positions.
+3. **Use the unified type-parameter system correctly.** A type is a templated function: it declares parameters in a `<>` header and is executed to produce a layout. Functions, methods, and constructors use the same `<>` header. Each header entry is concept-typed, distinguished by the concept and by casing:
+   - **Type parameter** — `name Type` with an uppercase name (e.g. `T Type`). Ranges over types; referenced bare (`T`).
+   - **Number parameter** — `name Number` with a lowercase name (e.g. `n Number`). Ranges over compile-time numbers; referenced bare (`n`) and resolves to a number value in body positions.
 
-   `<>` is the type-expression (application) syntax — `Vector<Int>`, `Array<'T, n>` — and is correct in any type position. `()` is the constructor-call syntax and **never** carries a `<>` list; a type reaches a constructor by inference from values (`Vector(Int(2))`) or as an argument to a `type`/`number` parameter (`Vector(Int)`, `Array(Int, 10000)`). Casing is load-bearing (`spec/lexical.md`): uppercase = type, lowercase = value/number. The old `[name]` binders and `Array3`-style root forms no longer exist.
+   `<>` is the type-expression (application) syntax — `Vector<Int>`, `Array<T, n>` — and is correct in any type position. `()` is the call syntax and **never** carries a `<>` list; a type reaches a constructor by inference from a `<>` header parameter (`Vector(Int(2))`) or as a `Type`/`Number` value parameter passed explicitly (`Vector(Int)`, `Array(Int, 10000)`). Casing is load-bearing (`spec/lexical.md`): uppercase = type, lowercase = value/number. The `'` sigil, the old `[name]` binders, and `Array3`-style root forms no longer exist.
 
 4. **Cross-reference, don't duplicate.** If a rule belongs in `spec/generics.md` (the unified parameter system) or `spec/lexical.md` (casing rules), reference it from `spec/types.md`, `spec/functions.md`, `spec/syntax.md`, or `spec/effects.md` rather than restating it. The contributing guide §1 is strict on this.
 
 5. **Validate your change before committing.** Run a grep for the forbidden *old* forms — the pre-redesign generics syntax that should no longer appear:
    ```
-   grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form" spec/*.md
+   grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
    ```
-   These were removed by the type-system redesign. The new syntax (`Vector<Int>`, `Array<'T, n>`, `type`/`number` constructor parameters) is correct and expected. The only stray `<...>` matches that are *not* Zane are the result-type comparator references in `spec/error-handling.md` (`Result<T, E>` is Rust's type, not Zane's).
+   These were removed by the type-system redesign. The new syntax (`Vector<Int>`, `Array<T, n>`, `Type`/`Number` constructor parameters) is correct and expected. The only stray `<...>` matches that are *not* Zane are the result-type comparator references in `spec/error-handling.md` (`Result<T, E>` is Rust's type, not Zane's).
 
 6. **If the change touches the type system** (anything in `spec/generics.md` or `spec/lexical.md`, or the `<>` type-expression / `type`/`number` parameter rules referenced elsewhere), spawn a parallel-track validation team via `mavis-team` before opening a PR. Two tracks:
    - Track A: validate the files the branch modified against their own rules.
@@ -55,7 +55,7 @@ description: |
 - If the change is structural, a follow-up commit with the validation team's FIX list applied before opening the PR.
 
 ## Failure handling
-- **Grep finds an old form (`Array[size]`, `[name]` binders, `Array3` root forms, "type generic", "type-parameter symbol").** Stop. The change references the pre-redesign generics design. Rewrite it in the unified `<>` system (`Array<'T, n>`, `type`/`number` parameters).
+- **Grep finds an old form (`Array[size]`, `[name]` binders, `Array3` root forms, `'T` apostrophe generics, "type generic", "type-parameter symbol").** Stop. The change references the pre-redesign generics design. Rewrite it in the unified `<>` system (`Array<T, n>`, `Type`/`Number` parameters).
 - **Cross-reference target no longer exists.** `spec/generics.md` has been renumbered by the redesign; if your `§3` is now `§4`, fix the reference in every doc that uses it, then re-grep for the old `§` numbers.
 - **The change conflicts with a section in another file.** Don't paper over it with a footnote. Either fix the conflicting section or escalate the conflict as a design call to the user.
 - **`bench/zane_bench.c` shows up in the diff for a spec change.** It is C, not Zane. Comments and `printf` labels in it that use old surface syntax (`Array[size]`, `List<T>`) are documentation, not parsing errors. Fix only the comment/label, never the C code.

@@ -30,7 +30,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 |---|---|
 | [`spec/types.md`](spec/types.md) | Classes, structs, fields, constructors, implicit conversions, and `type`/`alias` declarations |
 | [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
-| [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array<'T, n>` primitive |
+| [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array<T, n>` primitive |
 | [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, lifetimes, and heap layout |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
 | [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |

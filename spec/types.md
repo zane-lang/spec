@@ -236,22 +236,21 @@ car Car(Engine())   // legal: plain owner field accepts a temporary
 ```
 
 ### 3.9 Type and number parameters
-A constructor may declare parameters that carry a type or a compile-time number rather than an ordinary value. A `type` parameter accepts a type as its argument; a `number` parameter accepts a compile-time number. These kinds are how a constructor for a parameterized type receives its parameters, since a constructor call never carries a `<>` type-argument list.
+A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A parameter declared in the constructor's `<>` header is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
-Vector(T type) {
-    return init{
-        x: T(0),
-        y: T(0)
-    }
+// inferred: T is deduced from the value arguments
+Vector<T Type>(x T, y T) {
+    return init{x, y}
 }
 
-Array(T type, n number) {
+// explicit: the type and size are passed as arguments
+Array(T Type, n Number) {
     // zero-initialise n elements of type T
 }
 ```
 
-A constructor is always called by its bare name. A type reaches it either inferred from the value arguments (`Vector(Int(2), Int(3))`) or passed explicitly to a `type` parameter (`Vector(Int)`); a number reaches a `number` parameter the same way (`Array(Int, 10000)`).
+A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. A constructor is always called by its bare name: `Vector(Int(2), Int(3))` infers `T`, while `Array(Int, 10000)` passes the type and size explicitly.
 
 > **See also:** [`generics.md`](generics.md) §5 for the complete rules on how types and numbers reach a constructor, and §3 for the unified parameter system.
 
@@ -391,7 +390,7 @@ alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression
-The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<'T, n>`, or an inline `struct { ... }` or `class { ... }` body.
+The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline `struct { ... }` or `class { ... }` body.
 
 ```zane
 type Wrapper = struct {
@@ -428,7 +427,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
-| `type` / `number` constructor parameters | A constructor call carries no `<>` list, so a constructor for a parameterized type receives its template parameters as ordinary arguments; the `type` and `number` kinds let it accept a type or a size directly. |
+| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred via a `<>` header or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
 
 ---
 
@@ -444,6 +443,6 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
-| `type` / `number` constructor parameter | Accepts a type or a compile-time number as an argument; how a constructor for a parameterized type receives its parameters |
+| `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred via a `<>` header or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

@@ -53,12 +53,12 @@ vec vector(int(2))           // ILLEGAL: lowercase names are not types
 A binding, parameter, or field name is lowercase-initial. This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
 
 ```zane
-type Buffer<'T, n> = struct {   // 'T is a type parameter, n is a number parameter
-    data Array<'T, n>
+type Buffer<T Type, n Number> = struct {   // T is a type parameter, n is a number parameter
+    data Array<T, n>
 }
 ```
 
-A type parameter is the one value-of-the-type-system case: it is written with a leading `'` and an uppercase letter (`'T`), which marks it as a stand-in for a type rather than a concrete type. See [`generics.md`](generics.md) §3.
+A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time number. A parameter is introduced by the `<>` header and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
 ---
 
@@ -86,7 +86,6 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 
 | Sigil | Meaning | Canonical home |
 |---|---|---|
-| `'` | Type-parameter marker (`'T`) | [`generics.md`](generics.md) §3 |
 | `&` | Reference type (`&Node`) | [`memory.md`](memory.md) §2 |
 | `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`PackageName$member`) | [`packages.md`](packages.md) §1 |
@@ -127,7 +126,7 @@ A comparison never has a type on its immediate left, and a type expression never
 | Case sensitivity | Identifiers compare by exact bytes; case is never folded |
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
-| Number parameter | A lowercase name in a `<>` slot is a number, not a type |
-| Type parameter | A leading `'` with an uppercase letter (`'T`) marks a type stand-in |
+| Number parameter | A lowercase name (`n`) declared `n Number` in a `<>` header; a number, not a type |
+| Type parameter | An uppercase name (`T`) declared `T Type` in a `<>` header; referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |

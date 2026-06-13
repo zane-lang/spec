@@ -23,7 +23,7 @@
  *  Memory model:
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
- *    `Array<'T, n>` is the spec-defined fixed-size inline container.
+ *    `Array<T, n>` is the spec-defined fixed-size inline container.
  *    Because `n` is a compile-time constant, the growth tests below model
  *    user-space growable storage as the closest updated-spec stand-in for the
  *    now-deferred dynamic list containers (see type_parameters.md §8).
@@ -301,7 +301,7 @@ static void zm_free(void *p, size_t s) {
 
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
-     non-owning references. `Array<'T, n>` is the fixed-size inline
+     non-owning references. `Array<T, n>` is the fixed-size inline
      container. Growable buffers in these benchmarks are user-space layers
      built on top of contiguous owned storage.
 

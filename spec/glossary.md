@@ -75,8 +75,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
-- **Meaning:** A type is parameterized by a single positional `<>` slot system. Each parameter is either a *type parameter* (a `'`-prefixed uppercase name such as `'T`, ranging over types) or a *number parameter* (a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). The two kinds differ only by marker, not by syntactic position.
-- **Why this name:** The system unifies what were previously two separate mechanisms — apostrophe generics and bracketed size parameters in different positions — into one slot system distinguished only by the parameter's marker.
+- **Meaning:** A parameterized declaration lists its parameters in a `<>` header. Each entry is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). Parameters are referenced by bare name; casing carries the kind.
+- **Why this name:** The system unifies type and number parameters into one header-and-reference form shared by types, functions, methods, and constructors, distinguished only by the concept type (`Type`/`Number`) and the name's casing.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
@@ -128,6 +128,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial name is a type, a lowercase-initial name is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
 - **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
 - **Canonical home:** [`lexical.md`](lexical.md) §3
+
+### 3.14 `Type` and `Number` parameter concepts
+- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; as `<>` header entries they are inferred.
+- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
+- **Canonical home:** [`generics.md`](generics.md) §3.2
 
 ---
 
