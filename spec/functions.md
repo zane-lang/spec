@@ -185,8 +185,29 @@ Void consume(this Car, engine &Engine)  // ERROR
 ### 4.2 Consequences of the overload identity rules
 Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
 
+A further consequence is the **no-reference rule**: a function name is not a value, whether it has a single declaration or many. This is the function-value parallel of the operator rule from [`operators.md`](operators.md) §1 ("operators are grammar, not values"). See §4.4 below for the rule and the parallel.
+
 ### 4.3 Valid overloads differ by arity or parameter type
 Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `&`-ness at the same position.
+
+### 4.4 Functions are not values in name position
+A package-scope function name (a free function, a method, or a constructor) is not a value. There is no surface form that yields a function value from a name. The only way to obtain a function value is a lambda literal (§7) or a lambda variable (§7). The only way to *call* a function is to write the call form: `name(args...)`, `PackageName$name(args...)`, `receiver:method(args...)`, `receiver!method(args...)`, or the qualified-method forms in §2.6.
+
+This rule applies to **every** function name, whether it has a single declaration or multiple overloads. Overloaded names were already not referenceable as values in the older spec; the rule now extends the same treatment to non-overloaded names so the surface is uniform and has no conditional behaviour.
+
+The rule is the function-value parallel of [`operators.md`](operators.md) §1. Both operators and function names are grammar tokens, not values: the only way to obtain an `Int -> Int` callable is either an operator call (`a + b`) or a lambda, never a reference to a function by name. `PackageName$name` is a *call target*, not a value, just as `+` is a fixed grammar token rather than a value the user can name.
+
+```zane
+// ILLEGAL: function names are not values
+callback Float[Int] = Graph$scale
+```
+
+```zane
+// ILLEGAL: even non-overloaded free functions are not values
+mapper Int[Int] = identity$compose
+```
+
+Method desugaring under §2.6 is unaffected. The desugared form `ResolvedPkg$method(receiver, arg)` is internal to the compiler and never appears in user source.
 
 ---
 
@@ -228,59 +249,232 @@ Because methods are package-scope functions, any package may define methods on i
 
 ---
 
-## 7. Function Values and Lambdas
+## 7. Lambdas and Lambda Variables
 
-### 7.1 Package-scope functions are referenced as `PackageName$name`
-Methods and free functions are both referenced as values using the package namespace:
+A function value in Zane is always produced by a lambda. A function *name* is never a value (see §4.4). This section defines the two surface forms that produce a function value: a **lambda literal** written inline at a call site or in a typed slot, and a **lambda variable** that names a lambda with a fixed function type. It also defines the function-type ascription that both forms use.
+
+### 7.1 `PackageName$name` is a call target, not a value
+A package-qualified function name (`PackageName$name`) is the surface form of a *call*: writing `PackageName$name(args...)` invokes the function. The name is **not** legal in any value position. Every position that expects a function value — the right side of an assignment, an argument to a function or constructor, a typed slot of function type — rejects `PackageName$name` and requires a lambda literal or lambda variable instead.
 
 ```zane
-Graph$scaledId
-Graph$setScale
-Graph$getScale
+// ILLEGAL: function name in value position
+callback Float[Int] = Graph$scale
+
+// ILLEGAL: function name passed as an argument
+dispatch Int(Int, Float[Int]) = dispatchWith(Graph$scale)
+
+// ILLEGAL: function name in a typed slot
+mapper Float[Int] = Graph$scale
 ```
 
-When referenced as a value, a method's `this` parameter remains explicit in the function type.
+The rule is the function-value parallel of [`operators.md`](operators.md) §1: operators are a fixed set of grammar tokens, never values, and the same rule now applies uniformly to all function names. See §4.4 for the overload-side statement of the same rule.
 
-### 7.2 Lambdas use contextual typing
-Lambda literals write only parameter names. The surrounding function-value context supplies the parameter types, return type, and abort type:
+### 7.2 Lambda literals
+A lambda literal writes a parameter list and a body, optionally with an explicit return type. There are two surface forms.
+
+**Form A — explicit types.** The return type is written first, followed by a parenthesized parameter list in declaration form (name + type per parameter, comma-separated), followed by a body:
 
 ```zane
-Void onClick(this Element, (EventData) -> Void callback) mut {
+Float(x Int) {
+    return Float(x.value) * 2
+}
+```
+
+This is the explicit-typed literal. The parameter list inside the parentheses is the *lambda body header*, the same form a method or free-function declaration uses for its parameters (see §3.1 and §3.2). For a method lambda, the first parameter is `this`, and `mut` belongs on the function type:
+
+```zane
+Void(this Element, data EventData) {
     ...
 }
+```
 
+```zane
+Void mut[this Element, data EventData] {
+    ...
+}
+```
+
+**Form B — contextual typing.** When the surrounding slot already fixes the function type, the return type and parameter types can be omitted:
+
+```zane
 element!onClick((eventData) {
     ...
 })
 ```
 
-`mut` is not inferred. A lambda that needs the receiver-mutation contract writes `mut` explicitly:
+The contextual form writes only parameter names; the parameter types, return type, and abort type are supplied by the slot. Both forms are always legal; the choice is style. The contextual form is the original Zane lambda literal and is preserved unchanged from the previous spec.
+
+**Both forms compile to the same lambda value.** The following two declarations are equivalent:
 
 ```zane
-onEventCallback (this Node, EventData) mut -> Void = (this, data) {
-    ...
-} // OK: non-`mut` lambda assigned to a `mut` callback type
-
-onEventCallback = (this, data) mut {
-    ...
+// Form A: explicit return type
+callback Float(x Int) {
+    return Float(x.value) * 2
 }
 
-readonlyCallback (this Node, EventData) -> Void = (this, data) {
-    ...
+// Form B: contextual typing (slot supplies Float[Int])
+callback Float[Int] = (x) {
+    return Float(x.value) * 2
 }
-
-readonlyCallback = (this, data) mut {
-    ...
-} // ILLEGAL: expected a non-`mut` function value
 ```
 
-Because a lambda literal relies on contextual typing, it cannot be written and called directly in the same expression. The call must go through a name or another surrounding context that already fixes the function type.
+`mut` is not inferred. A lambda that needs the receiver-mutation contract writes `mut` on the function-type ascription. The contextual form of the lambda literal (the body of an assignment) may also write `mut` between the body header and the body block, and that body-side `mut` must match the mutating contract carried by the ascription side. The two `mut` markers live in different positions and are not interchangeable:
 
-### 7.3 Lambdas do not capture
+```zane
+callback Void mut[this Node, data EventData] = (this, data) {
+    ...
+} // OK: initial declaration, mutating contract on the ascription
+
+callback = (this, data) mut {
+    ...
+} // OK: body reassignment, `mut` on the body matches the ascription's mutating contract
+```
+
+If the ascription is non-`mut` and the contextual-form body writes `mut`, the body-side marker contradicts the ascription and the assignment is rejected:
+
+```zane
+callback Void[this Node, data EventData] = (this, data) mut {
+    ...
+} // ILLEGAL: ascription is non-`mut`, body-side `mut` does not match
+```
+
+Abortable lambda bodies use the same `? AbortType` marker they use in function declarations:
+
+```zane
+parserBad String[Int] ? ParseError = (input) {
+    ...
+    abort ParseError("bad input")
+}
+```
+
+Because a lambda literal relies on the surrounding slot to fix its type, it cannot be written and called directly in the same expression. The call must go through a name or another surrounding context that already fixes the function type.
+
+### 7.3 Lambda variables
+A lambda variable fuses three things: a variable name, a function-type ascription, and a lambda body header. The long form writes them as separate pieces:
+
+```zane
+callback Float[Int] = (x) {
+    return Float(x.value) * 2
+}
+```
+
+The shorthand fuses the same three pieces into a single declaration-shaped line:
+
+```zane
+callback (Int) -> Float(x Int) {
+    return Float(x.value) * 2
+}
+```
+
+The shorthand parallels the existing constructor shorthand (`text String("hello")` from [`syntax.md`](syntax.md) §1.1): a variable name fused with a callable type fused with a body. Reading the declaration as a lambda declaration gives it the same syntactic role as a free-function or method declaration; reading the type ascription alone recovers the function value's type.
+
+The function-type ascription inside the lambda-variable shorthand uses the **old** `(T) -> R` form on the ascription side. The shorthand is recognized only when a function-type ascription follows the variable name; without it the construct is a function declaration, not a variable declaration. The new bracket form (§7.4) is the standalone function-type notation and is **not** legal in this position.
+
+```zane
+// ILLEGAL: type ascription is required by the shorthand
+callback (x Int) -> Float {
+    return Float(x.value) * 2
+}
+```
+
+```zane
+// ILLEGAL: `mut` is not legal between the ascription and the body header
+callback (Int) -> Float(x Int) mut {
+    ...
+}
+```
+
+`mut` belongs on the function-type ascription, not between the ascription and the body header. A lambda that mutates a `this` receiver writes `mut` *inside* the type ascription. The two positions have two canonical forms:
+
+```zane
+// Standalone form: ascription is the new bracket form
+callback Void mut[this Node, data EventData] = (this, data) {
+    ...
+}
+
+// Shorthand: ascription is the old (T) -> R form, with `mut` inside the parentheses
+callback (this Node) mut -> Void(this Node, data EventData) {
+    ...
+}
+```
+
+Both forms declare the same lambda variable. The standalone form is the assignment shape, where the ascription side may use the new bracket notation; the shorthand fuses the ascription with the body header and is locked to the old ascription form.
+
+**Type-fixity rule.** A lambda variable's type is fixed at the variable's first declaration. Only the body can be reassigned; the type ascription cannot. The new bracket form (§7.4) is the standalone function-type notation that anchors the variable on each reassignment.
+
+```zane
+callback Float[Int] = (x) {
+    return Float(x.value) * 2
+}
+
+callback = (x) {        // legal: reassigns the body, type Float[Int] is preserved
+    return Float(x.value) * 3
+}
+
+callback Void[] = (x) { // ILLEGAL: type is fixed at first declaration
+    ...
+}
+```
+
+### 7.4 Function-type ascription syntax
+A function type is written in *return-type-first* bracket form: the return type, followed by square brackets containing the parameter type list, optionally followed by `mut` and optionally followed by `? AbortType`. The `&` ref-typed parameter and `&` ref-typed return forms use the existing `&` type syntax inside the bracket and as a return-type prefix. The shape is always:
+
+```zane
+ReturnType [paramTypes] mut? ?AbortType?
+```
+
+The brackets are required, even when the parameter list is empty. A parameterless free function has the type `Void[]`; a one-argument function returning `Float` has the type `Float[Int]`. A method's `this` parameter is the first element of the bracket, and `mut` follows the brackets (it is legal only when the first parameter is `this`):
+
+```zane
+// method type
+Float[this Player]
+Float[this Player, Int] mut
+&Float[this Player, &Int] ? AbortType
+```
+
+The new bracket form unifies the function type with every other parameterized type in Zane (`Array[size]`, `Matrix[rows]X[cols]`, type-parameter binders in [`generics.md`](generics.md) §2.4) and removes the parenthesized form, which was the only place in the type system that used `()` for type-level grouping. The old `(ParamType, ...) -> ReturnType` form is **rejected** in every position outside the lambda-variable shorthand in §7.3.
+
+**Old to new mapping.** Every old function-type form from [`syntax.md`](syntax.md) §2.9 maps to the new form:
+
+| Old form | New form |
+|---|---|
+| `() -> Void` | `Void[]` |
+| `(Int) -> Float` | `Float[Int]` |
+| `(Int, Float) -> String` | `String[Int, Float]` |
+| `(&Int) -> &Float` | `&Float[&Int]` |
+| `(this Player) -> Float` | `Float[this Player]` |
+| `(this Player, Int) -> Float` | `Float[this Player, Int]` |
+| `(this Player, Int) mut -> Float` | `Float[this Player, Int] mut` |
+| `(this Player, &Int) -> &Float ? AbortType` | `&Float[this Player, &Int] ? AbortType` |
+| `(this Buffer[n]) -> Array[n]` | `Array[n][this Buffer[n]]` |
+
+`mut` is position-sensitive: it always follows the brackets, never appears inside them, and is legal only when the first parameter is `this`. The brackets themselves are required even when the parameter list is empty. A method whose `this` type binds a type-parameter symbol (see [`generics.md`](generics.md) §4.3) produces a function type that nests the type-parameter slot of the receiver inside the same brackets as the parameter list, e.g. `Array[n] rowAt(this Buffer[n], i Int)` has function type `Array[n][this Buffer[n], i Int]`. The bracket-content delimiter rule from the function-overhaul design doc disambiguates: a bracket that contains `this`, a type name, or `&` is a function-type parameter list, not a type-parameter slot.
+
+### 7.5 Lambdas do not capture
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency.md`](concurrency.md) §5.2 ("Lambdas do not capture").
 
-### 7.4 No bound method references
-Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
+### 7.6 No bound method references
+Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked. The no-reference rule of §4.4 and §7.1 means a method is not a value either; only a lambda literal or lambda variable can carry a `this` receiver.
+
+### 7.7 Call resolution with a lambda variable
+The following walkthrough ties the overload-resolution mechanism of §5 to the type-fixity rule for lambda variables from §7.3. The scenario is a single lambda variable passed as an argument to an overloaded function:
+
+```zane
+Void receiver(Float[Int]) { ... }
+Void receiver(Float[Float]) { ... }
+
+callback (Int) -> Float(x Int) {
+    return Float(x.value) * 2
+}
+
+Void main() {
+    receiver(callback)
+}
+```
+
+The walkthrough has three steps. First, `callback` is declared with the lambda-variable shorthand from §7.3. By the type-fixity rule, the variable's static type is fixed at first declaration as `(Int) -> Float` and is preserved across any subsequent reassignments of the body. The argument `callback` therefore has the single static type `(Int) -> Float` at every call site, regardless of which body the variable currently holds. Second, `receiver` is overloaded: two declarations with parameter types `(Int) -> Float` and `(Float) -> Float`. The overload-identity rule of §4.1 distinguishes the two unambiguously because their parameter types differ. Third, the call `receiver(callback)` enters the §5 resolution pipeline. The argument `callback` has static type `(Int) -> Float`. The direct-match phase (step 1 of §5) compares the argument type against each candidate's parameter type. The `(Int) -> Float` overload matches exactly. The `(Float) -> Float` overload does not match — there is no implicit conversion that turns `(Int) -> Float` into `(Float) -> Float` because function types have no implicit constructors in either direction. Resolution selects the first overload, and the call is unambiguous.
+
+**Key insight.** The call is unambiguous not because the lambda variable is monomorphic — it is, but that is not what disambiguates the overload — but because the destination slot, the parameter of the selected overload, has a single function type. Function-typed parameters are monomorphic by the overload-identity rule of §4.1, so any argument passed to one is resolved by direct match against that one type. This is the property that makes lambda values safe to use in calls to overloaded functions.
 
 ---
 
@@ -306,7 +500,9 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
 | Generic match uses inferred type generics only | Callers never write type arguments, so the generic-match phase is purely an inference step driven by argument types and type ascriptions (see [`generics.md`](generics.md) §5). |
 | Generic match also unifies type-parameter symbols | Type-parameter symbols inside the called declaration are inferred from the type-parameter part of each call argument's static type in the same pass, so a single generic-match phase handles both kinds. The *type-parameter part* of a static type is the integer value baked into the type identifier (see [`generics.md`](generics.md) §2.4 and §7.1). |
-| Package-qualified function values | Uses one naming rule for methods and free functions. |
+| Functions are not nameable values | Makes Zane's function surface a 1:1 parallel of [`operators.md`](operators.md) §1 ("operators are grammar, not values"). Operators are a fixed set of grammar tokens, not user-defined values; function names are now the same. Overloaded names were already non-values; the rule unifies the overloaded and non-overloaded cases. |
+| Lambda-variable shorthand parallels constructors | Parallels the existing constructor shorthand `text String("hello")` from [`syntax.md`](syntax.md) §1.1, fusing a variable name with a callable type and a body. The variable name, function type, and parameter names are all declaration-shaped, so the fusion is unambiguous. |
+| Return-type-first function type syntax | Parallels the lambda literal syntax in §7.2 (`ReturnType(params DeclForm) { body }`). Putting the return type first reads as *"return type, parameterized by these input types"*, which is the natural reading order for a value the caller is going to use. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
 
@@ -325,6 +521,14 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `&` at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
-| Lambda | Contextually typed function value; `mut` stays explicit; no capture |
+| Function reference | Illegal in all positions; a function name is not a value |
+| Lambda literal | Either explicit-typed (`Float(x Int) { ... }`) or contextually-typed (`(x) { ... }`); contextual form requires a typed slot |
+| Lambda variable | Shorthand for a typed lambda held in a single-type variable; type is fixed at first declaration, only the body may be reassigned |
+| Function type | `ReturnType [paramTypes] mut? ?AbortType?`; brackets required even when empty |
+| Method type | `Float[this Player]`, `Float[this Player, Int] mut`, `&Float[this Player, &Int] ? AbortType` |
+| `mut` placement | Always after the brackets; legal only when the first parameter is `this` |
+| `&` parameter | Inside the bracket: `Float[&Int]` |
+| `&` return | `&Float[Int]` |
+| No lambda capture | Unchanged from §7.5 |
 | Unqualified method lookup | Searches home package, then current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |
