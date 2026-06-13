@@ -15,9 +15,9 @@ description: |
 # Zane Spec
 
 ## Inputs to collect
-- Which spec document the change targets (13 markdown files under `spec/`).
+- Which spec document the change targets (14 markdown files under `spec/`).
 - Whether the change is a new design rule, an example, a cross-reference, or a terminology swap.
-- Whether the change interacts with the two parameter kinds (see §"Vocabulary" below). Most spec work does.
+- Whether the change interacts with the unified type-parameter system (see Procedure step 3). Most spec work does.
 
 ## Procedure
 1. **Read `README.md` first.** It is the table of contents. Each row is one spec document, one topic.
@@ -26,21 +26,21 @@ description: |
 2. **Read the target document in full before editing.** Every topic doc follows the structure in `contributing/writing-spec-docs.md` (overview, numbered sections, design rationale, summary). Skim the rationale and summary tables last — they are condensed views of the section bodies, and the section bodies are what the rationale is reasoning about.
    Why: edits to one section often break the rationale row that summarizes it; reading both keeps them aligned.
 
-3. **Use the two parameter kinds correctly.** The spec has two:
-   - **Type generics** — the `'`-prefixed name in a body type position (e.g. `value 'T`). Inferred from the body; no use-site syntax exists.
-   - **Type parameters** — the `[name]` binder in a type header (e.g. `struct Buffer[n]`) and references in the body. A third kind of symbol that resolves to `Int` in body positions. Adjacent slots require a non-type-parameter delimiter.
+3. **Use the unified type-parameter system correctly.** A type is a templated function: it declares parameters in a `<>` header and is executed to produce a layout. Functions, methods, and constructors use the same `<>` header. Each header entry is concept-typed, distinguished by the concept and by casing:
+   - **Type parameter** — `name Type` with an uppercase name (e.g. `T Type`). Ranges over types; referenced bare (`T`).
+   - **Number parameter** — `name Number` with a lowercase name (e.g. `n Number`). Ranges over compile-time numbers; referenced bare (`n`) and resolves to a number value in body positions.
 
-   "Type parameter" never means the old `<'T>` slot. If you find yourself writing `<'T>` or `<Int>`, you are reverting the inferred-generic design — stop and re-read `spec/generics.md`.
+   `<>` is the type-expression (application) syntax — `Vector<Int>`, `Array<T, n>` — and is correct in any type position. `()` is the call syntax and **never** carries a `<>` list; a type reaches a constructor by inference from a `<>` header parameter (`Vector(Int(2))`) or as a `Type`/`Number` value parameter passed explicitly (`Vector(Int)`, `Array(Int, 10000)`). Casing is load-bearing (`spec/lexical.md`): uppercase = type, lowercase = value/number. The `'` sigil, the old `[name]` binders, and `Array3`-style root forms no longer exist.
 
-4. **Cross-reference, don't duplicate.** If a rule belongs in `spec/generics.md §3.5` (phantom type generics), reference it from `spec/types.md`, `spec/functions.md`, or `spec/effects.md` rather than restating it. The contributing guide §1 is strict on this.
+4. **Cross-reference, don't duplicate.** If a rule belongs in `spec/generics.md` (the unified parameter system) or `spec/lexical.md` (casing rules), reference it from `spec/types.md`, `spec/functions.md`, `spec/syntax.md`, or `spec/effects.md` rather than restating it. The contributing guide §1 is strict on this.
 
-5. **Validate your change before committing.** Run a grep for the forbidden forms:
+5. **Validate your change before committing.** Run a grep for the forbidden *old* forms — the pre-redesign generics syntax that should no longer appear:
    ```
-   grep -E "<'T|<T>|const parameter|<'A|<'B|<'C|<'D|<'E|<'K|<'V" spec/*.md
+   grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
    ```
-   The only matches that should remain are deliberate negative examples in `spec/generics.md` (e.g. `// ILLEGAL: there is no <'T> form anywhere`) and the result-type comparator references in `spec/error-handling.md` (`Result<T, E>` is Rust's type, not Zane's).
+   These were removed by the type-system redesign. The new syntax (`Vector<Int>`, `Array<T, n>`, `Type`/`Number` constructor parameters) is correct and expected. The only stray `<...>` matches that are *not* Zane are the result-type comparator references in `spec/error-handling.md` (`Result<T, E>` is Rust's type, not Zane's).
 
-6. **If the change touches the new design** (anything in `spec/generics.md`, or the `<'T>` / `[name]` rules referenced elsewhere), spawn a parallel-track validation team via `mavis-team` before opening a PR. Two tracks:
+6. **If the change touches the type system** (anything in `spec/generics.md` or `spec/lexical.md`, or the `<>` type-expression / `type`/`number` parameter rules referenced elsewhere), spawn a parallel-track validation team via `mavis-team` before opening a PR. Two tracks:
    - Track A: validate the files the branch modified against their own rules.
    - Track B: validate the un-updated spec files + `bench/zane_bench.c` against the new design.
    - Synthesis: cross-reference the two and produce a single fix list.
@@ -55,16 +55,16 @@ description: |
 - If the change is structural, a follow-up commit with the validation team's FIX list applied before opening the PR.
 
 ## Failure handling
-- **Grep finds `<T>` outside the documented exceptions.** Stop. The change reverts the inferred-generic design. Either drop the use-site syntax or update the section to be a deliberate negative example.
-- **Cross-reference target no longer exists.** `spec/generics.md` has been renumbered multiple times; if your `§3` is now `§4`, fix the reference in every doc that uses it, then re-grep for the old `§` numbers.
+- **Grep finds an old form (`Array[size]`, `[name]` binders, `Array3` root forms, `'T` apostrophe generics, "type generic", "type-parameter symbol").** Stop. The change references the pre-redesign generics design. Rewrite it in the unified `<>` system (`Array<T, n>`, `Type`/`Number` parameters).
+- **Cross-reference target no longer exists.** `spec/generics.md` has been renumbered by the redesign; if your `§3` is now `§4`, fix the reference in every doc that uses it, then re-grep for the old `§` numbers.
 - **The change conflicts with a section in another file.** Don't paper over it with a footnote. Either fix the conflicting section or escalate the conflict as a design call to the user.
-- **`bench/zane_bench.c` shows up in the diff for a spec change.** It is C, not Zane. Comments and `printf` labels in it that use old surface syntax (`Array[size]<T>`, `List<T>`) are documentation, not parsing errors. Fix only the comment/label, never the C code.
+- **`bench/zane_bench.c` shows up in the diff for a spec change.** It is C, not Zane. Comments and `printf` labels in it that use old surface syntax (`Array[size]`, `List<T>`) are documentation, not parsing errors. Fix only the comment/label, never the C code.
 
 ## Examples
 
 **Input:** "Add a section to `spec/error-handling.md` about a new `Recover` abort type."
 
-**Output:** A new section that follows the §3 / §4 / §5 numerical pattern of nearby sections, with its own design-rationale row in §8 and a row in the §9 summary. Cross-references `spec/generics.md §3.5` if the new abort type interacts with phantom generics. PR description summarizes the cross-references added.
+**Output:** A new section that follows the §3 / §4 / §5 numerical pattern of nearby sections, with its own design-rationale row in §8 and a row in the §9 summary. Cross-references `spec/generics.md` if the new abort type interacts with the type-parameter system. PR description summarizes the cross-references added.
 
 **Input:** "Validate this PR — does it keep the spec internally consistent?"
 
@@ -77,10 +77,11 @@ The spec lives in `spec/`. Each file is one topic.
 | File | Owns |
 |---|---|
 | `spec/syntax.md` | Canonical surface syntax reference |
+| `spec/lexical.md` | Case sensitivity, identifier formation, casing-determines-kind |
 | `spec/glossary.md` | Canonical names for recurring concepts |
-| `spec/types.md` | Classes, structs, fields, constructors, implicit conversions |
+| `spec/types.md` | Classes, structs, fields, constructors, implicit conversions, `type`/`alias` |
 | `spec/functions.md` | Methods, free functions, subscripts, overload resolution, lambdas |
-| `spec/generics.md` | **Inferred type generics + type-parameter symbols (canonical home)** |
+| `spec/generics.md` | **Unified type parameters, `<>` type expressions, constructor calls (canonical home)** |
 | `spec/memory.md` | Ownership, refs, anchors, lifetime, layout |
 | `spec/effects.md` | Effect model, `mut`, inferred effect levels |
 | `spec/concurrency.md` | Implicit parallelism, `spawn`, water-tower lifetimes |

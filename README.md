@@ -21,15 +21,16 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | Document | Purpose |
 |---|---|
 | [`spec/syntax.md`](spec/syntax.md) | Canonical surface syntax for every construct |
+| [`spec/lexical.md`](spec/lexical.md) | Case-sensitive parsing, identifier formation, and the casing-determines-kind rule |
 | [`spec/glossary.md`](spec/glossary.md) | Canonical names for recurring concepts and coined spec terms |
 
 ### Type system and runtime model
 
 | Document | Purpose |
 |---|---|
-| [`spec/types.md`](spec/types.md) | Classes, structs, fields, constructors, and implicit conversions |
+| [`spec/types.md`](spec/types.md) | Classes, structs, fields, constructors, implicit conversions, and `type`/`alias` declarations |
 | [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
-| [`spec/generics.md`](spec/generics.md) | Inferred type generics, type parameters, and the `Array[size]` primitive |
+| [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array<T, n>` primitive |
 | [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, lifetimes, and heap layout |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
 | [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |

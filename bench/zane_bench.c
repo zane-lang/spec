@@ -23,10 +23,10 @@
  *  Memory model:
  *    Ownership is the default — no keyword. Objects are stored inline.
  *    `ref` is the opt-in for non-owning references.
- *    `Array[size]` is the spec-defined fixed-size inline container.
- *    Because `size` is compile-time constant, the growth tests below model
+ *    `Array<T, n>` is the spec-defined fixed-size inline container.
+ *    Because `n` is a compile-time constant, the growth tests below model
  *    user-space growable storage as the closest updated-spec stand-in for the
- *    now-deferred dynamic list containers (see type_parameters.md §8).
+ *    now-deferred dynamic list containers (see generics.md §9).
  *
  *  Tests:
  *    1. Sequential alloc + sequential free          (32B × 100k)
@@ -301,7 +301,7 @@ static void zm_free(void *p, size_t s) {
 
    Memory model:
      Ownership is the default — no keyword. `ref` is the opt-in for
-     non-owning references. `Array[size]` is the fixed-size inline
+     non-owning references. `Array<T, n>` is the fixed-size inline
      container. Growable buffers in these benchmarks are user-space layers
      built on top of contiguous owned storage.
 
@@ -756,7 +756,7 @@ static void test4(void) {
 /* ═══════════════════════════════════════════════════════════════════
    TEST 5 — Owned buffer append growth
    Dynamic list containers are not specified on `main` (see
-   type_parameters.md §8), so this benchmark models the closest current-spec
+   generics.md §9), so this benchmark models the closest current-spec
    equivalent: a growable user-space buffer built from contiguous owned
    `Array`-like storage with compile-time-sized chunks.
 ═══════════════════════════════════════════════════════════════════ */

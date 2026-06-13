@@ -67,6 +67,18 @@ struct Name {
 import PackageName
 ```
 
+### 1.6 Type and alias declarations
+
+```zane
+type Name = TypeExpr
+alias Name = TypeExpr
+type Name<T Type, n Number> = TypeExpr
+type Name = struct { field Type, ... }
+type Name = class { field Type, ... }
+```
+
+`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct` or `class` body. A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+
 ---
 
 ## 2. Types
@@ -92,46 +104,46 @@ Type
 `&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
-Array[size] of &Node
+Array<&Node, n>
 ```
 
-### 2.4 Inferred type generics
+### 2.4 Type expressions
 
-A type generic is introduced by a `'`-prefixed name in a type position inside a declaration body. There is no separate binder syntax at the declaration header.
+A type expression applies arguments to a parameterized type with `<>`. Arguments are positional.
 
 ```zane
-struct Box {
-    value 'T
+Type<Arg, ...>
+Vector<Int>
+Array<Int, 10000>
+Matrix<Float, 3>
+```
+
+A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. See [`generics.md`](generics.md) §4 and §5.
+
+### 2.5 Type and number parameters
+
+A parameterized declaration declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.8).
+
+```zane
+type Vector<T Type> = struct {
+    x T
+    y T
+}
+
+type Buffer<T Type, n Number> = struct {
+    data Array<T, n>
 }
 ```
 
-The set of unique `'`-prefixed names in the body is the named type-generic set of the declaration. The compiler infers the type-generic set at use sites from call-argument types and type ascriptions. Callers never write type arguments; see [`generics.md`](generics.md) §5.1 for the rule.
-
-### 2.5 Type-parameterized types
-
-Definition-site type-parameter binders:
-
-```zane
-struct Matrix[rows]X[cols] {
-    ...
-}
-```
-
-Use-site form (type parameters are baked into the type name; the type generics of the body are inferred):
-
-```zane
-Matrix10X20
-```
-
-Digits are illegal in identifiers except where they supply type parameters to a type-parameterized type name.
+Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites. See [`lexical.md`](lexical.md) §3 and [`generics.md`](generics.md) §3.
 
 ### 2.6 Array storage primitive
 
 ```zane
-Array[size]
+Array<T, n>
 ```
 
-`Array[size]` is a compiler-provided storage primitive representing `size` contiguous elements of an inferred type. The element type is a type generic and is inferred from the surrounding context, just like any other type generic in the language.
+`Array<T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `T`. Both parameters may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
 
 ### 2.7 Reserved compiler namespaces
 
@@ -152,6 +164,8 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 ```
 
 These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding core surface type.
+
+The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 
 ### 2.9 Function types
 
@@ -196,7 +210,10 @@ ReturnType?AbortType name(param Type, ...) { body }
 ReturnType name(param Type, ...) => expr
 ReturnType name(param &Type, ...) => expr
 ReturnType?AbortType name(param Type, ...) => expr
+ReturnType name<T Type, n Number>(param Type, ...) { body }
 ```
+
+A function, method, or constructor may carry a `<>` parameter header immediately after its name to declare type and number parameters that are inferred from the value arguments at the call. The header uses the same `name Type` / `name Number` entries as a type definition (§2.5); see [`generics.md`](generics.md) §3 and §5.
 
 ### 3.2 Methods
 
@@ -213,6 +230,7 @@ ReturnType name(this ReceiverType, param Type, ...) mut => expr
 ReturnType name(this ReceiverType, param &Type, ...) mut => expr
 ReturnType?AbortType name(this ReceiverType, param Type, ...) => expr
 ReturnType?AbortType name(this ReceiverType, param Type, ...) mut => expr
+ReturnType name<T Type, n Number>(this ReceiverType, param Type, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
@@ -230,9 +248,12 @@ TypeName(param &Type, ...) {
 }
 TypeName(param Type, ...) => init{ field: expr, ... }
 TypeName(param &Type, ...) => init{ field: expr, ... }
+TypeName<T Type, n Number>(param Type, ...) { return init{ field: expr, ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
+
+A constructor for a parameterized type may declare a `<>` parameter header (inferred from the value arguments) or accept a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
 
 ### 3.4 Field constructors
 
