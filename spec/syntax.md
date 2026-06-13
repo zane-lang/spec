@@ -357,11 +357,11 @@ name ReturnType(this ReceiverType, param Type, ...) mut { body }
 The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
 
 ```zane
-callback Float[this Player] mut = Float(this Player) mut {
+callback Void[this Player] mut = Void(this Player) mut {
     this.shooting = false
 }
 
-callback Float(this Player) mut {        // shorthand for the line above
+callback Void(this Player) mut {        // shorthand for the line above
     this.shooting = false
 }
 ```
