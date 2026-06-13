@@ -44,9 +44,9 @@ Changing a function's abort type changes its function type. Abort types cannot b
 ```zane
 Int parse(String text) ? ParseError { ... }
 
-parserOk (String) -> Int ? ParseError = parse // ok
+parserOk Int[String] ? ParseError = parse // ok
 
-parserBad (String) -> Int = parse // ILLEGAL: abort type would be dropped
+parserBad Int[String] = parse // ILLEGAL: abort type would be dropped
 ```
 
 ---
