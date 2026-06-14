@@ -103,8 +103,10 @@ This is **runtime tag dispatch**, distinct from the static overload resolution i
 - **One return type.** All arms share one return type, which is the result type of the call.
 - **One-level unwrap.** A whole-variant value dispatches over its immediate cases. It does not recurse into nested variant payloads.
 - **Static narrowing skips dispatch.** If the static type is already a case (`Expr.intLit`), the matching arm is chosen statically, with no runtime jump.
-- **Exhaustiveness.** All arms must be visible; the case set is closed.
+- **Exhaustiveness, checked per package.** All overloads of one function name over a variant's cases — the arms of one match — **MUST** be declared in the same package, and that package is where the compiler verifies every case is covered. An incomplete set is a compile-time error in that package.
 - **Mutual exclusion.** For one function name, a whole-variant overload `f(x V)` and that variant's case overloads `f(x V.case)` **cannot coexist**. A call `f(value)` with `value : V` could not tell whether to match `V` directly or to unwrap and dispatch. The rule is symmetric — order does not matter — and overloads on unrelated types are unaffected.
+
+This exhaustiveness rule is *per match set*, not per variant. A variant's cases are fixed at its definition, but operations stay open: any package may import a variant and declare its own complete match over every case, because the variant is closed and all its cases are visible. What is forbidden is *splitting one match* across packages — handling some cases in one package and the rest in another — because then no single compilation unit could verify completeness. (The inline `match` expression of §6 is a single local expression and is always checkable in place.)
 
 > **See also:** [`functions.md`](functions.md) §4.4 for the same rule from the overload side.
 
@@ -217,6 +219,7 @@ type Expr = variant { intLit String; flip &Expr }   // sum type
 | `variant` shares the `struct` body grammar | One body shape with the keyword flipping product into sum keeps the surface minimal and makes the and/or duality obvious at a glance. |
 | Variant member reads are abortable | A case may not be live, so a partial read is naturally a bifurcated return rather than a silent failure or a sentinel. |
 | Dispatch is tag-directed and exhaustive | Closing the case set lets the compiler guarantee every case is handled and lower a whole-variant value to an O(1) tag jump. |
+| Exhaustiveness is checked per package | A package compiles as one unit, so requiring a match's arms to be co-located lets the compiler verify completeness locally and early — while still letting any package add its own complete match over an imported variant, keeping the type closed but operations open. |
 | Mutual exclusion of whole-variant and case overloads | A call on a whole-variant value would otherwise be ambiguous between matching the variant directly and unwrapping into a case; forbidding the coexistence removes the ambiguity by construction. |
 | `match` arms are ordinary callables | Reusing lambda literals and lambda-variables avoids inventing special arm syntax and lets arms be named, reused, and passed like any other function value. |
 | Recursion boxes through explicit `&` | Inline self-reference breaks uniform stride; explicit `&` keeps indirection visible and consistent with Zane's explicit-ownership stance, with no hidden auto-boxing. |
@@ -238,6 +241,7 @@ type Expr = variant { intLit String; flip &Expr }   // sum type
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `variant` or `class`, never a `struct` |
 | Variant storage | Inline value when all payloads are inline-safe and non-recursive; owned heap with a tag otherwise |
 | Case-overload dispatch | Overload a function on a variant's cases; runtime tag jump, one return type, one-level unwrap, exhaustive; static narrowing chooses statically |
+| Match exhaustiveness | The arms of one match (one function's case overloads over a variant) must all live in one package, where completeness is verified; the type is closed but operations stay open |
 | Whole-variant vs. case mutual exclusion | `f(x V)` and `f(x V.case)` cannot coexist for one function name |
 | `match` | Expression dispatching a scrutinee over a `[ ]` list of callables; exhaustive; one return type; abort flows through with `?` |
 | Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <Type> [ member = value, ... ]`; read field-style; not a passable value |

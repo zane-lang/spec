@@ -189,7 +189,7 @@ Declarations that differ only by return type, parameter names, `this`, or `mut` 
 Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `&`-ness at the same position.
 
 ### 4.4 Variant case overloads
-A function may be overloaded on the individual cases of a `variant` to express pattern matching. These case overloads are subject to one extra restriction: a whole-variant overload `f(x V)` and a case overload `f(x V.case)` for the same variant **MUST NOT** coexist for one function name, because a call on a whole-variant value could not tell which to select. The full rule lives in [`adt.md`](adt.md) §5.
+A function may be overloaded on the individual cases of a `variant` to express pattern matching. These case overloads are subject to two extra restrictions: a whole-variant overload `f(x V)` and a case overload `f(x V.case)` for the same variant **MUST NOT** coexist for one function name, because a call on a whole-variant value could not tell which to select; and all of a function's case overloads over one variant **MUST** be declared in the same package, where the compiler verifies they cover every case. The full rules live in [`adt.md`](adt.md) §5.
 
 > **See also:** [`adt.md`](adt.md) §5 for case-overload dispatch and the whole-variant-versus-case mutual-exclusion rule.
 
