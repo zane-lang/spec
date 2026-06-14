@@ -411,7 +411,7 @@ type Wrapper = struct {
 }
 ```
 
-A named class or struct is therefore always declared this way: `type Name = class { ... }` or `type Name = struct { ... }`. There is no standalone `class Name { ... }` or `struct Name { ... }` declaration form — the `class { ... }` and `struct { ... }` field bodies are type expressions that only name a type through a `type` (or `alias`) declaration.
+A named class or struct is therefore always declared this way: `type Name = class { ... }` or `type Name = struct { ... }`. There is no standalone `class Name { ... }` or `struct Name { ... }` declaration form — the `class { ... }` and `struct { ... }` bodies are type expressions that only name a type through a `type` (or `alias`) declaration.
 
 ### 5.4 The keyword carries the distinction
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
