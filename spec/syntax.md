@@ -57,7 +57,7 @@ type Name = class {
 
 ### 1.4 Struct fields
 
-A struct body declares fields only and names a type through a `type` declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
+A struct body declares fields only and names a type through a type declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
 
 ```zane
 type Name = struct {
