@@ -2,7 +2,7 @@
 
 This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only.
 
-> **See also:** [`types.md`](types.md) for constructors. [`functions.md`](functions.md) for methods. [`control-flow.md`](control-flow.md) for branching and loop semantics. [`error-handling.md`](error-handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
+> **See also:** [`types.md`](types.md) for constructors. [`functions.md`](functions.md) for methods. [`adt.md`](adt.md) for `enum`, `variant`, `match`, and enum maps. [`control-flow.md`](control-flow.md) for branching and loop semantics. [`error-handling.md`](error-handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
 
 ---
 
@@ -14,7 +14,7 @@ New symbol declarations:
 
 ```zane
 name Type(args, ...)
-name Type{field: expr, ...}
+name Type{field = expr, ...}
 name Type{fieldA, fieldB, ...}
 name Type = expr
 name &Type = expr
@@ -22,7 +22,7 @@ name ReturnType(param Type, ...) { body }
 name ReturnType(param Type, ...) => expr
 ```
 
-`Type{fieldA, fieldB}` is shorthand for `Type{fieldA: fieldA, fieldB: fieldB}`.
+`Type{fieldA, fieldB}` is shorthand for `Type{fieldA = fieldA, fieldB = fieldB}`.
 
 The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name Type(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
@@ -48,8 +48,8 @@ name Type(value)
 
 ```zane
 class Name {
-    field Type
-    field &Type
+    field Type;
+    field &Type;
 }
 ```
 
@@ -57,7 +57,7 @@ class Name {
 
 ```zane
 struct Name {
-    field Type
+    field Type;
 }
 ```
 
@@ -73,11 +73,49 @@ import PackageName
 type Name = TypeExpr
 alias Name = TypeExpr
 type Name<T Type, n Number> = TypeExpr
-type Name = struct { field Type, ... }
-type Name = class { field Type, ... }
+type Name = struct { field Type; ... }
+type Name = class { field Type; ... }
+type Name = variant { member Type; ... }
+type Name = enum [ memberA, memberB, ... ]
 ```
 
-`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct` or `class` body. A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `class`, `variant`, or `enum` body. A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+
+### 1.7 Variant declarations
+
+A `variant` body uses the same grammar as a `struct` body: `{ }` brackets with `;`-separated members, each a lowercase member name followed by its payload type.
+
+```zane
+type Name = variant {
+    memberA TypeA;
+    memberB TypeB;
+}
+```
+
+> **See also:** [`adt.md`](adt.md) §3 for variant semantics.
+
+### 1.8 Enum declarations
+
+An `enum` body is a flat list: `[ ]` brackets with `,`-separated lowercase members. Members are payloadless.
+
+```zane
+type Name = enum [ memberA, memberB, memberC ]
+```
+
+> **See also:** [`adt.md`](adt.md) §2 for enum semantics.
+
+### 1.9 Enum map declarations
+
+An enum map is a package-scope declaration. It names the enum, the property, the property's type, then a `[ ]` list of `,`-separated `member = value` entries.
+
+```zane
+EnumName.property Type [
+    memberA = valueA,
+    memberB = valueB,
+]
+```
+
+> **See also:** [`adt.md`](adt.md) §7 for enum-map semantics.
 
 ---
 
@@ -120,18 +158,27 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. See [`generics.md`](generics.md) §4 and §5.
 
+An inline body-form type expression — `struct { ... }`, `class { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body.
+
+```zane
+type Expr = variant {
+    op class { left &Expr; right &Expr };
+    args tuple[String, String];
+}
+```
+
 ### 2.5 Type and number parameters
 
 A parameterized declaration declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.8).
 
 ```zane
 type Vector<T Type> = struct {
-    x T
-    y T
+    x T;
+    y T;
 }
 
 type Buffer<T Type, n Number> = struct {
-    data Array<T, n>
+    data Array<T, n>;
 }
 ```
 
@@ -241,14 +288,14 @@ ReturnType name<T Type, n Number>(this ReceiverType, param Type, ...) { body }
 
 ```zane
 TypeName(param Type, ...) {
-    return init{ field: expr, ... }
+    return init{ field = expr, ... }
 }
 TypeName(param &Type, ...) {
-    return init{ field: expr, ... }
+    return init{ field = expr, ... }
 }
-TypeName(param Type, ...) => init{ field: expr, ... }
-TypeName(param &Type, ...) => init{ field: expr, ... }
-TypeName<T Type, n Number>(param Type, ...) { return init{ field: expr, ... } }
+TypeName(param Type, ...) => init{ field = expr, ... }
+TypeName(param &Type, ...) => init{ field = expr, ... }
+TypeName<T Type, n Number>(param Type, ...) { return init{ field = expr, ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
@@ -279,7 +326,7 @@ Each field entry uses either the bare required-field form `field Type` or an ini
 Field-constructor call sites may use explicit or implicit field names:
 
 ```zane
-name TypeName{fieldA: expr, fieldB: expr}
+name TypeName{fieldA = expr, fieldB = expr}
 name TypeName{fieldA, fieldB}
 ```
 
@@ -289,9 +336,9 @@ A field-constructor call may omit any field whose constructor entry includes an 
 
 ```zane
 implicit TypeName(param Type) {
-    return init{ field: expr, ... }
+    return init{ field = expr, ... }
 }
-implicit TypeName(param Type) => init{ field: expr, ... }
+implicit TypeName(param Type) => init{ field = expr, ... }
 ```
 
 Implicit constructors use the `implicit` modifier and are written only in positional form with exactly one parameter.
@@ -326,13 +373,13 @@ ReturnType (this ReceiverType)[index ParamType] => expr
 
 ```zane
 init{
-    field: expr,
+    field = expr,
     otherField,
     ...
 }
 ```
 
-A bare field name inside `init{ }` is shorthand for `fieldName: fieldName`.
+A bare field name inside `init{ }` is shorthand for `fieldName = fieldName`.
 
 ### 3.8 Lambda literals and lambda-variable declarations
 
@@ -494,6 +541,29 @@ Example:
 ```zane
 number Int = (3 + 2) * 2
 ```
+
+### 4.8 `match` expressions
+
+A `match` expression names a scrutinee, then a `[ ]` list of `,`-separated callables (lambda literals or lambda-variables). A `match` is an expression and may carry a trailing `?` (or `??`) handler when its arms are abortable.
+
+```zane
+match scrutinee [ callable, callable, ... ]
+name Type = match scrutinee [ callable, callable, ... ]
+name Type = match scrutinee [ callable, callable, ... ] ? binder { ... }
+```
+
+The arms are ordinary function values, so each may be a lambda literal (block- or `=>`-bodied) or a named lambda-variable.
+
+```zane
+result Int = match value [
+    Int(x Num.int)   => 2 * x,
+    Int(x Num.float) => Int(6 * x),
+]
+
+result Int = match x [intCase, floatCase]
+```
+
+> **See also:** [`adt.md`](adt.md) §6 for `match` semantics.
 
 ---
 

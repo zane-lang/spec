@@ -27,9 +27,9 @@ A `class` body contains only field declarations. Class instances are heap-alloca
 package Graph
 
 class Node {
-    _id Int
-    scale Float
-    label String
+    _id Int;
+    scale Float;
+    label String;
 }
 ```
 
@@ -44,8 +44,8 @@ After construction, a struct's fields are immutable: code cannot mutate a struct
 package Math
 
 struct Vec2 {
-    x Float
-    y Float
+    x Float;
+    y Float;
 }
 
 pos Vec2(1, 2)
@@ -64,6 +64,18 @@ This is intentional: private-field access in Zane is method-based, not package-b
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
+### 2.5 `struct` and `variant` share one body grammar
+A `struct` is a product type: it has all of its members at once. A `variant` is a sum type with the same body grammar: it has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
+
+```zane
+type Color = struct { r Int; g Int; b Int }    // product: has r and g and b
+type Shape = variant { dot Dot; line Line }      // sum: has dot or line
+```
+
+A `struct` is restricted to inline value storage and **MUST NOT** contain a class field, an `&` field, or itself (§2.2, [`memory.md`](memory.md) §2.10). A `variant` is not so restricted: it may be recursive and may box recursive members through `&`. The body syntax is symmetric, but the memory model decides which keyword a given shape is legal under.
+
+> **See also:** [`adt.md`](adt.md) for the canonical rules on `variant`, `enum`, pattern matching, and enum maps. [`adt.md`](adt.md) §3 for the full struct-versus-variant symmetry.
+
 ---
 
 ## 3. Constructors and Initialization
@@ -81,9 +93,9 @@ package Graph
 
 Node(id Int, scale Float, label String) {
     return init{
-        _id: id,
-        scale: scale,
-        label: label
+        _id = id,
+        scale = scale,
+        label = label
     }
 }
 ```
@@ -107,8 +119,8 @@ A constructor may also declare fields directly in its parameter header:
 package Math
 
 struct Vector {
-    x Int
-    y Int
+    x Int;
+    y Int;
 }
 
 Vector{x Int, y Int} {
@@ -122,9 +134,9 @@ Field-constructor entries may also declare default values. They use the same ini
 
 ```zane
 class Weapon {
-    name String
-    fireRate Float
-    damage Float
+    name String;
+    fireRate Float;
+    damage Float;
 }
 
 Weapon{
@@ -135,7 +147,7 @@ Weapon{
     return init{name, fireRate, damage}
 }
 
-starter Weapon{fireRate: Float(2)}
+starter Weapon{fireRate = Float(2)}
 ```
 
 ### 3.4 Implicit field access in constructor calls
@@ -147,10 +159,10 @@ y Int(2)
 vec Vector{x, y}
 ```
 
-`Vector{x, y}` is shorthand for `Vector{x: x, y: y}`.
+`Vector{x, y}` is shorthand for `Vector{x = x, y = y}`.
 
 ### 3.5 Implicit field access in `init{ }`
-Inside `init{ }`, a bare field name is shorthand for `fieldName: fieldName` when a symbol of that name is in scope:
+Inside `init{ }`, a bare field name is shorthand for `fieldName = fieldName` when a symbol of that name is in scope:
 
 ```zane
 Vector{x Int, y Int} {
@@ -163,8 +175,8 @@ This is shorthand for:
 ```zane
 Vector{x Int, y Int} {
     return init{
-        x: x,
-        y: y
+        x = x,
+        y = y
     }
 }
 ```
@@ -175,8 +187,8 @@ Vector{x Int, y Int} {
 ```zane
 Vector{x Int, y Int} {
     temp Vector = init{
-        x: x,
-        y: y
+        x = x,
+        y = y
     }
     return temp
 }
@@ -194,19 +206,19 @@ A constructor that assigns a value to an `&` field must declare the correspondin
 package Vehicle
 
 class Car {
-    engine &Engine
+    engine &Engine;
 }
 
 // legal: `&` parameter allows storing into `&` field
 Car(engine &Engine) {
-    return init{engine: engine}
+    return init{engine = engine}
 }
 ```
 
 ```zane
 // ILLEGAL: plain parameter cannot be bound into `&` storage
 Car(engine Engine) {
-    return init{engine: engine}   // ERROR: plain parameter MUST NOT be bound into `&` storage
+    return init{engine = engine}   // ERROR: plain parameter MUST NOT be bound into `&` storage
 }
 ```
 
@@ -225,11 +237,11 @@ A class whose fields are all plain owners does not require `&` parameters:
 
 ```zane
 class Car {
-    engine Engine
+    engine Engine;
 }
 
 Car(engine Engine) {
-    return init{engine: engine}
+    return init{engine = engine}
 }
 
 car Car(Engine())   // legal: plain owner field accepts a temporary
@@ -265,15 +277,15 @@ A constructor marked with the `implicit` modifier declares a single-parameter co
 package Units
 
 struct Meters {
-    value Float
+    value Float;
 }
 
 struct Feet {
-    value Float
+    value Float;
 }
 
 // implicit conversion from Feet to Meters
-implicit Meters(feet Feet) => init{value: feet.value * Float(0.3048)}
+implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
 ```
 
 At a **coercion site** where the destination type is already known, if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
@@ -312,7 +324,7 @@ The **destination type** (return type, i.e., the type name of the constructor) *
 struct Celsius { value Float }
 struct Fahrenheit { value Float }
 
-implicit Celsius(f Fahrenheit) => init{value: (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
+implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
 ```
 
 ```zane
@@ -320,7 +332,7 @@ class Logger { verbosity Int }
 struct LogConfig { verbosity Int }
 
 implicit Logger(cfg LogConfig) {   // legal: struct → class
-    return init{verbosity: cfg.verbosity}
+    return init{verbosity = cfg.verbosity}
 }
 ```
 
@@ -329,7 +341,7 @@ class Source { data String }
 class Destination { payload String }
 
 implicit Destination(s Source) {   // ILLEGAL: source type is a class
-    return init{payload: s.data}
+    return init{payload = s.data}
 }
 ```
 
@@ -344,7 +356,7 @@ package Units
 struct Meters { value Float }
 
 // legal: declared in home package of Meters
-implicit Meters(feet Feet) => init{value: feet.value * Float(0.3048)}
+implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
 ```
 
 ```zane
@@ -352,7 +364,7 @@ package Conversions
 import Units
 
 // ILLEGAL: neither Meters nor Feet is defined in Conversions
-implicit Units$Meters(feet Units$Feet) => init{value: feet.value * Float(0.3048)}
+implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048)}
 ```
 
 ### 4.6 Method receivers are never implicitly converted
@@ -394,8 +406,8 @@ The right-hand side of a `type` or `alias` declaration is any type expression: a
 
 ```zane
 type Wrapper = struct {
-    vec Vector<Int>
-    arr Array<Int, 10000>
+    vec Vector<Int>;
+    arr Array<Int, 10000>;
 }
 ```
 
@@ -418,7 +430,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Structs update by replacement, not in-place mutation | Preserves plain value semantics for structs while still allowing ordinary reassignment of struct-typed storage. |
 | Name-based field privacy | Privacy follows method receivers, not packages. A method declared in any package gets the same private-field access as one declared in the home package. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
-| Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field: field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
+| Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
 | Implicit constructors for coercion | Allows ergonomic conversions at assignment sites without operator overloading or hidden multi-step chaining. |
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
