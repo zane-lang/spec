@@ -46,7 +46,7 @@ name Type(value)
 
 ### 1.3 Class fields
 
-A class body declares fields only and names a type through a `type` declaration (§1.6). There is no standalone `class Name { ... }` declaration form.
+A class body declares fields only and names a type through a type declaration (§1.6). There is no standalone `class Name { ... }` declaration form.
 
 ```zane
 type Name = class {
