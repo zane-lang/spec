@@ -125,7 +125,7 @@ A parameter declared as `&T` requires the caller to supply a source that may cre
 A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage or returned as a new `&T`. Inside the callee body, a plain `T` parameter is not a place expression for `&`-binding purposes.
 
 ```zane
-class Car {
+type Car = class {
     engine &Engine;
     _value Int;
 }
@@ -159,21 +159,21 @@ Here, **downstream** means "through nested struct fields." The restriction is ch
 Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain an `&`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
 
 ```zane
-struct Vec2 {
+type Vec2 = struct {
     x Float;
     y Float;
 }
 
-struct Rect {
+type Rect = struct {
     pos Vec2;
     size Vec2;
 }
 
-struct BadOwner {
+type BadOwner = struct {
     engine Engine;      // ILLEGAL: class field inside a struct
 }
 
-struct BadRef {
+type BadRef = struct {
     target &Engine;  // ILLEGAL: `&` field inside a struct
 }
 ```

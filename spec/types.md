@@ -26,7 +26,7 @@ A `class` body contains only field declarations. Class instances are heap-alloca
 ```zane
 package Graph
 
-class Node {
+type Node = class {
     _id Int;
     scale Float;
     label String;
@@ -43,7 +43,7 @@ After construction, a struct's fields are immutable: code cannot mutate a struct
 ```zane
 package Math
 
-struct Vec2 {
+type Vec2 = struct {
     x Float;
     y Float;
 }
@@ -118,7 +118,7 @@ A constructor may also declare fields directly in its parameter header:
 ```zane
 package Math
 
-struct Vector {
+type Vector = struct {
     x Int;
     y Int;
 }
@@ -133,7 +133,7 @@ This form is the canonical constructor syntax when the constructor parameters ma
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
 ```zane
-class Weapon {
+type Weapon = class {
     name String;
     fireRate Float;
     damage Float;
@@ -205,7 +205,7 @@ A constructor that assigns a value to an `&` field must declare the correspondin
 ```zane
 package Vehicle
 
-class Car {
+type Car = class {
     engine &Engine;
 }
 
@@ -236,7 +236,7 @@ car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
 A class whose fields are all plain owners does not require `&` parameters:
 
 ```zane
-class Car {
+type Car = class {
     engine Engine;
 }
 
@@ -276,11 +276,11 @@ A constructor marked with the `implicit` modifier declares a single-parameter co
 ```zane
 package Units
 
-struct Meters {
+type Meters = struct {
     value Float;
 }
 
-struct Feet {
+type Feet = struct {
     value Float;
 }
 
@@ -321,15 +321,15 @@ The **source type** (parameter type) of an implicit constructor **MUST** be a st
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a struct or a class.
 
 ```zane
-struct Celsius { value Float }
-struct Fahrenheit { value Float }
+type Celsius = struct { value Float }
+type Fahrenheit = struct { value Float }
 
 implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
 ```
 
 ```zane
-class Logger { verbosity Int }
-struct LogConfig { verbosity Int }
+type Logger = class { verbosity Int }
+type LogConfig = struct { verbosity Int }
 
 implicit Logger(cfg LogConfig) {   // legal: struct → class
     return init{verbosity = cfg.verbosity}
@@ -337,8 +337,8 @@ implicit Logger(cfg LogConfig) {   // legal: struct → class
 ```
 
 ```zane
-class Source { data String }
-class Destination { payload String }
+type Source = class { data String }
+type Destination = class { payload String }
 
 implicit Destination(s Source) {   // ILLEGAL: source type is a class
     return init{payload = s.data}
@@ -353,7 +353,7 @@ This rule prevents conflicts when multiple packages independently define the sam
 ```zane
 package Units
 
-struct Meters { value Float }
+type Meters = struct { value Float }
 
 // legal: declared in home package of Meters
 implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
@@ -411,7 +411,7 @@ type Wrapper = struct {
 }
 ```
 
-The field-declaring forms `struct Name { ... }` and `class Name { ... }` (§2) are shorthand for `type Name = struct { ... }` and `type Name = class { ... }`.
+A named class or struct is therefore always declared this way: `type Name = class { ... }` or `type Name = struct { ... }`. There is no standalone `class Name { ... }` or `struct Name { ... }` declaration form — the `class { ... }` and `struct { ... }` bodies are type expressions that only name a type through a `type` (or `alias`) declaration.
 
 ### 5.4 The keyword carries the distinction
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.

@@ -87,7 +87,7 @@ Explicit parameters other than `this` are read-only. Mutation of another object 
 A method parameter declared as `&T` requires the caller to supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 and permits the callee to store that argument into an `&` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage.
 
 ```zane
-class Car {
+type Car = class {
     engine &Engine;
     _value Int;
 }

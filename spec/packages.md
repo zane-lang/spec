@@ -43,7 +43,7 @@ Float radsToDeg(x Float) {
     return x / pi * Float(180)
 }
 
-class Math {
+type Math = class {
     _deterministicRandomCounter Int;
 }
 
@@ -78,7 +78,7 @@ package Main
 
 import Math
 
-class Math {   // ILLEGAL: duplicate type "Math"
+type Math = class {   // ILLEGAL: duplicate type "Math"
     value Int;
 }
 ```
