@@ -55,7 +55,7 @@ type Expr = variant {
     boolLit Bool;
     ident String;
     qualifiedIdent tuple[String, String];
-    op struct { left &Expr; right &Expr; operator Operator };
+    op class { left &Expr; right &Expr; operator Operator };
     flip &Expr;
     parenthesized &Expr;
     funcCall FuncCall;
@@ -65,6 +65,8 @@ type Expr = variant {
 ```
 
 Reading a member of a variant is **partial** (the case may not be live), so it is an **abortable** access (`?`/`??`). The primary consumer is exhaustive dispatch (§6). A single-payload case, once bound, behaves as its payload (so `color.colorName` reaches the payload's members).
+
+> *Note (confirm):* `tuple` is treated here as a lowercase structural keyword like `struct`/`enum`/`variant` — it takes a `[ … ]` list of element types and has variadic arity, so it doesn't fit the `<T Type>` generic form. That makes its lowercase correct and exempt from the casing rule (it's a keyword, not a type name). We never explicitly designed `tuple`; flag if you'd rather it be a built-in `Tuple` type instead.
 
 ---
 
@@ -83,7 +85,7 @@ Same declaration body; the keyword flips four things in lockstep. "Interchangeab
 
 ## 4. Recursion & memory boundary [DECIDED]
 
-- A directly-inline self-reference is infinite size, forbidden by the uniform-stride rule (generics.md §7). **Recursive members box through `&`:** `flip &Expr`, `op struct { left &Expr; … }`.
+- A directly-inline self-reference is infinite size, forbidden by the uniform-stride rule (generics.md §7). **Recursive members box through `&`:** `flip &Expr`, `op class { left &Expr; … }`.
 - **Structs cannot hold `&` or contain themselves** (memory.md §2.10). Therefore a recursive type can be a `variant` or a `class`, but **never a `struct`**. The body syntax is symmetric; the memory model decides which forms are legal.
 - A `variant` follows the same storage split as `struct`/`class`: inline value type when every payload is inline-safe and non-recursive; **owned heap type otherwise**. Recursive variants (like `Expr`) are owned, get a tag, and box recursive cases.
 - Indirection is **explicit `&`** — no hidden auto-boxing, matching Zane's "ownership and refs are explicit" stance.
@@ -199,7 +201,7 @@ Form: `<Enum>.<property> <Type> [ member = value, … ]`. Uses `[ ]` + `,`, name
 
 ## 9. Constructor key-value uses `=`, not `:` [DECIDED — NEW]
 
-Named construction switches from `:` to `=`, matching `type X = …`, enum/map tables, and declarations generally. Assignment is not an expression, so `name = value` in an argument or `init` position is unambiguously a named field.
+Named construction switches from `:` to `=`, matching `type X = …`, enum/map tables, and declarations generally. This affects only the **named** forms — `init{ }` and the `{ }` field-constructor. The positional `( )` constructor takes **no** key-value at all; named arguments live in `{ }`. Assignment is not an expression, so `name = value` in an `init`/field-constructor position is unambiguously a named field.
 
 ```zane
 // init{ }
@@ -210,8 +212,8 @@ Vector{x Int, y Int} {
 // field-constructor call
 starter Weapon{ fireRate = Float(2) }   // was: fireRate: Float(2)
 
-// named constructor args
-p Color(r = x, g = Int(0), b = Int(0))
+// named field-constructor call — '{ }', because '( )' is positional-only
+p Color{ r = x, g = Int(0), b = Int(0) }
 ```
 
 Bare-field shorthand is unchanged: `init{ x, y }` still means `init{ x = x, y = y }`, and `Vector{ x, y }` still means `Vector{ x = x, y = y }`.
