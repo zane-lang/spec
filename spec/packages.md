@@ -44,10 +44,10 @@ Float radsToDeg(x Float) {
 }
 
 class Math {
-    _deterministicRandomCounter Int
+    _deterministicRandomCounter Int;
 }
 
-Math() => init{_deterministicRandomCounter: 0}
+Math() => init{_deterministicRandomCounter = 0}
 
 Int deterministicRandom(this Math) mut {
     ...
@@ -79,7 +79,7 @@ package Main
 import Math
 
 class Math {   // ILLEGAL: duplicate type "Math"
-    value Int
+    value Int;
 }
 ```
 

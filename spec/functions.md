@@ -88,8 +88,8 @@ A method parameter declared as `&T` requires the caller to supply a source that 
 
 ```zane
 class Car {
-    engine &Engine
-    _value Int
+    engine &Engine;
+    _value Int;
 }
 
 // legal: engine may be stored into an `&` field
@@ -188,6 +188,11 @@ Declarations that differ only by return type, parameter names, `this`, or `mut` 
 ### 4.3 Valid overloads differ by arity or parameter type
 Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `&`-ness at the same position.
 
+### 4.4 Variant case overloads
+A function may be overloaded on the individual cases of a `variant` to express pattern matching. These case overloads are subject to two extra restrictions: a whole-variant overload `f(x V)` and a case overload `f(x V.case)` for the same variant **MUST NOT** coexist for one function name, because a call on a whole-variant value could not tell which to select; and all of a function's case overloads over one variant **MUST** be declared in the same package, where the compiler verifies they cover every case. The full rules live in [`adt.md`](adt.md) §5.
+
+> **See also:** [`adt.md`](adt.md) §5 for case-overload dispatch and the whole-variant-versus-case mutual-exclusion rule.
+
 ---
 
 ## 5. Overload Resolution with Implicit Constructors
@@ -202,7 +207,9 @@ If no phase yields a viable candidate, the call is a normal no-match type error.
 
 Implicit constructors are therefore a last resort. They never participate in discovering an otherwise unknown destination type for generic inference.
 
-> **See also:** [`types.md`](types.md) §4 for the definition and constraints of implicit constructors.
+These phases describe **static** overload resolution. Dispatch over a `variant`'s cases is a separate, **runtime** mechanism: a value whose static type is a whole variant lowers to a tag jump over the matching case overloads, rather than being resolved statically. See [`adt.md`](adt.md) §5.
+
+> **See also:** [`types.md`](types.md) §4 for the definition and constraints of implicit constructors. [`adt.md`](adt.md) §5 for runtime case-overload dispatch.
 
 ---
 

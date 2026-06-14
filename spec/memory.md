@@ -126,8 +126,8 @@ A parameter declared as plain `T` is a **value-only binding**. The caller is not
 
 ```zane
 class Car {
-    engine &Engine
-    _value Int
+    engine &Engine;
+    _value Int;
 }
 
 // legal: `&` parameter allows storing into `&` field
@@ -160,21 +160,21 @@ Structs are copied and overwritten as ordinary inline values. They do not have p
 
 ```zane
 struct Vec2 {
-    x Float
-    y Float
+    x Float;
+    y Float;
 }
 
 struct Rect {
-    pos Vec2
-    size Vec2
+    pos Vec2;
+    size Vec2;
 }
 
 struct BadOwner {
-    engine Engine      // ILLEGAL: class field inside a struct
+    engine Engine;      // ILLEGAL: class field inside a struct
 }
 
 struct BadRef {
-    target &Engine  // ILLEGAL: `&` field inside a struct
+    target &Engine;  // ILLEGAL: `&` field inside a struct
 }
 ```
 

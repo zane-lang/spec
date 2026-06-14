@@ -27,8 +27,8 @@ A parameterized type declares its parameters in a `<>` header, then produces a l
 
 ```zane
 type Vector<T Type> = struct {
-    x T
-    y T
+    x T;
+    y T;
 }
 ```
 
@@ -47,7 +47,7 @@ A header may mix type parameters and number parameters. A type parameter is decl
 
 ```zane
 type Buffer<T Type, n Number> = struct {
-    data Array<T, n>
+    data Array<T, n>;
 }
 
 Buffer<Int, 64>   // T = Int, n = 64
@@ -61,8 +61,8 @@ A type with no parameters needs no `<>` header. Its `<>`-free name is already a 
 
 ```zane
 type Wrapper = struct {
-    vec Vector<Int>
-    arr Array<Int, 10000>
+    vec Vector<Int>;
+    arr Array<Int, 10000>;
 }
 ```
 
@@ -94,8 +94,8 @@ A parameter is referenced by its bare name. The casing rule (see [`lexical.md`](
 
 ```zane
 type Pair<T Type, U Type> = struct {
-    first T
-    second U
+    first T;
+    second U;
 }
 ```
 
@@ -125,8 +125,8 @@ A type expression applies arguments to a parameterized type. It is a compile-tim
 
 ```zane
 type Wrapper = struct {
-    vec Vector<Int>
-    arr Array<Int, 10000>
+    vec Vector<Int>;
+    arr Array<Int, 10000>;
 }
 
 Vec2 transform(this Vec2, mat Matrix<Float, 3>) { ... }
@@ -147,7 +147,7 @@ A type argument may itself reference a parameter that the surrounding scope has 
 
 ```zane
 type Buffer<T Type, n Number> = struct {
-    data Array<T, n>
+    data Array<T, n>;
 }
 ```
 
@@ -188,7 +188,7 @@ A type or number can instead be passed as an ordinary argument by declaring a va
 
 ```zane
 Vector(T Type) {
-    return init{ x: T(0), y: T(0) }
+    return init{ x = T(0), y = T(0) }
 }
 
 Array(T Type, n Number) {
@@ -246,7 +246,7 @@ Used when no literal is available — for example, a zero-initialised array of k
 
 ```zane
 type Matrix = struct {
-    data Array<Float, 9>     // architecture: 9 contiguous Floats, stored inline
+    data Array<Float, 9>;     // architecture: 9 contiguous Floats, stored inline
 }
 ```
 
