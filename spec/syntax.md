@@ -46,8 +46,10 @@ name Type(value)
 
 ### 1.3 Class fields
 
+A class body declares fields only and names a type through a `type` declaration (§1.6). There is no standalone `class Name { ... }` declaration form.
+
 ```zane
-class Name {
+type Name = class {
     field Type;
     field &Type;
 }
@@ -55,8 +57,10 @@ class Name {
 
 ### 1.4 Struct fields
 
+A struct body declares fields only and names a type through a `type` declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
+
 ```zane
-struct Name {
+type Name = struct {
     field Type;
 }
 ```
