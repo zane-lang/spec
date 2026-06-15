@@ -43,7 +43,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/control-flow.md`](spec/control-flow.md) | `if`/`elif`/`else`, `guard`, counted loops, and 1-based ordinal rules |
 | [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, and boolean keywords |
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
-| [`spec/packages.md`](spec/packages.md) | Package declarations, member access, and the instanceful package pattern |
+| [`spec/packages.md`](spec/packages.md) | Package declarations and member access |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
 
 ## Contributing
