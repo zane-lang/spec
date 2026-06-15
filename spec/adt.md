@@ -40,7 +40,7 @@ Per-member associated data is attached externally through an enum map (§7), whi
 
 ## 3. Variants
 
-A `variant` is a sum type. A value holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-separated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
+A `variant` is a sum type. A value holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
 
 ```zane
 type Expr = variant {
@@ -50,7 +50,7 @@ type Expr = variant {
     boolLit Bool;
     ident String;
     qualifiedIdent tuple[String, String];
-    op class { left &Expr; right &Expr; operator Operator };
+    op class { left &Expr; right &Expr; operator Operator; };
     flip &Expr;
     parenthesized &Expr;
     funcCall FuncCall;
@@ -67,7 +67,7 @@ Reading a member of a variant value is **partial**: the case may not be the live
 
 A `struct` and a `variant` share one declaration body. The keyword flips four things in lockstep. "Interchangeable" applies to the *declaration*, not to consuming code: construction and reads differ between the two.
 
-| | `struct { a A; b B }` (product) | `variant { a A; b B }` (sum) |
+| | `struct { a A; b B; }` (product) | `variant { a A; b B; }` (sum) |
 |---|---|---|
 | Meaning | has `a` **and** `b` | has `a` **or** `b` |
 | Construct | must set **all** members | sets **exactly one** member |
@@ -122,7 +122,7 @@ This exhaustiveness rule is *per match set*, not per variant. A variant's cases 
 // lambda literals (=> expr is shorthand for { return expr })
 result Int = match value [
     Int(x Num.int)   => 2 * x,
-    Int(x Num.float) => Int(6 * x),
+    Int(x Num.float) => Int(6 * x)
 ]
 
 // lambda-variables — any callables of the right parameter types
@@ -163,7 +163,7 @@ An enum map attaches **uniform external data** to an enum's members. It is a pac
 Colors.colorName String [
     red = "Red",
     green = "Green",
-    blue = "Blue",
+    blue = "Blue"
 ]
 
 Colors.red.colorName   // "Red" — a String value
@@ -200,7 +200,7 @@ enum Expr { IntLit(String), Flip(Box<Expr>) }  // payload-carrying
 **Zane:**
 ```zane
 type Colors = enum [ red, green, blue ]    // uniform peers
-type Expr = variant { intLit String; flip &Expr }   // sum type
+type Expr = variant { intLit String; flip &Expr; }   // sum type
 ```
 
 | Difference | Rust | Zane |
@@ -235,7 +235,7 @@ type Expr = variant { intLit String; flip &Expr }   // sum type
 | Concept | Rule |
 |---|---|
 | `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum type |
-| `variant` | Sum type holding exactly one named member at a time; `{ }` body with `;`-separated `member Type` entries, identical to a `struct` body |
+| `variant` | Sum type holding exactly one named member at a time; `{ }` body with `;`-terminated `member Type` entries, identical to a `struct` body |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout |
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `variant` or `class`, never a `struct` |

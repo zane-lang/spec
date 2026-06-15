@@ -14,7 +14,7 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
-- **`Delimiter follows the separated thing`.** `;` separates members of a `struct`/`class`/`variant` body, `,` separates elements of a value collection, and a newline separates statements. `{ }` holds a member body or code block; `[ ]` holds a flat list.
+- **`Delimiter follows the separated thing`.** `;` terminates every member of a `struct`/`class`/`variant` body (always trailing), `,` separates elements of a value collection (never trailing), and a newline separates statements. `{ }` holds a member body or code block; `[ ]` holds a flat list.
 
 ---
 
@@ -115,9 +115,9 @@ A comparison never has a type on its immediate left, and a type expression never
 
 Zane chooses its delimiter by *what is being separated*, and its bracket by *what kind of thing is inside*. The choice is mechanical, so the same character never means two things in one context.
 
-### 6.1 `;` separates members of a declaration body
+### 6.1 `;` terminates members of a declaration body
 
-A `;` separates the members of a `struct`, `class`, or `variant` type-definition body. It is used **always**, inline or multiline, because newlines are **insignificant inside these three bodies**. In a multiline body, write a `;` after every member line, including the last, for regularity. A single-member inline body needs none.
+A `;` **terminates** every member of a `struct`, `class`, or `variant` type-definition body. It is **always trailing**: every member ends with a `;`, inline or multiline, single-member or many, because newlines are **insignificant inside these three bodies**. The last member carries a `;` exactly like every other, so the form is uniform.
 
 ```zane
 type Node = class {
@@ -126,12 +126,12 @@ type Node = class {
     label String;
 }
 
-type Color = struct { r Int; g Int; b Int }   // inline body, ';'
+type Color = struct { r Int; g Int; b Int; }   // inline body, every member ends in ';'
 ```
 
 ### 6.2 `,` separates elements of a value collection
 
-A `,` separates the elements of a value collection: array literals, `tuple`, `enum`, call and constructor arguments, `init{ }` fields, generic arguments, and `match` arm lists.
+A `,` separates the elements of a value collection: array literals, `tuple`, `enum`, call and constructor arguments, `init{ }` fields, generic arguments, and `match` arm lists. It is **never trailing**: a `,` appears only *between* elements, never after the last one.
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])
@@ -169,6 +169,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Digits allowed inside names | Names such as `Vec2` and `Matrix3` read naturally, and with parameters supplied only through `<>` there is no need to reserve digits for a baked-in size form. |
 | Casing disambiguates `<>` | Reusing `<` and `>` for type arguments is only safe because the left operand's casing distinguishes a type application from a comparison. |
 | Delimiter follows the separated thing | Tying `;`, `,`, and the newline each to one kind of separated thing means a character never carries two meanings in one context, so the parser never needs lookahead to know what a separator separates. |
+| `;` always trailing, `,` never trailing | A terminator that follows every member (and a separator that never follows the last element) makes both rules positional and uniform: every member ends in `;`, no value collection ends in `,`, inline or multiline. The asymmetry also keeps the two characters visually distinct in role. |
 | `;` always, newlines insignificant in member bodies | Making the member delimiter explicit and uniform inline and multiline removes the need for newline-sensitivity rules inside `struct`/`class`/`variant` bodies. |
 | `{ }` for bodies, `[ ]` for flat lists | One bracket marks a named-member body or code block and the other a flat list, so the bracket itself signals whether newlines are structural. |
 
@@ -185,7 +186,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Type parameter | An uppercase name (`T`) declared `T Type` in a `<>` header; referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
-| Member delimiter | `;` separates members of a `struct`/`class`/`variant` body, always, inline or multiline; newlines are insignificant there |
-| Value delimiter | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) |
+| Member terminator | `;` terminates every member of a `struct`/`class`/`variant` body; always trailing, inline or multiline; newlines are insignificant there |
+| Value delimiter | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
 | Brackets | `{ }` holds a member body or code/`init{}` block; `[ ]` holds a flat list |

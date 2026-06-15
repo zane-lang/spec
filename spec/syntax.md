@@ -87,7 +87,7 @@ type Name = enum [ memberA, memberB, ... ]
 
 ### 1.7 Variant declarations
 
-A `variant` body uses the same grammar as a `struct` body: `{ }` brackets with `;`-separated members, each a lowercase member name followed by its payload type.
+A `variant` body uses the same grammar as a `struct` body: `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type.
 
 ```zane
 type Name = variant {
@@ -115,7 +115,7 @@ An enum map is a package-scope declaration. It names the enum, the property, the
 ```zane
 EnumName.property Type [
     memberA = valueA,
-    memberB = valueB,
+    memberB = valueB
 ]
 ```
 
@@ -166,7 +166,7 @@ An inline body-form type expression — `struct { ... }`, `class { ... }`, `vari
 
 ```zane
 type Expr = variant {
-    op class { left &Expr; right &Expr };
+    op class { left &Expr; right &Expr; };
     args tuple[String, String];
 }
 ```
@@ -561,7 +561,7 @@ The arms are ordinary function values, so each may be a lambda literal (block- o
 ```zane
 result Int = match value [
     Int(x Num.int)   => 2 * x,
-    Int(x Num.float) => Int(6 * x),
+    Int(x Num.float) => Int(6 * x)
 ]
 
 result Int = match x [intCase, floatCase]

@@ -68,8 +68,8 @@ Methods, constructors, overload rules, and function values live at package scope
 A `struct` is a product type: it has all of its members at once. A `variant` is a sum type with the same body grammar: it has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
 
 ```zane
-type Color = struct { r Int; g Int; b Int }    // product: has r and g and b
-type Shape = variant { dot Dot; line Line }      // sum: has dot or line
+type Color = struct { r Int; g Int; b Int; }    // product: has r and g and b
+type Shape = variant { dot Dot; line Line; }      // sum: has dot or line
 ```
 
 A `struct` is restricted to inline value storage and **MUST NOT** contain a class field, an `&` field, or itself (§2.2, [`memory.md`](memory.md) §2.10). A `variant` is not so restricted: it may be recursive and may box recursive members through `&`. The body syntax is symmetric, but the memory model decides which keyword a given shape is legal under.
@@ -340,15 +340,15 @@ The **source type** (parameter type) of an implicit constructor **MUST** be a st
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a struct or a class.
 
 ```zane
-type Celsius = struct { value Float }
-type Fahrenheit = struct { value Float }
+type Celsius = struct { value Float; }
+type Fahrenheit = struct { value Float; }
 
 implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
 ```
 
 ```zane
-type Logger = class { verbosity Int }
-type LogConfig = struct { verbosity Int }
+type Logger = class { verbosity Int; }
+type LogConfig = struct { verbosity Int; }
 
 implicit Logger(cfg LogConfig) {   // legal: struct → class
     return init{verbosity = cfg.verbosity}
@@ -356,8 +356,8 @@ implicit Logger(cfg LogConfig) {   // legal: struct → class
 ```
 
 ```zane
-type Source = class { data String }
-type Destination = class { payload String }
+type Source = class { data String; }
+type Destination = class { payload String; }
 
 implicit Destination(s Source) {   // ILLEGAL: source type is a class
     return init{payload = s.data}
@@ -372,7 +372,7 @@ This rule prevents conflicts when multiple packages independently define the sam
 ```zane
 package Units
 
-type Meters = struct { value Float }
+type Meters = struct { value Float; }
 
 // legal: declared in home package of Meters
 implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}

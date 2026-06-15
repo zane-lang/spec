@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §7
 
 ### 3.21 member-versus-value delimiter
-- **Meaning:** `;` separates the members of a `struct`/`class`/`variant` body (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms); a newline separates statements.
+- **Meaning:** `;` terminates every member of a `struct`/`class`/`variant` body and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
