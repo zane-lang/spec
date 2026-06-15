@@ -334,7 +334,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Read-only method | Called with `:`; may read but not write `this` |
-| Function | Package-scope verb without `this`; no private-field privilege |
+| Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` method parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |

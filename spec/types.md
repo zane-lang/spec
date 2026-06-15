@@ -55,7 +55,7 @@ pos = Vec2(3, 4)   // legal: replaces the whole value
 ### 2.3 Field visibility is name-based
 Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
 
-The same receiver type written under any other parameter name is a function parameter and does not gain private-field access.
+The same receiver type written under any other parameter name is a non-receiver parameter and does not gain private-field access.
 
 All fields whose names do not begin with `_` are public.
 
