@@ -32,7 +32,7 @@ Primitive operators are implementable and define the operator surface area:
 | `<` | binary | `Bool <(left T, right T)` |
 
 ### 2.2 Where operators may be defined
-Operator implementations are package-scope function declarations whose names are operator tokens. They are ordinary non-`mut` functions with special names, not methods: an operator declaration never has a `this` receiver parameter.
+Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` receiver parameter.
 
 A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. See [`functions.md`](functions.md) §6.1 for the home-package concept used by method resolution.
 
@@ -134,7 +134,7 @@ The following are not operators in Zane:
 - `!=` (replaced by `~=` as a derived operator)
 
 ### 5.3 Operators are call-only
-An operator token may appear only in operator position; it has no value form. There is no syntax that references `+` or `<` as a value. This is the same rule that makes methods and free functions call-only, and it is why an overloaded operator never has to be resolved without operands. To pass behavior as a value, use a lambda-variable.
+An operator token may appear only in operator position; it has no value form. There is no syntax that references `+` or `<` as a value. This is the same rule that makes methods and functions call-only, and it is why an overloaded operator never has to be resolved without operands. To pass behavior as a value, use a lambda-variable.
 
 > **See also:** [`functions.md`](functions.md) §7.1 for the general call-only rule on callables.
 

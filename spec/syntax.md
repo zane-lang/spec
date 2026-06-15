@@ -252,7 +252,7 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ## 3. Functions, Methods, Constructors, and Lambdas
 
-### 3.1 Free functions
+### 3.1 Functions
 
 ```zane
 ReturnType name(param Type, ...) { body }
@@ -449,13 +449,13 @@ Bool ==(leftParam LeftType, rightParam RightType) { body }
 Bool <(leftParam LeftType, rightParam RightType) { body }
 ```
 
-Operator definitions are package-scope function declarations whose names are operator tokens. They never declare `this`, so they are not methods and cannot use `mut`.
+Operator definitions are package-scope verb declarations whose names are operator tokens. They never declare `this`, so they are not methods and cannot use `mut`.
 
 ---
 
 ## 4. Calls and Function Values
 
-### 4.1 Free-function calls
+### 4.1 Function calls
 
 ```zane
 name(args...)
@@ -473,7 +473,7 @@ receiver!packageName$method(args...)
 
 ### 4.3 Callables are call-only
 
-Methods, free functions, and operators have no value form. A package-scope callable name may appear only in call position; it cannot be written as a bare value.
+Methods, functions, and operators have no value form. A package-scope callable name may appear only in call position; it cannot be written as a bare value.
 
 ```zane
 packageName$functionName(args...)   // legal: call position
