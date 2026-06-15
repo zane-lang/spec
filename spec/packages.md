@@ -10,19 +10,19 @@ This document specifies Zane's package model: package declarations and member na
 
 Zane packages are namespaces that host every type, function, and constant in the language.
 
-- **`PascalCase namespaces`.** Package names use PascalCase, matching the casing convention for type names.
-- **`Explicit member access`.** Cross-package members are addressed with `PackageName$member`.
+- **`camelCase names`.** Package names use camelCase, keeping them visually distinct from type names which are PascalCase.
+- **`Explicit member access`.** Cross-package members are addressed with `packageName$member`.
 - **`No hidden ambient state`.** Packages expose constants and functions; time-varying state must live in objects and be passed explicitly.
 
 ---
 
 ## 2. Package Declarations and Member Access
 
-### 2.1 Packages are PascalCase namespaces
-`package PackageName` introduces a namespace. Package names use PascalCase, like type names. Members are referenced as `PackageName$member`.
+### 2.1 Packages are camelCase namespaces
+`package packageName` introduces a namespace. Package names use camelCase (lowercase-initial), keeping them visually distinct from type names which are PascalCase. Members are referenced as `packageName$member`.
 
 ### 2.2 Imports
-A package becomes available with `import PackageName`. After import, both qualified (`PackageName$member`) and unqualified references (subject to method-lookup rules in [`functions.md`](functions.md) §6) are usable.
+A package becomes available with `import packageName`. After import, both qualified (`packageName$member`) and unqualified references (subject to method-lookup rules in [`functions.md`](functions.md) §6) are usable.
 
 > **See also:** [`dependencies.md`](dependencies.md) §8 for the import syntax and resolution rules across the dependency graph.
 
@@ -35,6 +35,6 @@ Packages may expose immutable constants and package-scope functions. Time-varyin
 
 | Decision | Rationale |
 |---|---|
-| PascalCase package names | Aligns package names with type-naming conventions, making qualified member access (`PackageName$member`) visually consistent with the rest of the language. |
+| camelCase package names | Distinguishes package names from type names (which are PascalCase), making it immediately clear at a glance whether an identifier refers to a namespace or a type. |
 | `$` as the member separator | A non-letter separator removes any ambiguity between package-qualified access and ordinary identifier characters such as `.` (used for field access). |
 | No hidden mutable package state | Prevents ambient state from undermining ownership and effect reasoning. |
