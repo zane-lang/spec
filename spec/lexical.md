@@ -39,6 +39,9 @@ The first letter of an identifier selects its lexical class.
 |---|---|---|
 | Uppercase | Type | `Int`, `Vector`, `Vec2`, `Matrix` |
 | Lowercase | Value, binding, or parameter | `x`, `count`, `n`, `transform` |
+| Lowercase | Package name | `math`, `json`, `httpClient` |
+
+Package names share lowercase-initial casing with value names but are syntactically distinct: they appear only after the `package` keyword, after `import`, or as the left operand of `$`. The surrounding syntax, not casing, disambiguates them from ordinary value names.
 
 ### 3.1 Types must be uppercase
 
@@ -89,7 +92,7 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 |---|---|---|
 | `&` | Reference type (`&Node`) | [`memory.md`](memory.md) §2 |
 | `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`) | [`syntax.md`](syntax.md) §2.7 |
-| `$` | Package-member separator (`PackageName$member`) | [`packages.md`](packages.md) §1 |
+| `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
 
 ---
 
@@ -182,6 +185,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Case sensitivity | Identifiers compare by exact bytes; case is never folded |
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
+| Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, or as the left operand of `$` |
 | Number parameter | A lowercase name (`n`) declared `n Number` in a `<>` header; a number, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` in a `<>` header; referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |

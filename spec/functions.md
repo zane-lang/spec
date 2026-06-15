@@ -156,7 +156,7 @@ Float getScale(node Node) {
 Free functions may access only fields whose names do not begin with `_`. This rule is package-independent: a free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 3.3 Free functions use ordinary call syntax
-Free functions are called as `name(args...)` or `PackageName$name(args...)`.
+Free functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied functions and methods
 Both free functions and methods may use `=>` when they return a value:
