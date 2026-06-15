@@ -10,6 +10,7 @@ This document specifies Zane's function model: free functions, methods, subscrip
 
 Zane unifies methods, free functions, and lambdas under one model: a callable is a package-scope declaration (or anonymous literal) whose first parameter may optionally be `this`.
 
+- **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: free functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "free function" for the narrow name-and-no-`this` form. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, free functions, and constructors are declared at package scope; type bodies never contain behavior.
 - **`Methods as functions`.** A method is a function whose first parameter is `this`, so methods and function values share one model.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
@@ -158,8 +159,8 @@ Free functions may access only fields whose names do not begin with `_`. This ru
 ### 3.3 Free functions use ordinary call syntax
 Free functions are called as `name(args...)` or `packageName$name(args...)`.
 
-### 3.4 Expression-bodied functions and methods
-Both free functions and methods may use `=>` when they return a value:
+### 3.4 Expression-bodied verbs
+A verb that returns a value may use `=>` for its body. Both free functions and methods take this shorthand (operators and constructors use the same `=>` form; see [`types.md`](types.md) §3.2):
 
 ```zane
 Int double(value Int) => value * 2

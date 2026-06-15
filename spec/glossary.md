@@ -169,6 +169,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
+### 3.22 verb
+- **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are free functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
+- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
+- **Canonical home:** [`functions.md`](functions.md) §1
+
 ---
 
 ## 4. Packages, Operators, and Versioning
