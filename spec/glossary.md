@@ -100,7 +100,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.11
 
 ### 3.8 call-only callable
-- **Meaning:** Methods, free functions, and operators may appear only in call position; they have no value form and cannot be referenced as values.
+- **Meaning:** Methods, functions, and operators may appear only in call position; they have no value form and cannot be referenced as values.
 - **Why this name:** The name states the single permitted use site — a call — and contrasts it with the value form that callables deliberately lack.
 - **Canonical home:** [`functions.md`](functions.md) §7.1
 
@@ -170,7 +170,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
 ### 3.22 verb
-- **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are free functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
+- **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 

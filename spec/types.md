@@ -2,7 +2,7 @@
 
 This document specifies Zane's data types: classes, structs, fields, constructors, `type` and `alias` declarations, and the `init{ }` expression. Methods and other behavior live in [`functions.md`](functions.md).
 
-> **See also:** [`memory.md`](memory.md) §2 for ownership rules. [`functions.md`](functions.md) for methods and free functions. [`syntax.md`](syntax.md) §1 and §3 for declaration grammar.
+> **See also:** [`memory.md`](memory.md) §2 for ownership rules. [`functions.md`](functions.md) for methods and functions. [`syntax.md`](syntax.md) §1 and §3 for declaration grammar.
 
 ---
 
@@ -12,7 +12,7 @@ Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** Class and struct bodies declare storage only — no methods or constructors live inside the body.
 - **`Two type kinds`.** `class` is heap-allocated with single ownership; `struct` is inline value storage.
-- **`Package-scope constructors`.** Construction is a function declaration at package scope; the body builds the value with `init{ }`.
+- **`Package-scope constructors`.** Construction is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
 
@@ -55,7 +55,7 @@ pos = Vec2(3, 4)   // legal: replaces the whole value
 ### 2.3 Field visibility is name-based
 Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
 
-The same receiver type written under any other parameter name is a free-function parameter and does not gain private-field access.
+The same receiver type written under any other parameter name is a function parameter and does not gain private-field access.
 
 All fields whose names do not begin with `_` are public.
 
@@ -81,9 +81,9 @@ A `struct` is restricted to inline value storage and **MUST NOT** contain a clas
 ## 3. Constructors and Initialization
 
 ### 3.1 Constructors are package-scope declarations
-A constructor is a package-scope function declaration named after the type. It has no `this` parameter because no object exists yet.
+A constructor is a package-scope verb named after the type. It has no `this` parameter because no object exists yet.
 
-Constructors use the same block-bodied or expression-bodied surface forms as other package-scope functions, except that the written type name is the return type and the body constructs the result with `init{ ... }`.
+Constructors use the same block-bodied or expression-bodied surface forms as other package-scope verbs, except that the written type name is the return type and the body constructs the result with `init{ ... }`.
 
 ### 3.2 Positional constructors
 Positional constructors declare ordinary parameters and return `init{ ... }`.
@@ -307,7 +307,7 @@ distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
 ### 4.2 Coercion sites
 A coercion site is a **positional argument of a function call or constructor call** where the corresponding parameter type is known. These are the only positions where the compiler inserts an implicit constructor:
 
-- Positional arguments of a free-function call
+- Positional arguments of a function call
 - Positional arguments of a method call (the receiver is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
 
@@ -470,7 +470,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Class body | Fields only — no methods or constructors inside the body |
 | Struct | Inline value type; cannot contain class or `&` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
-| Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
+| Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically only at positional arguments of function and constructor calls — never at declarations, assignments, stores, `return`, or `Type{field = value}` initializers; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |

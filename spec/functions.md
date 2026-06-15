@@ -1,6 +1,6 @@
 # Zane Functions, Methods, and Lambdas
 
-This document specifies Zane's function model: free functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that host these declarations live in [`packages.md`](packages.md).
+This document specifies Zane's function model: functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that host these declarations live in [`packages.md`](packages.md).
 
 > **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for ownership and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
 
@@ -8,11 +8,11 @@ This document specifies Zane's function model: free functions, methods, subscrip
 
 ## 1. Overview
 
-Zane unifies methods, free functions, and lambdas under one model: a callable is a package-scope declaration (or anonymous literal) whose first parameter may optionally be `this`.
+Zane unifies methods, functions, and lambdas under one model: a callable is a package-scope declaration (or anonymous literal) whose first parameter may optionally be `this`.
 
-- **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: free functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "free function" for the narrow name-and-no-`this` form. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
-- **`Package-scope behavior`.** All methods, free functions, and constructors are declared at package scope; type bodies never contain behavior.
-- **`Methods as functions`.** A method is a function whose first parameter is `this`, so methods and function values share one model.
+- **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
+- **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
+- **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the receiver.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
@@ -20,8 +20,8 @@ Zane unifies methods, free functions, and lambdas under one model: a callable is
 
 ## 2. Methods
 
-### 2.1 Methods are functions whose first parameter is `this`
-A method is any package-scope function whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
+### 2.1 Methods are verbs whose first parameter is `this`
+A method is any package-scope verb whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -30,7 +30,7 @@ Int scaledId(this Node, factor Int) {
 ```
 
 ### 2.2 `this` grants private-field access
-Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a free function and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -142,10 +142,10 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 
 ---
 
-## 3. Free Functions
+## 3. Functions
 
-### 3.1 Free functions are package-scope functions without `this`
-A free function is any package-scope function whose first parameter is not named `this`.
+### 3.1 Functions are package-scope verbs without `this`
+A function is any package-scope verb whose first parameter is not named `this`.
 
 ```zane
 Float getScale(node Node) {
@@ -153,14 +153,14 @@ Float getScale(node Node) {
 }
 ```
 
-### 3.2 Free functions cannot access private fields
-Free functions may access only fields whose names do not begin with `_`. This rule is package-independent: a free function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
+### 3.2 Functions cannot access private fields
+Functions may access only fields whose names do not begin with `_`. This rule is package-independent: a function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
-### 3.3 Free functions use ordinary call syntax
-Free functions are called as `name(args...)` or `packageName$name(args...)`.
+### 3.3 Functions use ordinary call syntax
+Functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied verbs
-A verb that returns a value may use `=>` for its body. Both free functions and methods take this shorthand (operators and constructors use the same `=>` form; see [`types.md`](types.md) §3.2):
+A verb that returns a value may use `=>` for its body. Both functions and methods take this shorthand (operators and constructors use the same `=>` form; see [`types.md`](types.md) §3.2):
 
 ```zane
 Int double(value Int) => value * 2
@@ -198,7 +198,7 @@ A function may be overloaded on the individual cases of a `variant` to express p
 
 ## 5. Overload Resolution with Implicit Constructors
 
-For free-function calls, constructor calls, and desugared method calls, overload resolution proceeds in three phases:
+For function calls, constructor calls, and desugared method calls, overload resolution proceeds in three phases:
 
 1. **Direct match.** A candidate is viable only if the call type-checks with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
 2. **Generic match.** If the direct phase finds no viable candidate, the called declaration's `<>` header parameters are inferred from the static types of the call arguments: a type parameter from an argument's type, a number parameter from the number part of an argument's type. A call never carries a `<>` type-argument list; a type or number may instead be passed as an ordinary argument to a `Type` or `Number` value parameter (see [`generics.md`](generics.md) §5). Inference proceeds under the rules of [`generics.md`](generics.md) §3 and §5, still with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
@@ -232,14 +232,14 @@ vec:Physics$kineticEnergy()
 ```
 
 ### 6.3 Extension methods may be declared in any package
-Because methods are package-scope functions, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
+Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
 
 ---
 
 ## 7. Function Values and Lambdas
 
 ### 7.1 Callables cannot be referenced as values
-Methods, free functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. This is exactly the rule that already governs operators: `+` can be called, but `+` cannot be written as a value.
+Methods, functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. This is exactly the rule that already governs operators: `+` can be called, but `+` cannot be written as a value.
 
 ```zane
 Graph$scaledId(node, Int(2))   // legal: call position
@@ -299,7 +299,7 @@ Zane does not provide bound method references as a separate feature. Because lam
 
 ## 8. Connection to the Effect Model
 
-Read-only methods and free functions are effect-free with respect to their receiver unless they touch refs or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+Read-only methods and functions are effect-free with respect to their receiver unless they touch refs or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -309,7 +309,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 
 | Decision | Rationale |
 |---|---|
-| Methods are functions with `this` | Keeps the language model flat: methods are ordinary functions with one extra permission token. |
+| Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
 | `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
 | Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
@@ -319,7 +319,7 @@ Read-only methods and free functions are effect-free with respect to their recei
 | Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
 | Generic match infers type parameters | A call carries no `<>` list, so the generic-match phase is purely an inference step driven by the argument types (see [`generics.md`](generics.md) §5). |
 | One pass handles types and numbers | Both type parameters and number parameters of the called declaration are inferred from the argument types in the same pass, since the two kinds share one header form (see [`generics.md`](generics.md) §3). |
-| Callables are call-only | An overloaded name is a candidate set, not a value; it only collapses when arguments are supplied at a call site. Keeping methods, free functions, and operators call-only removes the ambiguity of passing an overloaded name into an overloaded parameter, exactly as operators already avoid it. |
+| Callables are call-only | An overloaded name is a candidate set, not a value; it only collapses when arguments are supplied at a call site. Keeping methods, functions, and operators call-only removes the ambiguity of passing an overloaded name into an overloaded parameter, exactly as operators already avoid it. |
 | Self-typed lambdas | A lambda carries its own complete type, so it is a single value that overload resolution can match without circularity even when the receiver is overloaded. |
 | Lambda-variables for function values | A named lambda-variable has one function type and cannot accumulate an overload set, so it is always unambiguous in value position. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
@@ -331,16 +331,16 @@ Read-only methods and free functions are effect-free with respect to their recei
 
 | Concept | Rule |
 |---|---|
-| Method | Package-scope function whose first parameter is `this` |
+| Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Read-only method | Called with `:`; may read but not write `this` |
-| Free function | Package-scope function without `this`; no private-field privilege |
+| Function | Package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` method parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by `&` at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
-| Callable reference | Illegal; methods, free functions, and operators are call-only and have no value form |
+| Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Unqualified method lookup | Searches home package, then current package |
