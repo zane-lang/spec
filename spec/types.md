@@ -286,29 +286,48 @@ type Feet = struct {
 
 // implicit conversion from Feet to Meters
 implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
+
+Void printDistance(d Meters) { ... }
 ```
 
-At a **coercion site** where the destination type is already known, if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
+At a **coercion site** — a positional argument of a function or constructor call (see §4.2) — if the source expression has a different type than the parameter and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
 
 ```zane
-distance Meters = Feet(Float(10))   // coercion site: Meters expected, Feet provided
-// desugars to: distance Meters = Meters(Feet(Float(10)))
+printDistance(Feet(Float(10)))   // coercion site: parameter expects Meters, Feet provided
+// desugars to: printDistance(Meters(Feet(Float(10))))
+```
+
+A declaration is **not** a coercion site, so the conversion must be written explicitly there:
+
+```zane
+distance Meters = Feet(Float(10))           // ILLEGAL: a declaration is not a coercion site
+distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
 ```
 
 ### 4.2 Coercion sites
-A coercion site is a position where the destination type is already known:
-- Symbol declarations with an explicit type annotation: `name Type = expr`
+A coercion site is a **positional argument of a function call or constructor call** where the corresponding parameter type is known. These are the only positions where the compiler inserts an implicit constructor:
+
+- Positional arguments of a free-function call
+- Positional arguments of a method call (the receiver is excluded; see §4.6)
+- Positional arguments of a positional constructor call `Type(...)`
+
+An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
+
+- Symbol declarations with a type annotation: `name Type = expr`
 - Assignments to already-declared symbols: `name = expr`
-- Field or subscript assignments where the storage type is already known
-- Constructor arguments where the parameter type is known
-- Method and free-function arguments where the parameter type is known
-- `return` expressions in a declaration with an explicit return type
+- Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
+- `return` expressions, even when the return type is declared
+- Named field entries of a field-constructor call `Type{ field = expr }` (including the `init{ field = expr }` form)
 
-At one coercion site requiring destination type `T`, given an expression with static type `U`, the compiler resolves the site locally:
+At each of these positions the destination type is either written locally or names existing storage, so the conversion must be written explicitly.
 
-1. If `U` is exactly `T`, accept the expression with no insertion.
+Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [`operators.md`](operators.md) §2.3); each operand is a positional argument of that call.
+
+At one coercion site requiring parameter type `T`, given an argument with static type `U`, the compiler resolves the site locally:
+
+1. If `U` is exactly `T`, accept the argument with no insertion.
 2. Otherwise, collect all visible applicable implicit constructors from `U` to `T`.
-3. If exactly one applicable implicit constructor exists, rewrite the expression as `T(expr)`.
+3. If exactly one applicable implicit constructor exists, rewrite the argument as `T(arg)`.
 4. If multiple applicable implicit constructors exist, the site is an ambiguity error.
 5. If none exist, the site is a normal type error.
 
@@ -431,7 +450,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Name-based field privacy | Privacy follows method receivers, not packages. A method declared in any package gets the same private-field access as one declared in the home package. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
-| Implicit constructors for coercion | Allows ergonomic conversions at assignment sites without operator overloading or hidden multi-step chaining. |
+| Implicit constructors for coercion | Allows ergonomic conversions when passing arguments to function and constructor calls, without operator overloading or hidden multi-step chaining. |
+| Implicit conversion only at call arguments | A call argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying. Declarations, assignments, field and subscript stores, `return`, and `Type{field = value}` initializers either write the destination type locally or store into existing storage, where a hidden conversion would be surprising. |
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
 | No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
@@ -452,7 +472,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope function declaration named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at coercion sites; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically only at positional arguments of function and constructor calls — never at declarations, assignments, stores, `return`, or `Type{field = value}` initializers; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred via a `<>` header or passed explicitly as a value parameter |
