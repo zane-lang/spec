@@ -187,6 +187,6 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`class`/`variant` body; always trailing, inline or multiline; newlines are insignificant there |
-| Value delimiter | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms); never trailing |
+| Value separator | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
 | Brackets | `{ }` holds a member body or code/`init{}` block; `[ ]` holds a flat list |
