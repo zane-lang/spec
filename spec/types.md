@@ -321,7 +321,7 @@ An implicit constructor is **never** inserted at any other position. In particul
 
 At each of these positions the destination type is either written locally or names existing storage, so the conversion must be written explicitly.
 
-Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [`operators.md`](operators.md) §2.3); each operand is a positional argument of that call.
+Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [operators.md](operators.md) §2.2); each operand is a positional argument of that call.
 
 At one coercion site requiring parameter type `T`, given an argument with static type `U`, the compiler resolves the site locally:
 
