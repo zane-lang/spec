@@ -145,7 +145,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 ## 3. Functions
 
 ### 3.1 Functions are package-scope verbs without `this`
-A function is any package-scope verb whose first parameter is not named `this`.
+A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`.
 
 ```zane
 Float getScale(node Node) {
