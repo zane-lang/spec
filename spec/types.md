@@ -12,7 +12,7 @@ Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** Class and struct bodies declare storage only — no methods or constructors live inside the body.
 - **`Two type kinds`.** `class` is heap-allocated with single ownership; `struct` is inline value storage.
-- **`Package-scope constructors`.** Construction is a verb at package scope; the body builds the value with `init{ }`.
+- **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
 
@@ -100,7 +100,7 @@ Node(id Int, scale Float, label String) {
 }
 ```
 
-Expression-bodied constructors are equivalent:
+Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below means exactly `{ return init{x, y} }`:
 
 ```zane
 package Math
@@ -111,6 +111,22 @@ Vec2(x Float, y Float) => init{x, y}
 Positional constructors **MAY** be overloaded by arity or parameter types.
 
 Constructor parameters do not need to repeat private-field underscores. It is normal to map a public-facing parameter such as `id` into a private field such as `_id` explicitly inside `init{ }`.
+
+A constructor body is an ordinary verb body: a sequence of statements that ends by returning an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns `init{ }` — it is indistinguishable from a builder helper that ends in a constructor call, apart from that sugar.
+
+```zane
+package Graph
+
+Node(id Int, scale Float, label String) {
+    scaled Float = scale * scale       // ordinary statements run first
+    nextId Int = id + Int(1)
+    return init{
+        _id = nextId,
+        scale = scaled,
+        label = label
+    }
+}
+```
 
 ### 3.3 Field constructors
 A constructor may also declare fields directly in its parameter header:

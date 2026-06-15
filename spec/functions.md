@@ -145,7 +145,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 ## 3. Functions
 
 ### 3.1 Functions are package-scope verbs without `this`
-A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`.
+A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`. (Operators are symbol-named and constructors are named after their type, so neither is a function even though they also take no `this`.)
 
 ```zane
 Float getScale(node Node) {
@@ -160,14 +160,14 @@ Functions may access only fields whose names do not begin with `_`. This rule is
 Functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied verbs
-A verb that returns a value may use `=>` for its body. Both functions and methods take this shorthand (operators and constructors use the same `=>` form; see [`types.md`](types.md) §3.2):
+A verb that returns a value may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
 
 ```zane
 Int double(value Int) => value * 2
 Int scaledId(this Node, factor Int) => this._id * factor
 ```
 
-`=> expr` desugars to `{ return expr }`. Because the shorthand always returns its expression, it is illegal for declarations whose return type is `Void`.
+`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`. Because the shorthand always returns its expression, it is illegal for declarations whose return type is `Void`.
 
 ---
 
