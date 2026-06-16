@@ -354,6 +354,7 @@ static struct {
 static void zat_init(void) {
     zat.cap       = 1u << 16;
     zat.cells     = (uint32_t*)malloc(zat.cap * sizeof(uint32_t));
+    assert(zat.cells != NULL);
     zat.cells[0]  = 0;   /* slot 0: reserved null/trap cell */
     zat.count     = 1;
     zat.free_head = 0;
@@ -372,8 +373,11 @@ static ZRef zat_alloc_slot(uint32_t off) {
         zat.free_head = zat.cells[idx];          /* unlink */
     } else {
         if (zat.count == zat.cap) {
-            zat.cap *= 2;
-            zat.cells = (uint32_t*)realloc(zat.cells, zat.cap * sizeof(uint32_t));
+            uint32_t  new_cap   = zat.cap * 2;
+            uint32_t *new_cells = (uint32_t*)realloc(zat.cells, new_cap * sizeof(uint32_t));
+            assert(new_cells != NULL);
+            zat.cells = new_cells;
+            zat.cap   = new_cap;
         }
         idx = zat.count++;
     }
@@ -382,6 +386,7 @@ static ZRef zat_alloc_slot(uint32_t off) {
 }
 /* return a slot to the free list (threaded through the cell itself). */
 static void zat_free_slot(ZRef idx) {
+    assert(idx != 0 && "slot 0 is the reserved null cell and is never freed");
     zat.cells[idx] = zat.free_head;
     zat.free_head  = idx;
 }
@@ -413,12 +418,14 @@ static ZRef zm_create_ref(void *obj, size_t obj_size) {
 /* resolve a ref to the owner's current address: anchor_ptr[idx] → owner.
    One dependent load (the cell) on top of a raw pointer dereference. */
 static inline void *zm_deref(ZRef idx) {
+    assert(idx != 0 && "dereference of a null/unreferenced ZRef");
     return zm.base + zat.cells[idx];
 }
 
 /* move / owner-overwrite: rewrite the one cell with the new offset.
    O(1) regardless of how many refs point at the owner. */
 static inline void zm_anchor_update(ZRef idx, void *new_obj) {
+    assert(idx != 0 && "anchor update for a null/unreferenced ZRef");
     zat.cells[idx] = (uint32_t)((uint8_t*)new_obj - zm.base);
 }
 

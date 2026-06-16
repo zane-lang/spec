@@ -213,7 +213,7 @@ The heap and stack grow toward each other; if they meet, the program terminates 
 
 Every location inside the region is expressed as a **`u32` offset from the region base**, never as a native pointer. Refs, the per-owner backpointer (§4.2), the anchor cells (§4.1), and `anchor_ptr` itself are all `u32`. An address is materialized only at use, as `region base + offset`, with region base held in a register. A `u32` byte offset reaches 4 GiB; because allocations are 8-byte aligned (§3.2), scaling the offset by 8 extends the reach to 32 GiB.
 
-**`anchor_ptr`** is a single fixed-location word at the base of the region. It holds the `u32` offset of the anchor table (§4.1) — heap data that may relocate as it grows. When the table relocates, only this one word is rewritten.
+**`anchor_ptr`** is a single fixed-location word at the base of the region. It holds the `u32` offset of the anchor table (§4.1) — heap data that may relocate as it grows. When the table relocates, only this one word is rewritten. `anchor_ptr` sits in a small fixed **root record** at the region base that also holds the table's allocation frontier, capacity, and free-list head (§4.6); the relocatable cell array holds only the cells themselves.
 
 ### 3.2 Heap allocation uses size-indexed free stacks
 Heap allocations reuse previously freed slots by exact rounded size:
@@ -225,7 +225,7 @@ Heap allocations reuse previously freed slots by exact rounded size:
 This keeps allocation and free O(1) and avoids coalescing logic.
 
 ### 3.3 Struct and class layout follow declaration order
-Fields are laid out in declaration order. Structs are stored inline. A class instance has stable identity and, once first referenced, carries one backpointer slot of anchor metadata (§4.2); an unreferenced instance carries none. Placement of a class instance — stack or heap — is covered in §3.5.
+Fields are laid out in declaration order. Structs are stored inline. A class instance has stable identity and carries one `u32` backpointer field of anchor metadata (§4.2) that stays `0` until the instance is first referenced. Placement of a class instance — stack or heap — is covered in §3.5.
 
 ### 3.4 Booleans may be packed
 The compiler may pack booleans in structs and stack frames when doing so does not change language semantics.
@@ -236,7 +236,7 @@ Placement is an implementation decision, not a language-visible property. The co
 - its size is statically known, and
 - it does not escape the frame that creates it in a way a move cannot satisfy.
 
-A class instance is forced onto the heap only when its size is dynamic or it must outlive its creating frame through a longer-lived owner. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
+A class instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
 
 ### 3.6 Handle-typed core classes have fixed footprint
 The core dynamically-sized classes — `List`, `String`, and their kin — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
@@ -277,10 +277,10 @@ Indices are **1-based**, and the value `0` means *unreferenced*:
 - Physical slot `0` is reserved as a null/trap cell and is never handed out. Anchors start at slot `1`.
 - A `u32` of `0` therefore reads as "no anchor yet," which is the natural state of zero-initialized storage.
 
-Each referenced owner also stores its own slot index in a **`u32` backpointer**, allocated lazily with the slot. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
+Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The lazily-allocated thing is the table slot (§4.3), not the field — the field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
 
 ### 4.3 Anchors are created lazily
-An owner that is never referenced pays nothing: its backpointer stays `0` and it consumes no table slot. The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's address into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
+An owner that is never referenced consumes no table slot: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's `u32` offset into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
 
 ### 4.4 Dereferencing a ref
 Resolving an `&` finds the cell through `anchor_ptr`, reads the owner's `u32` offset, adds the region base, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
@@ -324,7 +324,7 @@ A ref follows the owner/anchor path rather than pointing at a fixed object addre
 This is why object relocation and owner overwrite are **O(1) with respect to the number of refs**. It is also how a moved-from symbol stays readable: after a move the symbol downgrades to an `&` — a slot index — and reads resolve through the cell to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
 ### 4.6 Destroying an owner frees its slot
-When a referenced owner is destroyed, its anchor slot is returned to the free list as part of destruction. Freed cells thread the free list through themselves: a free cell stores the next free index, and the table header holds the free-list head (`0` when empty), so reuse costs no extra space.
+When a referenced owner is destroyed, its anchor slot is returned to the free list as part of destruction. Freed cells thread the free list through themselves: a free cell stores the next free index, and the table's root record (§3.1, the fixed area at the region base alongside `anchor_ptr`) holds the free-list head (`0` when empty), so reuse costs no extra space.
 
 Because scope rules keep every ref inside its owner's lifetime ([`lifetimes.md`](lifetimes.md) §1.1, §1.4), no live ref can point at a freed slot. Destruction therefore creates no dangling-reference state.
 
