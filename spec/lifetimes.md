@@ -124,7 +124,7 @@ A function may return an `&T` only when the returned reference is rooted in one 
 Class instances are destroyed when their owner dies, their owning container dies, or their owning scope drains under the concurrency rules.
 
 ### 2.2 Scopes drain before destruction
-If a scope launches concurrent work, objects owned by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule.
+If a scope launches concurrent work, objects owned by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
 ### 2.3 Ref storage never extends lifetime
 Refs do not participate in ownership and cannot prolong object lifetime. They only track a live object whose owner is already guaranteed to outlive them.
