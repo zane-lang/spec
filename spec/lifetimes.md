@@ -90,6 +90,8 @@ node Node()
 }
 ```
 
+An owned verb result (§1.2) has no source owner; its source scope is the expression that produces it. That scope is always nested within or equal to the destination owner's scope, so this restriction is trivially satisfied and never blocks moving a verb result into any owner.
+
 ### 1.5 Callee-decides move semantics
 When a value is passed to a function, the callee decides whether a move happens by what it does internally:
 
