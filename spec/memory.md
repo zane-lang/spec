@@ -205,11 +205,15 @@ The runtime reserves one contiguous region at startup, divided into three parts:
 [anchor_ptr][ heap → … ← stack ]
 ```
 
-- **`anchor_ptr`** is a single fixed-location word at the base of the region. It holds the current address of the anchor table (§4.1).
+- The **region base** is the start address of the whole region — the one native pointer the runtime holds. It is fixed for the program's lifetime.
 - The **heap** grows upward, starting just above `anchor_ptr`.
 - The **stack** grows downward from the top.
 
-The heap and stack grow toward each other; if they meet, the program terminates with out-of-memory. The anchor table is ordinary heap data reached through `anchor_ptr`, so only one fixed word is reserved up front — the table itself grows on demand (§4.1).
+The heap and stack grow toward each other; if they meet, the program terminates with out-of-memory.
+
+Every location inside the region is expressed as a **`u32` offset from the region base**, never as a native pointer. Refs, the per-owner backpointer (§4.2), the anchor cells (§4.1), and `anchor_ptr` itself are all `u32`. An address is materialized only at use, as `region base + offset`, with region base held in a register. A `u32` byte offset reaches 4 GiB; because allocations are 8-byte aligned (§3.2), scaling the offset by 8 extends the reach to 32 GiB.
+
+**`anchor_ptr`** is a single fixed-location word at the base of the region. It holds the `u32` offset of the anchor table (§4.1) — heap data that may relocate as it grows. When the table relocates, only this one word is rewritten.
 
 ### 3.2 Heap allocation uses size-indexed free stacks
 Heap allocations reuse previously freed slots by exact rounded size:
@@ -261,9 +265,9 @@ Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md
 ## 4. Anchors and Refs
 
 ### 4.1 The anchor table
-Refs are tracked through a single **anchor table**: a heap-resident array of fixed-size cells, each holding the current address of one referenced owner. The table is reached through `anchor_ptr` (§3.1), the one fixed word at the base of the memory region.
+Refs are tracked through a single **anchor table**: a heap-resident array of fixed-size cells, each holding the current `u32` region offset (§3.1) of one referenced owner. The table is reached through `anchor_ptr` (§3.1), the one fixed word at the base of the region.
 
-Each cell is one machine word — just the owner's current address; it stores nothing else. Because every cell is the same size, the table is the simplest possible pool: a bump frontier plus a free list, with no size classes and no coalescing. It is ordinary heap data, so it grows on demand; growing it allocates a larger block, copies the cells, and updates `anchor_ptr`. Growth touches only that one root word, never the refs (§4.2), so it is O(1) with respect to the number of live refs.
+Each cell is a single **`u32`** — the owner's current offset; it stores nothing else. Because every cell is the same size, the table is the simplest possible pool: a bump frontier plus a free list, with no size classes and no coalescing. It is ordinary heap data, so it grows on demand; growing it allocates a larger block, copies the cells, and rewrites the one `anchor_ptr` word. Growth touches only that root word, never the refs (§4.2), so it is O(1) with respect to the number of live refs.
 
 ### 4.2 Refs are slot indices, not pointers
 An `&` value is a **`u32` index** into the anchor table, not a raw pointer. A `u32` indexes over four billion simultaneously-referenced owners — far beyond any realistic working set, since only referenced class instances consume a slot — while keeping an `&` half the size of a 64-bit pointer.
@@ -279,7 +283,7 @@ Each referenced owner also stores its own slot index in a **`u32` backpointer**,
 An owner that is never referenced pays nothing: its backpointer stays `0` and it consumes no table slot. The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's address into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
 
 ### 4.4 Dereferencing a ref
-Resolving an `&` reads the table base from `anchor_ptr`, indexes to the cell, reads the owner's current address, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
+Resolving an `&` finds the cell through `anchor_ptr`, reads the owner's `u32` offset, adds the region base, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
 
 Consider reading a field through a ref, where `mainWeapon` is an `&Weapon`:
 
@@ -287,28 +291,32 @@ Consider reading a field through a ref, where `mainWeapon` is an `&Weapon`:
 dps Float = mainWeapon.dps
 ```
 
-`mainWeapon` holds a `u32` index, not the Weapon's address. Field access uses `.`: it reads through the current owner address in the cell and adds the field offset. The walk is index → cell → owner address → field:
+`mainWeapon` holds a `u32` index, not the Weapon's address. Field access uses `.`: it reads the owner's current offset from the cell, materializes the address as `region base + offset`, then adds the field offset. The walk is index → cell → owner offset → owner address → field:
 
 ```
+  region base  (the one native pointer, held in a register)
+  anchor_ptr (u32) ──▶ anchor table
+
   mainWeapon : &Weapon  =  index n  (u32)
-        │
-        │  anchor_ptr ──▶ base of anchor table
-        ▼
-  ┌──────────────────── anchor table (heap) ────────────────────┐
-  │  slot 0  │  slot 1  │   …   │              slot n            │
-  │  (null)  │  addr    │       │              addr ──┐          │
-  └────────────────────────────────────────────────┼───────────┘
-                                                     │  Weapon's
-                                                     ▼  current address
-                              owner_addr ──▶ ┌────────────────────────┐
-                                             │  Weapon  (stack/heap)   │
-                                             │  name   String          │
-                                             │  dps    Float  ◀── read │  = *(owner_addr + offset(dps))
-                                             │  range  Float           │
-                                             └────────────────────────┘
+
+  ┌──────────────── anchor table ────────────────┐
+  │  slot 0 │ slot 1 │  …  │       slot n         │
+  │  (null) │  off   │     │       off            │
+  └─────────────────────────────────┼────────────┘
+                                     │  cell = owner offset (u32)
+                                     ▼
+        owner address  =  region base + owner offset
+                                     │
+                                     ▼
+                       ┌────────────────────────┐
+                       │  Weapon  (stack/heap)   │
+                       │  name   String          │
+                       │  dps    Float  ◀── read │  = *(owner address + offset(dps))
+                       │  range  Float           │
+                       └────────────────────────┘
 ```
 
-The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the ref's index at a different Weapon (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. The address arithmetic — the 1-based slot offset, the cell stride, and the field offset — folds into machine addressing modes, so the index costs no extra instruction over a raw-pointer dereference. The added cost is one dependent load: the cell read between the index and the field. See §4.8.
+The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the ref's index at a different Weapon (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. The address arithmetic — the 1-based slot offset, the cell stride, the `region base +`, and the field offset — folds into machine addressing modes, so the index costs no extra instruction over a raw-pointer dereference. The added cost is one dependent load: the cell read between the index and the field. See §4.8.
 
 ### 4.5 Moves and overwrites update one cell, not all refs
 A ref follows the owner/anchor path rather than pointing at a fixed object address. When an owner moves (§3.7) or an owning slot is overwritten, the runtime writes the owner's new address into its one anchor cell, located through the backpointer (§4.2). Every ref reads that cell on its next dereference, so all refs observe the owner's current value with no per-ref fixup.
@@ -324,7 +332,7 @@ Because scope rules keep every ref inside its owner's lifetime ([`lifetimes.md`]
 A dangling ref would require one of three failures: an owner overwrite breaking existing refs, a ref outliving the owner's scope, or an object move leaving refs pointed at a dead address. The model eliminates each. Owner/anchor indirection makes overwrite and move follow the current cell value instead of a stale address (§4.5). The same-or-higher-scope rule keeps every ref inside the owner's lifetime envelope ([`lifetimes.md`](lifetimes.md) §1.1). The model is enforced by storage shape and lexical scope, not by runtime borrow tracking.
 
 ### 4.8 Resolution cost
-The index encoding adds no arithmetic cost: the 1-based offset and cell stride fold into the machine addressing mode, and `anchor_ptr` is the hottest word in the program — pinned in a register across a region and reloaded only after a (rare) table growth.
+The index encoding adds no arithmetic cost: the 1-based slot offset, the cell stride, and the `region base +` that turns a cell's `u32` offset into an address all fold into machine addressing modes. Region base and the table base (`anchor_ptr`) are the two hottest constants in the program — both register-resident, the table base reloaded only after a (rare) table growth.
 
 The genuine cost of any anchor scheme is **one extra dependent load per ref dereference** — the cell read — versus an idealized raw pointer that cannot survive moves. That load is a few cycles when the cell is cache-warm, which it usually is: cells are one word each and the table is small and hot. It is paid only when dereferencing an `&`; direct access to an owner never consults the table. Across a run of accesses through the same ref with no intervening move or overwrite, the compiler resolves the owner address once and reuses it, so hot loops do not re-pay the load.
 
@@ -372,6 +380,7 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 | Single `anchor_ptr` root | Reserving one fixed word instead of a whole region defers all anchor storage to the heap, so the table grows on demand with no fixed cap to size. |
 | Reserved 1-based slot 0 | A reserved null cell makes `0` mean "unreferenced" for free on zero-initialized storage and turns a stray sentinel dereference into a defined trap rather than an underflow. |
 | Per-owner backpointer | Storing one slot index in the owner lets moves locate the cell and lets `&x` mint refs, without the owner ever enumerating its refs — preserving O(1) moves. |
+| Region-relative `u32` addressing | One native pointer (region base) plus `u32` offsets keeps refs, backpointers, cells, and `anchor_ptr` all 32-bit and relocation-friendly; materializing `region base + offset` folds into addressing modes. |
 | Shared size-indexed free stacks | Keeps allocation predictable and avoids general-purpose allocator overhead. |
 
 ---
@@ -391,7 +400,8 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 | Symbol declaration | Must be directly initialized |
 | Class placement | Stack when statically sized and non-escaping; heap only for dynamic size or escape — an unobservable choice |
 | `&` representation | A `u32` 1-based index into the heap anchor table; `0` means unreferenced |
-| Anchor table | Heap-resident, rooted at the fixed `anchor_ptr`; one word per cell; grows on demand |
+| Addressing | Region base is the only native pointer; refs, backpointer, cells, and `anchor_ptr` are `u32` offsets/indices from it |
+| Anchor table | Heap-resident, rooted at the fixed `anchor_ptr`; one `u32` region-offset per cell; grows on demand |
 | Backpointer | Each referenced owner stores its own `u32` slot index for move updates and ref minting |
 | Anchor lifecycle | Lazily allocated on first ref; freed to a cell-threaded free list on destruction |
 
