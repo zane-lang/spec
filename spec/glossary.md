@@ -174,6 +174,21 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
+### 3.23 anchor table
+- **Meaning:** A single heap-resident array of fixed-size cells, each holding the current address of one referenced owner. It is reached through `anchor_ptr`, the one fixed word reserved at the base of the memory region, and grows on demand.
+- **Why this name:** Each cell *anchors* a referenced owner — a stable indirection point that refs read through — and the cells are collected into one table rather than scattered as individual allocations.
+- **Canonical home:** [`memory.md`](memory.md) §4.1
+
+### 3.24 index-form ref
+- **Meaning:** An `&` value is represented as a `u32`, 1-based index into the anchor table, not a raw pointer. The value `0` means unreferenced, and physical slot `0` is a reserved null/trap cell.
+- **Why this name:** The reference is a table *index*, which is half a pointer's size, survives table relocation, and resolves through the table to the owner's current address.
+- **Canonical home:** [`memory.md`](memory.md) §4.2
+
+### 3.25 stack-first placement
+- **Meaning:** A class instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
+- **Why this name:** The stack is the default location a class instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
+- **Canonical home:** [`memory.md`](memory.md) §3.5
+
 ---
 
 ## 4. Packages, Operators, and Versioning

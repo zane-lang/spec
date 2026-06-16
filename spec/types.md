@@ -20,8 +20,8 @@ Zane keeps data layout and construction separate from behavior.
 
 ## 2. Classes and Structs
 
-### 2.1 Classes declare heap-allocated storage
-A `class` body contains only field declarations. Class instances are heap-allocated and follow the ownership rules in [`memory.md`](memory.md) §2.
+### 2.1 Classes declare owned, identity-bearing storage
+A `class` body contains only field declarations. Class instances have single ownership and stable identity and follow the rules in [`memory.md`](memory.md) §2; their placement — stack or heap — is an unobservable implementation choice (see [`memory.md`](memory.md) §3.5).
 
 ```zane
 package Graph
