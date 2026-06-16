@@ -42,6 +42,7 @@ car Car(engine)             // legal: engine is a direct owning symbol
 boat Boat(makeEngine())     // legal: makeEngine() returns an owned Engine
 
 truck Truck(car.engine)     // ILLEGAL: field access is not a move-source
+truck2 Truck(makeCar().engine) // ILLEGAL: field access on temporary is not a move-source
 garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
 ```
 
