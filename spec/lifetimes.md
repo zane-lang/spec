@@ -22,24 +22,30 @@ r &Node = outer
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
-### 1.2 Only direct owning symbols are move-sources
-A move-source must be a **direct owning symbol**: an owning local binding or owning parameter named directly by an identifier expression.
+### 1.2 Move-sources are owning symbols or owned verb results
+A move-source must denote an **owned value the expression is entitled to consume**. Two forms qualify:
+
+- a **direct owning symbol**: an owning local binding or owning parameter named directly by an identifier expression
+- an **owned verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is an owned `T`
+
+A verb that returns an owned `T` produces a fresh value that no symbol, field, or container owns yet. Moving it transfers ownership of that temporary straight into the destination, so it re-parents nothing.
 
 The following are **not** move-sources:
-- an `&` value (refs are non-owning and cannot transfer ownership; see [`memory.md`](memory.md) §2.4)
+- an `&` value, including a verb that returns `&T` (refs are non-owning and cannot transfer ownership; see [`memory.md`](memory.md) §2.4)
 - a field access such as `car.engine`
 - a container element access such as `cars[1]`
-- any other access path, including method call results
+- any other access path that projects into an existing owner
 
 ```zane
 engine Engine()
-car Car(engine)          // legal: engine is a direct owning symbol
+car Car(engine)             // legal: engine is a direct owning symbol
+boat Boat(makeEngine())     // legal: makeEngine() returns an owned Engine
 
-truck Truck(car.engine)  // ILLEGAL: field access is not a direct symbol
-garage Garage(cars[1])   // ILLEGAL: container element is not a direct symbol
+truck Truck(car.engine)     // ILLEGAL: field access is not a move-source
+garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
 ```
 
-This rule makes containers stable ownership subtrees. Once a value is owned by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a direct owning symbol.
+This rule keeps containers stable ownership subtrees. Once a value is owned by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. An owned verb result is exempt from the access-path restriction because it is owned by no one until the move binds it.
 
 ### 1.3 Moves are restricted to the declaration block
 A direct owning symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Owning parameters are treated as declared at the top of the function body block.
@@ -71,6 +77,8 @@ Void loadCar(this Boat, car Car) mut {
 
 This restriction prevents conditional moves and flow-dependent ownership changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
 
+The restriction applies only to symbol move-sources. An owned verb result (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
+
 ### 1.4 Destination scope must contain or match source scope
 A value may move into a new owner only when the destination owner is declared in the same or a higher lexical scope than the source owner.
 
@@ -101,6 +109,8 @@ truck Truck(engine)      // ILLEGAL: engine is an `&`, not a move-source
 ```
 
 This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `&`. Zane therefore has no user-visible use-after-move error class for reads.
+
+An owned verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
 ### 1.7 Returned `&` values must be rooted in a parameter
 A function may return an `&T` only when the returned reference is rooted in one of the function's parameters. `this` counts as a parameter for this rule.
@@ -151,7 +161,7 @@ Because scope rules (§1.1) prevent refs from outliving their owners, the runtim
 
 | Decision | Rationale |
 |---|---|
-| Only direct owning symbols are move-sources | Makes containers stable ownership subtrees. Once a value is inside a field or container element, it cannot be individually extracted and re-parented. Ownership trees remain predictable and do not depend on runtime control flow. |
+| Move-sources are owning symbols or owned verb results | A symbol and a fresh verb result are each owned by no other object, so consuming either cannot re-parent an existing ownership subtree. Fields and container elements stay non-movable, keeping containers stable and ownership predictable. |
 | Refs are never move-sources | Refs are non-owning aliases. Allowing moves from refs would enable re-parenting through alias paths and break the owner-uniqueness property. |
 | Moves restricted to declaration block | Prevents conditional moves and flow-dependent ownership changes. A symbol's ownership transfer happens at most once, in a predictable location. This eliminates the need for flow-sensitive "maybe moved" analysis. |
 | Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through anchor-based ref downgrade. This preserves ergonomics while preventing double-moves and re-parenting. |
@@ -167,7 +177,7 @@ Because scope rules (§1.1) prevent refs from outliving their owners, the runtim
 |---|---|
 | `&` return | Returned `&T` must be rooted in a parameter; `this` counts |
 | Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
-| Move-source | Only a direct owning symbol (local or parameter); not an `&`, field, container element, or access path |
+| Move-source | A direct owning symbol (local or parameter) or an owned verb result; not an `&`, field, container element, or other access path |
 | Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters are treated as declared at function body top |
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
