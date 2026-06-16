@@ -130,7 +130,7 @@ If a scope launches concurrent work, objects owned by that scope remain alive un
 Refs do not participate in ownership and cannot prolong object lifetime. They only track a live object whose owner is already guaranteed to outlive them.
 
 ### 2.4 Null refs are not a user-facing state
-Because scope rules prevent refs from outliving their owners, the runtime does not expose a normal “null ref” programming model to the user.
+Because scope rules (§1.1) prevent refs from outliving their owners, the runtime does not expose a normal “null ref” programming model to the user.
 
 ---
 
