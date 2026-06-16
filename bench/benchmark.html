@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      30.97,
-      254.49,
-      498.37,
-      1673.29
+      34.21,
+      555.3,
+      683.52,
+      3387.15
     ],
     "colors": [
       "#3aab76",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      180.63,
-      448.21,
-      1356.12
+      421.65,
+      744.23,
+      2226.44
     ],
     "colors": [
       "#c49a2a",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      61.96,
-      887.75,
-      943.23,
-      3894.21
+      88.72,
+      1522.88,
+      2176.74,
+      7200.78
     ],
     "colors": [
       "#3aab76",
@@ -181,23 +181,23 @@ const TESTS=[
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
-      "UList (chunk=8, linked)",
-      "Inline array  (Array[100000]<Entity>)",
+      "Inline array  (Array[100000] of Entity)",
       "CChunked (chunk=64, ptr-array)",
+      "UList (chunk=8, linked)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      61.89,
-      72.08,
-      76.12,
-      104.21,
-      112.12
+      119.43,
+      148.22,
+      151.42,
+      217.12,
+      301.43
     ],
     "colors": [
       "#3aab76",
-      "#3aab76",
       "#c45a8a",
+      "#3aab76",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      65.01,
-      208.38,
-      382.72,
-      1310.47
+      152.03,
+      441.11,
+      653.89,
+      1183.78
     ],
     "colors": [
       "#7c6ff7",
@@ -286,46 +286,50 @@ const TESTS=[
   },
   {
     "t": "T6 \u2014 ref access",
-    "title": "Ref access via anchor+ref_obj vs direct pointer",
+    "title": "Ref access via the index-form anchor table vs direct pointer",
     "labels": [
-      "Direct pointer (baseline)",
-      "Anchor only (owning, post-move)",
-      "Full ref path (ref_anchor->ref_obj->anchor->obj)"
+      "Index ref (anchor table, base cached)",
+      "Index ref (base reloaded per access)",
+      "Direct pointer (baseline)"
     ],
     "data": [
-      174.73,
-      169.73,
-      162.97
+      180.56,
+      182.96,
+      184.79
     ],
     "colors": [
-      "#4a9edd",
       "#7c6ff7",
-      "#b8a4ff"
+      "#6b7280",
+      "#4a9edd"
     ],
     "meta": [
       {
         "label": "Direct",
-        "val": "one pointer dereference \u2014 working set pre-heated before each timed run"
+        "val": "raw C pointer dereference \u2014 baseline"
       },
       {
-        "label": "Anchor only",
-        "val": "heap_base + anchor.heapoffset \u2014 simulates post-move owning access"
+        "label": "Index ref, base cached",
+        "val": "anchor_ptr hoisted; one cell load \u2192 owner"
       },
       {
-        "label": "Full ref path",
-        "val": "ref_anchor \u2192 ref_obj \u2192 anchor \u2192 object (two hops)"
+        "label": "Index ref, base reloaded",
+        "val": "anchor_ptr re-fetched per access (non-hoisted)"
       },
       {
-        "label": "Leaf-only",
-        "val": "ref registers only in the leaf object\u2019s anchor"
+        "label": "Ref size",
+        "val": "u32 index \u2014 half a 64-bit pointer"
+      },
+      {
+        "label": "Slot 0",
+        "val": "reserved null cell; index 0 = unreferenced"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Full ref dereference path: ref_anchor (stack) \u2192 ref_obj (heap) \u2192 anchor \u2192 object. Each variant pre-heats its working set before the timed loop for a fair warm-cache comparison. Zane statically guarantees all refs are non-null, so there is no runtime liveness guard.",
-    "details": "With cache pre-heating applied equally to all variants, direct pointer is the expected lower bound at one hop. Anchor-only (one heap-offset add) is the fastest Zane path; the full ref path (two hops) adds a small but measurable overhead. All three variants land within ~10% of each other, showing the Zane indirection cost is modest."
+    "setup": "Ref dereference path: a ref is a u32, 1-based index into one heap-resident anchor table (anchor_ptr[index] \u2192 owner offset \u2192 owner \u2192 field). The added cost over a raw pointer is a single dependent load \u2014 the cell \u2014 plus loading the table base, which is normally register-resident.",
+    "details": "Direct pointer access is the lower bound at one load. The index ref with a cached base adds only the cell load; reloading the base each access (the non-hoisted case) adds a little more. All variants land within a few percent, showing the index indirection is near-free when the table is warm."
   },
   {
     "t": "T7 \u2014 game loop",
@@ -336,9 +340,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2575.99,
-      2581.91,
-      2775.13
+      3039.25,
+      3160.88,
+      3542.04
     ],
     "colors": [
       "#c49a2a",
@@ -378,20 +382,20 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Pool (per-size free-list)",
       "Zane (mmap + free-stacks)",
+      "Pool (per-size free-list)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      8053.36,
-      8125.3,
-      8661.51,
-      36955.01
+      9851.87,
+      10271.06,
+      11575.6,
+      66647.73
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -437,9 +441,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      97.44,
-      478.25,
-      1048.67
+      189.0,
+      1043.35,
+      1836.86
     ],
     "colors": [
       "#7c6ff7",
@@ -482,22 +486,22 @@ const TESTS=[
       "Pool cascade destroy",
       "Zane \u2014 single parent ref (root only)",
       "Zane \u2014 no refs",
-      "malloc cascade destroy",
-      "Zane \u2014 individual refs (1 per node)"
+      "Zane \u2014 individual refs (1 per node)",
+      "malloc cascade destroy"
     ],
     "data": [
-      63.71,
-      77.57,
-      77.78,
-      148.74,
-      165.48
+      93.39,
+      112.72,
+      113.12,
+      121.71,
+      191.59
     ],
     "colors": [
       "#c49a2a",
       "#5a4faa",
       "#7c6ff7",
-      "#e05a3a",
-      "#b8a4ff"
+      "#b8a4ff",
+      "#e05a3a"
     ],
     "meta": [
       {
@@ -506,7 +510,7 @@ const TESTS=[
       },
       {
         "label": "No refs",
-        "val": "back-ptr = 0, single zm_free per node"
+        "val": "backpointer = 0, single zm_free per node"
       },
       {
         "label": "Single parent ref",
@@ -514,7 +518,7 @@ const TESTS=[
       },
       {
         "label": "Individual refs",
-        "val": "every node: ref_anchor \u2192 ref_obj \u2192 anchor"
+        "val": "every node frees its anchor slot, then itself"
       },
       {
         "label": "malloc",
@@ -525,25 +529,25 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Three Zane variants: no refs (lazy stays 0), single parent ref (root only gets anchor + ref), individual refs (every node gets ref_anchor \u2192 ref_obj \u2192 anchor). All use post-order DFS destruction.",
-    "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never create anchors. If the individual-ref variant is much slower, the extra cost is coming from per-node anchor and ref teardown."
+    "setup": "Three Zane variants: no refs (backpointer stays 0), single parent ref (only the root gets an anchor slot), individual refs (every node gets its own anchor-table slot). All use post-order DFS destruction; freeing a referenced node returns its slot to a cell-threaded free list.",
+    "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never get a slot. If the individual-ref variant is slower, the extra cost is the per-node slot alloc/free \u2014 there is no ref-list teardown, since refs are indices that cannot outlive the owner."
   },
   {
     "t": "T11 \u2014 stress test",
     "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
     "labels": [
-      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
       "malloc / free"
     ],
     "data": [
-      1980.44,
-      1982.2,
-      2142.0
+      2718.79,
+      2755.91,
+      3046.48
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -587,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      60.15,
-      153.52
+      138.1,
+      244.58
     ],
     "colors": [
       "#3aab76",

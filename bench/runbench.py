@@ -26,8 +26,8 @@ HTML_OUT   = os.path.join(SCRIPT_DIR, "benchmark.html")
 # ─────────────────────────────────────────────────────────────
 # Test metadata: descriptions, details, and per-impl info.
 # These match the updated Zane memory model (no 'store' keyword,
-# ownership is default, ref is opt-in, leaf-only registration,
-# ref objects on heap with stack_index for O(1) unregistration).
+# ownership is default, ref is opt-in, refs are u32 indices into a
+# single heap-resident anchor table; each owner stores a u32 backpointer).
 # ─────────────────────────────────────────────────────────────
 
 TEST_META = {
@@ -100,15 +100,15 @@ TEST_META = {
     },
     "Test 6": {
         "short": "T6 — ref access",
-        "title": "Ref access via anchor+ref_obj vs direct pointer",
-        "setup": "Full ref dereference path: ref_anchor (stack) → ref_obj (heap) → anchor → object. Two pointer hops vs one for direct access.",
-        "details": "Direct pointer access should be the lower bound, anchor-only is usually next, and the full ref path should cost more because it adds extra indirection. If the liveness-guard variant matches the full ref path, the guard itself is not the dominant cost.",
+        "title": "Ref access via the index-form anchor table vs direct pointer",
+        "setup": "Ref dereference path: a ref is a u32, 1-based index into one heap-resident anchor table (anchor_ptr[index] → owner offset → owner → field). The added cost over a raw pointer is a single dependent load — the cell — plus loading the table base, which is normally register-resident.",
+        "details": "Direct pointer access is the lower bound at one load. The index ref with a cached base adds only the cell load; reloading the base each access (the non-hoisted case) adds a little more. All variants land within a few percent, showing the index indirection is near-free when the table is warm.",
         "meta": [
-            ("Direct", "one pointer dereference — baseline"),
-            ("Anchor only", "heap_base + anchor.heapoffset — simulates post-move owning access"),
-            ("Full ref path", "ref_anchor → ref_obj → anchor → object (two hops)"),
-            ("Liveness guard", "0xFFFFFFFF on ref_anchor.heapoffset — runtime-only check before deref"),
-            ("Leaf-only", "ref registers only in the leaf object's anchor"),
+            ("Direct", "raw C pointer dereference — baseline"),
+            ("Index ref, base cached", "anchor_ptr hoisted; one cell load → owner"),
+            ("Index ref, base reloaded", "anchor_ptr re-fetched per access (non-hoisted)"),
+            ("Ref size", "u32 index — half a 64-bit pointer"),
+            ("Slot 0", "reserved null cell; index 0 = unreferenced"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -158,13 +158,13 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
-        "setup": "Three Zane variants: no refs (lazy stays 0), single parent ref (root only gets anchor + ref), individual refs (every node gets ref_anchor → ref_obj → anchor). All use post-order DFS destruction.",
-        "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never create anchors. If the individual-ref variant is much slower, the extra cost is coming from per-node anchor and ref teardown.",
+        "setup": "Three Zane variants: no refs (backpointer stays 0), single parent ref (only the root gets an anchor slot), individual refs (every node gets its own anchor-table slot). All use post-order DFS destruction; freeing a referenced node returns its slot to a cell-threaded free list.",
+        "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never get a slot. If the individual-ref variant is slower, the extra cost is the per-node slot alloc/free — there is no ref-list teardown, since refs are indices that cannot outlive the owner.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
-            ("No refs", "back-ptr = 0, single zm_free per node"),
+            ("No refs", "backpointer = 0, single zm_free per node"),
             ("Single parent ref", "one ref to root only; 3,999 nodes ref-free"),
-            ("Individual refs", "every node: ref_anchor → ref_obj → anchor"),
+            ("Individual refs", "every node frees its anchor slot, then itself"),
             ("malloc", "free(node) per node, coalescing on each"),
             ("Runs", "20 — median reported"),
         ],

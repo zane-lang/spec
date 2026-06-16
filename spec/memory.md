@@ -279,26 +279,36 @@ Each referenced owner also stores its own slot index in a **`u32` backpointer**,
 An owner that is never referenced pays nothing: its backpointer stays `0` and it consumes no table slot. The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's address into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
 
 ### 4.4 Dereferencing a ref
-Resolving an `&` reads the table base from `anchor_ptr`, indexes to the cell, reads the owner's current address, then accesses the object. The reserved slot `0` means a dereference never underflows the table.
+Resolving an `&` reads the table base from `anchor_ptr`, indexes to the cell, reads the owner's current address, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
+
+Consider reading a field through a ref, where `mainWeapon` is an `&Weapon`:
+
+```zane
+dps Float = mainWeapon.dps
+```
+
+`mainWeapon` holds a `u32` index, not the Weapon's address. Field access uses `.`: it reads through the current owner address in the cell and adds the field offset. The walk is index → cell → owner address → field:
 
 ```
-  &x  =  index n  (u32)
-            │
-            │   anchor_ptr ──▶ base of table
-            ▼
+  mainWeapon : &Weapon  =  index n  (u32)
+        │
+        │  anchor_ptr ──▶ base of anchor table
+        ▼
   ┌──────────────────── anchor table (heap) ────────────────────┐
-  │  slot 0  │  slot 1  │  slot 2  │   …   │   slot n            │
-  │  (null)  │  addr    │  addr    │       │   addr ──┐          │
+  │  slot 0  │  slot 1  │   …   │              slot n            │
+  │  (null)  │  addr    │       │              addr ──┐          │
   └────────────────────────────────────────────────┼───────────┘
-                                                     │  owner's
+                                                     │  Weapon's
                                                      ▼  current address
-                                               ┌───────────┐
-                                               │  owner x  │   (stack or heap)
-                                               │  fields…  │
-                                               └───────────┘
+                              owner_addr ──▶ ┌────────────────────────┐
+                                             │  Weapon  (stack/heap)   │
+                                             │  name   String          │
+                                             │  dps    Float  ◀── read │  = *(owner_addr + offset(dps))
+                                             │  range  Float           │
+                                             └────────────────────────┘
 ```
 
-The address arithmetic — the 1-based offset and the cell stride — folds into a single machine addressing mode (`base + n·stride`), so the index costs no extra instruction over a raw-pointer dereference. The added cost is one dependent load: the cell read between the index and the object. See §4.8.
+The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the ref's index at a different Weapon (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. The address arithmetic — the 1-based slot offset, the cell stride, and the field offset — folds into machine addressing modes, so the index costs no extra instruction over a raw-pointer dereference. The added cost is one dependent load: the cell read between the index and the field. See §4.8.
 
 ### 4.5 Moves and overwrites update one cell, not all refs
 A ref follows the owner/anchor path rather than pointing at a fixed object address. When an owner moves (§3.7) or an owning slot is overwritten, the runtime writes the owner's new address into its one anchor cell, located through the backpointer (§4.2). Every ref reads that cell on its next dereference, so all refs observe the owner's current value with no per-ref fixup.
