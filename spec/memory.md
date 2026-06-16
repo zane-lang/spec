@@ -12,7 +12,7 @@ Zane eliminates dangling references by combining single ownership, lexical lifet
 
 - **`Overwritable owners`.** A class owner is directly initialized and may later be overwritten.
 - **`Repointable refs`.** An `&` value is non-owning storage that can point at different owners over time.
-- **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md)).
+- **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
 - **`Deterministic destruction`.** Objects are destroyed when their owning scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
 
 These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves or an owner is overwritten, refs stay valid because they follow the owner/anchor path rather than a fixed object address.
