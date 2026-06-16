@@ -387,20 +387,21 @@ static ZRef zat_alloc_slot(uint32_t off) {
 /* return a slot to the free list (threaded through the cell itself). */
 static void zat_free_slot(ZRef idx) {
     assert(idx != 0 && "slot 0 is the reserved null cell and is never freed");
+    assert(idx < zat.count && "slot index out of bounds");
     zat.cells[idx] = zat.free_head;
     zat.free_head  = idx;
 }
 
-/* backpointer = trailing word of the object; stores the u32 slot index. */
+/* backpointer = trailing u32 of the object (spec §4.2); holds the slot index. */
 static inline ZRef *zm_backptr(void *obj, size_t obj_size) {
-    return (ZRef*)((uint8_t*)obj + obj_size - sizeof(uintptr_t));
+    return (ZRef*)((uint8_t*)obj + obj_size - sizeof(ZRef));
 }
 
 /* alloc object only — backpointer initialised to 0 (unreferenced).
    Cost: one zm_alloc. */
 static void *zm_alloc_lazy(size_t obj_size) {
     void *obj = zm_alloc(obj_size);
-    *(uintptr_t*)((uint8_t*)obj + obj_size - sizeof(uintptr_t)) = 0; /* zero the full trailing word */
+    *zm_backptr(obj, obj_size) = 0; /* backpointer = 0 (unreferenced) */
     return obj;
 }
 
@@ -419,6 +420,7 @@ static ZRef zm_create_ref(void *obj, size_t obj_size) {
    One dependent load (the cell) on top of a raw pointer dereference. */
 static inline void *zm_deref(ZRef idx) {
     assert(idx != 0 && "dereference of a null/unreferenced ZRef");
+    assert(idx < zat.count && "dereference index out of bounds");
     return zm.base + zat.cells[idx];
 }
 
@@ -426,6 +428,7 @@ static inline void *zm_deref(ZRef idx) {
    O(1) regardless of how many refs point at the owner. */
 static inline void zm_anchor_update(ZRef idx, void *new_obj) {
     assert(idx != 0 && "anchor update for a null/unreferenced ZRef");
+    assert(idx < zat.count && "anchor update index out of bounds");
     zat.cells[idx] = (uint32_t)((uint8_t*)new_obj - zm.base);
 }
 
@@ -623,7 +626,7 @@ static void test1(void) {
     double T[RUNS];
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
-    /* Zane: 40-byte runtime slot (32B object + 8B anchor back-ptr), paired anchor alloc/free */
+    /* Zane: 40-byte runtime slot (36B object + 4B backpointer), paired anchor alloc/free */
     for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_alloc_lazy(40); for(int i=0;i<N;i++) zm_free_lazy(ptrs[i],40); T[r]=now_ns()-t0; }
     print_result("Zane (lazy anchors)", T);
 
@@ -808,9 +811,9 @@ static void test6(void) {
     ZRef    *refs   = (ZRef*)malloc(N * sizeof(ZRef));
 
     for(int i=0;i<N;i++){
-        objs[i] = (Entity*)zm_alloc_lazy(sizeof(Entity)+sizeof(uintptr_t));
+        objs[i] = (Entity*)zm_alloc_lazy(sizeof(Entity)+sizeof(ZRef));
         objs[i]->hp = i%100+1;
-        refs[i] = zm_create_ref(objs[i], sizeof(Entity)+sizeof(uintptr_t)); /* first ref → slot */
+        refs[i] = zm_create_ref(objs[i], sizeof(Entity)+sizeof(ZRef)); /* first ref → slot */
         direct[i] = objs[i];
     }
 
@@ -850,7 +853,7 @@ static void test6(void) {
     print_result("Index ref (base reloaded per access)", T);
 
     /* cleanup — refs are just u32s; freeing each owner returns its slot */
-    for(int i=0;i<N;i++) zm_free_lazy(objs[i], sizeof(Entity)+sizeof(uintptr_t));
+    for(int i=0;i<N;i++) zm_free_lazy(objs[i], sizeof(Entity)+sizeof(ZRef));
     free(objs);free(direct);free(refs);
 }
 
@@ -920,8 +923,8 @@ static void game_loop_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     }
 }
 
-static void *zm_alloc_e(size_t s){return zm_alloc_lazy(s+sizeof(uintptr_t));}
-static void  zm_free_e (void*p,size_t s){zm_free_lazy(p,s+sizeof(uintptr_t));}
+static void *zm_alloc_e(size_t s){return zm_alloc_lazy(s+sizeof(ZRef));}
+static void  zm_free_e (void*p,size_t s){zm_free_lazy(p,s+sizeof(ZRef));}
 static void *ma_alloc_e(size_t s){return malloc(s);}
 static void  ma_free_e (void*p,size_t s){(void)s;free(p);}
 static void *po_alloc_e(size_t s){return pool_alloc(s);}
@@ -1168,7 +1171,7 @@ static void destroy_zane_norefs(TNode *n) {
     if(!n) return;
     for(int i=0;i<n->nchildren;i++) destroy_zane_norefs(n->children[i]);
     if(n->children) zm_free(n->children,(size_t)n->nchildren*sizeof(TNode*));
-    zm_free_lazy(n, sizeof(TNode)+sizeof(uintptr_t));
+    zm_free_lazy(n, sizeof(TNode)+sizeof(ZRef));
 }
 
 /* Individual refs variant — every node has one ref (its anchor-table slot).
@@ -1184,20 +1187,20 @@ static void destroy_zane_indirefs(TNode *n) {
     if(!n) return;
     for(int i=0;i<n->nchildren;i++) destroy_zane_indirefs(n->children[i]);
     if(n->children) zm_free(n->children,(size_t)n->nchildren*sizeof(TNode*));
-    zm_free_lazy(n, sizeof(TNode)+sizeof(uintptr_t));
+    zm_free_lazy(n, sizeof(TNode)+sizeof(ZRef));
 }
 
 static void destroy_malloc(TNode *n){ if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_malloc(n->children[i]); free(n->children); free(n); }
 static void destroy_pool(TNode *n)  { if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_pool(n->children[i]);  if(n->children)pool_free(n->children,(size_t)n->nchildren*sizeof(TNode*)); pool_free(n,sizeof(TNode)); }
 
-static void *zm_af(size_t s){return zm_alloc_lazy(s+sizeof(uintptr_t));}
+static void *zm_af(size_t s){return zm_alloc_lazy(s+sizeof(ZRef));}
 static void *ma_af(size_t s){return malloc(s);}
 static void *po_af(size_t s){return pool_alloc(s);}
 
 static void test10(void) {
     section("Test 10 -- Ownership tree teardown  [~4000 nodes, cascade post-order destroy]");
     double T[RUNS];
-    size_t znode_size = sizeof(TNode)+sizeof(uintptr_t);
+    size_t znode_size = sizeof(TNode)+sizeof(ZRef);
 
     /* A. No refs — lazy, single zm_free per node */
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}

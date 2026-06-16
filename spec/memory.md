@@ -239,7 +239,7 @@ Placement is an implementation decision, not a language-visible property. The co
 A class instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
 
 ### 3.6 Handle-typed core classes have fixed footprint
-The core dynamically-sized classes — `List`, `String`, and their kin — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
+The core dynamically-sized classes — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
 
 A type that contains a handle-typed field therefore stays statically sized. A class holding a `List` field does not become dynamically sized; it stores the fixed handle inline, and only the backing store behind the handle lives on the heap.
 
@@ -277,7 +277,7 @@ Indices are **1-based**, and the value `0` means *unreferenced*:
 - Physical slot `0` is reserved as a null/trap cell and is never handed out. Anchors start at slot `1`.
 - A `u32` of `0` therefore reads as "no anchor yet," which is the natural state of zero-initialized storage.
 
-Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The lazily-allocated thing is the table slot (§4.3), not the field — the field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
+Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The table slot is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
 
 ### 4.3 Anchors are created lazily
 An owner that is never referenced consumes no table slot: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's `u32` offset into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.

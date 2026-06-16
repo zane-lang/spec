@@ -37,7 +37,7 @@ TEST_META = {
         "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
         "details": "If Zane stays in the same rough performance band as Pool here (for example within about a 10–20% gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery.",
         "meta": [
-            ("Object size", "40B runtime (32B + 8B back-ptr)"),
+            ("Object size", "32B + 4B back-ptr"),
             ("Back-ptr init", "0 — no anchor at creation"),
             ("Alloc cost", "one zm_alloc + zero-write"),
             ("Free cost", "read back-ptr → 0 → single zm_free"),
@@ -118,7 +118,7 @@ TEST_META = {
         "setup": "Each spawn writes back-ptr = 0. Each kill reads back-ptr (0), single zm_free.",
         "details": "Once the entity pool reaches steady state, update work is expected to dominate. If allocator gaps widen, churn is contributing more; if results converge, per-frame simulation work is dominating allocator differences.",
         "meta": [
-            ("Entity size", "40B (32B + 8B back-ptr)"),
+            ("Entity size", "32B + 4B back-ptr"),
             ("Anchor", "never created — no refs"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "30 new entities"),
@@ -132,7 +132,7 @@ TEST_META = {
         "setup": "Maximum churn. Every death reads back-ptr (0), single zm_free.",
         "details": "The sequential baseline shows pure churn cost. If the work-stealing variant pulls ahead, the per-frame particle update has enough independent work to amortize coordination; if it falls behind, scheduler and shard overhead are larger than the frame work on this machine.",
         "meta": [
-            ("Particle size", "32B (24B + 8B back-ptr)"),
+            ("Particle size", "24B + 4B back-ptr"),
             ("Anchor", "never created — no refs"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "60 particles"),
@@ -147,7 +147,7 @@ TEST_META = {
         "setup": "Phases A+B untimed. Phase C timed. Free-stacks fully populated after Phase B.",
         "details": "Zane and Pool are expected to refill from prepared free slots with relatively stable cost. If an implementation slows markedly after fragmentation, the refill path is doing more than exact-size reuse.",
         "meta": [
-            ("Object size", "40B (32B + 8B back-ptr)"),
+            ("Object size", "32B + 4B back-ptr"),
             ("Anchor", "never created"),
             ("Phase A (prep)", "alloc 100k objects"),
             ("Phase B (prep)", "free every even-indexed"),
@@ -175,8 +175,8 @@ TEST_META = {
         "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
         "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here. The shared push/kill phases would otherwise mostly measure synchronization and ordering changes rather than the benchmark's existing workload.",
         "meta": [
-            ("Object size", "40B + 8B back-ptr"),
-            ("Owned buffers", "256–512B + 8B back-ptr"),
+            ("Object size", "32B + 4B back-ptr"),
+            ("Owned buffers", "256–512B + 4B back-ptr"),
             ("Anchor", "never created — no refs"),
             ("Cycles", "200 cycles"),
             ("Per cycle", "spawn + create buffers + push + update + kill"),

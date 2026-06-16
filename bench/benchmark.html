@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      36.82,
-      434.01,
-      820.85,
-      3160.35
+      58.86,
+      439.05,
+      510.54,
+      3082.93
     ],
     "colors": [
       "#3aab76",
@@ -70,7 +70,7 @@ const TESTS=[
     "meta": [
       {
         "label": "Object size",
-        "val": "40B runtime (32B + 8B back-ptr)"
+        "val": "32B + 4B back-ptr"
       },
       {
         "label": "Back-ptr init",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      321.91,
-      486.21,
-      1705.79
+      325.87,
+      462.28,
+      1674.27
     ],
     "colors": [
       "#c49a2a",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      72.34,
-      813.52,
-      1669.55,
-      6069.07
+      66.97,
+      799.44,
+      1612.5,
+      5766.93
     ],
     "colors": [
       "#3aab76",
@@ -188,11 +188,11 @@ const TESTS=[
       "Pointer array, shuffled"
     ],
     "data": [
-      90.31,
-      101.57,
-      121.64,
-      164.13,
-      202.41
+      89.85,
+      97.55,
+      109.7,
+      158.93,
+      199.95
     ],
     "colors": [
       "#3aab76",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      110.67,
-      382.29,
-      460.11,
-      1275.04
+      104.58,
+      366.69,
+      458.16,
+      1175.16
     ],
     "colors": [
       "#7c6ff7",
@@ -288,19 +288,19 @@ const TESTS=[
     "t": "T6 \u2014 ref access",
     "title": "Ref access via the index-form anchor table vs direct pointer",
     "labels": [
+      "Index ref (base reloaded per access)",
       "Direct pointer (baseline)",
-      "Index ref (anchor table, base cached)",
-      "Index ref (base reloaded per access)"
+      "Index ref (anchor table, base cached)"
     ],
     "data": [
-      136.98,
-      141.81,
-      142.03
+      144.34,
+      145.71,
+      149.04
     ],
     "colors": [
+      "#6b7280",
       "#4a9edd",
-      "#7c6ff7",
-      "#6b7280"
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -335,24 +335,24 @@ const TESTS=[
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (mmap + free-stacks)",
       "Pool (per-size free-list)",
+      "Zane (mmap + free-stacks)",
       "malloc / free"
     ],
     "data": [
-      4077.8,
-      4087.55,
-      4476.34
+      3017.33,
+      3089.43,
+      3320.6
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
       {
         "label": "Entity size",
-        "val": "40B (32B + 8B back-ptr)"
+        "val": "32B + 4B back-ptr"
       },
       {
         "label": "Anchor",
@@ -383,26 +383,26 @@ const TESTS=[
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
       "Pool (per-size free-list)",
-      "Zane (mmap + free-stacks)",
       "malloc / free",
+      "Zane (mmap + free-stacks)",
       "Zane + work-stealing update"
     ],
     "data": [
-      10199.44,
-      10346.12,
-      11055.09,
-      49458.67
+      10767.9,
+      11708.79,
+      11924.74,
+      46643.74
     ],
     "colors": [
       "#c49a2a",
-      "#7c6ff7",
       "#e05a3a",
+      "#7c6ff7",
       "#7c6ff7"
     ],
     "meta": [
       {
         "label": "Particle size",
-        "val": "32B (24B + 8B back-ptr)"
+        "val": "24B + 4B back-ptr"
       },
       {
         "label": "Anchor",
@@ -441,9 +441,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      165.16,
-      1085.0,
-      2107.24
+      159.27,
+      1003.6,
+      1859.27
     ],
     "colors": [
       "#7c6ff7",
@@ -453,7 +453,7 @@ const TESTS=[
     "meta": [
       {
         "label": "Object size",
-        "val": "40B (32B + 8B back-ptr)"
+        "val": "32B + 4B back-ptr"
       },
       {
         "label": "Anchor",
@@ -484,22 +484,22 @@ const TESTS=[
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
       "Pool cascade destroy",
-      "Zane \u2014 single parent ref (root only)",
       "Zane \u2014 no refs",
+      "Zane \u2014 single parent ref (root only)",
       "Zane \u2014 individual refs (1 per node)",
       "malloc cascade destroy"
     ],
     "data": [
-      92.34,
-      104.09,
-      104.53,
-      107.13,
-      156.97
+      89.12,
+      96.35,
+      96.4,
+      104.75,
+      153.11
     ],
     "colors": [
       "#c49a2a",
-      "#5a4faa",
       "#7c6ff7",
+      "#5a4faa",
       "#b8a4ff",
       "#e05a3a"
     ],
@@ -541,9 +541,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2854.69,
-      2887.24,
-      3107.88
+      2706.32,
+      2727.92,
+      2951.18
     ],
     "colors": [
       "#c49a2a",
@@ -553,11 +553,11 @@ const TESTS=[
     "meta": [
       {
         "label": "Object size",
-        "val": "40B + 8B back-ptr"
+        "val": "32B + 4B back-ptr"
       },
       {
         "label": "Owned buffers",
-        "val": "256\u2013512B + 8B back-ptr"
+        "val": "256\u2013512B + 4B back-ptr"
       },
       {
         "label": "Anchor",
@@ -591,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      94.76,
-      205.9
+      92.42,
+      218.57
     ],
     "colors": [
       "#3aab76",
