@@ -26,7 +26,7 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 A move-source must be a **direct owning symbol**: an owning local binding or owning parameter named directly by an identifier expression.
 
 The following are **not** move-sources:
-- an `&` value (refs are non-owning and cannot transfer ownership)
+- an `&` value (refs are non-owning and cannot transfer ownership; see [`memory.md`](memory.md) §2.4)
 - a field access such as `car.engine`
 - a container element access such as `cars[1]`
 - any other access path, including method call results
