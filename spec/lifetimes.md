@@ -88,7 +88,7 @@ When a value is passed to a function, the callee decides whether a move happens 
 - storing the value in an owning slot moves it
 - not storing it leaves ownership in place
 
-For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Attempting to bind a plain `T` parameter into `&` storage is a compile-time error. This means the callee's signature signals whether an `&`-creating source is required at the call site.
+For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Attempting to bind a plain `T` parameter into `&` storage is a compile-time error. This means the callee's signature signals whether an `&`-creating source ([`memory.md`](memory.md) §2.8) is required at the call site.
 
 ### 1.6 Moved symbols downgrade to `&` values and are no longer movable
 After a direct owning symbol is moved, that symbol is downgraded to an `&` value through the anchor. The symbol remains readable but cannot be moved again.
