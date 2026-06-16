@@ -82,7 +82,8 @@ The spec lives in `spec/`. Each file is one topic.
 | `spec/types.md` | Classes, structs, fields, constructors, implicit conversions, `type`/`alias` |
 | `spec/functions.md` | Methods, free functions, subscripts, overload resolution, lambdas |
 | `spec/generics.md` | **Unified type parameters, `<>` type expressions, constructor calls (canonical home)** |
-| `spec/memory.md` | Ownership, refs, anchors, lifetime, layout |
+| `spec/memory.md` | Ownership, refs, anchors, layout |
+| `spec/lifetimes.md` | Scope rules, ownership moves, lifetime, deterministic destruction |
 | `spec/effects.md` | Effect model, `mut`, inferred effect levels |
 | `spec/concurrency.md` | Implicit parallelism, `spawn`, water-tower lifetimes |
 | `spec/control-flow.md` | Conditional branching, `guard`, counted loops, 1-based ordinals |

@@ -32,7 +32,8 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/adt.md`](spec/adt.md) | Enums, variants, the struct/variant symmetry, pattern matching, `match`, and enum maps |
 | [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
 | [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array<T, n>` primitive |
-| [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, lifetimes, and heap layout |
+| [`spec/memory.md`](spec/memory.md) | Ownership, refs, anchors, and heap layout |
+| [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, ownership moves, scope rules, and deterministic destruction |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
 | [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
 
