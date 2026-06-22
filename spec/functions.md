@@ -313,7 +313,7 @@ Every callable in Zane is a verb (§1). What *kind* of verb a declaration is —
 
 | Marker | Verb kind | Capability unlocked |
 |---|---|---|
-| First parameter named `this` | Method | Private-field **read** access on the receiver; `:` / `!` call syntax |
+| First parameter named `this` | Method | Private-field access on the receiver; `:` / `!` call syntax |
 | Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for private-field **initialization** |
 | Symbol name (operator token) | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
@@ -323,13 +323,13 @@ The markers are largely independent — a lambda may still declare a `this` rece
 
 ### 8.2 `init{ }` is to constructors what `this` is to methods
 
-The marker model makes the constructor/function relationship exact: **a constructor is a function whose name is a type.** Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
+The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type.** Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
 
 So `init{ }` is a capability gated by a naming convention, exactly as `this` is. A plain function cannot use `init{ }` for the same reason it cannot read `_`-prefixed fields: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
 
 ### 8.3 What is shared, and what the markers change
 
-All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. They change only two things: whether a return type is written, and which private-state capability (`this` read access or `init{ }` initialization) is granted. Bringing functions and constructors "closer together" is therefore not a missing feature — they are already the same verb, separated only by the name-is-a-type marker.
+All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. They change only two things: whether a return type is written, and which private-state capability (`this` private-field access or `init{ }` initialization) is granted. Bringing functions and constructors "closer together" is therefore not a missing feature — they are already the same verb, separated only by the name-is-a-type marker.
 
 > **See also:** [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 
@@ -348,7 +348,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Decision | Rationale |
 |---|---|
 | Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
-| Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a function with one marker, not a separate mechanism. |
+| Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a verb with one marker, not a separate mechanism. |
 | `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
 | Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
@@ -372,7 +372,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Concept | Rule |
 |---|---|
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
-| Capability markers | `this` first → method (private read); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
+| Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Read-only method | Called with `:`; may read but not write `this` |
