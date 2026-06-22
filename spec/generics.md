@@ -294,6 +294,7 @@ The following are intentionally not specified in this version:
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — a header parameter with no path from any value argument, receiver, or literal that fixes it
+- generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
 ---
 

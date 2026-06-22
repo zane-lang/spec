@@ -13,6 +13,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 - **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
 - **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the receiver.
+- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants private-field access (a method); naming the verb after a type grants `init{ }` and an implicit return type (a constructor). See §8.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
@@ -295,9 +296,46 @@ Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as
 ### 7.5 No bound method references
 Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
 
+### 7.6 Generics are orthogonal to overloading for function values
+A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape: there can be at most one overload of a name that takes a given function-type parameter. Passing a lambda to an overloaded receiver is therefore an exact shape match, not a contest the lambda must win.
+
+The circularity that makes overloaded **names** unusable as values (§7.1) does not apply to a lambda. An overloaded name is a candidate *set* with nothing to collapse it in value position; a lambda is already a single value. That distinction — not genericity — is what lets a self-typed lambda be passed to an overloaded receiver while a bare callable name cannot.
+
+A function value that is itself **generic** — polymorphic over its own type or number parameters — is **not specified in this version**. The open question is its runtime representation (monomorphization versus dictionary passing), which is a memory-model decision, not an overload-resolution or type-checking one: a generic function type would still be a unique parameter shape under the rules above. See [`generics.md`](generics.md) §9.
+
 ---
 
-## 8. Connection to the Effect Model
+## 8. The Verb Model and Capability Markers
+
+Every callable in Zane is a verb (§1). What *kind* of verb a declaration is — function, method, constructor, operator, or lambda — is decided entirely by a small set of surface **markers**, and each marker unlocks a specific capability. There is no separate mechanism per callable kind; there is one verb, and markers select what it may do.
+
+### 8.1 One model, selected by markers
+
+| Marker | Verb kind | Capability unlocked |
+|---|---|---|
+| First parameter named `this` | Method | Private-field **read** access on the receiver; `:` / `!` call syntax |
+| Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for private-field **initialization** |
+| Symbol name (operator token) | Operator | Operator-position calls |
+| No name | Lambda | Anonymous function value |
+| Plain identifier, none of the above | Function | No special capability |
+
+The markers are largely independent — a lambda may still declare a `this` receiver (§7.2), for example — but the kinds above are distinguished by which markers are present. A constructor body and a method body are otherwise ordinary verb bodies (§2, §3).
+
+### 8.2 `init{ }` is to constructors what `this` is to methods
+
+The marker model makes the constructor/function relationship exact: **a constructor is a function whose name is a type.** Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
+
+So `init{ }` is a capability gated by a naming convention, exactly as `this` is. A plain function cannot use `init{ }` for the same reason it cannot read `_`-prefixed fields: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
+
+### 8.3 What is shared, and what the markers change
+
+All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. They change only two things: whether a return type is written, and which private-state capability (`this` read access or `init{ }` initialization) is granted. Bringing functions and constructors "closer together" is therefore not a missing feature — they are already the same verb, separated only by the name-is-a-type marker.
+
+> **See also:** [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
+
+---
+
+## 9. Connection to the Effect Model
 
 Read-only methods and functions are effect-free with respect to their receiver unless they touch refs or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
@@ -305,11 +343,12 @@ Read-only methods and functions are effect-free with respect to their receiver u
 
 ---
 
-## 9. Design Rationale
+## 10. Design Rationale
 
 | Decision | Rationale |
 |---|---|
 | Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
+| Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a function with one marker, not a separate mechanism. |
 | `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
 | Plain `T` parameters are value-only | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
@@ -320,17 +359,20 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Generic match infers type parameters | A call carries no `<>` list, so the generic-match phase is purely an inference step driven by the argument types (see [`generics.md`](generics.md) §5). |
 | One pass handles types and numbers | Both type parameters and number parameters of the called declaration are inferred from the argument types in the same pass, since the two kinds share one header form (see [`generics.md`](generics.md) §3). |
 | Callables are call-only | An overloaded name is a candidate set, not a value; it only collapses when arguments are supplied at a call site. Keeping methods, functions, and operators call-only removes the ambiguity of passing an overloaded name into an overloaded parameter, exactly as operators already avoid it. |
-| Self-typed lambdas | A lambda carries its own complete type, so it is a single value that overload resolution can match without circularity even when the receiver is overloaded. |
+| Self-typed lambdas | A lambda carries its own complete type, so it is a single value with one exact type. The circularity that bars overloaded *names* from value position (a candidate set with nothing to collapse it) never arises, so a lambda matches an overloaded receiver by exact shape — even if that type were a generic function type. |
+| Generic function values deferred | Overloading and type-checking already handle a generic function type as a unique parameter shape; what remains open is its runtime representation (monomorphization versus dictionary passing), a memory-model decision left unspecified rather than an overload-resolution problem. |
 | Lambda-variables for function values | A named lambda-variable has one function type and cannot accumulate an overload set, so it is always unambiguous in value position. |
 | No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
 | Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
 
 ---
 
-## 10. Summary
+## 11. Summary
 
 | Concept | Rule |
 |---|---|
+| Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
+| Capability markers | `this` first → method (private read); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
 | Read-only method | Called with `:`; may read but not write `this` |
@@ -343,5 +385,6 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
+| Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
 | Unqualified method lookup | Searches home package, then current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |
