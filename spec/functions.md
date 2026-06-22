@@ -331,7 +331,7 @@ So `init{ }` is a capability gated by a naming convention, exactly as `this` is.
 
 All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. They change only two things: whether a return type is written, and which private-state capability (`this` private-field access or `init{ }` initialization) is granted. Bringing functions and constructors "closer together" is therefore not a missing feature — they are already the same verb, separated only by the name-is-a-type marker.
 
-> **See also:** [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
+> **See also:** [`syntax.md`](syntax.md) §3 for the declaration forms of each verb kind. [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 
 ---
 
