@@ -264,11 +264,11 @@ car Car(Engine())   // legal: plain owner field accepts a temporary
 ```
 
 ### 3.9 Type and number parameters
-A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A parameter declared in the constructor's `<>` header is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
+A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
-// inferred: T is deduced from the value arguments
-Vector<T Type>(x T, y T) {
+// inferred: T is introduced inline and deduced from the value arguments
+Vector(x T Type, y T Type) {
     return init{x, y}
 }
 
