@@ -75,8 +75,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
-- **Meaning:** A parameterized declaration lists its parameters in a `<>` header. Each entry is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). Parameters are referenced by bare name; casing carries the kind.
-- **Why this name:** The system unifies type and number parameters into one header-and-reference form shared by types, functions, methods, and constructors, distinguished only by the concept type (`Type`/`Number`) and the name's casing.
+- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, or constructor — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
+- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`Number` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
@@ -130,7 +130,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
 ### 3.14 `Type` and `Number` parameter concepts
-- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; as `<>` header entries they are inferred.
+- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.2
 
@@ -188,6 +188,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A class instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
 - **Why this name:** The stack is the default location a class instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
+
+### 3.26 capability marker
+- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants private-field access; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; a symbol name makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
+- **Canonical home:** [`functions.md`](functions.md) §8
 
 ---
 

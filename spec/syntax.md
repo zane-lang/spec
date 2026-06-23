@@ -13,23 +13,23 @@ This document is the canonical reference for Zane's surface syntax. Topic docume
 New symbol declarations:
 
 ```zane
-name Type(args, ...)
-name Type{field = expr, ...}
-name Type{fieldA, fieldB, ...}
-name Type = expr
-name &Type = expr
-name ReturnType(param Type, ...) { body }
-name ReturnType(param Type, ...) => expr
+name VarType(args, ...)
+name VarType{field = expr, ...}
+name VarType{fieldA, fieldB, ...}
+name VarType = expr
+name &VarType = expr
+name ReturnType(param ParamType, ...) { body }
+name ReturnType(param ParamType, ...) => expr
 ```
 
-`Type{fieldA, fieldB}` is shorthand for `Type{fieldA = fieldA, fieldB = fieldB}`.
+`VarType{fieldA, fieldB}` is shorthand for `VarType{fieldA = fieldA, fieldB = fieldB}`.
 
-The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name Type(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
+The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
-Every symbol declaration is directly initialized. Bare forms such as `name Type` and `name &Type` are not declaration forms.
+Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
 
 ```zane
-name Type   // ILLEGAL: symbols require direct initialization
+name VarType   // ILLEGAL: symbols require direct initialization
 ```
 
 Once a symbol already exists, reassignment uses only:
@@ -41,7 +41,7 @@ name = expr
 ### 1.2 Package constants
 
 ```zane
-name Type(value)
+name VarType(value)
 ```
 
 ### 1.3 Class fields
@@ -50,8 +50,8 @@ A class body declares fields only and names a type through a type declaration (�
 
 ```zane
 type Name = class {
-    field Type;
-    field &Type;
+    field FieldType;
+    field &FieldType;
 }
 ```
 
@@ -61,7 +61,7 @@ A struct body declares fields only and names a type through a type declaration (
 
 ```zane
 type Name = struct {
-    field Type;
+    field FieldType;
 }
 ```
 
@@ -77,9 +77,9 @@ import packageName
 type Name = TypeExpr
 alias Name = TypeExpr
 type Name<T Type, n Number> = TypeExpr
-type Name = struct { field Type; ... }
-type Name = class { field Type; ... }
-type Name = variant { member Type; ... }
+type Name = struct { field FieldType; ... }
+type Name = class { field FieldType; ... }
+type Name = variant { member FieldType; ... }
 type Name = enum [ memberA, memberB, ... ]
 ```
 
@@ -113,7 +113,7 @@ type Name = enum [ memberA, memberB, memberC ]
 An enum map is a package-scope declaration. It names the enum, the property, the property's type, then a `[ ]` list of `,`-separated `member = value` entries.
 
 ```zane
-EnumName.property Type [
+EnumName.property FieldType [
     memberA = valueA,
     memberB = valueB
 ]
@@ -133,17 +133,17 @@ These are public language-level types, not storage primitives. `Int`, `Float`, a
 ### 2.2 Named types
 
 ```zane
-packageName$Type
-Type
+packageName$TypeName
+TypeName
 ```
 
 ### 2.3 Reference types
 
 ```zane
-&Type
+&TypeName
 ```
 
-`&Type` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+`&TypeName` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
 Array<&Node, n>
@@ -154,13 +154,13 @@ Array<&Node, n>
 A type expression applies arguments to a parameterized type with `<>`. Arguments are positional.
 
 ```zane
-Type<Arg, ...>
+TypeName<Arg, ...>
 Vector<Int>
 Array<Int, 10000>
 Matrix<Float, 3>
 ```
 
-A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. See [`generics.md`](generics.md) §4 and §5.
+A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
 An inline body-form type expression — `struct { ... }`, `class { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body.
 
@@ -173,7 +173,7 @@ type Expr = variant {
 
 ### 2.5 Type and number parameters
 
-A parameterized declaration declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.8).
+A parameterized **type** declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.8).
 
 ```zane
 type Vector<T Type> = struct {
@@ -186,7 +186,9 @@ type Buffer<T Type, n Number> = struct {
 }
 ```
 
-Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites. See [`lexical.md`](lexical.md) §3 and [`generics.md`](generics.md) §3.
+Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
+
+A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n Number>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
 ### 2.6 Array storage primitive
 
@@ -255,33 +257,34 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 ### 3.1 Functions
 
 ```zane
-ReturnType name(param Type, ...) { body }
-ReturnType name(param &Type, ...) { body }
-ReturnType?AbortType name(param Type, ...) { body }
-ReturnType name(param Type, ...) => expr
-ReturnType name(param &Type, ...) => expr
-ReturnType?AbortType name(param Type, ...) => expr
-ReturnType name<T Type, n Number>(param Type, ...) { body }
+ReturnType name(param ParamType, ...) { body }
+ReturnType name(param &ParamType, ...) { body }
+ReturnType?AbortType name(param ParamType, ...) { body }
+ReturnType name(param ParamType, ...) => expr
+ReturnType name(param &ParamType, ...) => expr
+ReturnType?AbortType name(param ParamType, ...) => expr
+ReturnType name(param T Type, ...) { body }
+ReturnType name(param Container<T Type, n Number>, ...) { body }
 ```
 
-A function, method, or constructor may carry a `<>` parameter header immediately after its name to declare type and number parameters that are inferred from the value arguments at the call. The header uses the same `name Type` / `name Number` entries as a type definition (§2.5); see [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 ### 3.2 Methods
 
 ```zane
-ReturnType name(this ReceiverType, param Type, ...) { body }
-ReturnType name(this ReceiverType, param &Type, ...) { body }
-ReturnType name(this ReceiverType, param Type, ...) mut { body }
-ReturnType name(this ReceiverType, param &Type, ...) mut { body }
-ReturnType?AbortType name(this ReceiverType, param Type, ...) { body }
-ReturnType?AbortType name(this ReceiverType, param Type, ...) mut { body }
-ReturnType name(this ReceiverType, param Type, ...) => expr
-ReturnType name(this ReceiverType, param &Type, ...) => expr
-ReturnType name(this ReceiverType, param Type, ...) mut => expr
-ReturnType name(this ReceiverType, param &Type, ...) mut => expr
-ReturnType?AbortType name(this ReceiverType, param Type, ...) => expr
-ReturnType?AbortType name(this ReceiverType, param Type, ...) mut => expr
-ReturnType name<T Type, n Number>(this ReceiverType, param Type, ...) { body }
+ReturnType name(this ReceiverType, param ParamType, ...) { body }
+ReturnType name(this ReceiverType, param &ParamType, ...) { body }
+ReturnType name(this ReceiverType, param ParamType, ...) mut { body }
+ReturnType name(this ReceiverType, param &ParamType, ...) mut { body }
+ReturnType?AbortType name(this ReceiverType, param ParamType, ...) { body }
+ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut { body }
+ReturnType name(this ReceiverType, param ParamType, ...) => expr
+ReturnType name(this ReceiverType, param &ParamType, ...) => expr
+ReturnType name(this ReceiverType, param ParamType, ...) mut => expr
+ReturnType name(this ReceiverType, param &ParamType, ...) mut => expr
+ReturnType?AbortType name(this ReceiverType, param ParamType, ...) => expr
+ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut => expr
+ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
@@ -291,41 +294,42 @@ ReturnType name<T Type, n Number>(this ReceiverType, param Type, ...) { body }
 ### 3.3 Positional constructors
 
 ```zane
-TypeName(param Type, ...) {
+TypeName(param ParamType, ...) {
     return init{ field = expr, ... }
 }
-TypeName(param &Type, ...) {
+TypeName(param &ParamType, ...) {
     return init{ field = expr, ... }
 }
-TypeName(param Type, ...) => init{ field = expr, ... }
-TypeName(param &Type, ...) => init{ field = expr, ... }
-TypeName<T Type, n Number>(param Type, ...) { return init{ field = expr, ... } }
+TypeName(param ParamType, ...) => init{ field = expr, ... }
+TypeName(param &ParamType, ...) => init{ field = expr, ... }
+TypeName<T>(param T Type, ...) { return init{ field = expr, ... } }
+TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = expr, ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
-A constructor for a parameterized type may declare a `<>` parameter header (inferred from the value arguments) or accept a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
+A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
 
 ### 3.4 Field constructors
 
 ```zane
 TypeName{
-    fieldA Type,
-    fieldB Type(args...),
-    fieldC Type = expr,
+    fieldA FieldType,
+    fieldB FieldType(args...),
+    fieldC FieldType = expr,
     ...
 } {
     return init{fieldA, fieldB, fieldC}
 }
 TypeName{
-    fieldA Type,
-    fieldB Type(args...),
-    fieldC Type = expr,
+    fieldA FieldType,
+    fieldB FieldType(args...),
+    fieldC FieldType = expr,
     ...
 } => init{fieldA, fieldB, fieldC}
 ```
 
-Each field entry uses either the bare required-field form `field Type` or an initialized storage form such as `field Type = expr`. This is a constructor-header-specific exception to the symbol-declaration rule above: the bare form declares a required constructor input that the call site must supply, not a standalone symbol declaration with its own storage.
+Each field entry uses either the bare required-field form `field FieldType` or an initialized storage form such as `field FieldType = expr`. This is a constructor-header-specific exception to the symbol-declaration rule above: the bare form declares a required constructor input that the call site must supply, not a standalone symbol declaration with its own storage.
 
 Field-constructor call sites may use explicit or implicit field names:
 
@@ -339,10 +343,10 @@ A field-constructor call may omit any field whose constructor entry includes an 
 ### 3.5 Implicit constructors
 
 ```zane
-implicit TypeName(param Type) {
+implicit TypeName(param ParamType) {
     return init{ field = expr, ... }
 }
-implicit TypeName(param Type) => init{ field = expr, ... }
+implicit TypeName(param ParamType) => init{ field = expr, ... }
 ```
 
 Implicit constructors use the `implicit` modifier and are written only in positional form with exactly one parameter.
@@ -352,7 +356,7 @@ Illegal forms:
 ```zane
 implicit TypeName() { ... }           // ILLEGAL: exactly one parameter is required
 implicit TypeName(a A, b B) { ... }   // ILLEGAL: implicit constructors are single-parameter only
-implicit TypeName{field Type} { ... } // ILLEGAL: field-constructor form is not allowed
+implicit TypeName{field FieldType} { ... } // ILLEGAL: field-constructor form is not allowed
 ```
 
 ### 3.6 Subscript definitions
@@ -391,16 +395,16 @@ A lambda literal is a function declaration with the name removed. It writes its 
 
 ```zane
 ReturnType() { body }
-ReturnType(param Type, ...) { body }
+ReturnType(param ParamType, ...) { body }
 ReturnType() => expr
-ReturnType(param Type, ...) => expr
-ReturnType?AbortType(param Type, ...) { body }
+ReturnType(param ParamType, ...) => expr
+ReturnType?AbortType(param ParamType, ...) { body }
 ReturnType(this ReceiverType) { body }
 ReturnType(this ReceiverType) mut { body }
-ReturnType(this ReceiverType, param Type, ...) { body }
-ReturnType(this ReceiverType, param Type, ...) mut { body }
-ReturnType(this ReceiverType, param Type, ...) => expr
-ReturnType(this ReceiverType, param Type, ...) mut => expr
+ReturnType(this ReceiverType, param ParamType, ...) { body }
+ReturnType(this ReceiverType, param ParamType, ...) mut { body }
+ReturnType(this ReceiverType, param ParamType, ...) => expr
+ReturnType(this ReceiverType, param ParamType, ...) mut => expr
 ```
 
 A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. `=> expr` is legal only when the declared return type is not `Void`.
@@ -417,13 +421,13 @@ element!onClick(Void(this Element, data EventData) mut {
 })
 ```
 
-A lambda-variable declaration binds a lambda literal to a symbol. The shorthand writes the symbol name in front of the lambda literal and drops the separate `= literal`, mirroring the constructor-call instantiation form `name Type(args, ...)`:
+A lambda-variable declaration binds a lambda literal to a symbol. The shorthand writes the symbol name in front of the lambda literal and drops the separate `= literal`, mirroring the constructor-call instantiation form `name VarType(args, ...)`:
 
 ```zane
-name ReturnType(param Type, ...) { body }
-name ReturnType(param Type, ...) => expr
-name ReturnType?AbortType(param Type, ...) { body }
-name ReturnType(this ReceiverType, param Type, ...) mut { body }
+name ReturnType(param ParamType, ...) { body }
+name ReturnType(param ParamType, ...) => expr
+name ReturnType?AbortType(param ParamType, ...) { body }
+name ReturnType(this ReceiverType, param ParamType, ...) mut { body }
 ```
 
 The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
@@ -506,10 +510,10 @@ spawn packageName$fn(args...)
 spawn packageName$fn(args...) ? binder { ... }
 spawn packageName$fn(args...) ? { ... }
 spawn packageName$fn(args...) ?? fallbackExpr
-name Type = spawn packageName$fn(args...)
-name Type = spawn packageName$fn(args...) ? binder { ... }
-name Type = spawn packageName$fn(args...) ? { ... }
-name Type = spawn packageName$fn(args...) ?? fallbackExpr
+name VarType = spawn packageName$fn(args...)
+name VarType = spawn packageName$fn(args...) ? binder { ... }
+name VarType = spawn packageName$fn(args...) ? { ... }
+name VarType = spawn packageName$fn(args...) ?? fallbackExpr
 ```
 
 `spawn` is legal only on function-call expressions.
@@ -552,8 +556,8 @@ A `match` expression names a scrutinee, then a `[ ]` list of `,`-separated calla
 
 ```zane
 match scrutinee [ callable, callable, ... ]
-name Type = match scrutinee [ callable, callable, ... ]
-name Type = match scrutinee [ callable, callable, ... ] ? binder { ... }
+name VarType = match scrutinee [ callable, callable, ... ]
+name VarType = match scrutinee [ callable, callable, ... ] ? binder { ... }
 ```
 
 The arms are ordinary function values, so each may be a lambda literal (block- or `=>`-bodied) or a named lambda-variable.

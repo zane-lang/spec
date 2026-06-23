@@ -264,19 +264,21 @@ car Car(Engine())   // legal: plain owner field accepts a temporary
 ```
 
 ### 3.9 Type and number parameters
-A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A parameter declared in the constructor's `<>` header is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
+A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
-// inferred: T is deduced from the value arguments
-Vector<T Type>(x T, y T) {
+// inferred: T is introduced inline and deduced from the value arguments
+Vector<T>(x T Type, y T Type) {
     return init{x, y}
 }
 
 // explicit: the type and size are passed as arguments
-Array(T Type, n Number) {
+Array<T, n>(T Type, n Number) {
     // zero-initialise n elements of type T
 }
 ```
+
+The constructor's name is its return type, so a constructor for a parameterized type names the applied type (`Vector<T>`, `Array<T, n>`); the `<...>` holds bare references to the inline-introduced or explicitly passed parameters (it carries `T`, not `T Type`, so it is not a reintroduced header). The call is always by bare name.
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. A constructor is always called by its bare name: `Vector(Int(2), Int(3))` infers `T`, while `Array(Int, 10000)` passes the type and size explicitly.
 
@@ -329,7 +331,7 @@ A coercion site is a **positional argument of a function call or constructor cal
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
-- Symbol declarations with a type annotation: `name Type = expr`
+- Symbol declarations with a type annotation: `name VarType = expr`
 - Assignments to already-declared symbols: `name = expr`
 - Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
 - `return` expressions, even when the return type is declared
@@ -475,7 +477,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
-| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred via a `<>` header or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
+| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred from inline introduction (on a value parameter's type or a nested type) or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
 
 ---
 
@@ -491,6 +493,6 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically only at positional arguments of function and constructor calls — never at declarations, assignments, stores, `return`, or `Type{field = value}` initializers; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
-| `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred via a `<>` header or passed explicitly as a value parameter |
+| `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

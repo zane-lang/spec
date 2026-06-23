@@ -62,7 +62,7 @@ type Buffer<T Type, n Number> = struct {   // T is a type parameter, n is a numb
 }
 ```
 
-A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time number. A parameter is introduced by the `<>` header and referenced by its bare name. See [`generics.md`](generics.md) §3.
+A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time number. A parameter is introduced by a type's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
 ---
 
@@ -186,8 +186,8 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
 | Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, or as the left operand of `$` |
-| Number parameter | A lowercase name (`n`) declared `n Number` in a `<>` header; a number, not a type |
-| Type parameter | An uppercase name (`T`) declared `T Type` in a `<>` header; referenced bare |
+| Number parameter | A lowercase name (`n`) declared `n Number` (in a type's `<>` header or inline in a verb); a number, not a type |
+| Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`class`/`variant` body; always trailing, inline or multiline; newlines are insignificant there |
