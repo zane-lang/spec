@@ -84,7 +84,7 @@ type Vector<T Type> = struct { ... }             // header: one type parameter
 type Buffer<T Type, n Number> = struct { ... }   // header: a type then a number
 ```
 
-A **verb** — a function, method, or constructor — has no header. It *introduces* each type or number parameter inline, at the parameter's first occurrence in the signature, by writing its concept (`Type` / `Number`) there:
+A **verb** — a function, method, or constructor — has no header. It *introduces* each type or number parameter inline, at the parameter's first **marked** occurrence — the first place the name carries its concept (`Type` / `Number`):
 
 ```zane
 Vector(x T Type, y T Type) { ... }               // T introduced on a value parameter
@@ -94,7 +94,7 @@ Int size(this Buffer<T Type, n Number>) { ... }   // T, n introduced on the rece
 
 A verb has no header because it never needs one: its parameters are always inferred (§5) and never applied positionally, so there is no order to fix and nothing for a header to declare.
 
-A name is introduced once and referenced bare everywhere else in the signature — the return type, the body, and any later parameter. Within one verb signature every occurrence of a name is the **same** parameter, so `add(x T Type, y T Type)` constrains `x` and `y` to a single type `T`. The first marked occurrence introduces the parameter; a later occurrence may be written bare (`T`) or may repeat the concept (`T Type`) — both denote the same parameter.
+A name is introduced by its first **marked** occurrence and referenced bare everywhere else in the signature. A bare reference may appear *before* the introduction: in `T head(arr Array<T Type, n Number>)` the return type `T` is a bare reference even though it is written first, because the introduction is the marked `T Type` in the parameter list. Within one verb signature every occurrence of a name is the **same** parameter, so `T add(x T Type, y T Type)` constrains `x` and `y` to a single type `T`; a non-introducing occurrence may be written bare (`T`) or may repeat the concept (`T Type`), and both denote the same parameter.
 
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
