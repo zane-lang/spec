@@ -268,15 +268,17 @@ A constructor for a parameterized type receives its type and number parameters i
 
 ```zane
 // inferred: T is introduced inline and deduced from the value arguments
-Vector(x T Type, y T Type) {
+Vector<T>(x T Type, y T Type) {
     return init{x, y}
 }
 
 // explicit: the type and size are passed as arguments
-Array(T Type, n Number) {
+Array<T, n>(T Type, n Number) {
     // zero-initialise n elements of type T
 }
 ```
+
+The constructor's name is its return type, so a constructor for a parameterized type names the applied type (`Vector<T>`, `Array<T, n>`); the `<...>` holds bare references to the inline-introduced or explicitly passed parameters (it carries `T`, not `T Type`, so it is not a reintroduced header). The call is always by bare name.
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. A constructor is always called by its bare name: `Vector(Int(2), Int(3))` infers `T`, while `Array(Int, 10000)` passes the type and size explicitly.
 

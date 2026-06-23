@@ -87,7 +87,7 @@ type Buffer<T Type, n Number> = struct { ... }   // header: a type then a number
 A **verb** — a function, method, or constructor — has no header. It *introduces* each type or number parameter inline, at the parameter's first **marked** occurrence — the first place the name carries its concept (`Type` / `Number`):
 
 ```zane
-Vector(x T Type, y T Type) { ... }               // T introduced on a value parameter
+Vector<T>(x T Type, y T Type) { ... }             // T introduced on a value parameter
 T head(arr Array<T Type, n Number>) { ... }       // T, n introduced inside a nested type
 Int size(this Buffer<T Type, n Number>) { ... }   // T, n introduced on the receiver
 ```
@@ -201,12 +201,14 @@ A type or number parameter reaches a callable in one of two ways: inferred (intr
 A type or number parameter introduced inline in a verb's signature is inferred from the value arguments. The caller writes no `<>`; the compiler deduces each parameter from the argument types.
 
 ```zane
-Vector(x T Type, y T Type) {     // T introduced inline; x and y share it
+Vector<T>(x T Type, y T Type) {  // T introduced inline; x and y share it
     return init{ x, y }
 }
 
 vec Vector(Int(2), Int(3))       // T inferred as Int from the arguments
 ```
+
+A constructor's name is its return type, so a constructor for a parameterized type names the **applied** type (`Vector<T>`), where the `<...>` holds bare *references* to the inline-introduced parameters — it carries `T`, not `T Type`, so it is a type expression, not a reintroduced header. The call is still by bare name (`Vector(Int(2), Int(3))`); only the declaration shows the applied return type.
 
 ### 5.3 Explicit parameters (`Type` / `Number` value parameters)
 
@@ -215,11 +217,11 @@ A type or number can instead be passed as an ordinary argument by declaring a va
 The distinction from §5.2 is purely structural, read off the parameter's shape. An *inferred* parameter rides on a value parameter's **type** (`x T Type` — a value `x` whose type is the fresh parameter `T`) or in a nested type, so a value argument fixes it. An *explicit* parameter **is** the value parameter (`T Type` — a value parameter named `T` of concept `Type`), so the caller passes it directly. The first carries a value name before the concept-typed type; the second does not.
 
 ```zane
-Vector(T Type) {
+Vector<T>(T Type) {
     return init{ x = T(0), y = T(0) }
 }
 
-Array(T Type, n Number) {
+Array<T, n>(T Type, n Number) {
     // zero-initialise n elements of type T
 }
 
@@ -249,7 +251,7 @@ This single explicit wrap at the call site is the deliberate cost that replaces 
 ### 6.1 Inferred from a literal
 
 ```zane
-Array(values Array<T Type, n Number>) {
+Array<T, n>(values Array<T Type, n Number>) {
     // T and n inferred from the literal
 }
 
@@ -261,7 +263,7 @@ The value-parameter type `Array<T Type, n Number>` introduces `T` and `n` inline
 ### 6.2 Explicit type and size
 
 ```zane
-Array(T Type, n Number) {        // called as Array(Int, 10000)
+Array<T, n>(T Type, n Number) {  // called as Array(Int, 10000)
     // zero-initialise n elements of type T
 }
 

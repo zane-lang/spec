@@ -160,7 +160,7 @@ Array<Int, 10000>
 Matrix<Float, 3>
 ```
 
-A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb signature, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
+A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
 An inline body-form type expression — `struct { ... }`, `class { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body.
 
@@ -188,7 +188,7 @@ type Buffer<T Type, n Number> = struct {
 
 Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
 
-A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline, at their first occurrence in the signature, by carrying the concept there (`x T Type`, `Array<T Type, n Number>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
+A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n Number>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
 ### 2.6 Array storage primitive
 
@@ -267,7 +267,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n Number>, ...) { body }
 ```
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline, at the parameter's first occurrence — on a value parameter's type (`param T Type`) or inside a nested type expression (`Container<T Type, n Number>`) — and references it bare elsewhere. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 ### 3.2 Methods
 
@@ -302,12 +302,13 @@ TypeName(param &Type, ...) {
 }
 TypeName(param Type, ...) => init{ field = expr, ... }
 TypeName(param &Type, ...) => init{ field = expr, ... }
-TypeName(param T Type, ...) { return init{ field = expr, ... } }
+TypeName<T>(param T Type, ...) { return init{ field = expr, ... } }
+TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = expr, ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
-A constructor for a parameterized type has no `<>` header. It either introduces its type and number parameters inline (`param T Type`, or in a nested type such as `Array<T Type, n Number>`), in which case they are inferred from the value arguments, or accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
+A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
 
 ### 3.4 Field constructors
 
