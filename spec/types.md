@@ -331,7 +331,7 @@ A coercion site is a **positional argument of a function call or constructor cal
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
-- Symbol declarations with a type annotation: `name Type = expr`
+- Symbol declarations with a type annotation: `name VarType = expr`
 - Assignments to already-declared symbols: `name = expr`
 - Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
 - `return` expressions, even when the return type is declared

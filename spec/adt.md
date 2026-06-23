@@ -235,7 +235,7 @@ type Expr = variant { intLit String; flip &Expr; }   // sum type
 | Concept | Rule |
 |---|---|
 | `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum type |
-| `variant` | Sum type holding exactly one named member at a time; `{ }` body with `;`-terminated `member Type` entries, identical to a `struct` body |
+| `variant` | Sum type holding exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout |
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `variant` or `class`, never a `struct` |
