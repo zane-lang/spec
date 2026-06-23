@@ -314,7 +314,7 @@ Every callable in Zane is a verb (§1). What *kind* of verb a declaration is —
 | Marker | Verb kind | Capability unlocked |
 |---|---|---|
 | First parameter named `this` | Method | Private-field access on the receiver; `:` / `!` call syntax |
-| Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for private-field **initialization** |
+| Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** |
 | Symbol name (operator token) | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
 | Plain identifier, none of the above | Function | No special capability |

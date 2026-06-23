@@ -130,7 +130,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
 ### 3.14 `Type` and `Number` parameter concepts
-- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type — or listed in a type's `<>` header — they are inferred.
+- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.2
 

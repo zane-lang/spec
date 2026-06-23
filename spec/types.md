@@ -477,7 +477,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
-| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred via a `<>` header or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
+| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred from inline introduction (on a value parameter's type or a nested type) or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
 
 ---
 
@@ -493,6 +493,6 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically only at positional arguments of function and constructor calls — never at declarations, assignments, stores, `return`, or `Type{field = value}` initializers; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
-| `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred via a `<>` header or passed explicitly as a value parameter |
+| `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |
