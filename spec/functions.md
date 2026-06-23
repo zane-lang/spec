@@ -297,7 +297,7 @@ Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as
 Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
 
 ### 7.6 Generics are orthogonal to overloading for function values
-A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape: there can be at most one overload of a name that takes a given function-type parameter. Passing a lambda to an overloaded callable is therefore an exact shape match, not a contest the lambda must win.
+A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape. Passing a lambda to an overloaded callable is therefore an exact shape match at that parameter position, not a contest the lambda must win.
 
 The circularity that makes overloaded **names** unusable as values (§7.1) does not apply to a lambda. An overloaded name is a candidate *set* with nothing to collapse it in value position; a lambda is already a single value. That distinction — not genericity — is what lets a self-typed lambda be passed to an overloaded callable while a bare callable name cannot.
 
