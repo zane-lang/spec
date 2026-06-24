@@ -4,6 +4,8 @@ This document specifies Zane's type-parameter system. A type in Zane is a *templ
 
 > **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`types.md`](types.md) §5 for `type` and `alias` declarations and §3 for constructors. [`lexical.md`](lexical.md) §3 for the casing rule that distinguishes types from values. [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution.
 
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) is the design journal behind these rules — the parameter ladder, the `<>`/`()` split, the literal-wrapping cost, and the deferred features.
+
 ---
 
 ## 1. Overview
@@ -128,6 +130,8 @@ Int size(this Buffer<T Type, n Number>) {
 Here `n` in the return position is the number the use site supplied for that parameter. The receiver type `Buffer<T Type, n Number>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
+
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder: a header for types, inline introduction for verbs" explains why `x T Type` infers and `T Type` passes, using the value:type ladder.
 
 ---
 
@@ -301,6 +305,8 @@ An array of variable-size structs loses uniform stride; a struct containing a va
 
 Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees every value of a given type is the same number of bytes. That guarantee is what makes indexing, copying, embedding, and calling all cheap.
 
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Size is part of the type" weighs the VLA alternative and the stride-loss propagation in full.
+
 ---
 
 ## 8. The `Array<T, n>` Storage Primitive
@@ -326,26 +332,11 @@ The following are intentionally not specified in this version:
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, receiver, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
----
-
-## 10. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Types are templated functions | Treating a type as something that is executed makes templating a first-class consequence rather than a separate feature. A type definition is a function from parameters to a layout. |
-| Header for types, inline introduction for verbs | A type is applied positionally (`Vector<Int>`), so its parameters' order is part of its public interface and belongs in an explicit `<>` header. A verb's parameters are always inferred and never applied positionally, so there is no order to fix and no need for a header: the verb introduces each parameter inline at its first marked occurrence and references it bare elsewhere. The split tracks the real apply-versus-infer distinction rather than imposing one form on two different roles. |
-| Parameters are concept-typed (`Type` / `Number`) | A type handed to a constructor is just a compile-time value, so its parameter has a type like any other — the `Type` concept for types, `Number` for sizes. No bespoke parameter-kind keyword is needed, and `Number` and `Type` reuse the existing concept-type machinery (parameter positions only, never storage). |
-| No sigil on parameters; casing carries the kind | A parameter is introduced once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule distinguishes a type (`T`) from a number (`n`). A bare reference is unambiguous because an introduced name is a parameter and any name never introduced is a concrete type. |
-| `<>` for type expressions, `()` for calls | `<>` belongs to the type system and describes architecture at compile time; `()` belongs to the value system and constructs or runs at run time. Keeping them separate keeps each mechanism simple. |
-| No `<>` at calls | A call is by name. Inline-introduced parameters are inferred from the value arguments and explicit parameters are passed as ordinary `Type`/`Number` arguments, so a parallel `<>` channel at the call site is unnecessary and is disallowed. |
-| Inline parameter = inferred, value parameter = explicit | Writing a concept on a value parameter's type or in a nested type (`x T Type`, `Array<T Type, n Number>`) means "infer me"; writing it as the value parameter itself (`T Type` in a `()` list) means "pass me" — exactly the inferred-versus-explicit choice a constructor author wants. |
-| Size is part of the type | Fixed size guarantees uniform stride, which is what makes indexing, copying, struct embedding, and calling conventions cheap. Runtime-sized values would propagate stride loss up every containment chain. |
-| Concept-typed literals must be wrapped | The compiler cannot pick a concrete numeric type from a bare literal. One explicit `Int(...)` wrap at the call site replaces a `<>` argument list everywhere else. |
-| `Array<T, n>` is the single storage primitive | One fixed-size base case keeps the compiler's layout responsibility minimal; every other fixed-size container is defined in terms of it. |
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.
 
 ---
 
-## 11. Summary
+## 10. Summary
 
 | Concept | Rule |
 |---|---|

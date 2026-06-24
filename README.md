@@ -7,8 +7,9 @@ This repository is a **prior art publication** for the Zane programming language
 ## Repository layout
 
 ```
-spec/             ← the specification itself (start here)
-contributing/     ← style guide for writing and editing spec docs
+spec/             ← the specification itself (start here): what the language does
+rationale/        ← design journals: why each spec decision was made
+contributing/     ← style guides for writing spec docs and rationale docs
 bench/            ← reference C harness used for runtime experiments
 ```
 
@@ -47,6 +48,17 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/packages.md`](spec/packages.md) | Package declarations and member access |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
 
+## Design rationale
+
+The spec states *what* the language does; the **why** lives in a parallel set of design journals under [`rationale/`](rationale/), one per spec document. They are dated, append-only records of the forks, the discarded alternatives, and the accepted costs behind each decision — kept separate so the spec stays terse and current while the reasoning has room to breathe.
+
+| Document | Justifies |
+|---|---|
+| [`rationale/generics.md`](rationale/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter ladder, the `<>`/`()` split, size-in-the-type, and the deferred features |
+
 ## Contributing
 
-Style and structural conventions for spec documents live in [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md). Read that file before editing or adding a topic doc.
+Style and structural conventions live in two sibling guides; read the relevant one before editing or adding a document:
+
+- [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
+- [`contributing/writing-rationale-docs.md`](contributing/writing-rationale-docs.md) — design journals in [`rationale/`](rationale/).
