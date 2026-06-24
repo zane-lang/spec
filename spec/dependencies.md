@@ -49,7 +49,7 @@ Each `deps` row records:
 `zane-versions.coda` records how each key resolves to a concrete source and commit:
 
 ```zane
-[
+resolutions [
     key  url                                commit
     zane https://github.com/zane-lang/zane  9f1c0aa
     math https://github.com/zane-lang/math  a3f8c2d
