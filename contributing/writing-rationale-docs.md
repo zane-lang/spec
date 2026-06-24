@@ -138,7 +138,7 @@ When section numbers in the spec change, update the `**Spec:**` anchors in the m
 
 ## 7. Prose Style
 
-Rationale docs share the spec guide's [§7 prose rules](writing-spec-docs.md): short sentences, one idea each, active voice, `` `backticks` `` for identifiers, `**bold**` for a term's first definition or a key claim, italics only for document names and semantic categories.
+Rationale docs share the spec guide's [§6 prose rules](writing-spec-docs.md): short sentences, one idea each, active voice, `` `backticks` `` for identifiers, `**bold**` for a term's first definition or a key claim, italics only for document names and semantic categories.
 
 Two differences in register, because this is a journal, not a definition:
 
