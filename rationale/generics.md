@@ -43,7 +43,7 @@ A **verb** (function, method, constructor) never gets applied positionally. Its 
 
 The split is not stylistic. It tracks the real apply-versus-infer distinction. Header where there is a positional interface; inline where there is not.
 
-❌ Header on everything (Rust/Swift style: `fn head<T, const N>(...)`). Clean to read because the binders come first, but it forces verbs to declare an order that no call site ever fills, and it reintroduces the `<>`-at-call-site channel we wanted to delete (see the next entry).
+❌ Header on everything (Rust/Swift style: `fn head<T, const N>(...)`). Clean to read because the binders come first, but it forces verbs to declare an order that no call site ever fills, and it reintroduces the `<>`-at-call-site channel we wanted to delete (see the "`<>` describes architecture, `()` constructs — and calls never take `<>`" entry below).
 
 ❌ Inline on everything, types included. Breaks the positional public interface of a type — you could no longer see `Vector`'s parameter order at a glance, and `Vector<Int>` would have no signature to check against.
 
@@ -68,7 +68,7 @@ So inferring is not a different mechanism from passing — it is passing observe
 This reframing earns its keep three ways:
 
 1. It makes the `x T Type` / `T Type` distinction *legible* instead of arbitrary. A reader who holds the ladder reads `T Type` instantly as "the tower truncated by one rung."
-2. It explains the literal-wrapping rule for free (see the next-but-one entry): inference is an up-one-rung read, and the up-rung of a bare literal is a *concept*, not a concrete type.
+2. It explains the literal-wrapping rule for free (see the "Concept-typed literals must be wrapped at a call" entry below): inference is an up-one-rung read, and the up-rung of a bare literal is a *concept*, not a concrete type.
 3. It turns the apparent footgun — "delete one identifier, flip the meaning" — into a legible edit: removing the name doesn't flip a flag, it stops binding the rung below. Still a sharp edge, but a sharp edge that *means* something.
 
 ### Costs / deferred
@@ -133,7 +133,7 @@ So `Array<T, n>` is the mechanism that *guarantees* every value of a given type 
 
 > This rule is cited from [`adt.md`](../spec/adt.md) §4 — a directly inline self-referential type would have infinite size, which uniform stride forbids, which is why recursive types must box through `&`.
 
-**Costs / deferred:** the size is in the type, so two arrays of different lengths are different types. Arithmetic on the size in a type position (`Array<T, rows * cols>`) is therefore a type-identity question, and is deferred — see below.
+**Costs / deferred:** the size is in the type, so two arrays of different lengths are different types. Arithmetic on the size in a type position (`Array<T, rows * cols>`) is therefore a type-identity question, and is deferred — see the "Deferred: what the model promises but does not yet deliver" entry below.
 
 ---
 
