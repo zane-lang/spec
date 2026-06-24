@@ -31,12 +31,12 @@ A rationale document is looser than a spec document on purpose — a journal nee
 One or two sentences: this is the design journal for spec/<topic>.md.
 A short paragraph stating the append-only / dated / non-normative rule.
 
-> **See also:** this guide, and the spec doc these entries justify.
+> **See also:** [`writing-rationale-docs.md`](../contributing/writing-rationale-docs.md) for this guide. [`spec/<topic>.md`](../spec/<topic>.md) for the spec doc these entries justify.
 
 ---
 
 ## <Decision name>
-**Spec:** <topic>.md §N   ·   **Settled:** <YYYY-MM>
+**Spec:** [`<topic>.md`](../spec/<topic>.md) §N   ·   **Settled:** <YYYY-MM>
 
 <entry body — see §4>
 
@@ -89,7 +89,7 @@ An entry is mostly prose. Only two things are required; everything else is a rec
 ### 4.1 Required
 
 1. **A decision name** as the `## ` heading — a short noun phrase naming the decision, not a question.
-2. **A spec back-link** on the line under the heading: `**Spec:** <topic>.md §N`. This is the anti-drift anchor — the one piece of discipline that keeps the journal tied to the rules it explains. Add `· **Settled:** <YYYY-MM>` after it.
+2. **A spec back-link** on the line under the heading: **Spec:** [`<topic>.md`](../spec/<topic>.md) §N. This is the anti-drift anchor — the one piece of discipline that keeps the journal tied to the rules it explains. Add `· **Settled:** <YYYY-MM>` after it.
 
 ### 4.2 Recommended rhythm
 
