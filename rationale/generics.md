@@ -80,7 +80,7 @@ This reframing earns its keep three ways:
 ---
 
 ## Parameters are concept-typed (`Type` / `Number`)
-**Spec:** [`generics.md`](../spec/generics.md) §3.2 · **Settled:** 2026-06
+**Spec:** [`generics.md`](../spec/generics.md) §3.3 · **Settled:** 2026-06
 
 Once a type handed to a constructor is just a compile-time value, its parameter needs a *type* like any other value — and we already had concept types (`@concepts$Number`, etc.) for exactly the "compile-time, parameter-position-only, never storage" role that literals occupy before lowering.
 

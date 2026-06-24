@@ -30,7 +30,7 @@ The catch, and the reason this is a real bet rather than a slogan, is the word *
 
 The decision to make types ordinary compile-time values executed in an earlier stage is the root that generics, the `<>`/`()` split, and compile-time arguments all grow from. The full argument — why staging beats a bolt-on generics sublanguage, and where the model currently overpromises (type-level arithmetic, constraints) — is recorded once, in the generics journal, rather than duplicated here.
 
-> See [`rationale/generics.md`](generics.md) — "Types are templated functions" and "Deferred: what the model promises but does not yet deliver".
+> See [`generics.md`](generics.md) — "Types are templated functions" and "Deferred: what the model promises but does not yet deliver".
 
 **Costs / deferred:** the elegance of "a type is just a function you run" oversells how much falls out for free. Type identity for computed type expressions, and constraints on parameters, do *not* fall out of it; they are the hard parts the framing hides. Tracked in the generics journal.
 
@@ -47,7 +47,7 @@ A name's kind has to be recoverable somehow — by the parser, to know whether `
 
 The choice: encode kind in *case*, a property every identifier already has, costing zero extra tokens. An uppercase-initial name is a type; lowercase is a value. The parser and the reader recover kind from the same signal, everywhere, for free. This is what makes `<>` type syntax viable at all (`Vector<Int>` vs `a < b`) and what lets parameters drop their sigils (bare `T`, bare `n`).
 
-**Costs / deferred:** case is no longer a free stylistic choice — you cannot name a type in lowercase or a local in uppercase, because case now carries meaning. Identifier conventions in other languages (SCREAMING_CONSTANTS, lowercase type aliases) are unavailable by construction. We judge a single, universal, zero-token kind signal worth the loss of naming latitude. The two-kind encoding (type vs value/number) is also load-bearing in a way that may strain if a third compile-time kind ever needs its own casing; noted in [`rationale/generics.md`](generics.md) under concept-typing.
+**Costs / deferred:** case is no longer a free stylistic choice — you cannot name a type in lowercase or a local in uppercase, because case now carries meaning. Identifier conventions in other languages (SCREAMING_CONSTANTS, lowercase type aliases) are unavailable by construction. We judge a single, universal, zero-token kind signal worth the loss of naming latitude. The two-kind encoding (type vs value/number) is also load-bearing in a way that may strain if a third compile-time kind ever needs its own casing; noted in [`generics.md`](generics.md) under concept-typing.
 
 ---
 

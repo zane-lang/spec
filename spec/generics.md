@@ -96,7 +96,7 @@ This ladder is the model behind the rest of this section and behind the call rul
 
 A `Number` parameter sits on the ladder differently. A type can be the type of a value, so a type parameter has a rung below it to ride (`x T Type`). A number cannot be the type of a value, so a number parameter has no such rung — `x n Number` is not a value with an inferred number. A number is therefore inferred only *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` is read from the literal's length), never from a value's own type.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder" develops this picture, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder: a header for types, inline introduction for verbs" develops this picture, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
 ### 3.2 Where parameters are introduced
 
@@ -326,7 +326,7 @@ An array of variable-size structs loses uniform stride; a struct containing a va
 
 Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees every value of a given type is the same number of bytes. That guarantee is what makes indexing, copying, embedding, and calling all cheap.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Size is part of the type" weighs the VLA alternative and the stride-loss propagation in full.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Size is part of the type (`Array<T, n>`)" weighs the VLA alternative and the stride-loss propagation in full.
 
 ---
 
