@@ -36,7 +36,7 @@ deps [
 Top-level fields:
 
 - **`zane-version`**: the toolchain tag used for the compiler and the `core` package; see [§14 Toolchain Version](#14-toolchain-version).
-- **`version-pattern`** (optional): the package author's declared ABI-compatibility window for this package's *own* versions. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
+- **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 Each `deps` row records:
 
@@ -114,13 +114,15 @@ If the required target artifact is missing from `build/`, the fetch fails for th
 ## 6. Symbol Versioning
 
 ### 6.1 Placeholder-prefix rewriting
-Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag — and places the rewritten binaries into `build/`.
+Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag followed by an `@` separator — and places the rewritten binaries into `build/`.
 
 Conceptually:
 
 ```zane
-!math$vec  →  v1.0.1math$vec
+!math$vec  →  v1.0.1@math$vec
 ```
+
+The `@` separates the version tag from the package key so the version boundary is unambiguous and two different packages can never collide on a shared prefix. Because path-safety validation (§7) forbids `@` in version tags, the first `@` always delimits the version from the key during the remap rewrite.
 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
@@ -275,8 +277,8 @@ Example: `v*.+.++` reads as "same major; among interchangeable versions prefer t
 ### 15.3 Selection ("best of both")
 With remapping enabled for a package, the toolchain considers the set of versions required across the graph and groups them by their declared `version-pattern` string:
 
-1. Within a group sharing an identical pattern, two versions are **interchangeable** when every `*` component matches and every `+`/`-` component lies in the declared direction relative to each version's own tag.
-2. Among interchangeable versions, the **chosen** version is selected by optimizing the highest-priority (fewest-repeats) component in its direction — `+` maximizes, `-` minimizes — breaking ties down the priority chain. The strict total order guarantees a single deterministic winner, so the link is reproducible.
+1. Within a group sharing an identical pattern, one version may **substitute** for another when every `*` component is equal and the directional components agree under a **hierarchical** comparison: the `+`/`-` components are examined in priority order (highest priority — fewest repeats — first), and the first component at which the two versions differ must differ in that component's declared direction (greater for `+`, smaller for `-`). Once a higher-priority component satisfies its direction, lower-priority components are unconstrained — so a minor bump that resets the patch to `0` still substitutes. Versions equal in every component substitute trivially.
+2. The **chosen** version is the optimum under this priority order — for `+` the greatest value at the highest-priority component, for `-` the least, with lower-priority components breaking ties — provided every other version in the group may substitute onto it. The strict total order guarantees a single deterministic winner, so the link is reproducible.
 3. References to the displaced versions are remapped onto the chosen version and the displaced copies are dropped from the link.
 
 ### 15.4 When versions are not interchangeable
@@ -287,7 +289,7 @@ With remapping enabled for a package, the toolchain considers the set of version
 Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer, defaults to `no`, and always degrades to safe coexistence when a single common version cannot be shown interchangeable.
 
 ### 15.6 Mechanism reuses pull-time rewriting
-Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version remains recorded in `zane.coda` / `zane-versions.coda` and fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9math$vec → v6.3.4math$vec` — onto the chosen version.
+Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version remains recorded in `zane.coda` / `zane-versions.coda` and fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9@math$vec → v6.3.4@math$vec` — onto the chosen version.
 
 ---
 
