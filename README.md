@@ -17,6 +17,12 @@ bench/            ← reference C harness used for runtime experiments
 
 The specification lives in [`spec/`](spec/) and is organized by topic. Each document has a single canonical home for its rules; everything else cross-references.
 
+### Foundations
+
+| Document | Purpose |
+|---|---|
+| [`spec/foundations.md`](spec/foundations.md) | The few cross-cutting commitments the whole spec rests on: captured intent, staged compilation, casing-determines-kind, fixed layout, and strictness-as-performance — start here |
+
 ### Reference documents
 
 | Document | Purpose |
@@ -54,6 +60,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 
 | Document | Justifies |
 |---|---|
+| [`rationale/foundations.md`](rationale/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
 | [`rationale/generics.md`](rationale/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter ladder, the `<>`/`()` split, size-in-the-type, and the deferred features |
 
 ## Contributing
