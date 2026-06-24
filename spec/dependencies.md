@@ -64,6 +64,8 @@ Each row records:
 
 The repository URL is canonical identity; the key is only a local convenience for naming the package in source and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
+The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-versions.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
+
 ### 2.3 Files are recorded and updated by commands
 `zane add` resolves the requested tag to its current commit hash, writes the key, tag, and remap flag into `zane.coda`, and writes the key, url, and commit into `zane-versions.coda`. The user does not type the commit hash manually in the normal workflow.
 
@@ -227,7 +229,7 @@ This is an explicit trust/debugging escape hatch, not the default package-distri
 
 At a high level, dependency resolution proceeds in this order:
 
-1. read local `zane.coda` and `zane-versions.coda`
+1. read local `zane.coda` and `zane-versions.coda`, and abort if their keys are out of sync (§2.2)
 2. resolve each tag to its current commit hash
 3. verify commit hashes against `zane-versions.coda`
 4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
@@ -260,10 +262,12 @@ By default, when two parts of the dependency graph require different versions of
 Remapping of a package occurs only when the consumer enables it **and** the published patterns make it ABI-safe. Otherwise the versions coexist unchanged.
 
 ### 15.2 Pattern syntax
-A `version-pattern` mirrors the shape of the package's version tags, replacing each numeric component with a marker:
+A `version-pattern` mirrors the shape of the package's version tags, replacing each **numeric** component with a marker:
 
 - `*` — **fixed boundary.** This component must match exactly for two versions to be interchangeable. It carries no priority and does not participate in selection. (Typically the major component.)
 - `+` / `-` — **directional and priority-bearing.** `+` means the component is upward-substitutable (a higher value is a valid replacement); `-` means downward-substitutable. The marker is repeated to encode priority.
+
+Markers replace only numeric components. Every other character in the pattern — a leading `v`, separators such as `.`, and any non-numeric text including pre-release identifiers like `-rc.1` — is a **literal** that a tag must match exactly; `*`/`+`/`-` never apply to it. A pattern thus has no directional ordering over pre-release identifiers; they participate only as literal matches.
 
 **Priority is repetition-based: fewer repeats means higher priority** (as with markdown heading levels, where `#` outranks `##`). `+` outranks `++` outranks `+++`. Priority is always explicit — there is no positional default — so a pattern is fully self-describing in isolation.
 
@@ -273,6 +277,7 @@ Example: `v*.+.++` reads as "same major; among interchangeable versions prefer t
 - Every `+`/`-` component **MUST** carry an explicit priority via its repetition count.
 - No two `+`/`-` components may share a priority level. A pattern with a duplicate level is **rejected at parse time**; this strict total order is what makes selection deterministic.
 - `*` components carry no priority and are excluded from the ordering.
+- A marker position that contains anything other than `*`, `+`, or `-` is malformed and **MUST** be rejected at parse time. Literal positions must contain only the characters of the tag shape they match.
 
 ### 15.3 Selection ("best of both")
 With remapping enabled for a package, the toolchain considers the set of versions required across the graph and groups them by their declared `version-pattern` string:
@@ -284,7 +289,7 @@ With remapping enabled for a package, the toolchain considers the set of version
 ### 15.4 When versions are not interchangeable
 - **Same pattern, out of window** (for example, a `*` major component differs): the versions are kept side by side, as in the default model. This is expected and produces **no warning**.
 - **Different patterns**: versions of the same package that declare *different* `version-pattern` strings are never remapped onto each other. They are kept side by side and the toolchain emits an **informational warning** (not a security error) noting that divergent patterns prevented full deduplication. Other versions that do share a pattern still collapse normally.
-- **Tag shape mismatch**: a version tag whose component structure does not match the package's `version-pattern` — a different number of components, or pre-release identifiers the pattern does not describe — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
+- **Tag shape mismatch**: a version tag whose structure does not match the package's `version-pattern` — a different number of numeric components, or extra parts such as pre-release identifiers that the pattern's literals do not match — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
 
 ### 15.5 Safety: this is an ABI assertion on prebuilt objects
 Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer, defaults to `no`, and always degrades to safe coexistence when a single common version cannot be shown interchangeable.
