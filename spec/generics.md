@@ -14,6 +14,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 
 - **`Types are templated functions`.** A parameterized *type* lists its parameters in a `<>` header and produces a result. Applying arguments to those parameters (`Vector<Int>`) evaluates the template into a concrete type.
 - **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n Number>`) and references it bare elsewhere.
+- **`Inferring is passing, one level up`.** A parameter binds a rung of a value:type ladder; an inferred parameter (`x T Type`) rides on a value one rung below and is read upward from it, while an explicit parameter (`T Type`) is the rung itself. This ladder is the model behind the whole parameter system (§3.1).
 - **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
@@ -73,9 +74,31 @@ type Wrapper = struct {
 
 ---
 
-## 3. The Parameter System
+## 3. The Parameter Model
 
-### 3.1 Where parameters are introduced
+### 3.1 The value:type ladder
+
+A parameter binds a rung of a value's *ladder*. Every binding names a level, and the concept (`Type` / `Number`) is the type of the rung one level up. The same three signatures show all three positions on the ladder:
+
+```zane
+Void func (x Int)        // x : Int(3) : Int               — names the value
+Void func2(x T Type)     // x : Int(3) : T : Int : Type    — names the value AND its type
+Void func3(  T Type)     //          T : Int : Type        — names the type only
+```
+
+- `func(x Int)` names the ground value. `x` is `Int(3)`; its type is the concrete `Int`.
+- `func2(x T Type)` names two rungs. `x` is the value; its type is `T`; and `T`'s own value is `Int`, whose type is the concept `Type`. A call supplies `Int(3)`, and the compiler reads one rung up to recover `T = Int`. That upward read is inference.
+- `func3(T Type)` names the upper rung only. There is no ground value, so the caller supplies the type directly: `func3(Int)`. That is explicit passing.
+
+Inference and explicit passing are therefore not separate mechanisms. They are the same binding observed one level apart: an inferred parameter rides on a value one rung below and is read upward from it; an explicit parameter is the rung itself. The leading value name decides which — present, the compiler reads the type off a value (`x T Type`, inferred); absent, the caller hands the type over (`T Type`, explicit).
+
+This ladder is the model behind the rest of this section and behind the call rules in §5. Where a parameter is introduced (§3.2) and how each kind reaches a call (§5.2, §5.3) are this picture made precise.
+
+A `Number` parameter sits on the ladder differently. A type can be the type of a value, so a type parameter has a rung below it to ride (`x T Type`). A number cannot be the type of a value, so a number parameter has no such rung — `x n Number` is not a value with an inferred number. A number is therefore inferred only *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` is read from the literal's length), never from a value's own type.
+
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder" develops this picture, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
+
+### 3.2 Where parameters are introduced
 
 A type and a verb introduce their parameters in different places, for one concrete reason: a type is applied positionally, a verb is not.
 
@@ -100,11 +123,11 @@ A name is introduced by its first **marked** occurrence and referenced bare ever
 
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
-### 3.2 `Type` and `Number` are concept types
+### 3.3 `Type` and `Number` are concept types
 
 `Type` and `Number` are compiler-provided concept types. `Type` is the concept of a type; `Number` is the concept of a compile-time number. Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8). A value of concept type `Type` is a type; a value of concept type `Number` is a compile-time number. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, a `Number` value in a number position.
 
-### 3.3 References are bare; casing carries the kind
+### 3.4 References are bare; casing carries the kind
 
 A parameter is referenced by its bare name. The casing rule (see [`lexical.md`](lexical.md) §3) carries the kind: an uppercase name is a type, a lowercase name is a number. Within one declaration, two occurrences of `T` are the same parameter, and two different names (`T` and `U`) are independent.
 
@@ -117,7 +140,7 @@ type Pair<T Type, U Type> = struct {
 
 `first` and `second` are independent; a use site may apply different types to each (`Pair<Int, Float>`).
 
-### 3.4 Number parameters resolve to values in body positions
+### 3.5 Number parameters resolve to values in body positions
 
 A number parameter referenced in a body position (not a type position) resolves to its number value. This is how a method on a parameterized type can read a size as an ordinary number.
 
@@ -130,8 +153,6 @@ Int size(this Buffer<T Type, n Number>) {
 Here `n` in the return position is the number the use site supplied for that parameter. The receiver type `Buffer<T Type, n Number>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
-
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder: a header for types, inline introduction for verbs" explains why `x T Type` infers and `T Type` passes, using the value:type ladder.
 
 ---
 
