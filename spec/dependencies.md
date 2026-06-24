@@ -255,7 +255,7 @@ By default, when two parts of the dependency graph require different versions of
 
 ### 15.1 Roles: author declares, consumer decides
 - **Author (`version-pattern`).** A package author publishes a `version-pattern` in the package's own `zane.coda`. It is **information, not permission**: it declares the range of the package's own versions that are interchangeable at the ABI level. It never forces remapping on or off.
-- **Consumer (`version-remap`).** The top-level project decides, per dependency, whether to remap, via the boolean `version-remap` column in its `deps` block. This is the **only** place the remap decision is made. `version-remap` flags in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate.
+- **Consumer (`version-remap`).** The top-level project decides, per dependency, whether to remap, via the boolean `version-remap` column in its `deps` block. This is the **only** place the remap decision is made. `version-remap` flags in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. A package that appears only transitively is remapped only if the top-level project adds its own `deps` row naming it — the URL-identity model lets any package be named directly. There is no wildcard or global opt-in: remapping is always an explicit, per-package decision recorded in the top-level manifest.
 
 Remapping of a package occurs only when the consumer enables it **and** the published patterns make it ABI-safe. Otherwise the versions coexist unchanged.
 
@@ -265,7 +265,7 @@ A `version-pattern` mirrors the shape of the package's version tags, replacing e
 - `*` — **fixed boundary.** This component must match exactly for two versions to be interchangeable. It carries no priority and does not participate in selection. (Typically the major component.)
 - `+` / `-` — **directional and priority-bearing.** `+` means the component is upward-substitutable (a higher value is a valid replacement); `-` means downward-substitutable. The marker is repeated to encode priority.
 
-**Priority is markdown-style: fewer repeats means higher priority.** `+` outranks `++` outranks `+++`. Priority is always explicit — there is no positional default — so a pattern is fully self-describing in isolation.
+**Priority is repetition-based: fewer repeats means higher priority** (as with markdown heading levels, where `#` outranks `##`). `+` outranks `++` outranks `+++`. Priority is always explicit — there is no positional default — so a pattern is fully self-describing in isolation.
 
 Example: `v*.+.++` reads as "same major; among interchangeable versions prefer the highest minor first (`+`, top priority), breaking ties by highest patch (`++`)."
 
@@ -284,6 +284,7 @@ With remapping enabled for a package, the toolchain considers the set of version
 ### 15.4 When versions are not interchangeable
 - **Same pattern, out of window** (for example, a `*` major component differs): the versions are kept side by side, as in the default model. This is expected and produces **no warning**.
 - **Different patterns**: versions of the same package that declare *different* `version-pattern` strings are never remapped onto each other. They are kept side by side and the toolchain emits an **informational warning** (not a security error) noting that divergent patterns prevented full deduplication. Other versions that do share a pattern still collapse normally.
+- **Tag shape mismatch**: a version tag whose component structure does not match the package's `version-pattern` — a different number of components, or pre-release identifiers the pattern does not describe — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
 
 ### 15.5 Safety: this is an ABI assertion on prebuilt objects
 Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer, defaults to `no`, and always degrades to safe coexistence when a single common version cannot be shown interchangeable.
