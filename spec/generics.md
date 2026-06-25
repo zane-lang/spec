@@ -259,6 +259,8 @@ arr Array(Int, 10000)        // Int passed as the type, 10000 as the size
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
 
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Passing a type directly, without a turbofish" tells why this exists: it is what makes the no-turbofish decision affordable rather than crippling.
+
 ### 5.4 Concept-typed literals must be wrapped
 
 A bare source literal carries a compiler concept type (such as `@concepts$Number`), not a concrete storage type. A bare literal **MUST NOT** drive inference of a type parameter, because the compiler cannot choose between `Int`, `Float`, and other concrete types. Wrap the literal in its destination type:
