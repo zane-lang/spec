@@ -318,7 +318,7 @@ Do not use *italics* for emphasis. Italics are reserved for the names of other d
 
 ### 6.3 Neutral register
 
-A spec document states rules without arguing for them and without editorial voice. No first person, no "we chose", no "unfortunately". Judgement, opinion, and honest doubt about a decision belong in the rationale doc, where the register is explicitly looser (see [`writing-rationale-docs.md`](writing-rationale-docs.md) §7).
+A spec document states rules without arguing for them and without editorial voice. No first person, no "we chose", no "unfortunately". Judgement, opinion, and honest doubt about a decision belong in the rationale doc, where the register is explicitly looser (see [`writing-rationale-docs.md`](writing-rationale-docs.md) §5).
 
 ### 6.4 Cross-references
 
