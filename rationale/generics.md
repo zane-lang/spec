@@ -51,13 +51,36 @@ The split is not stylistic. It tracks the real apply-versus-infer distinction. H
 
 The inline form has a subtlety that the spec states mechanically ("first marked occurrence") but never *motivates*: why does `x T Type` mean "infer `T`" while `T Type` means "pass `T`"? They look almost identical — the second is the first with the value name deleted.
 
-The motivating idea is that **every symbol has a value and a type**, and a type is itself a symbol — its value is a concrete type, its type is the concept `Type`. Read the same three signatures with each symbol's value and type spelled out:
+The motivating idea is that **every symbol has a value and a type**, and a type is itself a symbol — its value is a concrete type, its type is the concept `Type`. Take three verbs that differ only in how they declare their one parameter:
 
 ```zane
-Void func (x Int)        // x : value Int(3), type Int
-Void func2(x T Type)     // x : value Int(3), type T   —  and T : value Int, type Type
-Void func3(  T Type)     //                              T : value Int, type Type
+Void func (x Int) {}
+Void func2(x T Type) {}
+Void func3(T Type) {}
 ```
+
+Now call each, and draw the parameter as a tree of its `value` and its `type` — expanding any `type` that is itself a symbol one level further:
+
+```text
+func(Int(3))
+└─ x
+   ├─ value: Int(3)
+   └─ type:  Int
+
+func2(Int(3))
+└─ x
+   ├─ value: Int(3)
+   └─ type:  T
+      ├─ value: Int
+      └─ type:  Type
+
+func3(Int)
+└─ T
+   ├─ value: Int
+   └─ type:  Type
+```
+
+`func2` is the whole point: the parameter `x` has type `T`, and `T` is itself a symbol whose value (`Int`) is what inference recovers — the same `value`/`type` subtree as `func3`'s `T`, just reached from a value argument instead of given directly.
 
 - `func(x Int)` declares `x`, value `Int(3)`, type the concrete `Int`. Nothing is left open.
 - `func2(x T Type)` declares `x` with type `T` — but `T`'s *value* is left open. The call `func2(Int(3))` gives the compiler a value for `x`, and `T`'s value is just that value's type: `Int(3)` has type `Int`, so `T` is `Int`. That recovery *is* inference.
