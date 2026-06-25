@@ -21,7 +21,7 @@ The payoff is conceptual economy: one model (types are staged functions) explain
 
 ---
 
-## The parameter ladder: a header for types, inline introduction for verbs
+## The parameter model: a header for types, inline introduction for verbs
 **Spec:** [`generics.md`](../spec/generics.md) §3 · **Settled:** 2026-06
 
 This is the central decision of the whole document, and the one a one-line rationale table did the most damage to. It deserves the long version.
@@ -47,35 +47,35 @@ The split is not stylistic. It tracks the real apply-versus-infer distinction. H
 
 ❌ Inline on everything, types included. Breaks the positional public interface of a type — you could no longer see `Vector`'s parameter order at a glance, and `Vector<Int>` would have no signature to check against.
 
-### The ladder — why `x T Type` and `T Type` are the same idea at different heights
+### Values and types — why `x T Type` and `T Type` are the same idea
 
 The inline form has a subtlety that the spec states mechanically ("first marked occurrence") but never *motivates*: why does `x T Type` mean "infer `T`" while `T Type` means "pass `T`"? They look almost identical — the second is the first with the value name deleted.
 
-The motivating picture is a ladder of value:type rungs. Every binding names a rung, and the concept (`Type`/`Number`) is simply the type of the rung one level up:
+The motivating idea is that **every symbol has a value and a type**, and a type is itself a symbol — its value is a concrete type, its type is the concept `Type`. Read the same three signatures with each symbol's value and type spelled out:
 
 ```zane
-Void func (x Int)        // x : Int(3) : Int                     — name rung 0
-Void func2(x T Type)     // x : Int(3) : T : Int : Type          — name rung 0 AND rung 1
-Void func3(  T Type)     //          T : Int : Type              — name rung 1 only
+Void func (x Int)        // x : value Int(3), type Int
+Void func2(x T Type)     // x : value Int(3), type T   —  and T : value Int, type Type
+Void func3(  T Type)     //                              T : value Int, type Type
 ```
 
-- `func(x Int)` names the ground value. `x` is `Int(3)`; its type is the concrete `Int`.
-- `func2(x T Type)` names *two* rungs. `x` is the value; its type is `T`; and `T`'s own value is `Int`, whose type is the concept `Type`. The call `func2(Int(3))` gives the compiler `Int(3)`; it walks **up one rung** to recover `T = Int`. That upward walk *is* inference.
-- `func3(T Type)` names only the upper rung. There is no ground value to bind, so the caller hands `T` directly: `func3(Int)`. That *is* explicit passing.
+- `func(x Int)` declares `x`, value `Int(3)`, type the concrete `Int`. Nothing is left open.
+- `func2(x T Type)` declares `x` with type `T` — but `T`'s *value* is left open. The call `func2(Int(3))` gives the compiler a value for `x`, and `T`'s value is just that value's type: `Int(3)` has type `Int`, so `T` is `Int`. That recovery *is* inference.
+- `func3(T Type)` declares the type-symbol `T` and leaves nothing below it. The caller hands `T`'s value directly: `func3(Int)`. That *is* explicit passing.
 
-So inferring is not a different mechanism from passing — it is passing observed **one level lower**. The presence or absence of the leading value name is not an arbitrary mode flag; it is the answer to "do you also want to bind the rung below `T`?" Add the name, the compiler reads the type off a value (infer). Drop it, the caller supplies the type itself (pass).
+So inferring is not a different mechanism from passing — it is the same `T Type` symbol with its *value* left blank, filled from the value argument instead of given at the call. The presence or absence of the leading value name is not an arbitrary mode flag; it is the answer to "do you supply a value `T` can be read from, or do you supply `T`'s value yourself?" Add the name, the compiler reads `T`'s value off the argument (infer). Drop it, the caller supplies `T`'s value directly (pass).
 
-This reframing earns its keep three ways:
+This framing earns its keep three ways:
 
-1. It makes the `x T Type` / `T Type` distinction *legible* instead of arbitrary. A reader who holds the ladder reads `T Type` instantly as "the tower truncated by one rung."
-2. It explains the literal-wrapping rule for free (see the "Concept-typed literals must be wrapped at a call" entry below): inference is an up-one-rung read, and the up-rung of a bare literal is a *concept*, not a concrete type.
-3. It turns the apparent footgun — "delete one identifier, flip the meaning" — into a legible edit: removing the name doesn't flip a flag, it stops binding the rung below. Still a sharp edge, but a sharp edge that *means* something.
+1. It makes the `x T Type` / `T Type` distinction *legible* instead of arbitrary. Once `T` is just a symbol whose value is a type, `T Type` reads instantly as "the same declaration as `x Int`, one level up."
+2. It explains the literal-wrapping rule for free (see the "Concept-typed literals must be wrapped at a call" entry below): inferring `T` means reading a value's *type*, and a bare literal's type is a *concept*, not a concrete type.
+3. It turns the apparent footgun — "delete one identifier, flip the meaning" — into a legible edit: removing the name doesn't flip a flag, it stops supplying a value for `T` to be read from. Still a sharp edge, but a sharp edge that *means* something.
 
 ### Costs / deferred
 
-- **Non-local reading.** A bare reference may appear before its marked introduction: in `T head(arr Array<T Type, n Number>)` the return `T` is bound by the marked occurrence *later* in the signature. You cannot resolve a verb's parameters strictly left-to-right; you scan the whole signature for the introductions. The ladder does not fix this — it is orthogonal to infer-vs-pass — and it is the part of the design most likely to trip up newcomers. We accept it as the price of dropping the header.
-- **The ladder is a `Type` story; `Number` is asymmetric.** `func2`-style inference works because a type can *be* the type of a value, so there is a rung 0 to name. A number cannot be the type of a value — `x n Number` is ill-formed — so `Number` has no flat infer form. Numbers are inferred only *structurally*, through a nested type like `Array<T Type, n Number>` where `n` rides on the literal's length, not on any value's type. The elegant three-rung symmetry is a property of `Type` specifically. Worth teaching where it stops.
-- **The model is the load-bearing thing, not the syntax.** If a reader is taught the ladder, the syntax is fine. If they are not, `T Type` in a value list looks like a type sitting where a value should be. This is an argument for teaching the ladder up front (it is why this entry exists), not for changing the surface form.
+- **Non-local reading.** A bare reference may appear before its marked introduction: in `T head(arr Array<T Type, n Number>)` the return `T` is bound by the marked occurrence *later* in the signature. You cannot resolve a verb's parameters strictly left-to-right; you scan the whole signature for the introductions. The value/type framing does not fix this — it is orthogonal to infer-vs-pass — and it is the part of the design most likely to trip up newcomers. We accept it as the price of dropping the header.
+- **The value-driven form is a `Type` story; `Number` is asymmetric.** `func2`-style inference works because a type can *be* the type of a value, so `T`'s value can be read off an argument. A number cannot be the type of a value — `x n Number` is ill-formed — so `Number` has no value-driven infer form. Numbers are inferred only *structurally*, through a nested type like `Array<T Type, n Number>` where `n` rides on the literal's length, not on any value's type. The symmetry between `x T Type` and `T Type` is a property of `Type` specifically. Worth teaching where it stops.
+- **The model is the load-bearing thing, not the syntax.** If a reader is taught that a type is just a symbol with a value and a type, the syntax is fine. If they are not, `T Type` in a value list looks like a type sitting where a value should be. This is an argument for teaching the model up front (it is why this entry exists), not for changing the surface form.
 
 ---
 
@@ -97,7 +97,7 @@ So a type parameter is declared with the `Type` concept and a number parameter w
 
 These are two rows in the old table but one decision. `<>` belongs to the type system: it is a compile-time, structural description of what a value's architecture *is*, resolved in an earlier compilation stage. `()` belongs to the value system: it constructs or runs at run time. Keeping them as different *mechanisms* — not two syntaxes for one idea — is what keeps each simple.
 
-The sharp consequence is that a call **never** carries a `<>` list. There is no `Vector<Int>(...)` turbofish. A parameter reaches a callable either by inference (the ladder, up one rung from a value argument) or as an explicit `Type`/`Number` value argument. A parallel `<>` channel at the call site would be a third way to pass the same information, redundant with both.
+The sharp consequence is that a call **never** carries a `<>` list. There is no `Vector<Int>(...)` turbofish. A parameter reaches a callable either by inference (reading `T`'s value off a value argument) or as an explicit `Type`/`Number` value argument. A parallel `<>` channel at the call site would be a third way to pass the same information, redundant with both.
 
 ❌ Turbofish / explicit type arguments at calls (Rust's `::<T>`, C++'s `f<T>()`). Rejected for redundancy and for the parser cost it forces elsewhere. But it has a real downside we are choosing to eat — see costs.
 
@@ -112,7 +112,7 @@ This decision is what makes case-sensitive parsing pay off: `Vector<Int>` is a t
 
 `Vector(Int(2), Int(3))` is legal; `Vector(2, 3)` is not. A bare `2` carries the concept type `@concepts$Number`, not a concrete `Int`/`Float`, and the compiler will not guess. So a bare literal must not drive inference of a type parameter.
 
-This looks like an ad-hoc restriction until you read it through the ladder. Inference is an up-one-rung walk: from the value, to its type, which becomes `T`. The up-rung of `Int(3)` is the concrete `Int` — usable as `T`. The up-rung of a bare `2` is the *concept* `@concepts$Number` — not a concrete type, so there is nothing usable to assign to `T`. The wrapping requirement is not a special case; it is "the up-rung read has to land on a concrete type, and a bare literal's doesn't."
+This looks like an ad-hoc restriction until you read it through the value/type model. Inferring `T` means taking a value and reading its type: the type of `Int(3)` is the concrete `Int` — usable as `T`. The type of a bare `2` is the *concept* `@concepts$Number` — not a concrete type, so there is nothing usable to assign to `T`. The wrapping requirement is not a special case; it is "the type read off the argument has to be concrete, and a bare literal's isn't."
 
 ❌ Inferring a default concrete type from a bare literal (e.g. literal `2` ⇒ `Int`). Rejected: it bakes a silent type choice into every generic call and is exactly the kind of implicit decision the language avoids elsewhere.
 

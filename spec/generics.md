@@ -4,7 +4,7 @@ This document specifies Zane's type-parameter system. A type in Zane is a *templ
 
 > **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`types.md`](types.md) §5 for `type` and `alias` declarations and §3 for constructors. [`lexical.md`](lexical.md) §3 for the casing rule that distinguishes types from values. [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) is the design journal behind these rules — the parameter ladder, the `<>`/`()` split, the literal-wrapping cost, and the deferred features.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) is the design journal behind these rules — the parameter model, the `<>`/`()` split, the literal-wrapping cost, and the deferred features.
 
 ---
 
@@ -14,7 +14,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 
 - **`Types are templated functions`.** A parameterized *type* lists its parameters in a `<>` header and produces a result. Applying arguments to those parameters (`Vector<Int>`) evaluates the template into a concrete type.
 - **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n Number>`) and references it bare elsewhere.
-- **`Inferring is passing, one level up`.** A parameter binds a rung of a value:type ladder; an inferred parameter (`x T Type`) rides on a value one rung below and is read upward from it, while an explicit parameter (`T Type`) is the rung itself. This ladder is the model behind the whole parameter system (§3.1).
+- **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
 - **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
@@ -76,27 +76,30 @@ type Wrapper = struct {
 
 ## 3. The Parameter Model
 
-### 3.1 The value:type ladder
+### 3.1 Symbols have a value and a type
 
-A parameter binds a rung of a value's *ladder*. Every binding names a level, and the concept (`Type` / `Number`) is the type of the rung one level up. The same three signatures show all three positions on the ladder:
+Every symbol — a variable or a parameter — has a **value** and a **type**. `x Int` declares a symbol `x` of type `Int`; its value at run time might be `Int(3)`.
+
+A type is itself a symbol of exactly this kind. The symbol `T` has a value — a concrete type such as `Int` — and a type: the concept `Type`. So `T Type` declares `T` the same way `x Int` declares `x`: a symbol named `T`, of type `Type`, whose value is a type.
+
+That is the whole parameter model. The two parameter forms differ only in which part you supply:
 
 ```zane
-Void func (x Int)        // x : Int(3) : Int               — names the value
-Void func2(x T Type)     // x : Int(3) : T : Int : Type    — names the value AND its type
-Void func3(  T Type)     //          T : Int : Type        — names the type only
+Void func (x Int)        // x : value Int(3), type Int
+Void func2(x T Type)     // x : value Int(3), type T   —  and T : value Int, type Type
+Void func3(  T Type)     //                              T : value Int, type Type
 ```
 
-- `func(x Int)` names the ground value. `x` is `Int(3)`; its type is the concrete `Int`.
-- `func2(x T Type)` names two rungs. `x` is the value; its type is `T`; and `T`'s own value is `Int`, whose type is the concept `Type`. A call supplies `Int(3)`, and the compiler reads one rung up to recover `T = Int`. That upward read is inference.
-- `func3(T Type)` names the upper rung only. There is no ground value, so the caller supplies the type directly: `func3(Int)`. That is explicit passing.
+- `func3(T Type)` declares the type-symbol `T` directly. The caller supplies its value: `func3(Int)` gives `T` the value `Int`. This is **explicit passing**.
+- `func2(x T Type)` declares a value-symbol `x` whose type is `T`, but says nothing about `T`'s value. The caller supplies a value for `x` — `func2(Int(3))` — and the compiler reads `T`'s value off it: `Int(3)` has type `Int`, so `T` is `Int`. This is **inference**.
 
-Inference and explicit passing are therefore not separate mechanisms. They are the same binding observed one level apart: an inferred parameter rides on a value one rung below and is read upward from it; an explicit parameter is the rung itself. The leading value name decides which — present, the compiler reads the type off a value (`x T Type`, inferred); absent, the caller hands the type over (`T Type`, explicit).
+Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. The leading value name decides which form you get: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
 
-This ladder is the model behind the rest of this section and behind the call rules in §5. Where a parameter is introduced (§3.2) and how each kind reaches a call (§5.2, §5.3) are this picture made precise.
+Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
 
-A `Number` parameter sits on the ladder differently. A type can be the type of a value, so a type parameter has a rung below it to ride (`x T Type`). A number cannot be the type of a value, so a number parameter has no such rung — `x n Number` is not a value with an inferred number. A number is therefore inferred only *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` is read from the literal's length), never from a value's own type.
+A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the literal's length).
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter ladder: a header for types, inline introduction for verbs" develops this picture, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter model: a header for types, inline introduction for verbs" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
 ### 3.2 Where parameters are introduced
 
