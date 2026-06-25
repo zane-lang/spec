@@ -273,7 +273,7 @@ A `version-pattern` mirrors the shape of the package's version tags, replacing e
 - `*` — **fixed boundary.** This component must match exactly for two versions to be interchangeable. It carries no priority and does not participate in selection. (Typically the major component.)
 - `+` / `-` — **directional and priority-bearing.** `+` means the component is upward-substitutable (a higher value is a valid replacement); `-` means downward-substitutable. The marker is repeated to encode priority.
 
-Markers replace only numeric components. Every other character in the pattern — a leading `v`, separators such as `.`, and any non-numeric text including pre-release identifiers like `-rc.1` — is a **literal** that a tag must match exactly; `*`/`+`/`-` never apply to it. A pattern thus has no directional ordering over pre-release identifiers; they participate only as literal matches.
+Markers replace only numeric components. A component is a **marker position** if and only if it consists entirely of one repeated marker character (`*`, `+`, or `-`), for example `*`, `+`, `++`, `-`, or `--`. Any component that contains any other character — a leading `v`, a separator `.`, text like `-rc`, `alpha`, or digits — is a **literal position** regardless of whether it begins with a marker character: `-rc` is a literal, `-` alone is a marker. No escaping is needed or supported; the rule is unambiguous from the component's content alone. A pattern thus has no directional ordering over pre-release identifiers; they participate only as literal matches.
 
 **Priority is repetition-based: fewer repeats means higher priority** (as with markdown heading levels, where `#` outranks `##`). `+` outranks `++` outranks `+++`. Priority is always explicit — there is no positional default — so a pattern is fully self-describing in isolation.
 
@@ -294,7 +294,7 @@ With remapping enabled for a package, the toolchain considers the set of version
 
 ### 15.4 When versions are not interchangeable
 - **Same pattern, out of window** (for example, a `*` major component differs): the versions are kept side by side, as in the default model. This is expected and produces **no warning**.
-- **Different patterns**: versions of the same package that declare *different* `version-pattern` strings are never remapped onto each other. They are kept side by side and the toolchain emits an **informational warning** (not a security error) noting that divergent patterns prevented full deduplication. Other versions that do share a pattern still collapse normally.
+- **Different patterns**: versions of the same package that declare *different* `version-pattern` strings are never remapped onto each other. They are kept side by side and the toolchain emits a **one-time informational warning during dependency resolution** (not on every build, and not a security error) noting that divergent patterns prevented full deduplication. Other versions that do share a pattern still collapse normally.
 - **Tag shape mismatch**: a version tag whose structure does not match the package's `version-pattern` — a different number of numeric components, or extra parts such as pre-release identifiers that the pattern's literals do not match — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
 
 ### 15.5 Safety: this is an ABI assertion on prebuilt objects
