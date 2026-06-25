@@ -99,7 +99,7 @@ Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2,
 
 A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the literal's length).
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "The parameter model: a header for types, inline introduction for verbs" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md#the-parameter-model-a-header-for-types-inline-introduction-for-verbs) — "The parameter model: a header for types, inline introduction for verbs" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
 ### 3.2 Where parameters are introduced
 
@@ -259,6 +259,8 @@ arr Array(Int, 10000)        // Int passed as the type, 10000 as the size
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
 
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md#passing-a-type-directly-without-a-turbofish) — "Passing a type directly, without a turbofish" tells why this exists: it is what makes the no-turbofish decision affordable rather than crippling.
+
 ### 5.4 Concept-typed literals must be wrapped
 
 A bare source literal carries a compiler concept type (such as `@concepts$Number`), not a concrete storage type. A bare literal **MUST NOT** drive inference of a type parameter, because the compiler cannot choose between `Int`, `Float`, and other concrete types. Wrap the literal in its destination type:
@@ -329,7 +331,7 @@ An array of variable-size structs loses uniform stride; a struct containing a va
 
 Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees every value of a given type is the same number of bytes. That guarantee is what makes indexing, copying, embedding, and calling all cheap.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Size is part of the type (`Array<T, n>`)" weighs the VLA alternative and the stride-loss propagation in full.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md#size-is-part-of-the-type-arrayt-n) — "Size is part of the type (`Array<T, n>`)" weighs the VLA alternative and the stride-loss propagation in full.
 
 ---
 
@@ -356,7 +358,7 @@ The following are intentionally not specified in this version:
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, receiver, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md#deferred-what-the-model-promises-but-does-not-yet-deliver) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.
 
 ---
 

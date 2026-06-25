@@ -68,25 +68,35 @@ A good rationale story tends to move through four things — but as *prose*, nev
 
 Let the length flex with the decision: a minor choice is a paragraph, a foundational one runs to pages. Order the stories by conceptual importance, not by spec section order.
 
+Those four movements are a tendency, not a cage. A story can instead retrace the **actual path** the thinking took — the first idea, why it broke, the next one, the dead end after that, and the approach that finally held. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead. Write whichever shape tells the truth of the decision better — a clean fork-and-resolution where the decision was clean, a winding "we tried X, then Y, then realised Z" where it actually wound.
+
 When the design changes, **rewrite the story to match.** The spec is the record of what is true; the rationale is the current explanation of why. Keep it honest to the present design rather than accumulating a changelog.
 
 ---
 
-## 4. Cross-Linking With the Spec
+## 4. Cross-Linking
 
-The two folders are joined by links in both directions:
+A rationale doc is joined to the spec, and its stories are joined to each other.
+
+### 4.1 With the spec
+
+The two folders are linked in both directions:
 
 - **Spec → rationale.** A spec section whose *why* is non-trivial ends with a pointer:
 
   ```markdown
-  > **Rationale:** [`rationale/<topic>.md`](../rationale/<topic>.md) — "<decision name>".
+  > **Rationale:** [`rationale/<topic>.md`](../rationale/<topic>.md#<anchor>) — "<decision name>".
   ```
 
-  The quoted text is the story's exact heading, so the link lands on the right decision. Put it where the curious reader is — at the section whose rule it explains — not only at the foot of the file.
+  The href ends in the story's heading **anchor** — GitHub's slug of the heading (lowercased, punctuation dropped, spaces turned to hyphens) — so the link scrolls straight to that story, and the quoted text is the heading itself, so a reader also reads which decision it lands on. Put it where the curious reader is — at the section whose rule it explains — not only at the foot of the file.
 
 - **Rationale → spec.** Every story's `**Spec:**` back-link (§2.2) closes the loop.
 
-When section numbers or story headings change, update both sides in the same change — the same discipline the spec guide already requires for its own cross-references.
+When section numbers or story headings change, update both sides in the same change — the same discipline the spec guide already requires for its own cross-references. An anchor is derived from its heading, so renaming a story moves its anchor too: fix every inbound link in the same change.
+
+### 4.2 Between stories
+
+Stories may — and often should — link to **each other**, not just to the spec. A design decision rarely stands alone: one choice creates the problem the next one solves, and that lineage is itself part of the why. So let a story open where another left off — *"Once we had decided a call carries no `<>` list, a caller had no way to name a type that inference couldn't reach, so we needed…"* — and name the story it builds on. A decision that exists *only* because of an earlier one should make that debt explicit; a reader who can follow the chain understands the design as a sequence of forced moves rather than a pile of independent rules, and that chain is frequently the most illuminating thing in the file. Link to another story by its heading **anchor** — `[the parameter-model story](#the-parameter-model-a-header-for-types-inline-introduction-for-verbs)` — so the chain is clickable; let the visible text stay a natural phrase and let the anchor carry the slug. And don't be shy about narrating the connective reasoning across decisions rather than quarantining each one.
 
 ---
 
