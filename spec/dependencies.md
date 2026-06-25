@@ -28,8 +28,13 @@ zane-version v0.4.1
 version-pattern v*.+.++
 
 deps [
-    key  version version-remap
-    math v6.2.9  no
+    key  version
+    math v6.2.9
+]
+
+remaps [
+    key
+    math
 ]
 ```
 
@@ -42,7 +47,8 @@ Each `deps` row records:
 
 - **key**: the local camelCase package name used in source code and as the lookup key into `zane-versions.coda`
 - **version**: the exact tag requested by the user
-- **version-remap**: a boolean opting this dependency into compatibility-based symbol remapping; defaults to `no`
+
+The optional top-level **`remaps`** block lists the package keys the consumer opts into compatibility-based symbol remapping. A listed key may name a direct dependency **or** a package that appears only transitively; listing it requires no version pin, since the versions come from the resolved graph. A key absent from `remaps` is never remapped and its versions coexist side by side (the default). `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 ### 2.2 Resolution file (`zane-versions.coda`)
 
@@ -67,7 +73,7 @@ The repository URL is canonical identity; the key is only a local convenience fo
 The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-versions.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
 ### 2.3 Files are recorded and updated by commands
-`zane add` resolves the requested tag to its current commit hash, writes the key, tag, and remap flag into `zane.coda`, and writes the key, url, and commit into `zane-versions.coda`. The user does not type the commit hash manually in the normal workflow.
+`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-versions.coda`. The user does not type the commit hash manually in the normal workflow. Remap opt-in is recorded separately in the `remaps` block.
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-versions.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
@@ -116,15 +122,15 @@ If the required target artifact is missing from `build/`, the fetch fails for th
 ## 6. Symbol Versioning
 
 ### 6.1 Placeholder-prefix rewriting
-Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag followed by an `@` separator — and places the rewritten binaries into `build/`.
+Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag followed by a `%` separator — and places the rewritten binaries into `build/`.
 
 Conceptually:
 
 ```zane
-!math$vec  →  v1.0.1@math$vec
+!math$vec  →  v1.0.1%math$vec
 ```
 
-The `@` separates the version tag from the package key so the version boundary is unambiguous and two different packages can never collide on a shared prefix. Because path-safety validation (§7) forbids `@` in version tags, the first `@` always delimits the version from the key during the remap rewrite.
+The `%` separates the version tag from the package key so the version boundary is unambiguous and two different packages can never collide on a shared prefix. `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7), so the first `%` always delimits the version from the key during the remap rewrite. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
@@ -149,7 +155,7 @@ Fetched packages are stored in a global cache shared across projects:
   build/
 ```
 
-The URL and version are mangled into safe path components using Go-style path mangling: each `/` in the URL produces a new subdirectory level, so `github.com/zane-lang/math` becomes `github.com/zane-lang/math` as nested directories. If the URL or version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character.
+The URL and version are mangled into safe path components using Go-style path mangling: each `/` in the URL produces a new subdirectory level, so `github.com/zane-lang/math` becomes `github.com/zane-lang/math` as nested directories. If the URL or version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the version/key boundary unambiguous.)
 
 The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
@@ -236,7 +242,7 @@ At a high level, dependency resolution proceeds in this order:
 5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle
 6. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
 7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
-8. for any package whose `version-remap` the consumer enabled, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
+8. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
 9. link the locally compiled program against the cached artifacts in `build/`
 
 ---
@@ -257,7 +263,7 @@ By default, when two parts of the dependency graph require different versions of
 
 ### 15.1 Roles: author declares, consumer decides
 - **Author (`version-pattern`).** A package author publishes a `version-pattern` in the package's own `zane.coda`. It is **information, not permission**: it declares the range of the package's own versions that are interchangeable at the ABI level. It never forces remapping on or off.
-- **Consumer (`version-remap`).** The top-level project decides, per dependency, whether to remap, via the boolean `version-remap` column in its `deps` block. This is the **only** place the remap decision is made. `version-remap` flags in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. A package that appears only transitively is remapped only if the top-level project adds its own `deps` row naming it — the URL-identity model lets any package be named directly. There is no wildcard or global opt-in: remapping is always an explicit, per-package decision recorded in the top-level manifest.
+- **Consumer (`remaps`).** The top-level project decides which packages to remap via a `remaps` block listing package keys. This is the **only** place the remap decision is made. A listed key may be a direct dependency or a package that appears only transitively — the URL-identity model lets any package be named — and listing it needs no version pin, so opting in a transitive package adds no version-management burden. `remaps` blocks in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. There is no wildcard or global opt-in: each remapped package is named explicitly in the top-level manifest.
 
 Remapping of a package occurs only when the consumer enables it **and** the published patterns make it ABI-safe. Otherwise the versions coexist unchanged.
 
@@ -292,10 +298,10 @@ With remapping enabled for a package, the toolchain considers the set of version
 - **Tag shape mismatch**: a version tag whose structure does not match the package's `version-pattern` — a different number of numeric components, or extra parts such as pre-release identifiers that the pattern's literals do not match — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
 
 ### 15.5 Safety: this is an ABI assertion on prebuilt objects
-Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer, defaults to `no`, and always degrades to safe coexistence when a single common version cannot be shown interchangeable.
+Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer — a package is remapped only when listed in `remaps`, and the default is safe coexistence — and it always degrades to safe coexistence when a single common version cannot be shown interchangeable.
 
 ### 15.6 Mechanism reuses pull-time rewriting
-Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version remains recorded in `zane.coda` / `zane-versions.coda` and fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9@math$vec → v6.3.4@math$vec` — onto the chosen version.
+Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version remains recorded in `zane.coda` / `zane-versions.coda` and fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%math$vec → v6.3.4%math$vec` — onto the chosen version.
 
 ---
 
@@ -315,7 +321,7 @@ Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pi
 | Manifest/resolution split (`zane.coda` + `zane-versions.coda`) | Keeps human-stated intent (key, version, remap) separate from resolved addressing (url, commit), so intent reviews stay small while the resolved commits act as a verifiable lock. |
 | `zane-version` pins compiler and `core` together | Each project builds with a known toolchain, freeing the toolchain to evolve without cross-version backward-compatibility guarantees. |
 | `std` is an ordinary package | Avoids privileged standard-library coupling; only `core` rides the toolchain tag. |
-| Author-declared `version-pattern`, consumer-decided `version-remap` | Separates the compatibility *facts* (only the author knows them) from the *decision* to trust them (only the consumer bears the ABI risk). |
-| Markdown-style explicit priority (fewer repeats = higher) | Makes every pattern self-describing with no positional convention to assume, supporting arbitrary and custom version schemes. |
+| Author-declared `version-pattern`, consumer-decided `remaps` | Separates the compatibility *facts* (only the author knows them) from the *decision* to trust them (only the consumer bears the ABI risk). |
+| Repetition-based explicit priority (fewer repeats = higher) | Makes every pattern self-describing with no positional convention to assume, supporting arbitrary and custom version schemes. |
 | Remap as opt-in link-time dedup over exact pins | Removes duplicate near-identical versions from the binary without a version solver or any loss of reproducibility; safe coexistence remains the default. |
 | Warning on divergent patterns | Surfaces a likely-unintended compatibility gap as information, without blocking the build or overstating it as a security issue. |
