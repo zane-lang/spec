@@ -4,7 +4,7 @@ This document specifies Zane's type-parameter system. A type in Zane is a *templ
 
 > **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`types.md`](types.md) §5 for `type` and `alias` declarations and §3 for constructors. [`lexical.md`](lexical.md) §3 for the casing rule that distinguishes types from values. [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) is the design journal behind these rules — the parameter model, the `<>`/`()` split, the literal-wrapping cost, and the deferred features.
+> **Rationale:** [`rationale/generics.md`](../rationale/generics.md) tells the story behind these rules — the parameter model, the `<>`/`()` split, the literal-wrapping cost, and the deferred features.
 
 ---
 

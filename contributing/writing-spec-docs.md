@@ -8,7 +8,7 @@ Spec documents state *what the language does*. The *why* — the reasoning, the 
 
 ## 1. Document Inventory
 
-Every spec document lives in [`spec/`](../spec/), and each file covers one topic area. Each topic has a single *canonical* home document. Its *why* lives in a sibling design journal at `rationale/<same-name>.md`.
+Every spec document lives in [`spec/`](../spec/), and each file covers one topic area. Each topic has a single *canonical* home document. Its *why* lives in a sibling rationale doc at `rationale/<same-name>.md`.
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
@@ -156,7 +156,7 @@ Include this section only when Zane's design is meaningfully different from main
 
 ### 3.4 Rationale cross-references
 
-A spec document records its design rationale **not** as an in-document table but in a sibling design journal at `rationale/<same-name>.md`, governed by [`writing-rationale-docs.md`](writing-rationale-docs.md).
+A spec document records its design rationale **not** as an in-document table but in a sibling rationale doc at `rationale/<same-name>.md`, governed by [`writing-rationale-docs.md`](writing-rationale-docs.md).
 
 At the end of any section whose reasoning is non-trivial, add a pointer:
 
@@ -348,10 +348,10 @@ At the end of a section that is closely connected to another document, add a `> 
 2. Follow the required shape from §2.
 3. Add a row to the appropriate table in [`README.md`](../README.md).
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
-5. Create the matching `rationale/<topic>.md` design journal (see [`writing-rationale-docs.md`](writing-rationale-docs.md)) and add `> **Rationale:**` pointers from the non-trivial sections.
+5. Create the matching `rationale/<topic>.md` rationale doc (see [`writing-rationale-docs.md`](writing-rationale-docs.md)) and add `> **Rationale:**` pointers from the non-trivial sections.
 6. If meaningful language comparisons exist, add a Language Comparisons section (§4 format).
 
-Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section. Reference documents (`syntax.md`, `glossary.md`) do not get a rationale journal.
+Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section. Reference documents (`syntax.md`, `glossary.md`) do not get a rationale doc.
 
 ---
 

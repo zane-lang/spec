@@ -8,7 +8,7 @@ This repository is a **prior art publication** for the Zane programming language
 
 ```
 spec/             ← the specification itself (start here): what the language does
-rationale/        ← design journals: why each spec decision was made
+rationale/        ← rationale stories: why each spec decision was made
 contributing/     ← style guides for writing spec docs and rationale docs
 bench/            ← reference C harness used for runtime experiments
 ```
@@ -56,7 +56,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 
 ## Design rationale
 
-The spec states *what* the language does; the **why** lives in a parallel set of design journals under [`rationale/`](rationale/), one per spec document. They are dated, append-only records of the forks, the discarded alternatives, and the accepted costs behind each decision — kept separate so the spec stays terse and current while the reasoning has room to breathe.
+The spec states *what* the language does; the **why** lives in a parallel set of rationale docs under [`rationale/`](rationale/), one per spec document. Each reads as a set of short stories — the forks, the roads not taken, and the costs behind each decision — kept separate so the spec stays terse while the reasoning has room to breathe.
 
 | Document | Justifies |
 |---|---|
@@ -68,4 +68,4 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 Style and structural conventions live in two sibling guides; read the relevant one before editing or adding a document:
 
 - [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
-- [`contributing/writing-rationale-docs.md`](contributing/writing-rationale-docs.md) — design journals in [`rationale/`](rationale/).
+- [`contributing/writing-rationale-docs.md`](contributing/writing-rationale-docs.md) — rationale docs in [`rationale/`](rationale/).

@@ -4,7 +4,7 @@ This document states the few ideas the rest of the specification rests on. Every
 
 > **See also:** [`lexical.md`](lexical.md) §3 for the casing rule. [`generics.md`](generics.md) §2 and §7 for types-as-functions and uniform stride. [`memory.md`](memory.md) §3 for layout. [`effects.md`](effects.md) for how the strictness is enforced.
 
-> **Rationale:** [`rationale/foundations.md`](../rationale/foundations.md) is the design journal behind these commitments — the bets they represent and the costs they accept.
+> **Rationale:** [`rationale/foundations.md`](../rationale/foundations.md) tells the story behind these commitments — the bets they represent and the costs they accept.
 
 ---
 
