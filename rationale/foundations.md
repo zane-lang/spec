@@ -1,0 +1,46 @@
+# Rationale: Foundations
+
+> **See also:** [`spec/foundations.md`](../spec/foundations.md) for the commitments these stories justify.
+
+---
+
+## Source is captured intent
+**Spec:** [`foundations.md`](../spec/foundations.md) §2
+
+The fork is the oldest one in language design: meet the machine where it is, or meet the programmer where they are. A low-level language like C makes the source a faithful transcript of machine steps — fast, but the intent is buried under bookkeeping. A high-level managed language, which is most of the rest, makes the source express intent — readable, but it pays for the altitude with a runtime that guesses at the mechanism the programmer elided. Both roads were on the table, and both were rejected: the low-level one because intent is recoverable only by reverse-engineering the bookkeeping, which is exactly what makes whole-program optimization hard; the managed one because it buys readability by handing the mechanism to a runtime that must be conservative, which is the performance cost we are trying to avoid in the first place.
+
+Zane bets that this is a false choice if the source is forced to be unambiguous. The wager is that a program expressing intent cleanly leaves the compiler *more* freedom to choose the mechanism, not less, because nothing important was left implicit for a runtime to reconstruct. High level and fast are not opposed; they are both consequences of intent being captured well. The catch, and the reason this is a real bet rather than a slogan, is the word *forced*. The altitude only pays off if expression is unambiguous, and programmers do not write unambiguously on their own — so the rest of the foundations, and most of the language's strictness, exist to make good expression mandatory. Captured intent is the goal; the strictness is the price of admission. The bet only holds for well-expressed programs, and the language makes you express well by force, which is a real ergonomic cost: more up-front rules to satisfy than either a permissive low-level or a permissive high-level language demands. The whole language is, in a sense, a standing test of whether that trade was worth it.
+
+---
+
+## Compilation is staged; types are values
+**Spec:** [`foundations.md`](../spec/foundations.md) §3
+
+The decision to make types ordinary compile-time values, executed in an earlier stage, is the root that generics, the `<>`/`()` split, and compile-time arguments all grow from. The full argument — why staging beats a bolt-on generics sublanguage, and where the model currently overpromises, on type-level arithmetic and on constraints — is told once, in the generics stories, rather than duplicated here: see [`generics.md`](generics.md), "Types are templated functions" and "Deferred: what the model promises but does not yet deliver". The short version of the cost is that the elegance of "a type is just a function you run" oversells how much falls out for free. Type identity for computed type expressions, and constraints on parameters, do not fall out of it; they are the hard parts the framing hides, and the generics stories track them.
+
+---
+
+## Casing determines kind
+**Spec:** [`foundations.md`](../spec/foundations.md) §4
+
+A name's kind has to be recoverable somehow — by the parser, to know whether `Foo<Bar>` is a type application or a comparison, and by the reader, to know whether `T` is a type or a value. There were three ways to encode it, and two were rejected. Sigils (`&T`, `'a`, `@T`, `$x`) turn every kind distinction into punctuation noise at every use site, and the surface stops reading like captured intent. Inferring kind from declaration context — remembering where a name was introduced — makes the parser context-sensitive and forces the reader to recall a declaration to read a use, exactly the implicitness the language avoids.
+
+The choice was to encode kind in case, a property every identifier already has, costing zero extra tokens: an uppercase-initial name is a type, a lowercase one is a value. The parser and the reader recover kind from the same signal, everywhere, for free. This is what makes `<>` type syntax viable at all — `Vector<Int>` versus `a < b` — and what lets parameters drop their sigils down to a bare `T` or `n`. The cost is that case is no longer a free stylistic choice: you cannot name a type in lowercase or a local in uppercase, because case now carries meaning, and conventions from other languages like SCREAMING_CONSTANTS or lowercase type aliases are unavailable by construction. We judge a single, universal, zero-token kind signal worth the loss of naming latitude. The encoding is also only two kinds wide, type versus value, and that may strain if a third compile-time kind ever needs its own casing — a tension noted in [`generics.md`](generics.md), under "Parameters are concept-typed (`Type` / `Number`)".
+
+---
+
+## Strictness is the performance model
+**Spec:** [`foundations.md`](../spec/foundations.md) §6
+
+The framing to reject is that Zane has two separable properties — it is strict (single ownership, fixed layout, enforced effects, mandatory error handling) and it is fast — as if these were independent selling points that happen to coexist. They are not independent. The strictness is the cause of the speed. Every rule that forbids a convenience is the same rule that lets the compiler stop guessing: known ownership gives deterministic destruction with no collector, fixed layout gives direct access and cheap copies, known effects give safe automatic parallelism. It is the same trade Rust makes — you do not get speed from being expressive, you get it from the invariants the rules preserve, and the expressiveness is what those invariants buy back.
+
+This is why the language forbids rather than discourages. A guarantee that holds only when the programmer is careful is a guarantee the compiler cannot build on; it would have to emit the conservative path anyway, for the cases where the programmer was not careful, so optionality forfeits the entire benefit. The rule has to be total to be worth anything. Strict-by-default with pervasive opt-out escape hatches fails for exactly that reason — each hatch reintroduces the conservative path the strictness was meant to eliminate (narrow, clearly-marked `unsafe`-style boundaries are a separate question; pervasive opt-out is what fails). Going permissive and leaving optimization to the compiler fails too, because without the invariants the compiler is reduced to proving them by analysis, which is undecidable in general and conservative in practice; better to have the language guarantee what the optimizer would otherwise have to prove.
+
+This is the language's steepest cost. Mandatory strictness means a higher learning curve and more programs rejected that would have run fine — the price of forbidding a convenience is that you cannot use it even when it would have been safe in your particular case. We are betting that the floor it puts under performance and reasoning is worth the constructs it takes off the table. It is the most expensive bet in the language, and the one most worth revisiting if the ergonomic cost proves too high in practice.
+
+---
+
+## A foundations doc, separate from the philosophy that justifies it
+**Spec:** [`foundations.md`](../spec/foundations.md)
+
+This file's own existence is a small design decision worth recording. The cross-cutting "why" of the language could have lived in one essay, mixing the model with the argument for it. We split it instead: the model — staging, casing, fixed layout, the strictness principle — is normative and lives in `spec/foundations.md`, because topic docs cite it as ground truth; the bets and costs, this file, are story material, because they are opinion, history, and honestly-stated downside. Folding both into a single `philosophy.md` would have mixed normative grounding that other docs must reference as fact with editorial argument that should be free to be revised and second-guessed — the exact what/why blend the spec/rationale split exists to prevent. The price is that a reader after the big picture now has two files instead of one, mitigated by the cross-links: the spec doc states each commitment and points here for the argument. We accept the extra hop for the same reason the whole split exists — a definition and the debate behind it have different lifecycles and should not share a page.
