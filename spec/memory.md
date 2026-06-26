@@ -19,6 +19,8 @@ Zane eliminates dangling references by combining single ownership, lexical lifet
 
 These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves or an owner is overwritten, refs stay valid because they follow the owner/anchor path rather than a fixed object address.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
+
 ---
 
 ## 2. Ownership and Storage
@@ -121,6 +123,8 @@ Non-`&` owner bindings may be initialized from any expression, including tempora
 engine Engine()         // legal: plain owner binding; Engine() temporary is materialized into engine
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
+
 ### 2.9 `&` function parameters
 A parameter declared as `&T` requires the caller to supply a source that may create a new `&` under §2.8. Inside the callee body it acts as a place expression and may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7.
 
@@ -180,6 +184,8 @@ type BadRef = struct {
 }
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+
 ### 2.11 Symbols require direct initialization
 Every symbol declaration **MUST** provide its initial value in the declaration itself. Zane does not permit bare symbol declarations followed by conditional or delayed first assignment.
 
@@ -238,6 +244,8 @@ Placement is an implementation decision, not a language-visible property. The co
 
 A class instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+
 ### 3.6 Handle-typed core classes have fixed footprint
 The core dynamically-sized classes — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
 
@@ -279,8 +287,12 @@ Indices are **1-based**, and the value `0` means *unreferenced*:
 
 Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The table slot is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#from-a-reserved-pool-to-an-indexed-heap-table) — "From a reserved pool to an indexed heap table".
+
 ### 4.3 Anchors are created lazily
 An owner that is never referenced consumes no table slot: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's `u32` offset into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor, and not paying when there are no refs".
 
 ### 4.4 Dereferencing a ref
 Resolving an `&` finds the cell through `anchor_ptr`, reads the owner's `u32` offset, adds the region base, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
@@ -323,6 +335,8 @@ A ref follows the owner/anchor path rather than pointing at a fixed object addre
 
 This is why object relocation and owner overwrite are **O(1) with respect to the number of refs**. It is also how a moved-from symbol stays readable: after a move the symbol downgrades to an `&` — a slot index — and reads resolve through the cell to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
+
 ### 4.6 Destroying an owner frees its slot
 When a referenced owner is destroyed, its anchor slot is returned to the free list as part of destruction. Freed cells thread the free list through themselves: a free cell stores the next free index, and the table's root record (§3.1, the fixed area at the region base alongside `anchor_ptr`) holds the free-list head (`0` when empty), so reuse costs no extra space.
 
@@ -361,31 +375,7 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 
 ---
 
-## 6. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Overwritable owning storage | Owner/anchor indirection lets ordinary reassignment coexist with stable refs, including inside owning containers. |
-| Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
-| Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
-| `&` in parameter and return positions | Allows ordinary APIs to accept and return refs without inventing a separate getter mechanism. |
-| Rooted-source requirement for new `&` | A ref must come from an existing owner-rooted path. Binding to a temporary or plain value-only parameter would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
-| No new `&` from `[]` | Prevents element-reference invalidation rules from leaking out of containers that own their elements. |
-| Direct initialization for symbols | Eliminates maybe-uninitialized storage paths now that symbols may be reassigned later. |
-| Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
-| Anchor indirection | Makes object moves O(1) with respect to the number of refs. |
-| Stack-first placement | A class needs the heap only for dynamic size or escape; placing static, non-escaping instances on the stack is cheaper and never changes observable behavior. |
-| Handle-typed core classes | Representing `List`/`String` as fixed-size handles keeps containing types statically sized, so dynamic size — the one hard heap trigger — stays confined to backing stores. |
-| Index-form refs (`u32`) | A small index is half a pointer's size, is immune to table relocation, and lets the table grow with a single root update; the index math folds into the addressing mode. |
-| Single `anchor_ptr` root | Reserving one fixed word instead of a whole region defers all anchor storage to the heap, so the table grows on demand with no fixed cap to size. |
-| Reserved 1-based slot 0 | A reserved null cell makes `0` mean "unreferenced" for free on zero-initialized storage and turns a stray sentinel dereference into a defined trap rather than an underflow. |
-| Per-owner backpointer | Storing one slot index in the owner lets moves locate the cell and lets `&x` mint refs, without the owner ever enumerating its refs — preserving O(1) moves. |
-| Region-relative `u32` addressing | One native pointer (region base) plus `u32` offsets keeps refs, backpointers, cells, and `anchor_ptr` all 32-bit and relocation-friendly; materializing `region base + offset` folds into addressing modes. |
-| Shared size-indexed free stacks | Keeps allocation predictable and avoids general-purpose allocator overhead. |
-
----
-
-## 7. Summary
+## 6. Summary
 
 | Concept | Rule |
 |---|---|
