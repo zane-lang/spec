@@ -13,6 +13,8 @@ Zane treats a package's full source URL as its identity and pins every dependenc
 - **`Prebuilt distribution`.** Libraries are distributed as source plus prebuilt object files committed to the repository.
 - **`Global caching`.** Fetched and versioned artifacts are shared across projects on the machine.
 
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#a-url-is-the-identity-the-key-is-only-a-local-nickname) — "A URL is the identity; the key is only a local nickname" weighs URL identity against a central registry and records what the registry road would have bought.
+
 ---
 
 ## 2. Manifest and Resolution File
@@ -33,7 +35,7 @@ deps [
 ]
 
 remaps [
-    math
+    https://github.com/zane-lang/math
 ]
 ```
 
@@ -47,7 +49,7 @@ Each `deps` row records:
 - **key**: the local camelCase package name used in source code and as the lookup key into `zane-versions.coda`
 - **version**: the exact tag requested by the user
 
-The optional top-level **`remaps`** block is a bare list of the package keys the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). A listed key may name a direct dependency **or** a package that appears only transitively; listing it requires no version pin, since the versions come from the resolved graph. A key absent from `remaps` is never remapped and its versions coexist side by side (the default). `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
+The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 ### 2.2 Resolution file (`zane-versions.coda`)
 
@@ -82,6 +84,8 @@ If a tag has moved and the user intentionally wants to trust the new commit, the
 zane update math v6.2.9 --accept-tag-move
 ```
 
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#two-files-stated-intent-and-verified-resolution) — "Two files: stated intent and verified resolution" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
+
 ---
 
 ## 3. Repository Layout
@@ -107,6 +111,8 @@ When the toolchain fetches a dependency, it resolves the recorded tag to a curre
 - If the hashes differ, the fetch **MUST** abort with a security error.
 
 This detects moved tags and repository tampering.
+
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#a-tag-for-humans-a-commit-for-the-machine-a-moved-tag-is-an-attack) — "A tag for humans, a commit for the machine; a moved tag is an attack" records why both are pinned and why a moved tag is treated as hostile by default.
 
 ---
 
@@ -141,6 +147,8 @@ When a library already depends on another versioned library, the referenced tran
 
 ### 6.4 Optional compatibility-based remapping
 When a consumer opts in, version-prefixed symbols may additionally be remapped at link time to collapse interchangeable versions of a package onto a single copy. This is layered on the same rewrite step; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
+
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#pulling-a-version-means-rewriting-its-symbols) — "Pulling a version means rewriting its symbols" tells why versioning lives in the linker's namespace, and the separator saga that landed on `%` over `@` and `__`.
 
 ---
 
@@ -254,15 +262,19 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - The standard library beyond `core` is **not** special. `std` is a separate package fetched, versioned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#the-toolchain-rides-one-tag-the-standard-library-does-not) — "The toolchain rides one tag; the standard library does not" explains why `core` is coupled to the compiler while `std` is an ordinary package.
+
 ---
 
 ## 15. Compatibility Patterns and Remapping
 
 By default, when two parts of the dependency graph require different versions of the same package, both versions are linked side by side using version-prefixed symbols (§6, §11). Compatibility-based remapping is an **opt-in** optimization that collapses such versions onto a single copy when doing so is declared safe, eliminating the duplicate.
 
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#opt-in-remapping-the-author-states-facts-the-consumer-takes-the-risk) — "Opt-in remapping: the author states facts, the consumer takes the risk" develops the author/consumer split, why `remaps` names URLs rather than keys, and the unchecked-ABI cost the whole design is built to contain.
+
 ### 15.1 Roles: author declares, consumer decides
 - **Author (`version-pattern`).** A package author publishes a `version-pattern` in the package's own `zane.coda`. It is **information, not permission**: it declares the range of the package's own versions that are interchangeable at the ABI level. It never forces remapping on or off.
-- **Consumer (`remaps`).** The top-level project decides which packages to remap via a `remaps` block listing package keys. This is the **only** place the remap decision is made. A listed key may be a direct dependency or a package that appears only transitively — the URL-identity model lets any package be named — and listing it needs no version pin, so opting in a transitive package adds no version-management burden. `remaps` blocks in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. There is no wildcard or global opt-in: each remapped package is named explicitly in the top-level manifest.
+- **Consumer (`remaps`).** The top-level project decides which packages to remap via a `remaps` block listing canonical package URLs. This is the **only** place the remap decision is made. A listed URL may name a direct dependency or a package that appears only transitively — the URL is the canonical identity, so any package in the resolved graph can be named unambiguously even when it has no local key — and listing it needs no version pin, so opting in a transitive package adds no version-management burden. `remaps` blocks in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. There is no wildcard or global opt-in: each remapped package is named explicitly in the top-level manifest.
 
 Remapping of a package occurs only when the consumer enables it **and** the published patterns make it ABI-safe. Otherwise the versions coexist unchanged.
 
@@ -272,7 +284,7 @@ A `version-pattern` mirrors the shape of the package's version tags, replacing e
 - `*` — **fixed boundary.** This component must match exactly for two versions to be interchangeable. It carries no priority and does not participate in selection. (Typically the major component.)
 - `+` / `-` — **directional and priority-bearing.** `+` means the component is upward-substitutable (a higher value is a valid replacement); `-` means downward-substitutable. The marker is repeated to encode priority.
 
-Markers replace only numeric components. A component is a **marker position** if and only if it consists entirely of one repeated marker character (`*`, `+`, or `-`), for example `*`, `+`, `++`, `-`, or `--`. Any component that contains any other character — a leading `v`, a separator `.`, text like `-rc`, `alpha`, or digits — is a **literal position** regardless of whether it begins with a marker character: `-rc` is a literal, `-` alone is a marker. No escaping is needed or supported; the rule is unambiguous from the component's content alone. A pattern thus has no directional ordering over pre-release identifiers; they participate only as literal matches.
+Markers replace only numeric components. A leading `v` on a tag or pattern (the conventional version prefix) is stripped first; the remaining string is then split into components on `.`. A component is a **marker position** if and only if it consists entirely of one repeated marker character (`*`, `+`, or `-`), for example `*`, `+`, `++`, `-`, or `--`. Any component that contains any other character — text like `rc`, `alpha`, `0-rc`, or digits — is a **literal position** regardless of whether it begins with a marker character: `-rc` within a component is literal, `-` alone is a marker. No escaping is needed or supported; the rule is unambiguous from the component's content alone. So `v*.+.++` strips to `*.+.++` and splits to the marker components `*`, `+`, `++`, matching the major/minor/patch of a tag like `v6.2.9`. A pattern thus has no directional ordering over pre-release identifiers; they participate only as literal matches.
 
 **Priority is repetition-based: fewer repeats means higher priority** (as with markdown heading levels, where `#` outranks `##`). `+` outranks `++` outranks `+++`. Priority is always explicit — there is no positional default — so a pattern is fully self-describing in isolation.
 
@@ -306,21 +318,4 @@ Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pi
 
 ## 16. Design Rationale
 
-| Decision | Rationale |
-|---|---|
-| URL as package identity | Avoids global registry naming conflicts and matches how code is actually fetched. |
-| Exact tag plus commit hash | Keeps builds reproducible and makes moved tags detectable. |
-| Prebuilt objects in the repository under `build/` | Keeps fetching host-agnostic and lets source and artifacts share one immutable commit identity. |
-| Pull-time symbol versioning | Enables multiple versions to coexist without requiring source-level version names. |
-| `src/` and `build/` separation in the cache | Makes the distinction between the original `!`-prefixed objects from `src/build/` and the rewritten version-stamped objects explicit and auditable. Reuse across projects reads from `build/` without repeating the rewrite step. |
-| Go-style URL-to-path mangling with hard failure on illegal characters | Keeps cache paths human-readable and debuggable while preventing ambiguous or unsafe paths from ever being created. |
-| Global package cache | Avoids repeated downloads and rewrite work across projects. |
-| Key-based imports | Keeps source code readable while the manifest and resolution file remain the single source of truth for version resolution. |
-| Package dependency graph is a DAG | Simplifies compilation order, prevents initialization deadlocks, and makes dependency reasoning straightforward. Declarations within one package may still reference each other freely because the package is compiled as one unit. |
-| Manifest/resolution split (`zane.coda` + `zane-versions.coda`) | Keeps human-stated intent (key, version, remap) separate from resolved addressing (url, commit), so intent reviews stay small while the resolved commits act as a verifiable lock. |
-| `zane-version` pins compiler and `core` together | Each project builds with a known toolchain, freeing the toolchain to evolve without cross-version backward-compatibility guarantees. |
-| `std` is an ordinary package | Avoids privileged standard-library coupling; only `core` rides the toolchain tag. |
-| Author-declared `version-pattern`, consumer-decided `remaps` | Separates the compatibility *facts* (only the author knows them) from the *decision* to trust them (only the consumer bears the ABI risk). |
-| Repetition-based explicit priority (fewer repeats = higher) | Makes every pattern self-describing with no positional convention to assume, supporting arbitrary and custom version schemes. |
-| Remap as opt-in link-time dedup over exact pins | Removes duplicate near-identical versions from the binary without a version solver or any loss of reproducibility; safe coexistence remains the default. |
-| Warning on divergent patterns | Surfaces a likely-unintended compatibility gap as information, without blocking the build or overstating it as a security issue. |
+> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md) tells the story behind these rules — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting and the separator saga, tag/commit pinning, and the opt-in remapping model with its author/consumer split.

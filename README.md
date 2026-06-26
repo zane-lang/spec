@@ -62,6 +62,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 |---|---|
 | [`rationale/foundations.md`](rationale/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
 | [`rationale/generics.md`](rationale/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
+| [`rationale/dependencies.md`](rationale/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, and the opt-in remapping model |
 
 ## Contributing
 
