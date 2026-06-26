@@ -19,6 +19,8 @@ Zane eliminates dangling references by combining single ownership, lexical lifet
 
 These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves or an owner is overwritten, refs stay valid because they follow the owner/anchor path rather than a fixed object address.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
+
 ---
 
 ## 2. Ownership and Storage
@@ -121,6 +123,8 @@ Non-`&` owner bindings may be initialized from any expression, including tempora
 engine Engine()         // legal: plain owner binding; Engine() temporary is materialized into engine
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
+
 ### 2.9 `&` function parameters
 A parameter declared as `&T` requires the caller to supply a source that may create a new `&` under §2.8. Inside the callee body it acts as a place expression and may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7.
 
@@ -180,6 +184,8 @@ type BadRef = struct {
 }
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+
 ### 2.11 Symbols require direct initialization
 Every symbol declaration **MUST** provide its initial value in the declaration itself. Zane does not permit bare symbol declarations followed by conditional or delayed first assignment.
 
@@ -238,6 +244,8 @@ Placement is an implementation decision, not a language-visible property. The co
 
 A class instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+
 ### 3.6 Handle-typed core classes have fixed footprint
 The core dynamically-sized classes — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
 
@@ -279,8 +287,12 @@ Indices are **1-based**, and the value `0` means *unreferenced*:
 
 Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The table slot is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#from-a-reserved-pool-to-an-indexed-heap-table) — "From a reserved pool to an indexed heap table".
+
 ### 4.3 Anchors are created lazily
 An owner that is never referenced consumes no table slot: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on an owner allocates a slot — popped from the free list, or bumped from the frontier if the free list is empty — writes the owner's `u32` offset into the cell, and records the 1-based slot index in the owner's backpointer. Every subsequent `&` of that owner copies the index.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor, and not paying when there are no refs".
 
 ### 4.4 Dereferencing a ref
 Resolving an `&` finds the cell through `anchor_ptr`, reads the owner's `u32` offset, adds the region base, then accesses the field. The reserved slot `0` means a dereference never underflows the table.
@@ -322,6 +334,8 @@ The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` i
 A ref follows the owner/anchor path rather than pointing at a fixed object address. When an owner moves (§3.7) or an owning slot is overwritten, the runtime writes the owner's new address into its one anchor cell, located through the backpointer (§4.2). Every ref reads that cell on its next dereference, so all refs observe the owner's current value with no per-ref fixup.
 
 This is why object relocation and owner overwrite are **O(1) with respect to the number of refs**. It is also how a moved-from symbol stays readable: after a move the symbol downgrades to an `&` — a slot index — and reads resolve through the cell to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
 
 ### 4.6 Destroying an owner frees its slot
 When a referenced owner is destroyed, its anchor slot is returned to the free list as part of destruction. Freed cells thread the free list through themselves: a free cell stores the next free index, and the table's root record (§3.1, the fixed area at the region base alongside `anchor_ptr`) holds the free-list head (`0` when empty), so reuse costs no extra space.

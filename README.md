@@ -63,6 +63,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
 | [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
 | [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, and the opt-in remapping model |
+| [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, and the rooted-ref rules |
 
 ## Contributing
 
