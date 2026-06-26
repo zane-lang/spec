@@ -40,7 +40,7 @@ Three consequences that other documents depend on:
 - **`<>` and `()` are different mechanisms, not two call syntaxes.** `<>` is a type expression, resolved in the earlier (type) stage; `()` is a construction or call, resolved in the later (value) stage. They live in different stages, which is why a call never carries a `<>` list. See [`generics.md`](generics.md) §4–§5.
 - **A value passed at compile time is just an argument.** A type or compile-time number handed to a constructor is an ordinary value the body can use, because the stage that runs the type has those values in hand. See [`generics.md`](generics.md) §5.3.
 
-> **Story:** [`stories/generics.md`](../stories/generics.md) — the generics story records why staging was chosen over a bolt-on generics sublanguage, and where the model promises more than it currently delivers.
+> **Story:** [`stories/generics.md`](../stories/generics.md#types-are-templated-functions) — "Types are templated functions" records why staging was chosen over a bolt-on generics sublanguage, and where the model promises more than it currently delivers.
 
 ---
 
@@ -78,7 +78,7 @@ High-level expression, on its own, usually costs speed. What buys it back is tha
 
 So the rules should not be read as a usability tax levied next to the performance. They are the bargain itself: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
 
-> **Story:** [`stories/foundations.md`](../stories/foundations.md) — the foundations story weighs this bet against the permissive alternative and records its real ergonomic cost.
+> **Story:** [`stories/foundations.md`](../stories/foundations.md#strictness-is-the-performance-model) — "Strictness is the performance model" weighs this bet against the permissive alternative and records its real ergonomic cost.
 
 ---
 

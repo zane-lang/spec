@@ -161,16 +161,16 @@ A spec document records its design reasoning **not** as an in-document table but
 At the end of any section whose reasoning is non-trivial, add a pointer:
 
 ```markdown
-> **Story:** [`stories/memory.md`](../stories/memory.md) — the memory story explains why ownership is single by default.
+> **Story:** [`stories/memory.md`](../stories/memory.md#single-ownership-by-default) — "Single ownership by default".
 ```
 
 Rules:
 - Put the pointer at the section whose rule it explains, where a curious reader actually is — not only at the foot of the file.
-- The href is the story file with no anchor — a stories doc is one continuous narrative, so the pointer lands at the top and the description tells the reader what thread it develops.
-- A section whose rule is self-evident needs no pointer. Do not manufacture story material for trivial decisions.
-- When you add or change a rule, extend its story in the same change (see §8). The story is *appended to*, not rewritten — see [`writing-stories-docs.md`](writing-stories-docs.md) §5.
+- The quoted text is the story chapter's heading and the href ends in its anchor, so the link lands on the right chapter. A chapter is a theme spanning several decisions, so more than one spec section may point at the same chapter.
+- A section whose rule is self-evident needs no pointer. Do not manufacture story chapters for trivial decisions.
+- When you add or change a rule, extend the matching chapter (or add one) in the same change (see §8). The story is *appended to*, not rewritten — see [`writing-stories-docs.md`](writing-stories-docs.md) §5.
 
-The `> **Story:**` pointer is a *living* link into the current story; in the other direction, when the story quotes a specific spec rule it pins that reference to a commit with a permalink (see [`writing-stories-docs.md`](writing-stories-docs.md) §4). This replaces the former per-document Design Rationale table. The reason for the move is itself recorded in the stories folder.
+The `> **Story:**` pointer is a *living* link into the current story; in the other direction, when a story chapter quotes a specific spec rule it pins that reference to a commit with a permalink (see [`writing-stories-docs.md`](writing-stories-docs.md) §4). This replaces the former per-document Design Rationale table. The reason for the move is itself recorded in the stories folder.
 
 ### 3.5 Summary section
 
@@ -328,7 +328,7 @@ Always link by filename, never by section title text. Include a `§` number afte
 [`memory.md`](memory.md) §3
 ```
 
-When section numbers change, update inbound and outbound references in the same change. Stories docs do not need updating for a section renumber: a story's spec references are commit-pinned permalinks frozen to the spec as it was (see [`writing-stories-docs.md`](writing-stories-docs.md) §4.2), and the spec's own `> **Story:**` pointers link to the story file as a whole, not to a section number.
+When section numbers change, update inbound and outbound references in the same change. Stories docs do not need updating for a section renumber: a story's spec references are commit-pinned permalinks frozen to the spec as it was (see [`writing-stories-docs.md`](writing-stories-docs.md) §4.2), and the spec's own `> **Story:**` pointers anchor to chapter headings, not section numbers.
 
 To reduce churn:
 - Prefer adding new subsections to the end of an existing section when possible.
@@ -361,5 +361,5 @@ Exception: if the document is `glossary.md`, follow the glossary-specific refere
 - Do not add `---` between subsections.
 - Do not add semantics to `syntax.md`.
 - Do not duplicate content between files — add it in the canonical place and cross-reference from others.
-- When you add or change a rule whose reasoning is non-trivial, extend the narrative in the matching `stories/<topic>.md` and add or update its `> **Story:**` pointer in the same change.
+- When you add or change a rule whose reasoning is non-trivial, extend the matching chapter in (or add one to) `stories/<topic>.md` and add or update its `> **Story:**` pointer in the same change.
 - When adding a new top-level section, insert it before Language Comparisons / Summary as required by §2, adjusting section numbers accordingly.
