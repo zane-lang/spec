@@ -132,7 +132,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.14 `Type` and `Number` parameter concepts
 - **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
-- **Canonical home:** [`generics.md`](generics.md) §3.2
+- **Canonical home:** [`generics.md`](generics.md) §3.3
 
 ### 3.15 variant (sum type)
 - **Meaning:** A `variant` is a sum type: a value holds exactly one of its named members at a time. Its body grammar is identical to a `struct`; the keyword flips product into sum. Reading a member is partial and therefore abortable.
