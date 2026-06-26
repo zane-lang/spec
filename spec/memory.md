@@ -375,31 +375,7 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 
 ---
 
-## 6. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Overwritable owning storage | Owner/anchor indirection lets ordinary reassignment coexist with stable refs, including inside owning containers. |
-| Structs remain overwritable | Structs are plain values; restricting reassignment would add complexity with no safety benefit. |
-| Struct-downstream enforcement | Inline value copying must never duplicate ownership or ref-tracking state implicitly. |
-| `&` in parameter and return positions | Allows ordinary APIs to accept and return refs without inventing a separate getter mechanism. |
-| Rooted-source requirement for new `&` | A ref must come from an existing owner-rooted path. Binding to a temporary or plain value-only parameter would require ghost refs or compiler-invented storage, obscure object identity and lifetime, and contradict the definition of a non-owning reference. |
-| No new `&` from `[]` | Prevents element-reference invalidation rules from leaking out of containers that own their elements. |
-| Direct initialization for symbols | Eliminates maybe-uninitialized storage paths now that symbols may be reassigned later. |
-| Lazy anchors | Objects with no refs do not pay ref-tracking costs. |
-| Anchor indirection | Makes object moves O(1) with respect to the number of refs. |
-| Stack-first placement | A class needs the heap only for dynamic size or escape; placing static, non-escaping instances on the stack is cheaper and never changes observable behavior. |
-| Handle-typed core classes | Representing `List`/`String` as fixed-size handles keeps containing types statically sized, so dynamic size — the one hard heap trigger — stays confined to backing stores. |
-| Index-form refs (`u32`) | A small index is half a pointer's size, is immune to table relocation, and lets the table grow with a single root update; the index math folds into the addressing mode. |
-| Single `anchor_ptr` root | Reserving one fixed word instead of a whole region defers all anchor storage to the heap, so the table grows on demand with no fixed cap to size. |
-| Reserved 1-based slot 0 | A reserved null cell makes `0` mean "unreferenced" for free on zero-initialized storage and turns a stray sentinel dereference into a defined trap rather than an underflow. |
-| Per-owner backpointer | Storing one slot index in the owner lets moves locate the cell and lets `&x` mint refs, without the owner ever enumerating its refs — preserving O(1) moves. |
-| Region-relative `u32` addressing | One native pointer (region base) plus `u32` offsets keeps refs, backpointers, cells, and `anchor_ptr` all 32-bit and relocation-friendly; materializing `region base + offset` folds into addressing modes. |
-| Shared size-indexed free stacks | Keeps allocation predictable and avoids general-purpose allocator overhead. |
-
----
-
-## 7. Summary
+## 6. Summary
 
 | Concept | Rule |
 |---|---|
