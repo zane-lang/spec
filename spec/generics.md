@@ -99,7 +99,7 @@ Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2,
 
 A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the literal's length).
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#the-parameter-model-a-header-for-types-inline-introduction-for-verbs) — "The parameter model: a header for types, inline introduction for verbs" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
+> **Story:** [`stories/generics.md`](../stories/generics.md#the-parameter-model) — "The parameter model" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
 ### 3.2 Where parameters are introduced
 
@@ -259,7 +259,7 @@ arr Array(Int, 10000)        // Int passed as the type, 10000 as the size
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#passing-a-type-directly-without-a-turbofish) — "Passing a type directly, without a turbofish" tells why this exists: it is what makes the no-turbofish decision affordable rather than crippling.
+> **Story:** [`stories/generics.md`](../stories/generics.md#no-turbofish-passing-types-as-values) — "No turbofish: passing types as values" tells why passing a type directly exists: it is what makes the no-turbofish decision affordable rather than crippling.
 
 ### 5.4 Concept-typed literals must be wrapped
 
@@ -331,7 +331,7 @@ An array of variable-size structs loses uniform stride; a struct containing a va
 
 Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees every value of a given type is the same number of bytes. That guarantee is what makes indexing, copying, embedding, and calling all cheap.
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#size-is-part-of-the-type-arrayt-n) — "Size is part of the type (`Array<T, n>`)" weighs the VLA alternative and the stride-loss propagation in full.
+> **Story:** [`stories/generics.md`](../stories/generics.md#size-is-part-of-the-type) — "Size is part of the type" weighs the VLA alternative and the stride-loss propagation in full.
 
 ---
 

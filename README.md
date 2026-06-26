@@ -56,7 +56,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 
 ## Design stories
 
-The spec states *what* the language does; the **why** lives in a parallel set of stories docs under [`stories/`](stories/), one per spec document. Each reads as a history — chapters that recount, in the order the thinking moved, the situation that forced a choice, the roads not taken, and the costs accepted — kept separate so the spec stays terse while the reasoning has room to breathe. They are appended to as the design evolves, so each is the record of how its part of the spec came to be, not just why it is the way it is now.
+The spec states *what* the language does; the **why** lives in a parallel set of stories docs under [`stories/`](stories/), one per spec document. Each reads as a history — a handful of thematic chapters that recount, in the order the thinking moved, the situation that forced a choice, the roads not taken, and the costs accepted — kept separate so the spec stays terse while the reasoning has room to breathe. They are appended to as the design evolves, so each is the record of how its part of the spec came to be, not just why it is the way it is now.
 
 | Document | Tells the story behind |
 |---|---|

@@ -18,25 +18,22 @@ The reasoning lives in its own folder, rather than in a table at the foot of eac
 
 ## 2. Document Shape
 
-A stories document is a title, an optional pointer to the spec, and a series of **chapters** in the order the thinking moved through them, separated by `---`.
+A stories document is a title, an optional pointer to the spec, and a small number of **chapters** in the order the thinking moved through them. Each chapter is a *theme* — a phase of the design in which one pressure was met and resolved — and it reads as flowing prose that runs from one chapter into the next. Chapters are marked by `## ` headings and **nothing else**: there are no `---` separators between them, and the prose carries the reader across each boundary on the thread of cause and consequence.
 
 ```
 # Stories: <Topic>
 
 > **See also:** [`spec/<topic>.md`](../spec/<topic>.md) — the rules these chapters explain.
 
----
-
 ## <Chapter name>
 
 <the chapter — flowing prose. Opens on the situation that forced a choice,
-tells what was decided in response (possibly several things at once), the
-roads not taken, and the cost. Links to specific spec points by permalink
-when it discusses them (§4).>
-
----
+tells what was decided in response (usually several related things at once),
+the roads not taken, and the cost. Links to specific spec points by permalink
+when it discusses them (§4), and to sibling chapters by anchor (§4.3).>
 
 ## <Chapter name>
+
 ...
 ```
 
@@ -48,11 +45,11 @@ A stories document **mirrors its spec document's file name**: the story behind [
 
 Do not create one file per chapter (too fragmentary) or one file for the whole language (unnavigable). The cross-cutting, language-wide *why* belongs in [`stories/foundations.md`](../stories/foundations.md); a topic stories doc cross-references it rather than restating it.
 
-### 2.2 A chapter, not a decision
+### 2.2 A chapter is a theme, not a decision
 
-A chapter is a **phase of the design** — an episode in which one pressure was met and resolved. It is named by a `## ` heading: a short noun phrase that names the *episode* ("A URL is the identity; the key is only a local nickname"), not a question and not a single spec rule.
+A chapter is a **phase of the design** — an episode in which one pressure was met and resolved — and it almost always settles **several related decisions at once**, because that is how they were actually made. It is named by a `## ` heading: a short noun phrase that names the *theme* ("URL identity and the two-file manifest", "No turbofish: passing types as values"), not a question and not a single spec rule.
 
-A chapter may settle several decisions at once, because that is how they were actually made — and it should, when they were made together. Conversely, one large decision may run across several chapters if the thinking really arrived in stages. Let the chapter boundaries fall where the *reasoning* has joints, not where the spec has section numbers. There is no required template below the heading, no labelled parts, no metadata ritual. Everything under the heading is the story.
+This is the rule to hold on to: **do not write one chapter per spec decision.** A spec section is a fine-grained rule; a chapter is the coarser line of reasoning that produced a cluster of such rules. Group decisions that were forced by the same pressure into one chapter and let them play out as a single story; conversely, one large decision may run across several chapters if the thinking really arrived in stages. Let the chapter boundaries fall where the *reasoning* has joints — typically a handful of chapters per file — not where the spec has section numbers. There is no required template below the heading, no labelled parts, no metadata ritual. Everything under the heading is the story.
 
 A chapter is **not pinned to a spec section.** It is free to range across whatever the episode touched. It *should* link to specific spec rules where it discusses them (§4), but those links serve the reader; they are not a structural anchor, and a chapter is never reshaped just to line up one-to-one with a `§N`.
 
@@ -69,7 +66,7 @@ A good chapter tends to move through four things — but as *prose*, never as la
 
 Let the length flex with the episode: a minor turn is a paragraph, a foundational one runs to pages.
 
-**Order chapters by the path the thinking took**, not by spec section order and not by tidy importance. A chapter usually opens where the previous one left off — one choice creates the problem the next one solves — so the natural order is causal and roughly chronological. "When" here means *relative to the other decisions* ("once we had settled X, the next pressure was Y"), not a calendar date; record a real date or commit only if it genuinely matters. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead.
+**Order chapters by the path the thinking took**, not by spec section order and not by tidy importance. A chapter usually opens where the previous one left off — one choice creates the problem the next one solves — so the natural order is causal and roughly chronological, and because there are no separators, the opening sentence of each chapter should carry the reader across the seam ("With identity settled, the next question is…", "Shipping prebuilt objects raises a problem the moment…"). "When" here means *relative to the other decisions* ("once we had settled X, the next pressure was Y"), not a calendar date; record a real date or commit only if it genuinely matters. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead.
 
 ---
 
@@ -97,17 +94,17 @@ Linking like this is **recommended wherever a chapter discusses a specific rule*
 
 ### 4.3 Between chapters
 
-Chapters may — and often should — link to **each other**. A design decision rarely stands alone: one choice creates the problem the next one solves, and that lineage is itself part of the story. So let a chapter open where another left off — *"Once we had decided a call carries no `<>` list, a caller had no way to name a type that inference couldn't reach, so we needed…"* — and name the chapter it builds on. Link by the chapter's heading **anchor** — `[the parameter-model chapter](#the-parameter-model-a-header-for-types-inline-introduction-for-verbs)` — so the chain is clickable; let the visible text stay a natural phrase. These are sibling links *within the stories folder*, so they are ordinary relative anchors (living), not permalinks.
+Chapters may — and often should — link to **each other**. A design decision rarely stands alone: one choice creates the problem the next one solves, and that lineage is itself part of the story. So let a chapter open where another left off — *"Once we had decided a call carries no `<>` list, a caller had no way to name a type that inference couldn't reach, so we needed…"* — and name the chapter it builds on. Link by the chapter's heading **anchor** — `[the parameter model](#the-parameter-model)` — so the chain is clickable; let the visible text stay a natural phrase. These are sibling links *within the stories folder*, so they are ordinary relative anchors (living), not permalinks. A reference to a chapter in a *different* stories file uses a sibling-relative path plus anchor: `[the generics story](generics.md#types-are-templated-functions)`.
 
 ### 4.4 The spec's pointer back
 
-A spec section whose *why* is non-trivial ends with a pointer into the story that tells it:
+A spec section whose *why* is non-trivial ends with a pointer into the chapter that tells it:
 
 ```markdown
 > **Story:** [`stories/<topic>.md`](../stories/<topic>.md#<anchor>) — "<chapter name>".
 ```
 
-The href ends in the chapter's heading **anchor** so the link scrolls straight there, and the quoted text is the heading itself. Put it where the curious reader is — at the section whose rule it explains. When a chapter heading changes, its anchor changes too, so fix every inbound `> **Story:**` pointer in the same change.
+The href ends in the chapter's heading **anchor** so the link scrolls straight there, and the quoted text is the heading itself. Put it where the curious reader is — at the section whose rule it explains. Because a chapter is a theme rather than a single decision, several spec sections may point at the same chapter — that is expected. When a chapter heading changes, its anchor changes too, so fix every inbound `> **Story:**` pointer in the same change.
 
 ---
 
@@ -128,7 +125,7 @@ The contrast to hold in mind: the **spec** is rewritten to the present on every 
 Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` `backticks` `` for identifiers, `**bold**` for a term's first definition or a key claim, italics only for document names and semantic categories. But the register is looser than the spec's, because this is a story, not a definition:
 
 - **First person and judgement are welcome.** "We rejected X because…", "the elegant framing oversells this" — a stories doc is where opinion and honest doubt belong. The spec stays neutral; the story need not.
-- **Long-form prose is the point.** The spec keeps sentences short and clipped; a story can breathe, run longer sentences, and carry a narrative thread. Readability as a history matters more than terse rule-statement here.
+- **Long-form prose is the point.** The spec keeps sentences short and clipped; a story can breathe, run longer sentences, and carry a narrative thread within and across chapters. Readability as a history matters more than terse rule-statement here.
 - **Be honest about costs.** The reason anyone will trust the record later is that it admits what the decision gave up.
 
 ---
@@ -144,7 +141,7 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 ## 8. Adding a New Stories Document
 
 1. Create `stories/<topic>.md`, matching the spec file name exactly (§2.1).
-2. Follow the shape in §2 — title, optional `> **See also:**`, then the chapters.
-3. Write the chapters in the order the thinking moved (§3), one per episode of the design.
+2. Follow the shape in §2 — title, optional `> **See also:**`, then a handful of thematic chapters with `## ` headings and no `---` separators.
+3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule.
 4. Add a `> **Story:**` pointer from each non-trivially-justified section of the matching spec doc (§4.4), and pin in-prose spec references by permalink (§4.2).
 5. Add a row to the stories table in [`README.md`](../README.md).
