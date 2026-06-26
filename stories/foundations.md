@@ -1,11 +1,10 @@
-# Rationale: Foundations
+# Stories: Foundations
 
-> **See also:** [`spec/foundations.md`](../spec/foundations.md) for the commitments these stories justify.
+> **See also:** [`spec/foundations.md`](../spec/foundations.md) — the commitments these chapters explain.
 
 ---
 
 ## Source is captured intent
-**Spec:** [`foundations.md`](../spec/foundations.md) §2
 
 The fork is the oldest one in language design: meet the machine where it is, or meet the programmer where they are. A low-level language like C makes the source a faithful transcript of machine steps — fast, but the intent is buried under bookkeeping. A high-level managed language, which is most of the rest, makes the source express intent — readable, but it pays for the altitude with a runtime that guesses at the mechanism the programmer elided. Both roads were on the table, and both were rejected: the low-level one because intent is recoverable only by reverse-engineering the bookkeeping, which is exactly what makes whole-program optimization hard; the managed one because it buys readability by handing the mechanism to a runtime that must be conservative, which is the performance cost we are trying to avoid in the first place.
 
@@ -14,14 +13,12 @@ Zane bets that this is a false choice if the source is forced to be unambiguous.
 ---
 
 ## Compilation is staged; types are values
-**Spec:** [`foundations.md`](../spec/foundations.md) §3
 
 The decision to make types ordinary compile-time values, executed in an earlier stage, is the root that generics, the `<>`/`()` split, and compile-time arguments all grow from. The full argument — why staging beats a bolt-on generics sublanguage, and where the model currently overpromises, on type-level arithmetic and on constraints — is told once, in the generics stories, rather than duplicated here: see [Types are templated functions](generics.md#types-are-templated-functions) and [Deferred: what the model promises but does not yet deliver](generics.md#deferred-what-the-model-promises-but-does-not-yet-deliver). The short version of the cost is that the elegance of "a type is just a function you run" oversells how much falls out for free. Type identity for computed type expressions, and constraints on parameters, do not fall out of it; they are the hard parts the framing hides, and the generics stories track them.
 
 ---
 
 ## Casing determines kind
-**Spec:** [`foundations.md`](../spec/foundations.md) §4
 
 A name's kind has to be recoverable somehow — by the parser, to know whether `Foo<Bar>` is a type application or a comparison, and by the reader, to know whether `T` is a type or a value. There were three ways to encode it, and two were rejected. Sigils (`&T`, `'a`, `@T`, `$x`) turn every kind distinction into punctuation noise at every use site, and the surface stops reading like captured intent. Inferring kind from declaration context — remembering where a name was introduced — makes the parser context-sensitive and forces the reader to recall a declaration to read a use, exactly the implicitness the language avoids.
 
@@ -30,7 +27,6 @@ The choice was to encode kind in case, a property every identifier already has, 
 ---
 
 ## Strictness is the performance model
-**Spec:** [`foundations.md`](../spec/foundations.md) §6
 
 The framing to reject is that Zane has two separable properties — it is strict (single ownership, fixed layout, enforced effects, mandatory error handling) and it is fast — as if these were independent selling points that happen to coexist. They are not independent. The strictness is the cause of the speed. Every rule that forbids a convenience is the same rule that lets the compiler stop guessing: known ownership gives deterministic destruction with no collector, fixed layout gives direct access and cheap copies, known effects give safe automatic parallelism. It is the same trade Rust makes — you do not get speed from being expressive, you get it from the invariants the rules preserve, and the expressiveness is what those invariants buy back.
 
@@ -41,6 +37,5 @@ This is the language's steepest cost. Mandatory strictness means a higher learni
 ---
 
 ## A foundations doc, separate from the philosophy that justifies it
-**Spec:** [`foundations.md`](../spec/foundations.md)
 
-This file's own existence is a small design decision worth recording. The cross-cutting "why" of the language could have lived in one essay, mixing the model with the argument for it. We split it instead: the model — staging, casing, fixed layout, the strictness principle — is normative and lives in `spec/foundations.md`, because topic docs cite it as ground truth; the bets and costs, this file, are story material, because they are opinion, history, and honestly-stated downside. Folding both into a single `philosophy.md` would have mixed normative grounding that other docs must reference as fact with editorial argument that should be free to be revised and second-guessed — the exact what/why blend the spec/rationale split exists to prevent. The price is that a reader after the big picture now has two files instead of one, mitigated by the cross-links: the spec doc states each commitment and points here for the argument. We accept the extra hop for the same reason the whole split exists — a definition and the debate behind it have different lifecycles and should not share a page.
+This file's own existence is a small design decision worth recording. The cross-cutting "why" of the language could have lived in one essay, mixing the model with the argument for it. We split it instead: the model — staging, casing, fixed layout, the strictness principle — is normative and lives in `spec/foundations.md`, because topic docs cite it as ground truth; the bets and costs, this file, are story material, because they are opinion, history, and honestly-stated downside. Folding both into a single `philosophy.md` would have mixed normative grounding that other docs must reference as fact with editorial argument that should be free to be revised and second-guessed — the exact what/why blend the spec/stories split exists to prevent. The price is that a reader after the big picture now has two files instead of one, mitigated by the cross-links: the spec doc states each commitment and points here for the argument. We accept the extra hop for the same reason the whole split exists — a definition and the debate behind it have different lifecycles and should not share a page.

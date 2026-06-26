@@ -13,7 +13,7 @@ Zane treats a package's full source URL as its identity and pins every dependenc
 - **`Prebuilt distribution`.** Libraries are distributed as source plus prebuilt object files committed to the repository.
 - **`Global caching`.** Fetched and versioned artifacts are shared across projects on the machine.
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#a-url-is-the-identity-the-key-is-only-a-local-nickname) — "A URL is the identity; the key is only a local nickname" weighs URL identity against a central registry and records what the registry road would have bought.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-url-is-the-identity-the-key-is-only-a-local-nickname) — "A URL is the identity; the key is only a local nickname" weighs URL identity against a central registry and records what the registry road would have bought.
 
 ---
 
@@ -86,7 +86,7 @@ If a tag has moved and the user intentionally wants to trust the new commit, the
 zane update math v6.2.9 --accept-tag-move
 ```
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#two-files-stated-intent-and-verified-resolution) — "Two files: stated intent and verified resolution" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#two-files-stated-intent-and-verified-resolution) — "Two files: stated intent and verified resolution" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
 
 ---
 
@@ -114,7 +114,7 @@ When the toolchain fetches a dependency, it resolves the recorded tag to a curre
 
 This detects moved tags and repository tampering.
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#a-tag-for-humans-a-commit-for-the-machine-a-moved-tag-is-an-attack) — "A tag for humans, a commit for the machine; a moved tag is an attack" records why both are pinned and why a moved tag is treated as hostile by default.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-tag-for-humans-a-commit-for-the-machine-a-moved-tag-is-an-attack) — "A tag for humans, a commit for the machine; a moved tag is an attack" records why both are pinned and why a moved tag is treated as hostile by default.
 
 ---
 
@@ -150,7 +150,7 @@ When a library already depends on another versioned library, the referenced tran
 ### 6.4 Optional compatibility-based remapping
 When a consumer opts in, version-prefixed symbols may additionally be remapped at link time to collapse interchangeable versions of a package onto a single copy. This is layered on the same rewrite step; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#pulling-a-version-means-rewriting-its-symbols) — "Pulling a version means rewriting its symbols" tells why versioning lives in the linker's namespace, and the separator saga that landed on `%` over `@` and `__`.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#pulling-a-version-means-rewriting-its-symbols) — "Pulling a version means rewriting its symbols" tells why versioning lives in the linker's namespace, and the separator saga that landed on `%` over `@` and `__`.
 
 ---
 
@@ -270,7 +270,7 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - The standard library beyond `core` is **not** special. `std` is a separate package fetched, versioned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#the-toolchain-rides-one-tag-the-standard-library-does-not) — "The toolchain rides one tag; the standard library does not" explains why `core` is coupled to the compiler while `std` is an ordinary package.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-toolchain-rides-one-tag-the-standard-library-does-not) — "The toolchain rides one tag; the standard library does not" explains why `core` is coupled to the compiler while `std` is an ordinary package.
 
 ---
 
@@ -278,7 +278,7 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 
 By default, when two parts of the dependency graph require different versions of the same package, both versions are linked side by side using version-prefixed symbols (§6, §11). Compatibility-based remapping is an **opt-in** optimization that collapses such versions onto a single copy when doing so is declared safe, eliminating the duplicate.
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md#opt-in-remapping-the-author-states-facts-the-consumer-takes-the-risk) — "Opt-in remapping: the author states facts, the consumer takes the risk" develops the author/consumer split, why `remaps` names URLs rather than keys, and the unchecked-ABI cost the whole design is built to contain.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#opt-in-remapping-the-author-states-facts-the-consumer-takes-the-risk) — "Opt-in remapping: the author states facts, the consumer takes the risk" develops the author/consumer split, why `remaps` names URLs rather than keys, and the unchecked-ABI cost the whole design is built to contain.
 
 ### 15.1 Roles: author declares, consumer decides
 - **Author (`version-pattern`).** A package author publishes a `version-pattern` in the package's own `zane.coda`. It is **information, not permission**: it declares the range of the package's own versions that are interchangeable at the ABI level. It never forces remapping on or off.
@@ -328,4 +328,4 @@ Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pi
 
 ## 16. Design Rationale
 
-> **Rationale:** [`rationale/dependencies.md`](../rationale/dependencies.md) tells the story behind these rules — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting and the separator saga, tag/commit pinning, and the opt-in remapping model with its author/consumer split.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md) tells the story behind these rules — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting and the separator saga, tag/commit pinning, and the opt-in remapping model with its author/consumer split.

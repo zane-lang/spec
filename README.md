@@ -8,8 +8,8 @@ This repository is a **prior art publication** for the Zane programming language
 
 ```
 spec/             ← the specification itself (start here): what the language does
-rationale/        ← rationale stories: why each spec decision was made
-contributing/     ← style guides for writing spec docs and rationale docs
+stories/          ← design stories: how each part of the spec came to be
+contributing/     ← style guides for writing spec docs and stories docs
 bench/            ← reference C harness used for runtime experiments
 ```
 
@@ -54,19 +54,19 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/packages.md`](spec/packages.md) | Package declarations and member access |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
 
-## Design rationale
+## Design stories
 
-The spec states *what* the language does; the **why** lives in a parallel set of rationale docs under [`rationale/`](rationale/), one per spec document. Each reads as a set of short stories — the forks, the roads not taken, and the costs behind each decision — kept separate so the spec stays terse while the reasoning has room to breathe.
+The spec states *what* the language does; the **why** lives in a parallel set of stories docs under [`stories/`](stories/), one per spec document. Each reads as a history — chapters that recount, in the order the thinking moved, the situation that forced a choice, the roads not taken, and the costs accepted — kept separate so the spec stays terse while the reasoning has room to breathe. They are appended to as the design evolves, so each is the record of how its part of the spec came to be, not just why it is the way it is now.
 
-| Document | Justifies |
+| Document | Tells the story behind |
 |---|---|
-| [`rationale/foundations.md`](rationale/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
-| [`rationale/generics.md`](rationale/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
-| [`rationale/dependencies.md`](rationale/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, and the opt-in remapping model |
+| [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
+| [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
+| [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, and the opt-in remapping model |
 
 ## Contributing
 
 Style and structural conventions live in two sibling guides; read the relevant one before editing or adding a document:
 
 - [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
-- [`contributing/writing-rationale-docs.md`](contributing/writing-rationale-docs.md) — rationale docs in [`rationale/`](rationale/).
+- [`contributing/writing-stories-docs.md`](contributing/writing-stories-docs.md) — stories docs in [`stories/`](stories/).

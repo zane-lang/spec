@@ -2,17 +2,17 @@
 
 This guide describes the conventions for writing and maintaining spec documents in this repository. Follow it when adding a new document, extending an existing one, or editing any section.
 
-Spec documents state *what the language does*. The *why* — the reasoning, the alternatives, the accepted costs — lives in a separate place: see [`writing-rationale-docs.md`](writing-rationale-docs.md) for the rationale folder and its conventions. Keeping the two apart is deliberate; this guide governs only the normative spec.
+Spec documents state *what the language does*. The *why* — the reasoning, the alternatives, the accepted costs — lives in a separate place: see [`writing-stories-docs.md`](writing-stories-docs.md) for the stories folder and its conventions. Keeping the two apart is deliberate; this guide governs only the normative spec.
 
 ---
 
 ## 1. Document Inventory
 
-Every spec document lives in [`spec/`](../spec/), and each file covers one topic area. Each topic has a single *canonical* home document. Its *why* lives in a sibling rationale doc at `rationale/<same-name>.md`.
+Every spec document lives in [`spec/`](../spec/), and each file covers one topic area. Each topic has a single *canonical* home document. Its *why* lives in a sibling stories doc at `stories/<same-name>.md`.
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
-When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write it* (`syntax.md`), *what the spec calls it* (`glossary.md`), or *why it was decided that way* (`rationale/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `rationale/`.
+When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write it* (`syntax.md`), *what the spec calls it* (`glossary.md`), or *how it came to be decided that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
 
 See [`README.md`](../README.md) for the canonical index of every spec document and its purpose.
 
@@ -44,7 +44,7 @@ Bullet list of the 2–5 core ideas.
 
 ...
 A section whose reasoning is non-trivial ends with a
-> **Rationale:** pointer into rationale/<name>.md   (see §3.4)
+> **Story:** pointer into stories/<name>.md   (see §3.4)
 
 ---
 
@@ -59,7 +59,7 @@ Comparison tables and per-language breakdowns (see §4).
 Two-column summary table (see §3.5).
 ```
 
-A topic document **does not** contain a Design Rationale section. Rationale lives in `rationale/` (§3.4). Spec sections carry only the brief, in-place justification that a reader needs to *understand the rule as stated*; the developed why — forks, discarded alternatives, accepted costs — goes in the matching rationale doc and is reached by a `> **Rationale:**` pointer.
+A topic document **does not** contain a Design Rationale section. The reasoning lives in `stories/` (§3.4). Spec sections carry only the brief, in-place justification that a reader needs to *understand the rule as stated*; the developed why — forks, discarded alternatives, accepted costs — goes in the matching stories doc and is reached by a `> **Story:**` pointer.
 
 ### 2.1 Title line
 
@@ -88,7 +88,7 @@ Immediately after the lead-in, before the first `---`, if cross-references are u
 > **See also:** [`types.md`](types.md) for class/struct declarations. [`effects.md`](effects.md) for the effect model.
 ```
 
-Use `>` blockquote with bold `**See also:**`. Link text is the filename. Description is a short phrase. Separate entries with `. ` (period space). Spec documents always link to siblings inside `spec/` using a bare filename — for example, `types.md` rather than `spec/types.md` — since they live in the same directory. A link into the rationale folder uses a relative path: `../rationale/types.md`.
+Use `>` blockquote with bold `**See also:**`. Link text is the filename. Description is a short phrase. Separate entries with `. ` (period space). Spec documents always link to siblings inside `spec/` using a bare filename — for example, `types.md` rather than `spec/types.md` — since they live in the same directory. A link into the stories folder uses a relative path: `../stories/types.md`.
 
 ### 2.4 Section separators (`---`)
 
@@ -138,11 +138,11 @@ Zane uses a **structural effect model** with a single user-facing effect modifie
 - **Anchor-based refs.** An `&` points through a stable anchor, never directly at an object.
 ```
 
-The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the rationale doc for the argument.
+The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
 
 ### 3.2 Core topic sections
 
-Numbered `## 2.` onward. Write prose that explains *what the language does*, grounded in the rules, with enough *why* that the rule reads as sensible rather than arbitrary. The *developed* why — the forks, the rejected designs, the costs — does not go here; it goes in the rationale doc (§3.4). Include code examples in every subsection that has a non-obvious behaviour.
+Numbered `## 2.` onward. Write prose that explains *what the language does*, grounded in the rules, with enough *why* that the rule reads as sensible rather than arbitrary. The *developed* why — the forks, the rejected designs, the costs — does not go here; it goes in the stories doc (§3.4). Include code examples in every subsection that has a non-obvious behaviour.
 
 Do not include syntax grammar forms in topic docs. Those go in `syntax.md`. Cross-reference with:
 
@@ -154,23 +154,23 @@ Do not include syntax grammar forms in topic docs. Those go in `syntax.md`. Cros
 
 Include this section only when Zane's design is meaningfully different from mainstream alternatives. See §4 for format.
 
-### 3.4 Rationale cross-references
+### 3.4 Story cross-references
 
-A spec document records its design rationale **not** as an in-document table but in a sibling rationale doc at `rationale/<same-name>.md`, governed by [`writing-rationale-docs.md`](writing-rationale-docs.md).
+A spec document records its design reasoning **not** as an in-document table but in a sibling stories doc at `stories/<same-name>.md`, governed by [`writing-stories-docs.md`](writing-stories-docs.md).
 
 At the end of any section whose reasoning is non-trivial, add a pointer:
 
 ```markdown
-> **Rationale:** [`rationale/memory.md`](../rationale/memory.md) — "Single ownership by default".
+> **Story:** [`stories/memory.md`](../stories/memory.md) — "Single ownership by default".
 ```
 
 Rules:
 - Put the pointer at the section whose rule it explains, where a curious reader actually is — not only at the foot of the file.
-- The quoted text is the rationale entry's heading, so the link lands on the right decision.
-- A section whose rule is self-evident needs no pointer. Do not manufacture rationale entries for trivial decisions.
-- When you add or change a rule, add or update its rationale entry in the same change (see §8).
+- The quoted text is the story chapter's heading, so the link lands on the right chapter.
+- A section whose rule is self-evident needs no pointer. Do not manufacture story chapters for trivial decisions.
+- When you add or change a rule, add a chapter to (or extend) its story in the same change (see §8). The story is *appended to*, not rewritten — see [`writing-stories-docs.md`](writing-stories-docs.md) §5.
 
-This replaces the former per-document Design Rationale table. The reason for the move is itself recorded in the rationale folder.
+The `> **Story:**` pointer is a *living* link into the current story; in the other direction, when a story chapter quotes a specific spec rule it pins that reference to a commit with a permalink (see [`writing-stories-docs.md`](writing-stories-docs.md) §4). This replaces the former per-document Design Rationale table. The reason for the move is itself recorded in the stories folder.
 
 ### 3.5 Summary section
 
@@ -255,7 +255,7 @@ The table header is always one of:
 ### 5.2 What does not belong in `syntax.md`
 
 - Semantics, type rules, or compiler behaviour.
-- Rationale or language comparisons.
+- Design reasoning (the why — that lives in `stories/`) or language comparisons.
 - Anything that requires explaining *why*.
 
 ### 5.3 Referencing `syntax.md` from topic docs
@@ -318,7 +318,7 @@ Do not use *italics* for emphasis. Italics are reserved for the names of other d
 
 ### 6.3 Neutral register
 
-A spec document states rules without arguing for them and without editorial voice. No first person, no "we chose", no "unfortunately". Judgement, opinion, and honest doubt about a decision belong in the rationale doc, where the register is explicitly looser (see [`writing-rationale-docs.md`](writing-rationale-docs.md) §5).
+A spec document states rules without arguing for them and without editorial voice. No first person, no "we chose", no "unfortunately". Judgement, opinion, and honest doubt about a decision belong in the stories doc, where the register is explicitly looser (see [`writing-stories-docs.md`](writing-stories-docs.md) §6).
 
 ### 6.4 Cross-references
 
@@ -328,7 +328,7 @@ Always link by filename, never by section title text. Include a `§` number afte
 [`memory.md`](memory.md) §3
 ```
 
-When section numbers change, update inbound and outbound references in the same change — including the `**Spec:**` anchors in the matching rationale doc.
+When section numbers change, update inbound and outbound references in the same change. Stories docs do not need updating for a section renumber: a story's spec references are commit-pinned permalinks frozen to the spec as it was (see [`writing-stories-docs.md`](writing-stories-docs.md) §4.2), and the spec's own `> **Story:**` pointers anchor to chapter headings, not section numbers.
 
 To reduce churn:
 - Prefer adding new subsections to the end of an existing section when possible.
@@ -348,18 +348,18 @@ At the end of a section that is closely connected to another document, add a `> 
 2. Follow the required shape from §2.
 3. Add a row to the appropriate table in [`README.md`](../README.md).
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
-5. Create the matching `rationale/<topic>.md` rationale doc (see [`writing-rationale-docs.md`](writing-rationale-docs.md)) and add `> **Rationale:**` pointers from the non-trivial sections.
+5. Create the matching `stories/<topic>.md` stories doc (see [`writing-stories-docs.md`](writing-stories-docs.md)) and add `> **Story:**` pointers from the non-trivial sections.
 6. If meaningful language comparisons exist, add a Language Comparisons section (§4 format).
 
-Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section. Reference documents (`syntax.md`, `glossary.md`) do not get a rationale doc.
+Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section. Reference documents (`syntax.md`, `glossary.md`) do not get a stories doc.
 
 ---
 
 ## 8. Editing an Existing Document
 
-- Do not remove section numbers — renumber instead (and update references, including rationale `**Spec:**` anchors).
+- Do not remove section numbers — renumber instead (and update references; stories docs need no update on a renumber — see §6.4).
 - Do not add `---` between subsections.
 - Do not add semantics to `syntax.md`.
 - Do not duplicate content between files — add it in the canonical place and cross-reference from others.
-- When you add or change a rule whose reasoning is non-trivial, add or update the matching entry in `rationale/<topic>.md` and its `> **Rationale:**` pointer in the same change.
+- When you add or change a rule whose reasoning is non-trivial, append a chapter to (or extend) the matching `stories/<topic>.md` and add or update its `> **Story:**` pointer in the same change.
 - When adding a new top-level section, insert it before Language Comparisons / Summary as required by §2, adjusting section numbers accordingly.
