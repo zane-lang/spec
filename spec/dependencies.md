@@ -33,7 +33,6 @@ deps [
 ]
 
 remaps [
-    key
     math
 ]
 ```
@@ -48,7 +47,7 @@ Each `deps` row records:
 - **key**: the local camelCase package name used in source code and as the lookup key into `zane-versions.coda`
 - **version**: the exact tag requested by the user
 
-The optional top-level **`remaps`** block lists the package keys the consumer opts into compatibility-based symbol remapping. A listed key may name a direct dependency **or** a package that appears only transitively; listing it requires no version pin, since the versions come from the resolved graph. A key absent from `remaps` is never remapped and its versions coexist side by side (the default). `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
+The optional top-level **`remaps`** block is a bare list of the package keys the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). A listed key may name a direct dependency **or** a package that appears only transitively; listing it requires no version pin, since the versions come from the resolved graph. A key absent from `remaps` is never remapped and its versions coexist side by side (the default). `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 ### 2.2 Resolution file (`zane-versions.coda`)
 
