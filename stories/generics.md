@@ -1,11 +1,10 @@
-# Rationale: Generics and Type Parameters
+# Stories: Generics and Type Parameters
 
-> **See also:** [`spec/generics.md`](../spec/generics.md) for the rules these stories explain.
+> **See also:** [`spec/generics.md`](../spec/generics.md) — the rules these chapters explain.
 
 ---
 
 ## Types are templated functions
-**Spec:** [`generics.md`](../spec/generics.md) §2
 
 The first fork was whether templating is a *feature* bolted onto the type system or a *consequence* of it. Most languages take the first road: types are one kind of thing, and a separate generics sublanguage (`template<...>`, `<T>`, `[T any]`) is grafted on with its own scoping, its own inference, and its own corner cases. We could have done the same — a dedicated generics grammar layered on a non-value type system, the way C++, Java, and Rust do — but it duplicates machinery the rest of the language already has, and every such system grows its own scoping and inference rules that drift away from the language around them.
 
@@ -16,9 +15,8 @@ The payoff is conceptual economy: one idea — types are staged functions — ex
 ---
 
 ## The parameter model: a header for types, inline introduction for verbs
-**Spec:** [`generics.md`](../spec/generics.md) §3
 
-This is the central decision of the whole document, and the one a one-line rationale table did the most damage to, so it gets the long telling.
+This is the central decision of the whole document, and the one a one-line table cell did the most damage to, so it gets the long telling.
 
 A parameter has to be introduced somewhere, and there were two places to put it: a `<>` header after the name (`Foo<T Type>`), the way nearly every language headers its generic functions and types alike; or inline, at the parameter's first marked occurrence in the signature (`x T Type`), with no header at all. The tempting move is to pick one and impose it everywhere, for uniformity. We rejected that, because types and verbs are not doing the same thing.
 
@@ -62,7 +60,6 @@ None of this is free. A bare reference can appear before its marked introduction
 ---
 
 ## Parameters are concept-typed (`Type` / `Number`)
-**Spec:** [`generics.md`](../spec/generics.md) §3.3
 
 Once a type handed to a constructor is just a compile-time value, its parameter needs a type like any other value — and we already had concept types (`@concepts$Number` and the rest) for exactly the "compile-time, parameter-position-only, never storage" role that literals occupy before lowering. So a type parameter is declared with the `Type` concept and a number parameter with the `Number` concept, reusing that machinery wholesale, with no bespoke parameter-kind keyword like `typename`, `const`, or `comptime`. Inventing such a keyword would only be a second way to say "compile-time, parameter-position-only" when the concept types already say it.
 
@@ -71,18 +68,16 @@ The scheme cleanly distinguishes exactly two kinds, `Type` and `Number`, and lea
 ---
 
 ## `<>` describes architecture, `()` constructs — and calls never take `<>`
-**Spec:** [`generics.md`](../spec/generics.md) §4–§5
 
 These were two rows in the old table but they are one decision. `<>` belongs to the type system: a compile-time, structural description of what a value's architecture is, resolved in an earlier stage. `()` belongs to the value system: it constructs or runs at run time. Keeping them as different mechanisms — not two syntaxes for one idea — is what keeps each simple, and the sharp consequence is that a call never carries a `<>` list. There is no `Vector<Int>(...)` turbofish; a parameter reaches a callable either by inference, reading `T`'s value off a value argument, or as an explicit `Type`/`Number` value argument. A parallel `<>` channel at the call site would be a third way to pass the same information, redundant with both, which is why Rust's `::<T>` and C++'s `f<T>()` are deliberately not available here.
 
-This is also what makes case-sensitive parsing pay off: `Vector<Int>` is a type application and `a < b` is a comparison, told apart purely by whether the token before `<` is uppercase. Most languages pay for `<>` generics with permanent parser pain — the `>>` token, the most-vexing-parse — and we do not, precisely because `<>` lives only in type expressions and the casing rule disambiguates them (see [`lexical.md`](../spec/lexical.md) §5).
+This is also what makes case-sensitive parsing pay off: `Vector<Int>` is a type application and `a < b` is a comparison, told apart purely by whether the token before `<` is uppercase. Most languages pay for `<>` generics with permanent parser pain — the `>>` token, the most-vexing-parse — and we do not, precisely because `<>` lives only in type expressions and the casing rule disambiguates them (see [`lexical.md` §5](https://github.com/zane-lang/spec/blob/6dcc8cfeae291c122062513a31eeae3b74cdd721/spec/lexical.md#5-how-casing-disambiguates-the-grammar)).
 
 The downside we are choosing to eat is that, with no turbofish, a caller cannot force a type that appears only in a function's return — parse-to-`T`, an empty container of `T`, zero or default construction. The author has to anticipate that and expose an explicit `Type` value parameter, so expressiveness Rust gives the caller, we give the library designer instead. The deferred "phantom type parameters" question is the visible edge of this. We judge the simplicity worth it, but it is a genuine transfer of power, not a free win — and how a caller names such a type at all, without the channel we just deleted, is taken up in the story on [passing a type directly](#passing-a-type-directly-without-a-turbofish).
 
 ---
 
 ## Passing a type directly, without a turbofish
-**Spec:** [`generics.md`](../spec/generics.md) §5.3
 
 This story only exists because of the no-turbofish decision. Once we had decided that a call carries no `<>` list — no `Vector<Int>(...)`, no turbofish — inference became the only way a type reached a callable. For most calls that is enough: the type rides in on a value argument and the compiler reads it off (this is the [parameter-model story](#the-parameter-model-a-header-for-types-inline-introduction-for-verbs)). But not every type a call needs is sitting on a value. A function that only *returns* a `T` — a zero-initialised buffer, an empty container, a `parse` that turns text into an `Int` — has no value argument carrying the type, so there is nothing for inference to read. With the turbofish gone, the caller had no channel left to name that type at all. That is not a small gap: without an answer, `zeros(Int, 1024)`, an empty `List(String)`, and `parse(Int, text)` would simply be unwritable, and the no-turbofish decision would have quietly amputated a whole class of APIs. So we needed a way for the caller to hand a type over directly.
 
@@ -95,7 +90,6 @@ This is what makes "no turbofish" affordable instead of crippling, and it is the
 ---
 
 ## Concept-typed literals must be wrapped at a call
-**Spec:** [`generics.md`](../spec/generics.md) §5.4
 
 `Vector(Int(2), Int(3))` is legal; `Vector(2, 3)` is not. A bare `2` carries the concept type `@concepts$Number`, not a concrete `Int` or `Float`, and the compiler will not guess, so a bare literal must not drive inference of a type parameter. This looks like an ad-hoc restriction until you read it through the value/type idea: inferring `T` means taking a value and reading its type. The type of `Int(3)` is the concrete `Int`, usable as `T`; the type of a bare `2` is the concept `@concepts$Number`, which is not a concrete type, so there is nothing to assign to `T`. The wrapping rule is not a special case — it is simply that the type read off the argument has to be concrete, and a bare literal's isn't. Letting the compiler pick a default concrete type instead, `2` quietly becoming `Int`, would bake a silent type choice into every generic call, exactly the kind of implicit decision the language avoids elsewhere.
 
@@ -104,23 +98,20 @@ The price is one explicit `Int(...)` wrap at each such call site — paid once, 
 ---
 
 ## Size is part of the type (`Array<T, n>`)
-**Spec:** [`generics.md`](../spec/generics.md) §7
 
 The tempting shortcut is to leave an array's size out of its type — the stack pointer is just a register, an array never resizes after construction, and C99 VLAs already do this for locals, so there is prior art for "a runtime-sized local is fine." We bake the size in anyway, because the real cost of a runtime-sized type is not stack allocation but the loss of uniform stride. If two values of one type can differ in size, then `arr[i]` can no longer be `base + i * stride` with a constant stride; embedding the type in a struct leaves the outer layout unknown; copying needs a runtime size query; and calling conventions, which assume fixed-size parameters, break. Worse, the break propagates — an array of variable-size structs loses uniform stride, a struct containing one loses it, and so on up every containment chain. So `Array<T, n>` is the mechanism that guarantees every value of a given type is the same number of bytes, and that guarantee is precisely what makes indexing, copying, embedding, and calling cheap. It is the clearest case in the whole language of the general bargain: a high-level convenience is forbidden so that a low-level guarantee can hold, and the strictness is not a tax paid alongside the performance — it *is* the performance.
 
-This rule is cited from [`adt.md`](../spec/adt.md) §4, where a directly inline self-referential type would have infinite size, which uniform stride forbids, which is why recursive types must box through `&`. The one loose end it leaves is that two arrays of different lengths are different types, so arithmetic on the size in a type position (`Array<T, rows * cols>`) becomes a type-identity question — and that is deferred, below.
+This rule is cited from [`adt.md` §4](https://github.com/zane-lang/spec/blob/6dcc8cfeae291c122062513a31eeae3b74cdd721/spec/adt.md#4-recursion-and-storage), where a directly inline self-referential type would have infinite size, which uniform stride forbids, which is why recursive types must box through `&`. The one loose end it leaves is that two arrays of different lengths are different types, so arithmetic on the size in a type position (`Array<T, rows * cols>`) becomes a type-identity question — and that is deferred, below.
 
 ---
 
 ## `Array<T, n>` is the single storage primitive
-**Spec:** [`generics.md`](../spec/generics.md) §8
 
 One compiler-provided fixed-size base case — `n` contiguous `T` — keeps the compiler's layout responsibility minimal. Every other fixed-size container, vectors and matrices among them, is defined in terms of `Array` and needs no extra compiler support, and dynamic containers, when they are specified, will be separate runtime-managed wrappers over opaque storage rather than extensions of `Array`. Blessing several container primitives instead would hand the compiler more layout surface to own; one base case plus library composition is smaller, and more honest about what is actually primitive.
 
 ---
 
 ## Deferred: what the model promises but does not yet deliver
-**Spec:** [`generics.md`](../spec/generics.md) §9
 
 This is the honest record of the gaps. The "types are executed functions" framing is elegant, and part of that elegance is a promise the current spec does not fully keep, so it is worth naming what is still open.
 
@@ -128,4 +119,4 @@ The biggest is type-level arithmetic on number parameters, `Array<T, rows * cols
 
 Close behind is constraints on type parameters. `add(x T Type, y T Type)` silently assumes `T` supports `+`, but nothing yet lets an author require that `T` is addable, comparable, or printable, nor pins down how the compiler checks it. As specified the check is structural-at-instantiation, the way C++ templates worked before concepts, so a missing capability surfaces deep in the callee's body rather than at the signature. Bounded polymorphism is half of what makes generics usable in practice, and it is the most important thing to design next — most likely growing out of the concept machinery rather than a new sublanguage, since concepts are already how we type compile-time parameters.
 
-Two smaller gaps round it out. A generic function *value*, one polymorphic over its own type or number parameters, is unspecified; the open question there is runtime representation — monomorphization versus dictionary passing — which is a memory-model decision rather than an overload-resolution one, since a generic function type is still a unique parameter shape (see [`functions.md`](../spec/functions.md) §7.6). And phantom type parameters — an introduced parameter with no path from any value argument, receiver, or literal that fixes it — currently have no way to be supplied at all, which is the visible edge of the no-`<>`-at-calls decision above. Named lane access (`.x`/`.y`/`.z`/`.w`) and element-access bounds-checking are also deferred, but on their own merits, not for any reason rooted in the model.
+Two smaller gaps round it out. A generic function *value*, one polymorphic over its own type or number parameters, is unspecified; the open question there is runtime representation — monomorphization versus dictionary passing — which is a memory-model decision rather than an overload-resolution one, since a generic function type is still a unique parameter shape (see [`functions.md` §7.6](https://github.com/zane-lang/spec/blob/6dcc8cfeae291c122062513a31eeae3b74cdd721/spec/functions.md#76-generics-are-orthogonal-to-overloading-for-function-values)). And phantom type parameters — an introduced parameter with no path from any value argument, receiver, or literal that fixes it — currently have no way to be supplied at all, which is the visible edge of the no-`<>`-at-calls decision above. Named lane access (`.x`/`.y`/`.z`/`.w`) and element-access bounds-checking are also deferred, but on their own merits, not for any reason rooted in the model.

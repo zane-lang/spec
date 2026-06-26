@@ -4,7 +4,7 @@ This document states the few ideas the rest of the specification rests on. Every
 
 > **See also:** [`lexical.md`](lexical.md) §3 for the casing rule. [`generics.md`](generics.md) §2 and §7 for types-as-functions and uniform stride. [`memory.md`](memory.md) §3 for layout. [`effects.md`](effects.md) for how the strictness is enforced.
 
-> **Rationale:** [`rationale/foundations.md`](../rationale/foundations.md) tells the story behind these commitments — the bets they represent and the costs they accept.
+> **Story:** [`stories/foundations.md`](../stories/foundations.md) tells the story behind these commitments — the bets they represent and the costs they accept.
 
 ---
 
@@ -26,7 +26,7 @@ Zane source is meant to read as a captured *idea* — the shape of a program's a
 
 The high level is not in tension with performance. Because the source carries *intent* rather than *mechanism*, the compiler is left with more freedom to choose the mechanism — provided the intent was expressed well. Expressing it well is not optional; the language's rules (the rest of this document) force enough structure that the captured intent is unambiguous. A well-expressed Zane program is therefore both easier to read and easier to compile to fast code, for the same reason: nothing important was left implicit.
 
-This framing recurs throughout the spec. The two parallel document sets — `spec/` for *what* and `rationale/` for *why* — are the same idea at the level of the specification itself: capture the definition and the intent behind it, separately and explicitly.
+This framing recurs throughout the spec. The two parallel document sets — `spec/` for *what* and `stories/` for *why* — are the same idea at the level of the specification itself: capture the definition and the intent behind it, separately and explicitly.
 
 ---
 
@@ -40,7 +40,7 @@ Three consequences that other documents depend on:
 - **`<>` and `()` are different mechanisms, not two call syntaxes.** `<>` is a type expression, resolved in the earlier (type) stage; `()` is a construction or call, resolved in the later (value) stage. They live in different stages, which is why a call never carries a `<>` list. See [`generics.md`](generics.md) §4–§5.
 - **A value passed at compile time is just an argument.** A type or compile-time number handed to a constructor is an ordinary value the body can use, because the stage that runs the type has those values in hand. See [`generics.md`](generics.md) §5.3.
 
-> **Rationale:** [`rationale/generics.md`](../rationale/generics.md#types-are-templated-functions) — "Types are templated functions" records why staging was chosen over a bolt-on generics sublanguage, and where the model promises more than it currently delivers.
+> **Story:** [`stories/generics.md`](../stories/generics.md#types-are-templated-functions) — "Types are templated functions" records why staging was chosen over a bolt-on generics sublanguage, and where the model promises more than it currently delivers.
 
 ---
 
@@ -54,7 +54,7 @@ This is a foundation, not a style convention, because the whole surface grammar 
 - A parameter needs no sigil. A bare `T` is a type and a bare `n` is a number, so a reference carries its kind without decoration. See [`generics.md`](generics.md) §3.
 - The reader gets the same information the parser does: kind is visible at every use site, everywhere, for free.
 
-The cost — that case is not a free naming choice — is accepted deliberately; see the rationale.
+The cost — that case is not a free naming choice — is accepted deliberately; see the story.
 
 ---
 
@@ -78,7 +78,7 @@ High-level expression, on its own, usually costs speed. What buys it back is tha
 
 So the rules should not be read as a usability tax levied next to the performance. They are the bargain itself: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
 
-> **Rationale:** [`rationale/foundations.md`](../rationale/foundations.md#strictness-is-the-performance-model) — "Strictness is the performance model" weighs this bet against the permissive alternative and records its real ergonomic cost.
+> **Story:** [`stories/foundations.md`](../stories/foundations.md#strictness-is-the-performance-model) — "Strictness is the performance model" weighs this bet against the permissive alternative and records its real ergonomic cost.
 
 ---
 

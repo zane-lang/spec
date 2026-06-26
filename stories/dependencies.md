@@ -1,11 +1,10 @@
-# Rationale: Dependency Management
+# Stories: Dependency Management
 
-> **See also:** [`spec/dependencies.md`](../spec/dependencies.md) for the rules these stories explain.
+> **See also:** [`spec/dependencies.md`](../spec/dependencies.md) — the rules these chapters explain.
 
 ---
 
 ## A URL is the identity; the key is only a local nickname
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §1, §2.2
 
 The first fork in any dependency system is what a package *is*. The mainstream answer is a central registry: a package is a short global name — `lodash`, `serde`, `requests` — that the registry maps to code. We could have built that, and it buys real things: memorable names, a single place to search, a curated namespace. We turned it down anyway, because a registry is a name authority, and a name authority is a single point of control, failure, and dispute. Someone has to own the mapping from `math` to a repository, adjudicate who gets the name `http`, keep the index alive for the life of the language, and be trusted not to repoint a name at hostile code. Every registry ecosystem eventually fights typosquatting, name-squatting, and the day the index goes down. None of that is essential to *fetching code*; it is essential only to the short-name convenience the registry exists to sell.
 
@@ -16,7 +15,6 @@ The price is paid in two coins, and they are real. First, there are no short nam
 ---
 
 ## Two files: stated intent and verified resolution
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §2
 
 Given URL identity, a project still has to record two quite different things: what the human *asked for*, and what that request actually *resolved to*. The lazy design folds them into one file — a single manifest holding key, URL, version, and commit hash all together. We split them into `zane.coda` (intent) and `zane-versions.coda` (resolution) instead, and the split is not bookkeeping fussiness; it tracks a difference in audience and lifecycle.
 
@@ -27,7 +25,6 @@ The cost of two files is that they can drift out of sync — a key in one and no
 ---
 
 ## Libraries ship their compiled objects in the repository
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §3, §5, §12
 
 How does a dependency arrive as something linkable? Three roads. Distribute source and compile it on the consumer's machine, the way Cargo does. Distribute prebuilt binaries as release assets attached out-of-band to a tag, the way GitHub Releases and most C package managers do. Or commit the prebuilt object files into the repository tree itself, beside the source. Zane takes the third, and it is the most unusual choice in the document, so it is worth being honest about why and about what it costs.
 
@@ -38,7 +35,6 @@ The costs are not small and we do not pretend otherwise. Repositories carry comp
 ---
 
 ## Pulling a version means rewriting its symbols
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §6
 
 Two parts of one program will sometimes need two different versions of the same library — your direct dependency on `math v6` and some transitive dependency's pin to `math v5`. A linker cannot hold two symbols both named `math$vec`; one definition wins and the other's callers are silently mislinked. The classic answers are all unhappy: force the whole graph onto one version (a solver, with the diamond-dependency conflicts that make `npm` and `pip` painful), or make authors bake a version number into every public name by hand (`math_v6_vec`), which pushes versioning into source and makes every API rename a version bump.
 
@@ -51,7 +47,6 @@ The cost of the whole approach is a rewrite step with state: there is now a dist
 ---
 
 ## A tag for humans, a commit for the machine; a moved tag is an attack
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §4
 
 A version pin has to satisfy two readers who want opposite things. Humans want a tag — `v6.2.9` is meaningful, orderable, the thing a changelog talks about. Reproducibility wants a commit hash — immutable, content-addressed, immune to a tag being repointed. Pin only by tag and your build is at the mercy of whoever can move the tag; pin only by commit and the manifest becomes an unreadable wall of hashes nobody can review. Semver *ranges*, the npm/Cargo default, fail the reproducibility test outright: `^6.2.0` resolves to different code on different days, which is the opposite of what a build that has to be bit-reproducible can accept.
 
@@ -62,7 +57,6 @@ The cost is friction in the one case where a tag legitimately moves and the user
 ---
 
 ## Opt-in remapping: the author states facts, the consumer takes the risk
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §15
 
 Side-by-side coexistence ([the symbol-rewriting story](#pulling-a-version-means-rewriting-its-symbols)) is safe and simple, but it has a cost that grows with the dependency graph: a program that pulls `math` at `v6.2.9`, `v6.3.1`, and `v6.3.4` through three different paths links three nearly-identical copies of `math` into the binary, even though for most libraries those three are perfectly interchangeable. We wanted a way to collapse that waste — *without* reintroducing the version solver we had just spent the coexistence design avoiding, and without ever silently picking a version that turns out to be incompatible. That tension is the whole story.
 
@@ -77,7 +71,6 @@ The cost is the one the whole design is organized around and cannot remove, only
 ---
 
 ## The toolchain rides one tag; the standard library does not
-**Spec:** [`dependencies.md`](../spec/dependencies.md) §14
 
 A language has to say how the compiler and its core library are versioned together, and there is a tempting "everything is a package" purity that says the compiler, the core runtime, and the whole standard library should each be independently versioned dependencies. We took a deliberately impure middle line: the compiler and the `core` package are released *together* under a single `zane-version` tag, while everything else in the standard library — `std` and friends — is an ordinary package versioned like any third-party dependency.
 
