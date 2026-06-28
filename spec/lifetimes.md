@@ -22,6 +22,8 @@ r &Node = outer
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
+
 ### 1.2 Move-sources are owning symbols or owned verb results
 A move-source must denote an **owned value the expression is entitled to consume**. Two forms qualify:
 
@@ -47,6 +49,8 @@ garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
 ```
 
 This rule keeps containers stable ownership subtrees. Once a value is owned by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. An owned verb result is exempt from the access-path restriction because it is owned by no one until the move binds it.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-may-be-moved-keeping-ownership-subtrees-whole) — "What may be moved: keeping ownership subtrees whole".
 
 ### 1.3 Moves are restricted to the declaration block
 A direct owning symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Owning parameters are treated as declared at the top of the function body block.
@@ -79,6 +83,8 @@ Void loadCar(this Boat, car Car) mut {
 This restriction prevents conditional moves and flow-dependent ownership changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
 
 The restriction applies only to symbol move-sources. An owned verb result (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses) — "The declaration-block rule, and the flow analysis it refuses".
 
 ### 1.4 Destination scope must contain or match source scope
 A value may move into a new owner only when the destination owner is declared in the same or a higher lexical scope than the source owner.
@@ -113,6 +119,8 @@ truck Truck(engine)      // ILLEGAL: engine is an `&`, not a move-source
 
 This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `&`. Zane therefore has no user-visible use-after-move error class for reads.
 
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#downgrade-not-poison-why-there-is-no-use-after-move-read) — "Downgrade, not poison: why there is no use-after-move-read".
+
 An owned verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
 ### 1.7 Returned `&` values must be rooted in a parameter
@@ -128,6 +136,8 @@ A function may return an `&T` only when the returned reference is rooted in one 
     return value   // ILLEGAL: returned `&` is not rooted in a parameter
 }
 ```
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 
 ---
 
