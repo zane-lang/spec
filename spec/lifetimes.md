@@ -170,21 +170,7 @@ Because scope rules (§1.1) prevent refs from outliving their owners, the runtim
 
 ---
 
-## 4. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Move-sources are owning symbols or owned verb results | A symbol and a fresh verb result are each owned by no other object, so consuming either cannot re-parent an existing ownership subtree. Fields and container elements stay non-movable, keeping containers stable and ownership predictable. |
-| Refs are never move-sources | Refs are non-owning aliases. Allowing moves from refs would enable re-parenting through alias paths and break the owner-uniqueness property. |
-| Moves restricted to declaration block | Prevents conditional moves and flow-dependent ownership changes. A symbol's ownership transfer happens at most once, in a predictable location. This eliminates the need for flow-sensitive "maybe moved" analysis. |
-| Moved symbols downgrade to refs | Moved-from symbols remain usable for reads through anchor-based ref downgrade. This preserves ergonomics while preventing double-moves and re-parenting. |
-| Lexical scope rules | A simple same-or-higher-scope rule is easy to implement and explain. |
-| Callee-decides moves with caller downgrade | Preserves ownership while avoiding Rust-style use-after-move friction. |
-| Water-tower destruction | Extends the same ownership model into concurrent execution without adding GC or async lifetimes. |
-
----
-
-## 5. Summary
+## 4. Summary
 
 | Concept | Rule |
 |---|---|

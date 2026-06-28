@@ -148,17 +148,3 @@ Two `mut` calls on different receiver instances may run in parallel. Two `mut` c
 | Pure | ❌ | ❌ | ❌ | ❌ |
 | Read-Only Impure | ✅ | ❌ | ❌ | ❌ |
 | Write Impure | ⚠️ may | ✅ possible | ⚠️ may | ❌ |
-
----
-
-## 10. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Single user-facing effect modifier | Keeps the language small while still making mutation explicit. |
-| Structural inference instead of effect annotations | Lets the compiler derive power from ownership and call structure without burdening signatures. |
-| Distinguish Total Pure from Pure | Enables safe compile-time evaluation without assuming termination. |
-| Allocation alone is not a side effect | Constructing and destroying ordinary objects should not force otherwise pure code into an impure tier. |
-| Capabilities are explicit objects | Prevents hidden ambient effects and keeps dependency flow visible. |
-| `mut` is receiver-scoped | Aligns mutation permissions with ownership rather than arbitrary parameter aliasing. |
-| `&` differs only at storage sites | Non-owning links should not create a separate use-site effect rule from direct owners. |
