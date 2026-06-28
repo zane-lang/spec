@@ -30,26 +30,21 @@ There is a quieter companion to this bet, and it points the other way. Strictnes
 
 That preference rests on a claim worth making explicit, because it is the reason the readable rule and the checkable rule so rarely pull apart. The claim is a rough symmetry between two kinds of certainty. **If the compiler has to do hard work to verify something statically, a programmer reading the code almost certainly cannot quickly verify it either** — the analysis is heavy precisely because the property is non-local, conditional, or flow-dependent, and those are exactly the things a human eye cannot settle at a glance. The symmetry runs the other way too, and that direction is the useful one: **when a programmer can be 100% certain, just by reading, that something holds, the compiler can almost always be made to verify the same thing mechanically** — because the property obvious to a reader is obvious for being local and structural, and local structural facts are what a checker confirms cheaply. So a rule a human can verify by reading is not a concession to the human paid for at the compiler's expense; it is a win for both at once. It is why Zane reaches, wherever it can, for rules of that shape — lexical scope being the running example: a reader confirms an owner outlives a ref by *seeing* one declaration nested inside another, and the compiler confirms it the very same way.
 
-There is exactly one place the symmetry breaks, and the language is built around respecting it: **names are not enforced.** A reader leans on a name to know what a thing does — `isValid`, `+`, `users.len()` — and the compiler checks none of that meaning. A name is therefore the single channel where human certainty and machine certainty come apart: a reader can be sure of something the compiler never examined, and a definition can betray a name the compiler happily accepts. Rust shows the gap cleanly. A call site reads with total confidence:
+There is one place the two certainties come apart, and it is the place Zane works hardest to stay out of: **flow-dependent reasoning.** A compiler can hold every branch of a program in mind at once — at each point it knows the full set of paths that could have reached it. A reader cannot; a reader follows the code roughly as it runs, one plausible path at a time, and leans on surface cues — names, reading order — for the rest. So the moment correctness depends on *which branches ran*, the compiler stays certain while the human is guessing. Rust's borrow checker lives in exactly that territory. Take a conditional move:
 
 ```rust
-let total = cart_total + shipping;   // obviously a sum
-```
+let report = build_report();
 
-Nothing on that line is ambiguous to a human: `+` means addition. But the operator is just a method call, and its definition is free to mean anything at all:
-
-```rust
-impl Add<Money> for Money {
-    type Output = Money;
-    fn add(self, rhs: Money) -> Money {
-        Money(self.0 - rhs.0)        // it subtracts
-    }
+if urgent {
+    send(report);          // moved into `send` — but only on this branch
 }
+
+archive(report);           // ERROR: `report` may already have been moved
 ```
 
-The program is perfectly type-correct, so the compiler raises nothing; the reader's confidence at the call site was simply *misplaced*, and the only way they catch it is to stop trusting the name and reach for tooling — go-to-definition — to read the body. That is the symmetry's blind spot exactly: the one thing the reader was most sure of is the one thing the machine never checked, because it lived in a name rather than in structure.
+Read top to bottom it tells a coherent story — build a report, send it if it is urgent, archive it — and a reader leaning on the method names, `send` and `archive` both sounding harmless, has no reason to doubt it. But `send` takes its argument by value, so the branch moves `report` away, and at `archive` the value is only *maybe* still there. The borrow checker considers both paths and rejects the program; the reader, having followed one, did not see it coming. The fact that settles correctness — does `report` survive to `archive`? — lives in the branch structure and the by-value signature, not in anything the names promise, and it is exactly the kind of multi-path fact a compiler confirms easily and a human confirms badly. This is the symmetry's first half in the wild: the compiler is doing work the reader cannot follow, so the two have stopped checking the same thing — and a reader who fills the gap by trusting the names is trusting the one channel that carries no guarantee.
 
-This is why Zane pushes as much meaning as it can out of names and into *structure* that a reader and the compiler read identically — case decides kind, scope decides lifetime, the signature decides moves. Everywhere the language can encode a fact structurally instead of nominally, it does, so that the reader's certainty and the compiler's certainty are about the *same* artifact, and the gap the operator example falls into never opens. Names remain — they have to — but they are treated as the one trust-only channel, not as a place to hang a guarantee.
+Zane declines to enter that territory at all. A value may be moved only in its declaration block, as straight-line code ([the declaration-block rule](lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses)), so a conditional move simply cannot be written. The effect is that the load-bearing fact is never flow-dependent: there is exactly one place `report` could be consumed, it is in plain sight, and the reader sees precisely what the compiler sees. The cost is real, and the lifetimes story owns it — programs that lean on conditional moves in Rust must be restructured in Zane — but the payoff is that the reader's glance and the compiler's proof are about the same artifact again. Where Rust buys expressiveness by letting the checker reason across control flow the reader cannot, Zane buys legibility by forbidding the cases where that reasoning would be needed.
 
 ## A foundations doc, apart from its philosophy
 
