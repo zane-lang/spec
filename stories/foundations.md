@@ -26,6 +26,31 @@ This is the language's steepest cost. Mandatory strictness means a higher learni
 
 There is a quieter companion to this bet, and it points the other way. Strictness forbids conveniences to *buy* performance; but Zane also prizes simplicity and readability for their own sake, and where a simpler, more readable rule can be had *without surrendering* performance, it is preferred even over a more powerful one. Lifetimes are the clearest case. A maximally expressive system would track references with a lifetime vocabulary and borrow inference, the way Rust does, and accept more programs for it; Zane instead checks reference safety with nothing but lexical declaration scope — a rule a reader can run in their head, conservative by design, that gives up some safe programs but costs no performance, since deterministic destruction needs no collector and no annotations to enforce. That the readable rule and the fast language coincide there is not luck; it is the captured-intent wager again, that high level and fast are consequences of the same thing, this time spent on lifetimes rather than on the optimizer. The full working-out — why annotations were refused and how scope alone carries the weight — is the [lifetimes story](lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker); it is a direct result of this principle, not a separate idea.
 
+## The verifiability symmetry, and the one gap in it
+
+That preference rests on a claim worth making explicit, because it is the reason the readable rule and the checkable rule so rarely pull apart. The claim is a rough symmetry between two kinds of certainty. **If the compiler has to do hard work to verify something statically, a programmer reading the code almost certainly cannot quickly verify it either** — the analysis is heavy precisely because the property is non-local, conditional, or flow-dependent, and those are exactly the things a human eye cannot settle at a glance. The symmetry runs the other way too, and that direction is the useful one: **when a programmer can be 100% certain, just by reading, that something holds, the compiler can almost always be made to verify the same thing mechanically** — because the property obvious to a reader is obvious for being local and structural, and local structural facts are what a checker confirms cheaply. So a rule a human can verify by reading is not a concession to the human paid for at the compiler's expense; it is a win for both at once. It is why Zane reaches, wherever it can, for rules of that shape — lexical scope being the running example: a reader confirms an owner outlives a ref by *seeing* one declaration nested inside another, and the compiler confirms it the very same way.
+
+There is exactly one place the symmetry breaks, and the language is built around respecting it: **names are not enforced.** A reader leans on a name to know what a thing does — `isValid`, `+`, `users.len()` — and the compiler checks none of that meaning. A name is therefore the single channel where human certainty and machine certainty come apart: a reader can be sure of something the compiler never examined, and a definition can betray a name the compiler happily accepts. Rust shows the gap cleanly. A call site reads with total confidence:
+
+```rust
+let total = cart_total + shipping;   // obviously a sum
+```
+
+Nothing on that line is ambiguous to a human: `+` means addition. But the operator is just a method call, and its definition is free to mean anything at all:
+
+```rust
+impl Add<Money> for Money {
+    type Output = Money;
+    fn add(self, rhs: Money) -> Money {
+        Money(self.0 - rhs.0)        // it subtracts
+    }
+}
+```
+
+The program is perfectly type-correct, so the compiler raises nothing; the reader's confidence at the call site was simply *misplaced*, and the only way they catch it is to stop trusting the name and reach for tooling — go-to-definition — to read the body. That is the symmetry's blind spot exactly: the one thing the reader was most sure of is the one thing the machine never checked, because it lived in a name rather than in structure.
+
+This is why Zane pushes as much meaning as it can out of names and into *structure* that a reader and the compiler read identically — case decides kind, scope decides lifetime, the signature decides moves. Everywhere the language can encode a fact structurally instead of nominally, it does, so that the reader's certainty and the compiler's certainty are about the *same* artifact, and the gap the operator example falls into never opens. Names remain — they have to — but they are treated as the one trust-only channel, not as a place to hang a guarantee.
+
 ## A foundations doc, apart from its philosophy
 
 One last decision is this file's own existence. The cross-cutting "why" of the language could have lived in one essay, mixing the model with the argument for it. We split it instead: the model — staging, casing, fixed layout, the strictness principle — is normative and lives in `spec/foundations.md`, because topic docs cite it as ground truth; the bets and costs, this file, are story material, because they are opinion, history, and honestly-stated downside. Folding both into a single `philosophy.md` would have mixed normative grounding that other docs must reference as fact with editorial argument that should be free to be revised and second-guessed — the exact what/why blend the spec/stories split exists to prevent. The price is that a reader after the big picture now has two files instead of one, mitigated by the cross-links: the spec doc states each commitment and points here for the argument. We accept the extra hop for the same reason the whole split exists — a definition and the debate behind it have different lifecycles and should not share a page.
