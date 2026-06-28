@@ -62,7 +62,7 @@ A good chapter tends to move through four things — but as *prose*, never as la
 - **The situation.** What pressure forced a choice here at all — the cause. A chapter that records no real pressure is probably not a chapter; it is a rule, and the spec already has it.
 - **The roads not taken.** The alternatives, and why each lost. This is the highest-value part — it is precisely what a spec cannot hold — so do not skip it, but tell it in sentences ("We could have done X, the way C++ does, but…"), not as a bulleted list of rejects.
 - **The resolution.** What was decided, and the reasoning that settled it.
-- **The cost.** What the decision makes worse, what it defers, what it leaves open. An honest chapter always reaches this; a chapter that only lists upsides is incomplete, and the cost is the part later readers will most want to have been told.
+- **The cost.** What the decision makes worse, what it defers, what it leaves open. Where a decision carries a real cost, naming it is the most valuable thing a chapter can do — it is the part later readers will most want to have been told, and a chapter that lists only upsides usually means the cost went unexamined, not that there wasn't one. But this is a strong recommendation, not a requirement: do not invent or inflate a downside just to have one. If, after genuinely looking, the honest account is that the decision cost little or nothing, say that plainly rather than manufacturing a drawback the spec does not bear out.
 
 Let the length flex with the episode: a minor turn is a paragraph, a foundational one runs to pages.
 
@@ -126,7 +126,7 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 
 - **First person and judgement are welcome.** "We rejected X because…", "the elegant framing oversells this" — a stories doc is where opinion and honest doubt belong. The spec stays neutral; the story need not.
 - **Long-form prose is the point.** The spec keeps sentences short and clipped; a story can breathe, run longer sentences, and carry a narrative thread within and across chapters. Readability as a history matters more than terse rule-statement here.
-- **Be honest about costs.** The reason anyone will trust the record later is that it admits what the decision gave up.
+- **Be honest about costs.** The reason anyone will trust the record later is that it admits what the decision gave up. Honesty cuts both ways, though: where a decision genuinely cost little, saying so is more trustworthy than inventing a drawback to look balanced (§3).
 
 ---
 
