@@ -15,6 +15,8 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`Compiler-inferred effect levels`.** The compiler classifies code by what state it can read or write.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored.
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
+
 ---
 
 ## 2. Core Definitions
@@ -34,6 +36,8 @@ A capability is an object whose methods model access to external state, such as 
 ### 2.4 Parameters are not mutable by default
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#where-mutation-is-allowed-to-reach) — "Where mutation is allowed to reach".
+
 ---
 
 ## 3. Inferred Effect Levels
@@ -51,6 +55,8 @@ Read-Only Impure functions read capability-backed state but do not write.
 
 ### 3.4 Level 4 — Write Impure
 Write Impure functions mutate `this`, mutate capability-backed state, or otherwise perform externally observable writes.
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#four-levels-and-the-line-between-terminating-and-merely-pure) — "Four levels, and the line between terminating and merely pure".
 
 ---
 
@@ -81,6 +87,8 @@ A function does not leave the pure levels merely because it reads through an `&`
 ### 5.4 Unknown callees are conservatively classified
 If the compiler cannot prove the effect behavior of a callee, it must treat the call as requiring the strongest effect level needed to preserve safety.
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
+
 ---
 
 ## 6. Capability Wiring and Explicit State Flow
@@ -100,6 +108,8 @@ A "context object" that groups several capabilities is just another ordinary obj
 ### 6.5 Prop drilling is intentional
 Passing capabilities through constructors and methods is part of the design. It keeps effects visible in object structure rather than hidden in ambient module state.
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#no-ambient-io-effects-you-can-see-in-the-structure) — "No ambient I/O: effects you can see in the structure".
+
 ---
 
 ## 7. Constructors, Allocation, and Abortability
@@ -112,6 +122,8 @@ Heap allocation and destruction are runtime implementation events, but they are 
 
 ### 7.3 Abortability is orthogonal
 A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#what-deliberately-is-not-an-effect) — "What deliberately is not an effect".
 
 ---
 
