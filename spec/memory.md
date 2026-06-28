@@ -395,4 +395,4 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 | Backpointer | Each referenced owner stores its own `u32` slot index for move updates and ref minting |
 | Anchor lifecycle | Lazily allocated on first ref; freed to a cell-threaded free list on destruction |
 
-> **See also:** [`lifetimes.md`](lifetimes.md) §5 for the summary of scope, move, and destruction rules.
+> **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.
