@@ -327,9 +327,3 @@ Because libraries ship prebuilt object files (§3, §6), remapping rewrites a ca
 
 ### 15.6 Mechanism reuses pull-time rewriting
 Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-versions.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%math$vec → v6.3.4%math$vec` — onto the chosen version.
-
----
-
-## 16. Design Rationale
-
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md) tells the story behind these rules — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting and the separator saga, tag/commit pinning, and the opt-in remapping model with its author/consumer split.
