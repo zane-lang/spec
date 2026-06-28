@@ -174,6 +174,8 @@ Each `/` in the resulting URL then produces a new subdirectory level, so both `h
 
 The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#one-cache-many-spellings-of-one-url) — "One cache, many spellings of one URL" explains why one URL identity is mirrored into a browsable path, why the HTTPS and SSH spellings normalize together, and why unsafe characters are rejected rather than escaped.
+
 A fully expanded cache path for the `math` example therefore looks like:
 
 ```zane
@@ -220,6 +222,8 @@ The compiler **MUST** detect and reject cyclic package dependencies at build tim
 Within a single package, source files may freely reference each other's declarations. A package is compiled as one unit, so mutual references among declarations in the same package are legal and do not constitute a cycle.
 
 The acyclicity requirement applies only to the package-level dependency graph, not to intra-package references.
+
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#no-cycles-between-packages-every-freedom-within-one) — "No cycles between packages, every freedom within one" explains why cross-package cycles are rejected rather than resolved, and why intra-package mutual reference is left untouched.
 
 ---
 
