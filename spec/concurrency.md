@@ -49,6 +49,8 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 
 `auto` maps to hardware concurrency at startup. The thread count is fixed for a program’s lifetime unless the standard library exposes a dedicated, explicitly documented runtime override.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
+
 ---
 
 ## 3. `spawn` and Explicit Concurrency
@@ -97,6 +99,8 @@ Independent work may still be parallelized only when doing so preserves those so
 ### 3.7 No serial-equivalence guarantee
 `spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#spawn-and-why-it-marks-only-a-call) — "`spawn`, and why it marks only a call".
+
 ---
 
 ## 4. Safety Rules Under Concurrency
@@ -107,6 +111,8 @@ A scope does not complete until all `spawn`ed calls inside it have completed. Ow
 The analogy is a vertical water tower with water at the top and one horizontal plate for each still-running spawned call in that scope. The water cannot fall past a plate that is still in place, so destruction cannot pass that still-live concurrent work either.
 
 Each time one spawned call finishes, one plate is removed. The water level drops to the next remaining plate. Only when the last plate is gone does the water reach the bottom of the tower. That moment is when the scope drains and ordinary destruction runs.
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-water-tower-lifetimes-that-survive-the-spawn) — "The water tower: lifetimes that survive the spawn".
 
 ### 4.2 Single-writer rule for object mutation
 For any object, at most one concurrent `mut` accessor is allowed. Two `spawn`ed calls that both require `mut` access to the same object are a compile-time error.
@@ -123,6 +129,8 @@ The compiler enforces this from effect signatures; the programmer does not add l
 ### 4.4 Refs passed to spawned work remain independent
 When an `&` value is passed to a spawned call, the callee receives its own `&` value to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the `&` value already held by spawned work.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
+
 ---
 
 ## 5. Concurrency Boundaries
@@ -130,35 +138,26 @@ When an `&` value is passed to a spawned call, the callee receives its own `&` v
 ### 5.1 No cancellation or shutdown ordering
 The language does not provide cancellation, kill groups, or shutdown ordering. A spawned function runs until it returns or the process is terminated externally.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
+
 ### 5.2 Lambdas do not capture
 Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and single-writer verification tractable.
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
 ### 5.3 No `async`/`await` syntax
 Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism. This avoids function coloring: a function does not become a different kind of thing merely because some caller chooses to run it concurrently.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
+
 ### 5.4 No language-level process or channel abstraction
 Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function calls plus explicit state flow governed by ownership and effect rules.
 
----
-
-## 6. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Separate parallelism from concurrency | Parallelism must be unobservable; concurrency changes program meaning and must be explicit. |
-| No `async`/`await` function coloring | Whether work runs concurrently is a call-site choice, not a permanent property of a function definition. |
-| `spawn` on function calls only | Keeps conflict detection purely signature-based and statically decidable. |
-| Park stalled spawned work | Lets long-waiting calls coexist with a bounded worker pool without tying up OS threads unnecessarily. |
-| Water-tower lifetimes | Extends safe lifetimes into concurrent work without GC. |
-| Spawned values block on read | Makes data dependencies explicit at the point of use. |
-| Abortable spawns are handled at the spawn site | Keeps `spawn` in the same mandatory-handling model as ordinary calls. |
-| No cancellation/shutdown | Avoids hidden control flow; responsibility stays with the programmer. |
-| No lambda capture | Prevents hidden dependencies that would undermine effect analysis. |
-| No language-level process grouping | Keeps the concurrency core minimal and leaves orchestration to ordinary program structure. |
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
 ---
 
-## 7. Summary
+## 6. Summary
 
 | Concept | Rule |
 |---|---|

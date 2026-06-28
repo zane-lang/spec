@@ -66,6 +66,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, and the rooted-ref rules |
 | [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md) — lexical scope in place of a borrow checker, what may be moved, the declaration-block rule that kills flow analysis, downgrade instead of use-after-move, and parameter-rooted returned refs |
 | [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md) — inferring effects instead of annotating them, receiver-scoped `mut`, capabilities in place of ambient I/O, the four-level ladder and the Total-Pure/Pure split, and what deliberately is not an effect |
+| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based single-writer safety without locks, and what the core deliberately leaves out |
 
 ## Contributing
 
