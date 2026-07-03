@@ -57,7 +57,7 @@ type Name = #struct {
 
 ### 1.4 Value-type bodies
 
-A value-type body (unmarked) declares a **value type** — copied, transitively value, no `&` or reference fields. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
+A value-type body (unmarked) declares a **value type** — copied, transitively value, no `&` or reference-type fields. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
 
 ```zane
 type Name = struct {

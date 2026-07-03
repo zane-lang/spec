@@ -115,7 +115,7 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-water-tower-lifetimes-that-survive-the-spawn) — "The water tower: lifetimes that survive the spawn".
 
 ### 4.2 Concurrent mutation requires a value-typed receiver
-A spawned call may **mutate** state only through a value-typed receiver. A spawned `mut` call whose receiver is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. The compiler therefore rules out an aliased data race from the receiver's *type* alone, with no whole-program alias analysis.
+A spawned call may **mutate** state only through a value-typed receiver. A spawned `mut` call whose receiver is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. The compiler therefore rules out an aliased data race from the receiver's *type* alone, with no whole-program alias analysis.
 
 A direct consequence is that reference types are never mutated by spawned work, so every concurrent **read** of the reference-typed object graph is safe by construction.
 

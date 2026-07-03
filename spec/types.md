@@ -11,7 +11,7 @@ This document specifies Zane's data types: value and reference types, the `#` mo
 Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
-- **`One kind axis`.** A type is a **value type** unless marked `#`, which makes it a **reference type**. `struct` is the value product; `#struct` is the reference product — identity-bearing, aliasable through `&`, and able to hold reference fields and recurse.
+- **`One kind axis`.** A type is a **value type** unless marked `#`, which makes it a **reference type**. `struct` is the value product; `#struct` is the reference product — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
@@ -23,7 +23,7 @@ Zane keeps data layout and construction separate from behavior.
 ### 2.1 The value/reference axis and the `#` modifier
 Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This axis is orthogonal to the *shape* of the body (a product `struct` or a sum `variant`, see §2.5). The value product is `struct`; the reference product is `#struct`. The `#` modifier composes with any type expression, including sum types (`#variant`, see [`adt.md`](adt.md) §3) and even primitives (`#Int`); each `#T` is a distinct reference type — a cell that holds a `T` and can be pointed at (see [`memory.md`](memory.md) §2).
 
-A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference field or an `&` (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
+A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
 ```zane
 package Graph
@@ -36,7 +36,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, may recurs
 ```
 
 ### 2.2 Value types are transitive and mutable in place
-A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference field or an `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no ownership or anchor bookkeeping.
+A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no ownership or anchor bookkeeping.
 
 A value is **mutable in place**: a `mut` method may write its fields, because the receiver is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
@@ -73,7 +73,7 @@ type Color = struct { r Int; g Int; b Int; }    // value product: has r and g an
 type Shape = variant { dot Dot; line Line; }      // value sum: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis and applies to both shapes: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value type — `struct` or `variant` — is transitively value and **MUST NOT** contain a reference field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference type — `#struct` or `#variant` — may hold reference and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across all four; the keyword picks product versus sum and the `#` picks value versus reference.
+The `#` modifier (§2.1) is the other axis and applies to both shapes: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value type — `struct` or `variant` — is transitively value and **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference type — `#struct` or `#variant` — may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across all four; the keyword picks product versus sum and the `#` picks value versus reference.
 
 > **See also:** [`adt.md`](adt.md) for the canonical rules on `variant`, `enum`, pattern matching, and enum maps. [`adt.md`](adt.md) §3 for the full struct-versus-variant symmetry.
 
@@ -464,7 +464,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 |---|---|
 | Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
 | One kind axis with the `#` modifier | Value versus reference is orthogonal to product versus sum, so one modifier (`#`) spans `struct`/`variant` rather than a separate keyword per combination. Reference types need identity for refs; value types are transitively value and copyable. |
-| Value types cannot contain reference or `&` fields | A value is copied inline; embedding an identity-bearing or ref-bearing field would silently duplicate ownership or anchor state. The restriction (checked transitively) is what keeps a value alias-free and safe to snapshot. |
+| Value types cannot contain reference-type or `&` fields | A value is copied inline; embedding an identity-bearing or ref-bearing field would silently duplicate ownership or anchor state. The restriction (checked transitively) is what keeps a value alias-free and safe to snapshot. |
 | Value types mutate in place through a borrowed receiver | A `mut` method borrows the caller's storage, so a value is mutated without the return-a-replacement dance and without gaining identity. |
 | Name-based field privacy | Privacy follows method receivers, not packages. A method declared in any package gets the same private-field access as one declared in the home package. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
@@ -488,8 +488,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
 | Value/reference axis | A type is a value type unless marked `#`; `#struct`/`#variant` are reference types (identity, `&`-aliasing, recursion); `struct`/`variant` are value types |
-| Value type | Copied on assignment; transitively value (no reference or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
-| Reference type (`#`) | Single ownership and stable identity; may hold reference and `&` fields; may recurse; placement is unobservable |
+| Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
+| Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |

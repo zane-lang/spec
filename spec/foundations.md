@@ -87,12 +87,12 @@ So the rules should not be read as a usability tax levied next to the performanc
 
 Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark composes with any type: `#struct`, `#variant`, and even `#Int` are reference types, each a cell that holds a value and can be pointed at.
 
-A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference field or an `&`. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference and `&` fields, and may recurse.
+A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
 Both kinds are mutated the same way — through a `mut` method whose receiver is a *borrow* of the caller's storage — so a value is mutable in place without gaining identity.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
-- **A value type is transitively value** (no reference or `&` field, anywhere downstream). This closed value world is owned by [`memory.md`](memory.md) §2.10.
+- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is owned by [`memory.md`](memory.md) §2.10.
 - **`&` rides on `#`.** A non-owning `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed receiver, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
