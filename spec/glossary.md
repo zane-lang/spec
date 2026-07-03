@@ -69,9 +69,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
-### 3.2 struct-downstream enforcement
-- **Meaning:** A struct may contain only primitives and other legal structs, never a class or `&` field anywhere downstream in nested struct fields.
-- **Why this name:** The rule is checked recursively through fields downstream from the outer struct, not just at the first field layer.
+### 3.2 value-downstream enforcement
+- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields.
+- **Why this name:** The rule is checked recursively through fields downstream from the outer value type, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
@@ -185,7 +185,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 stack-first placement
-- **Meaning:** A class instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
+- **Meaning:** A reference-type instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
 - **Why this name:** The stack is the default location a class instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
