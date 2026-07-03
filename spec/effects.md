@@ -133,7 +133,7 @@ A function's abort type and effect level are independent. An abortable function 
 Because they do not write mutable state, they can be reordered and parallelized subject to profitability heuristics.
 
 ### 8.2 Reads compose with concurrent mutation
-Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.3).
+Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
 
 ### 8.3 Concurrent mutation is governed by the spawn rules
 Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's receiver **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the receiver's type alone.

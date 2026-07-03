@@ -35,10 +35,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The term emphasizes that `guard` is about leaving the surrounding scope, not about starting a new control-flow block.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3
 
-### 2.4 single-writer rule
-- **Meaning:** At most one concurrent `mut` accessor may exist for the same object.
-- **Why this name:** The rule is easiest to remember as the requirement that concurrent writing has exactly one writer at a time.
-- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2
+### 2.4 value-typed mutation rule
+- **Meaning:** A spawned call may mutate only a value-typed receiver, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the receiver's type alone; concurrent reads take a coherent snapshot instead of serializing.
+- **Why this name:** Concurrent mutation is gated on the receiver being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
 
 ### 2.5 water-tower lifetimes
 - **Meaning:** Scope-owned objects stay alive until every `spawn`ed call in that scope has completed and the scope drains.
@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §7
 
 ### 3.21 member-versus-value delimiter
-- **Meaning:** `;` terminates every member of a `struct`/`class`/`variant` body and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
+- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
@@ -186,7 +186,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.25 stack-first placement
 - **Meaning:** A reference-type instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
-- **Why this name:** The stack is the default location a class instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
+- **Why this name:** The stack is the default location a reference-type instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker

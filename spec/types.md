@@ -150,7 +150,7 @@ This form is the canonical constructor syntax when the constructor parameters ma
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
 ```zane
-type Weapon = class {
+type Weapon = #struct {
     name String;
     fireRate Float;
     damage Float;
