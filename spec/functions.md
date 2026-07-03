@@ -49,18 +49,20 @@ A method without `mut` may read `this`, its parameters, and reachable read-only 
 ### 2.4 Mutating methods use `mut`
 A method marked `mut` may write to `this` and objects owned by `this`.
 
-The receiver of a `mut` method **MUST** be a class type. Struct receivers are value receivers, so their fields cannot be changed in place. Code that wants an updated struct returns a replacement value instead of mutating the original.
+The receiver of a `mut` method is a **borrow** of the caller's storage — the actual value, not a copy — so a write to `this` lands on the caller's object. This holds for both kinds. A reference-type receiver is mutated in place through its identity, as before. A **value-type** receiver is mutated in place too: the borrow gives the method the caller's slot, retiring the older pattern of returning a replacement value. Because the borrow is a scoped, non-escaping view, a value receiver keeps its value semantics — `this` may be read and written, but it cannot be stored as an `&` or returned as a new `&`, since a value type is not `&`-rootable (see [`memory.md`](memory.md) §2.4, §2.9).
 
 ```zane
-Void setScale(this Node, scale Float) mut {
+Void setScale(this Node, scale Float) mut {   // reference receiver
     this.scale = scale
 }
 ```
 
 ```zane
-Vec2 setY(this Vec2, y Float) => Vec2(this.x, y)
+Void setY(this Vec2, y Float) mut {           // value receiver: in-place through the borrow
+    this.y = y
+}
 
-pos = pos:setY(Float(3))
+pos!setY(Float(3))
 ```
 
 ### 2.5 Call markers are part of the surface syntax
@@ -89,7 +91,7 @@ Explicit parameters other than `this` are read-only. Mutation of another object 
 A method parameter declared as `&T` requires the caller to supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 and permits the callee to store that argument into an `&` field. A parameter declared as plain `T` is value-only. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage.
 
 ```zane
-type Car = class {
+type Car = #struct {
     engine &Engine;
     _value Int;
 }
@@ -374,7 +376,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; receiver MUST be a class; may mutate `this` and its owned subtree |
+| `mut` method | Called with `!`; the receiver is a borrow of the caller's storage (value or reference type); may mutate `this` and its owned subtree in place |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
