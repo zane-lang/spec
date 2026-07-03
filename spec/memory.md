@@ -2,7 +2,7 @@
 
 This document specifies Zane's memory model: ownership, refs, anchors, and heap layout. Lexical lifetime rules, ownership moves, and deterministic destruction are specified in [`lifetimes.md`](lifetimes.md).
 
-> **See also:** [`lifetimes.md`](lifetimes.md) for scope rules, moves, and destruction. [`types.md`](types.md) §2 for classes and structs. [`effects.md`](effects.md) §2 for `mut`. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`syntax.md`](syntax.md) §1 and §2 for storage forms.
+> **See also:** [`lifetimes.md`](lifetimes.md) for scope rules, moves, and destruction. [`types.md`](types.md) §2 for value and reference types. [`effects.md`](effects.md) §2 for `mut`. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`syntax.md`](syntax.md) §1 and §2 for storage forms.
 
 ---
 
@@ -10,11 +10,12 @@ This document specifies Zane's memory model: ownership, refs, anchors, and heap 
 
 Zane eliminates dangling references by combining single ownership, lexical lifetime rules, and anchor-based tracking of non-owning references.
 
-- **`Overwritable owners`.** A class owner is directly initialized and may later be overwritten.
+- **`Overwritable owners`.** A reference-type owner is directly initialized and may later be overwritten.
+- **`Refs ride on reference types`.** An `&` is a non-owning handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored `&`.
 - **`Repointable refs`.** An `&` value is non-owning storage that can point at different owners over time.
 - **`Lexical lifetime enforcement`.** Ref assignment and ownership moves are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
 - **`Deterministic destruction`.** Objects are destroyed when their owning scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
-- **`Stack-first placement`.** A class instance lives on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap (see §3.5).
+- **`Stack-first placement`.** A reference-type instance lives on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap (see §3.5).
 - **`Index-form refs`.** An `&` value is a small integer index into a heap-resident anchor table, not a raw pointer (see §4.2).
 
 These rules fit together mechanically. Owners are the only storage that controls destruction. Refs may point only at existing places, never temporaries. Lexical scope checks ensure the owner outlives every ref derived from it. When ownership moves or an owner is overwritten, refs stay valid because they follow the owner/anchor path rather than a fixed object address.
@@ -25,11 +26,11 @@ These rules fit together mechanically. Owners are the only storage that controls
 
 ## 2. Ownership and Storage
 
-### 2.1 Every class instance has exactly one owner
-Every class instance is owned by exactly one symbol, field, or container slot at a time. Ownership is the default storage mode for class values.
+### 2.1 Every reference-type instance has exactly one owner
+Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md) §2.1) is owned by exactly one symbol, field, or container slot at a time. Ownership is the default storage mode for reference values.
 
-### 2.2 Class owners are overwritable after initialization
-Any owning storage position for a class instance—a symbol, field, or container slot—**MUST** be directly initialized, and **MAY** later be overwritten.
+### 2.2 Reference-type owners are overwritable after initialization
+Any owning storage position for a reference-type instance—a symbol, field, or container slot—**MUST** be directly initialized, and **MAY** later be overwritten.
 
 ```zane
 tank Tank(...)
@@ -44,21 +45,24 @@ Container overwrite therefore does not depend on whether the element slot stores
 owners Array<Node, 2> = [Node(), Node()]
 ```
 
-Rewriting `owners[1]` replaces the owned class instance in that slot. Refs to that slot observe the new value because refs follow the owner/anchor path, not the original object.
+Rewriting `owners[1]` replaces the owned reference-type instance in that slot. Refs to that slot observe the new value because refs follow the owner/anchor path, not the original object.
 
-### 2.3 Struct values are freely overwritable
-Structs are value types with no anchor and no heap identity. Reassigning a struct overwrites the storage slot directly.
+### 2.3 Value types are mutable in place and freely overwritable
+Value types have no anchor and no heap identity. A value is mutated in place through a `mut` method whose receiver is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale. Neither operation goes through the anchor system, because a value has no identity to track.
 
 ```zane
 pos Vec2(1, 2)
-pos = Vec2(3, 4) // ok
+pos!setX(Float(3)) // in-place field write through a borrow of pos
+pos = Vec2(3, 4)   // whole-slot overwrite
 ```
 
 ### 2.4 `&` is non-owning storage
-`&` creates non-owning storage. An `&` value may be declared as:
+`&` creates non-owning storage, and it references a **reference type** only: an `&T` requires `T` to be a `#`-marked type, because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving reference needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored `&`. Writing `&#Int` names a non-owning handle to a reference cell; a bare `&Int` over a value type is ill-formed.
+
+An `&` value may be declared as:
 
 - a local symbol
-- a class field
+- a reference-type field
 - an element type inside another storage type
 - a function or constructor parameter
 - a function return type
@@ -131,7 +135,7 @@ A parameter declared as `&T` requires the caller to supply a source that may cre
 A parameter declared as plain `T` is a **value-only binding**. The caller is not required to supply a place expression. A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage or returned as a new `&T`. Inside the callee body, a plain `T` parameter is not a place expression for `&`-binding purposes.
 
 ```zane
-type Car = class {
+type Car = #struct {
     engine &Engine;
     _value Int;
 }
@@ -157,12 +161,12 @@ Void consumeWrong(this Car, engine Engine) mut {
 
 This rule preserves uniform call syntax. The call site writes `consume(e)` or `inspect(e)` regardless of whether the parameter is `&`. The callee's signature determines whether an `&`-creating source is required from the caller.
 
-### 2.10 Struct-downstream enforcement (transitive struct field restrictions)
-Structs form a closed world of plain value storage. A struct field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other structs, but it **MUST NOT** contain a class or an `&`. This rule applies transitively: a struct containing another struct that eventually contains a class or `&` is also illegal.
+### 2.10 Value-downstream enforcement (transitive value-only field restriction)
+Value types form a closed world of plain value storage. A value-type field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other value types, but it **MUST NOT** contain a reference type (a `#`-marked type) or an `&`. This rule applies transitively: a value type containing another value type that eventually contains a reference or `&` field is also illegal. The same closure forbids a value type from recursing, since a self-reference would need indirection and indirection is a reference.
 
-Here, **downstream** means "through nested struct fields." The restriction is checked recursively through the full struct graph.
+Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-Structs are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a struct could contain a class field, copying the struct would silently duplicate ownership. If a struct could contain an `&`, copying the struct would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical and keeps ownership/ref bookkeeping confined to storage forms that participate in the memory model directly.
+Value types are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a value could contain a reference field, copying it would silently duplicate ownership. If a value could contain an `&`, copying it would silently duplicate non-owning tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical, keeps ownership/ref bookkeeping confined to reference types, and — because nothing reachable from a value can be aliased — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
 
 ```zane
 type Vec2 = struct {
@@ -176,11 +180,11 @@ type Rect = struct {
 }
 
 type BadOwner = struct {
-    engine Engine;      // ILLEGAL: class field inside a struct
+    engine Engine;      // ILLEGAL: reference-type field inside a value type
 }
 
 type BadRef = struct {
-    target &Engine;  // ILLEGAL: `&` field inside a struct
+    target &Engine;  // ILLEGAL: `&` field inside a value type
 }
 ```
 
@@ -230,29 +234,29 @@ Heap allocations reuse previously freed slots by exact rounded size:
 
 This keeps allocation and free O(1) and avoids coalescing logic.
 
-### 3.3 Struct and class layout follow declaration order
-Fields are laid out in declaration order. Structs are stored inline. A class instance has stable identity and carries one `u32` backpointer field of anchor metadata (§4.2) that stays `0` until the instance is first referenced. Placement of a class instance — stack or heap — is covered in §3.5.
+### 3.3 Value and reference layout follow declaration order
+Fields are laid out in declaration order. Value types are stored inline. A reference-type instance has stable identity and carries one `u32` backpointer field of anchor metadata (§4.2) that stays `0` until the instance is first referenced. Placement of a reference-type instance — stack or heap — is covered in §3.5.
 
 ### 3.4 Booleans may be packed
 The compiler may pack booleans in structs and stack frames when doing so does not change language semantics.
 
-### 3.5 Class instances may be placed on the stack
-Placement is an implementation decision, not a language-visible property. The compiler **MAY** place a class instance on the stack when both hold:
+### 3.5 Reference-type instances may be placed on the stack
+Placement is an implementation decision, not a language-visible property. The compiler **MAY** place a reference-type instance on the stack when both hold:
 
 - its size is statically known, and
 - it does not escape the frame that creates it in a way a move cannot satisfy.
 
-A class instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
+A reference-type instance is forced onto the heap only when its size is dynamic or it is moved into an owner that is itself heap-allocated. Moving it into a longer-lived *stack* owner — a return slot or an outer block's slot — is just a relocation into that slot and stays on the stack. Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and refs resolve identically regardless of where the instance lives (§4). This freedom mirrors the boolean-packing rule (§3.4): the compiler may choose the cheaper placement whenever doing so cannot change program meaning.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 
-### 3.6 Handle-typed core classes have fixed footprint
-The core dynamically-sized classes — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
+### 3.6 Handle-typed core reference types have fixed footprint
+The core dynamically-sized reference types — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single pointer) whose dynamic backing store lives on the heap. The handle occupies a statically known footprint wherever it is stored.
 
-A type that contains a handle-typed field therefore stays statically sized. A class holding a `List` field does not become dynamically sized; it stores the fixed handle inline, and only the backing store behind the handle lives on the heap.
+A type that contains a handle-typed field therefore stays statically sized. A type holding a `List` field does not become dynamically sized; it stores the fixed handle inline, and only the backing store behind the handle lives on the heap.
 
 ```zane
-type Inventory = class {
+type Inventory = #struct {
     items List<Item>;   // fixed-size handle inline; backing store on the heap
     count Int;
 }
@@ -278,14 +282,14 @@ Refs are tracked through a single **anchor table**: a heap-resident array of fix
 Each cell is a single **`u32`** — the owner's current offset; it stores nothing else. Because every cell is the same size, the table is the simplest possible pool: a bump frontier plus a free list, with no size classes and no coalescing. It is ordinary heap data, so it grows on demand; growing it allocates a larger block, copies the cells, and rewrites the one `anchor_ptr` word. Growth touches only that root word, never the refs (§4.2), so it is O(1) with respect to the number of live refs.
 
 ### 4.2 Refs are slot indices, not pointers
-An `&` value is a **`u32` index** into the anchor table, not a raw pointer. A `u32` indexes over four billion simultaneously-referenced owners — far beyond any realistic working set, since only referenced class instances consume a slot — while keeping an `&` half the size of a 64-bit pointer.
+An `&` value is a **`u32` index** into the anchor table, not a raw pointer. A `u32` indexes over four billion simultaneously-referenced owners — far beyond any realistic working set, since only referenced reference-type instances consume a slot — while keeping an `&` half the size of a 64-bit pointer.
 
 Indices are **1-based**, and the value `0` means *unreferenced*:
 
 - Physical slot `0` is reserved as a null/trap cell and is never handed out. Anchors start at slot `1`.
 - A `u32` of `0` therefore reads as "no anchor yet," which is the natural state of zero-initialized storage.
 
-Every class instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The table slot is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
+Every reference-type instance reserves a **`u32` backpointer** field, initialized to `0`; the first ref records the instance's slot index there. The table slot is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new refs — `&x` copies the index — and lets a move locate the owner's cell (§4.5). It is a single index, not a list of refs: the owner never enumerates the refs that point at it, which is what keeps moves O(1) (§4.5).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#from-a-reserved-pool-to-an-indexed-heap-table) — "From a reserved pool to an indexed heap table".
 
@@ -379,16 +383,17 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 
 | Concept | Rule |
 |---|---|
-| Owning storage | Class-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
-| Struct value | May be overwritten freely |
+| Owning storage | Reference-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
+| Value type | Mutable in place through a borrowed `mut` receiver; storage may also be overwritten freely |
 | `&` | Non-owning storage; may be repointed, copied by value, and returned from functions |
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
 | New `&` value | May be initialized only from a named symbol, a field access of a place, or an `&` parameter; temporaries and `[]` expressions are rejected |
 | `&` parameter | Declares that the caller must supply an `&`-creating source; the parameter is place-like inside the callee |
 | Plain `T` parameter | Value-only binding; caller need not supply an `&`-creating source; MUST NOT be bound into `&` storage or returned as a new `&T` |
-| Struct-downstream enforcement | Structs may contain only primitives and other structs, transitively |
+| Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
+| `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
-| Class placement | Stack when statically sized and non-escaping; heap only for dynamic size or escape — an unobservable choice |
+| Reference-type placement | Stack when statically sized and non-escaping; heap only for dynamic size or escape — an unobservable choice |
 | `&` representation | A `u32` 1-based index into the heap anchor table; `0` means unreferenced |
 | Addressing | Region base is the only native pointer; refs, backpointer, cells, and `anchor_ptr` are `u32` offsets/indices from it |
 | Anchor table | Heap-resident, rooted at the fixed `anchor_ptr`; one `u32` region-offset per cell; grows on demand |
