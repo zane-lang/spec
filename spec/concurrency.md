@@ -125,6 +125,8 @@ For any one storage location, at most one live spawned call may hold a **mutable
 ### 4.4 Reads take a coherent snapshot
 A spawned call may read a value that another live spawn is mutating; the read observes a **coherent snapshot** of the value rather than blocking. Reading a shared value into a fresh binding — `snap Type = shared` — is what takes the snapshot, and the copy is tear-free even when the writer is mid-update. This replaces lock-based serialization for in-memory value state, so a real-time reader never waits on a writer. Serialization still applies to external, capability-backed resources (§4.5).
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#value-typed-mutation-closing-the-aliased-write-gap) — "Value-typed mutation: closing the aliased-write gap".
+
 ### 4.5 Effect conflicts on external resources
 The effect system classifies resource access as **read** or **write**. Concurrent accesses to external, capability-backed state are permitted only when they do not conflict:
 
@@ -137,7 +139,7 @@ The compiler enforces this from effect signatures; the programmer does not add l
 ### 4.6 Refs passed to spawned work remain independent
 When an `&` value is passed to a spawned call, the callee receives its own `&` value to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the `&` value already held by spawned work.
 
-> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#value-typed-mutation-closing-the-aliased-write-gap) — "Value-typed mutation: closing the aliased-write gap".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
 ---
 
