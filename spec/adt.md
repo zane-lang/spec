@@ -2,7 +2,7 @@
 
 This document specifies Zane's algebraic data types: the `enum` of uniform peer members, the `variant` sum type, the body symmetry that ties `variant` to `struct`, pattern matching via case-overload dispatch, the `match` expression, and enum maps.
 
-> **See also:** [`types.md`](types.md) for structs, classes, and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.10 for why a `struct` cannot hold `&` or recurse. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`functions.md`](functions.md) §4 and §5 for overload resolution. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
+> **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.10 for why a `struct` cannot hold `&` or recurse. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`functions.md`](functions.md) §4 and §5 for overload resolution. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
 
 ---
 
