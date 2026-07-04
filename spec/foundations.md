@@ -16,6 +16,7 @@ Zane is built on a small number of commitments that the rest of the language der
 - **`Compilation is staged; types are values`.** A type is an ordinary compile-time value that the compiler *executes* in an earlier stage to produce a layout. Parameterization, and the split between type expressions and calls, fall out of this.
 - **`Casing determines kind`.** A name's case tells the reader and the parser what kind of thing it is — a type or a value. This single rule is what makes the surface grammar viable without sigils.
 - **`Layout is fixed`.** Every value of a given type is the same number of bytes. Uniform stride is a global invariant, not a per-type choice.
+- **`Identity is opt-in`.** A type is a value unless it is marked `#`; the mark makes it a reference type with identity, aliasing, and recursion. Value versus reference is one axis, orthogonal to the product/sum shape of the body.
 - **`Strictness is the performance model`.** The language forbids high-level conveniences that would dissolve a low-level guarantee. The rules are not a tax paid alongside fast code — they are the mechanism that produces it.
 
 ---
@@ -82,7 +83,24 @@ So the rules should not be read as a usability tax levied next to the performanc
 
 ---
 
-## 7. Summary
+## 7. Identity Is Opt-In
+
+Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark composes with any type: `#struct`, `#variant`, and even `#Int` are reference types, each a cell that holds a value and can be pointed at.
+
+A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
+
+Both kinds are mutated in place through a `mut` method, but the receiver reaches the caller differently: a value-type `this` is a *borrow* of the caller's slot (so a value is mutable without gaining identity), while a reference-type `this` is an implicit `&` to the object. Borrowing is the value world's device; the reference world already has `&`.
+
+- **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
+- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is owned by [`memory.md`](memory.md) §2.10.
+- **`&` rides on `#`.** A non-owning `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
+- **Concurrency reads this axis.** A spawned call may mutate only a value-typed receiver, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
+
+> **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
+
+---
+
+## 8. Summary
 
 | Foundation | Commitment | Owned by |
 |---|---|---|
@@ -90,4 +108,5 @@ So the rules should not be read as a usability tax levied next to the performanc
 | Staged compilation | Types are compile-time values executed in an earlier stage; `<>` and `()` are different stages | [`generics.md`](generics.md) §2, §4–§5 |
 | Casing determines kind | A name's case is its kind — uppercase type, lowercase value/number | [`lexical.md`](lexical.md) §3, §5 |
 | Fixed layout | Every value of a type is the same size; uniform stride is global | [`generics.md`](generics.md) §7, [`memory.md`](memory.md) §3 |
+| Identity is opt-in | A type is a value unless marked `#`; `#` adds identity, `&`-aliasing, and recursion; a value type is transitively value | [`memory.md`](memory.md) §2, [`types.md`](types.md) §2, [`adt.md`](adt.md) §2–§3 |
 | Strictness is performance | Forbidding guarantee-dissolving conveniences is what licenses aggressive codegen | [`memory.md`](memory.md), [`effects.md`](effects.md), [`lifetimes.md`](lifetimes.md) |

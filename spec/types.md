@@ -1,6 +1,6 @@
 # Zane Types
 
-This document specifies Zane's data types: classes, structs, fields, constructors, `type` and `alias` declarations, and the `init{ }` expression. Methods and other behavior live in [`functions.md`](functions.md).
+This document specifies Zane's data types: value and reference types, the `#` modifier, fields, constructors, `type` and `alias` declarations, and the `init{ }` expression. Methods and other behavior live in [`functions.md`](functions.md).
 
 > **See also:** [`memory.md`](memory.md) §2 for ownership rules. [`functions.md`](functions.md) for methods and functions. [`syntax.md`](syntax.md) §1 and §3 for declaration grammar.
 
@@ -10,46 +10,47 @@ This document specifies Zane's data types: classes, structs, fields, constructor
 
 Zane keeps data layout and construction separate from behavior.
 
-- **`Fields-only type bodies`.** Class and struct bodies declare storage only — no methods or constructors live inside the body.
-- **`Two type kinds`.** `class` is heap-allocated with single ownership; `struct` is inline value storage.
+- **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
+- **`One kind axis`.** A type is a **value type** unless marked `#`, which makes it a **reference type**. `struct` is the value product; `#struct` is the reference product — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
 
 ---
 
-## 2. Classes and Structs
+## 2. Value and Reference Types
 
-### 2.1 Classes declare owned, identity-bearing storage
-A `class` body contains only field declarations. Class instances have single ownership and stable identity and follow the rules in [`memory.md`](memory.md) §2; their placement — stack or heap — is an unobservable implementation choice (see [`memory.md`](memory.md) §3.5).
+### 2.1 The value/reference axis and the `#` modifier
+Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This axis is orthogonal to the *shape* of the body (a product `struct` or a sum `variant`, see §2.5). The value product is `struct`; the reference product is `#struct`. The `#` modifier composes with any type expression, including sum types (`#variant`, see [`adt.md`](adt.md) §3) and even primitives (`#Int`); each `#T` is a distinct reference type — a cell that holds a `T` and can be pointed at (see [`memory.md`](memory.md) §2).
+
+A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
 ```zane
 package Graph
 
-type Node = class {
+type Node = #struct {      // reference type: identity, may hold `&`, may recurse
     _id Int;
     scale Float;
     label String;
 }
 ```
 
-### 2.2 Structs are inline value types
-A `struct` body also contains only field declarations, but structs are stored inline. Structs **MUST NOT** contain class fields or `&` fields.
+### 2.2 Value types are transitive and mutable in place
+A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no ownership or anchor bookkeeping.
 
-This restriction exists because structs use inline value semantics, while class ownership and ref tracking require runtime identity and anchor bookkeeping.
-
-After construction, a struct's fields are immutable: code cannot mutate a struct instance in place. The storage position that holds a struct value remains overwritable, however, so a symbol, field, or container slot of struct type may later be assigned a replacement struct value.
+A value is **mutable in place**: a `mut` method may write its fields, because the receiver is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
 ```zane
 package Math
 
-type Vec2 = struct {
+type Vec2 = struct {       // value type: copied, transitively value, mutable in place
     x Float;
     y Float;
 }
 
 pos Vec2(1, 2)
-pos = Vec2(3, 4)   // legal: replaces the whole value
+pos!setX(Float(3))   // legal: mut method writes the field through a borrow of pos
+pos = Vec2(3, 4)     // legal: overwrites the whole value
 ```
 
 ### 2.3 Field visibility is name-based
@@ -68,11 +69,11 @@ Methods, constructors, overload rules, and function values live at package scope
 A `struct` is a product type: it has all of its members at once. A `variant` is a sum type with the same body grammar: it has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
 
 ```zane
-type Color = struct { r Int; g Int; b Int; }    // product: has r and g and b
-type Shape = variant { dot Dot; line Line; }      // sum: has dot or line
+type Color = struct { r Int; g Int; b Int; }    // value product: has r and g and b
+type Shape = variant { dot Dot; line Line; }      // value sum: has dot or line
 ```
 
-A `struct` is restricted to inline value storage and **MUST NOT** contain a class field, an `&` field, or itself (§2.2, [`memory.md`](memory.md) §2.10). A `variant` is not so restricted: it may be recursive and may box recursive members through `&`. The body syntax is symmetric, but the memory model decides which keyword a given shape is legal under.
+The `#` modifier (§2.1) is the other axis and applies to both shapes: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value type — `struct` or `variant` — is transitively value and **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference type — `#struct` or `#variant` — may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across all four; the keyword picks product versus sum and the `#` picks value versus reference.
 
 > **See also:** [`adt.md`](adt.md) for the canonical rules on `variant`, `enum`, pattern matching, and enum maps. [`adt.md`](adt.md) §3 for the full struct-versus-variant symmetry.
 
@@ -149,7 +150,7 @@ This form is the canonical constructor syntax when the constructor parameters ma
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
 ```zane
-type Weapon = class {
+type Weapon = #struct {
     name String;
     fireRate Float;
     damage Float;
@@ -216,12 +217,12 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ### 3.8 `&` fields require `&` constructor parameters
-A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
 
 ```zane
 package Vehicle
 
-type Car = class {
+type Car = #struct {
     engine &Engine;
 }
 
@@ -249,10 +250,10 @@ car Car(engine)   // legal: engine may create a new `&`
 car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
 ```
 
-A class whose fields are all plain owners does not require `&` parameters:
+A reference type whose fields are all plain owners does not require `&` parameters:
 
 ```zane
-type Car = class {
+type Car = #struct {
     engine Engine;
 }
 
@@ -353,31 +354,31 @@ At one coercion site requiring parameter type `T`, given an argument with static
 Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
 
 ### 4.4 Source and destination type constraints
-The **source type** (parameter type) of an implicit constructor **MUST** be a struct or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a class or an `&`.
+The **source type** (parameter type) of an implicit constructor **MUST** be a value type or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a reference type or an `&`.
 
-The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a struct or a class.
+The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type or a reference type.
 
 ```zane
 type Celsius = struct { value Float; }
 type Fahrenheit = struct { value Float; }
 
-implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: struct → struct
+implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: value → value
 ```
 
 ```zane
-type Logger = class { verbosity Int; }
+type Logger = #struct { verbosity Int; }
 type LogConfig = struct { verbosity Int; }
 
-implicit Logger(cfg LogConfig) {   // legal: struct → class
+implicit Logger(cfg LogConfig) {   // legal: value → reference
     return init{verbosity = cfg.verbosity}
 }
 ```
 
 ```zane
-type Source = class { data String; }
-type Destination = class { payload String; }
+type Source = #struct { data String; }
+type Destination = #struct { payload String; }
 
-implicit Destination(s Source) {   // ILLEGAL: source type is a class
+implicit Destination(s Source) {   // ILLEGAL: source type is a reference type
     return init{payload = s.data}
 }
 ```
@@ -439,7 +440,7 @@ alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression
-The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline `struct { ... }` or `class { ... }` body.
+The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, a `#`-marked reference type, or an inline `struct { ... }` or `#struct { ... }` body.
 
 ```zane
 type Wrapper = struct {
@@ -448,7 +449,7 @@ type Wrapper = struct {
 }
 ```
 
-A named class or struct is therefore always declared this way: `type Name = class { ... }` or `type Name = struct { ... }`. There is no standalone `class Name { ... }` or `struct Name { ... }` declaration form — the `class { ... }` and `struct { ... }` bodies are type expressions that only name a type through a `type` (or `alias`) declaration.
+A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`). There is no standalone `struct Name { ... }` declaration form — the `struct { ... }` and `#struct { ... }` bodies are type expressions that only name a type through a `type` (or `alias`) declaration.
 
 ### 5.4 The keyword carries the distinction
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
@@ -462,9 +463,9 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Decision | Rationale |
 |---|---|
 | Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
-| Two type kinds (class and struct) | Class instances need single ownership and stable identity for refs; structs are pure inline values with replacement semantics. The split keeps each kind simple. |
-| Structs cannot contain class or `&` fields | Structs are plain value storage; allowing them to embed identity-bearing or ref-bearing fields would force them to participate in ownership and anchor bookkeeping. |
-| Structs update by replacement, not in-place mutation | Preserves plain value semantics for structs while still allowing ordinary reassignment of struct-typed storage. |
+| One kind axis with the `#` modifier | Value versus reference is orthogonal to product versus sum, so one modifier (`#`) spans `struct`/`variant` rather than a separate keyword per combination. Reference types need identity for refs; value types are transitively value and copyable. |
+| Value types cannot contain reference-type or `&` fields | A value is copied inline; embedding an identity-bearing or ref-bearing field would silently duplicate ownership or anchor state. The restriction (checked transitively) is what keeps a value alias-free and safe to snapshot. |
+| Value types mutate in place through a borrowed receiver | A `mut` method borrows the caller's storage, so a value is mutated without the return-a-replacement dance and without gaining identity. |
 | Name-based field privacy | Privacy follows method receivers, not packages. A method declared in any package gets the same private-field access as one declared in the home package. |
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
@@ -473,7 +474,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
 | No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
-| Source type must be struct or compiler concept | Classes have ownership and identity; implicitly converting a class would hide ownership transfer. Compiler concept types in `@concepts$...` are designed for ergonomic lowering. |
+| Source type must be a value type or compiler concept | Reference types have ownership and identity; implicitly converting one would hide ownership transfer. Compiler concept types in `@concepts$...` are designed for ergonomic lowering. |
 | Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
 | Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
 | `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
@@ -485,8 +486,10 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 
 | Concept | Rule |
 |---|---|
-| Class body | Fields only — no methods or constructors inside the body |
-| Struct | Inline value type; cannot contain class or `&` fields; fields are immutable after construction, but struct-typed storage may be overwritten |
+| Type body | Fields only — no methods or constructors inside the body |
+| Value/reference axis | A type is a value type unless marked `#`; `#struct`/`#variant` are reference types (identity, `&`-aliasing, recursion); `struct`/`variant` are value types |
+| Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
+| Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |

@@ -70,7 +70,7 @@ type Wrapper = struct {
 }
 ```
 
-`Wrapper` is concrete: every field type is fully applied, so `Wrapper`'s layout is known. A named class or struct is always declared with `type Name = class { ... }` or `type Name = struct { ... }` (see [`types.md`](types.md) §2); the `struct { ... }` and `class { ... }` bodies are type expressions and do not name a type on their own.
+`Wrapper` is concrete: every field type is fully applied, so `Wrapper`'s layout is known. A named type is always declared with `type Name = struct { ... }` or `type Name = #struct { ... }` (see [`types.md`](types.md) §2); the `struct { ... }` and `#struct { ... }` bodies are type expressions and do not name a type on their own.
 
 ---
 

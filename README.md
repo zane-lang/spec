@@ -60,13 +60,13 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 
 | Document | Tells the story behind |
 |---|---|
-| [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, and strictness-as-performance |
+| [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, strictness-as-performance, and the collapse of value/reference into one `#` axis |
 | [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
 | [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, the browsable global cache, the package-graph acyclicity rule, and the opt-in remapping model |
-| [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, and the rooted-ref rules |
+| [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, the rooted-ref rules, and the collapse to one value/reference axis with a borrowed receiver |
 | [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md) — lexical scope in place of a borrow checker, what may be moved, the declaration-block rule that kills flow analysis, downgrade instead of use-after-move, and parameter-rooted returned refs |
-| [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md) — inferring effects instead of annotating them, receiver-scoped `mut`, capabilities in place of ambient I/O, the four-level ladder and the Total-Pure/Pure split, and what deliberately is not an effect |
-| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based single-writer safety without locks, and what the core deliberately leaves out |
+| [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md) — inferring effects instead of annotating them, receiver-scoped `mut`, capabilities in place of ambient I/O, the four-level ladder and the Total-Pure/Pure split, what deliberately is not an effect, and mutation through a borrowed receiver |
+| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based safety without locks, and value-typed mutation closing the aliased-write gap |
 
 ## Contributing
 

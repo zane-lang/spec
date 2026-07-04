@@ -35,10 +35,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The term emphasizes that `guard` is about leaving the surrounding scope, not about starting a new control-flow block.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3
 
-### 2.4 single-writer rule
-- **Meaning:** At most one concurrent `mut` accessor may exist for the same object.
-- **Why this name:** The rule is easiest to remember as the requirement that concurrent writing has exactly one writer at a time.
-- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2
+### 2.4 value-typed mutation rule
+- **Meaning:** A spawned call may mutate only a value-typed receiver, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the receiver's type alone; concurrent reads take a coherent snapshot instead of serializing.
+- **Why this name:** Concurrent mutation is gated on the receiver being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
 
 ### 2.5 water-tower lifetimes
 - **Meaning:** Scope-owned objects stay alive until every `spawn`ed call in that scope has completed and the scope drains.
@@ -69,9 +69,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
-### 3.2 struct-downstream enforcement
-- **Meaning:** A struct may contain only primitives and other legal structs, never a class or `&` field anywhere downstream in nested struct fields.
-- **Why this name:** The rule is checked recursively through fields downstream from the outer struct, not just at the first field layer.
+### 3.2 value-downstream enforcement
+- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields.
+- **Why this name:** The rule is checked recursively through fields downstream from the outer value type, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §7
 
 ### 3.21 member-versus-value delimiter
-- **Meaning:** `;` terminates every member of a `struct`/`class`/`variant` body and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
+- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
@@ -185,14 +185,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 stack-first placement
-- **Meaning:** A class instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
-- **Why this name:** The stack is the default location a class instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
+- **Meaning:** A reference-type instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
+- **Why this name:** The stack is the default location a reference-type instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker
 - **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants private-field access; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; a symbol name makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
+
+### 3.27 borrow
+- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed by `&` or swallowed instead, and a reference-type `this` is an implicit `&`.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not own it and cannot keep it. Unlike an `&`, a borrow has no anchor and cannot be stored or returned, which is what lets a value be mutated in place without becoming aliasable.
+- **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ---
 

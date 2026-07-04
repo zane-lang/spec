@@ -31,7 +31,7 @@ A side effect is any observable interaction beyond returning a value, including:
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier in the language. It appears on methods whose receiver is a class type and grants write access to `this` and values owned by `this`.
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to `this` and values owned by `this`; the write lands on the caller's object. A value-type `this` is a **borrow** of the caller's slot; a reference-type `this` is an implicit `&` reference to the object (see [`functions.md`](functions.md) §2.4).
 
 ### 2.4 Parameters are not mutable by default
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
@@ -66,7 +66,7 @@ Write Impure functions mutate `this`, mutate capability-backed state, or otherwi
 A method without `mut` may not assign to fields of `this` or call `mut` methods on `this` or owned descendants.
 
 ### 4.2 `mut` does not authorize arbitrary writes
-Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters. Struct updates are expressed by returning a replacement struct value rather than mutating a struct receiver in place.
+Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters. This applies whether the receiver is a value type or a reference type: a value receiver is mutated in place through its borrow (see [`functions.md`](functions.md) §2.4), not by returning a replacement.
 
 ### 4.3 `&` use sites follow ordinary call rules
 Reading through an `&` value is not a side effect by itself. At use sites, `&` values follow the same field-access and method-call rules as owners. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
@@ -132,11 +132,11 @@ A function's abort type and effect level are independent. An abortable function 
 ### 8.1 Total Pure and Pure work are natural parallelization candidates
 Because they do not write mutable state, they can be reordered and parallelized subject to profitability heuristics.
 
-### 8.2 Read-only effects compose with the single-writer rule
-Multiple concurrent reads are legal. A read that conflicts with a concurrent write must be serialized by the compiler/runtime.
+### 8.2 Reads compose with concurrent mutation
+Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
 
-### 8.3 Receiver-local mutation composes with ownership
-Two `mut` calls on different receiver instances may run in parallel. Two `mut` calls on the same instance must be serialized.
+### 8.3 Concurrent mutation is governed by the spawn rules
+Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's receiver **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the receiver's type alone.
 
 ---
 

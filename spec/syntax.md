@@ -44,20 +44,20 @@ name = expr
 name VarType(value)
 ```
 
-### 1.3 Class fields
+### 1.3 Reference-type bodies (`#`)
 
-A class body declares fields only and names a type through a type declaration (§1.6). There is no standalone `class Name { ... }` declaration form.
+A `#`-marked body declares a **reference type** — identity-bearing, may hold `&` fields, may recurse. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `#struct Name { ... }` declaration form.
 
 ```zane
-type Name = class {
+type Name = #struct {
     field FieldType;
     field &FieldType;
 }
 ```
 
-### 1.4 Struct fields
+### 1.4 Value-type bodies
 
-A struct body declares fields only and names a type through a type declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
+A value-type body (unmarked) declares a **value type** — copied, transitively value, no `&` or reference-type fields. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `struct Name { ... }` declaration form.
 
 ```zane
 type Name = struct {
@@ -78,12 +78,13 @@ type Name = TypeExpr
 alias Name = TypeExpr
 type Name<T Type, n Number> = TypeExpr
 type Name = struct { field FieldType; ... }
-type Name = class { field FieldType; ... }
+type Name = #struct { field FieldType; ... }
 type Name = variant { member FieldType; ... }
+type Name = #variant { member FieldType; ... }
 type Name = enum [ memberA, memberB, ... ]
 ```
 
-`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `class`, `variant`, or `enum` body. A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `#struct`, `variant`, `#variant`, or `enum` body; a leading `#` marks a reference type (§2.10). A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
 
 ### 1.7 Variant declarations
 
@@ -162,11 +163,11 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
-An inline body-form type expression — `struct { ... }`, `class { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body.
+An inline body-form type expression — `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body. A leading `#` on any of these, or on any type expression, marks a reference type (§2.10).
 
 ```zane
-type Expr = variant {
-    op class { left &Expr; right &Expr; };
+type Expr = #variant {
+    op #struct { left &Expr; right &Expr; };
     args tuple[String, String];
 }
 ```
@@ -249,6 +250,19 @@ ReturnType[&ParamType, ...]
 Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
 Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
+
+### 2.10 The `#` reference modifier
+
+A leading `#` on a type expression marks a **reference type**. It composes with any type: a body form (`#struct { ... }`, `#variant { ... }`), a named type or applied generic (`#Colors`, `#Vector<Int>`), or a primitive (`#Int`). The unmarked form is a value type.
+
+```zane
+#struct { field FieldType; ... }   // reference product
+#variant { member FieldType; ... } // reference sum
+#Int                               // reference cell over a primitive
+&#Int                              // non-owning reference to a reference cell
+```
+
+`&` combines with `#` and never with a bare value type: an `&T` requires `T` to be a reference type, so a stored reference over a value is written `&#T` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ---
 

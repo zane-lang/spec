@@ -2,7 +2,7 @@
 
 This document specifies Zane's package model: package declarations and member naming. Manifests, fetching, and version pinning live in [`dependencies.md`](dependencies.md).
 
-> **See also:** [`types.md`](types.md) for classes and structs. [`functions.md`](functions.md) for methods and functions. [`dependencies.md`](dependencies.md) for package identity, manifests, and the import system. [`syntax.md`](syntax.md) §8 for `package` and `$` syntax.
+> **See also:** [`types.md`](types.md) for value and reference types. [`functions.md`](functions.md) for methods and functions. [`dependencies.md`](dependencies.md) for package identity, manifests, and the import system. [`syntax.md`](syntax.md) §8 for `package` and `$` syntax.
 
 ---
 
