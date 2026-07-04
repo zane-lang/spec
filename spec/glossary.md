@@ -194,6 +194,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 
+### 3.27 borrow
+- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call. A value type is passed as a borrow (its slot, not a copy); a plain `T` parameter is a read-only borrow, and the `mut` receiver is the one writable borrow. A value is copied only when bound into a fresh slot.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not own it and cannot keep it. Unlike an `&`, a borrow has no anchor and cannot be stored or returned, which is what lets a value be mutated in place without becoming aliasable.
+- **Canonical home:** [`memory.md`](memory.md) §2.9
+
 ---
 
 ## 4. Packages, Operators, and Versioning
