@@ -31,7 +31,7 @@ A side effect is any observable interaction beyond returning a value, including:
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to `this` and values owned by `this`. The receiver of a `mut` method is a **borrow** of the caller's storage, so the write lands on the caller's object; the receiver may be a value type or a reference type (see [`functions.md`](functions.md) §2.4).
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to `this` and values owned by `this`; the write lands on the caller's object. A value-type `this` is a **borrow** of the caller's slot; a reference-type `this` is an implicit `&` reference to the object (see [`functions.md`](functions.md) §2.4).
 
 ### 2.4 Parameters are not mutable by default
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.

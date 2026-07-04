@@ -89,7 +89,7 @@ Every type is a **value type** unless it is marked with `#`, which makes it a **
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
-Both kinds are mutated the same way — through a `mut` method whose receiver is a *borrow* of the caller's storage — so a value is mutable in place without gaining identity.
+Both kinds are mutated in place through a `mut` method, but the receiver reaches the caller differently: a value-type `this` is a *borrow* of the caller's slot (so a value is mutable without gaining identity), while a reference-type `this` is an implicit `&` to the object. Borrowing is the value world's device; the reference world already has `&`.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is owned by [`memory.md`](memory.md) §2.10.

@@ -49,7 +49,10 @@ A method without `mut` may read `this`, its parameters, and reachable read-only 
 ### 2.4 Mutating methods use `mut`
 A method marked `mut` may write to `this` and objects owned by `this`.
 
-The receiver of a `mut` method is a **mutable borrow** of the caller's storage — the writable case of the parameter borrow defined in [`memory.md`](memory.md) §2.9, the actual value rather than a copy — so a write to `this` lands on the caller's object. This holds for both kinds. A reference-type receiver is mutated in place through its identity, as before. A **value-type** receiver is mutated in place too: the borrow gives the method the caller's slot, retiring the older pattern of returning a replacement value. Because the borrow is a scoped, non-escaping view, a value receiver keeps its value semantics — `this` may be read and written, but it cannot be stored as an `&` or returned as a new `&`, since a value type is not `&`-rootable (see [`memory.md`](memory.md) §2.4, §2.9).
+A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
+
+- For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. This is what makes value types mutable in place, retiring the older pattern of returning a replacement. Because the borrow is scoped and non-escaping, the value keeps its value semantics: `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
+- For a **reference-type** receiver, `this` is an implicit **`&` reference** to the object (never swallowed). A `mut` method mutates through it as through any `&`, and `this` composes with the `&` system — it may be passed where an `&T` is expected.
 
 ```zane
 Void setScale(this Node, scale Float) mut {   // reference receiver
@@ -85,10 +88,10 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 ```
 
 ### 2.7 Parameters are read-only
-Explicit parameters other than `this` are read-only — each is a read-only borrow (see [`memory.md`](memory.md) §2.9). Mutation of another object must be expressed as a `mut` method call on that object as the receiver.
+Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the receiver. How each parameter is passed — a value borrow, or a reference `&`/swallow — is covered in [`memory.md`](memory.md) §2.9.
 
-### 2.8 `&` method parameters
-A method parameter declared as `&T` requires the caller to supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 and permits the callee to store that argument into an `&` field. A parameter declared as plain `T` is a read-only borrow (see [`memory.md`](memory.md) §2.9). A plain `T` parameter does not guarantee a stable `&`-rootable source location, therefore it **MUST NOT** be bound into `&` storage.
+### 2.8 `&` and swallowing method parameters
+A method parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field. A parameter declared as plain `#T` **swallows** its argument — ownership moves into the callee — so it cannot be bound into `&` storage, because a swallowed owner is frame-local (see [`memory.md`](memory.md) §2.9). A value-type parameter is a read-only borrow. To pass a reference object for reading only, use `&T`.
 
 ```zane
 type Car = #struct {
@@ -96,30 +99,29 @@ type Car = #struct {
     _value Int;
 }
 
-// legal: engine may be stored into an `&` field
-Void consume(this Car, engine &Engine) mut {
+// `&` parameter: may be stored into an `&` field
+Void setEngine(this Car, engine &Engine) mut {
     this.engine = engine   // legal
 }
 
-// legal: engine is a read-only borrow; it may only be read
-Int calculate(this Car, engine Engine) {
-    return this._value + engine.speed   // legal: reading only
+// `&` parameter, read only
+Int calculate(this Car, engine &Engine) {
+    return this._value + engine.speed   // legal: reading through the reference
 }
 
-// ILLEGAL: plain parameter stored into `&` field
-Void consumeWrong(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL
+// plain `#T` swallows; a swallowed owner is not an `&` source
+Void setEngineWrong(this Car, engine Engine) mut {
+    this.engine = engine   // ILLEGAL: cannot store a swallowed owner into an `&` field
 }
 ```
 
-Call syntax is uniform regardless of whether a parameter is `&`:
+Call syntax is uniform regardless of the parameter mode:
 
 ```zane
 engine Engine()
-car!consume(engine)        // legal: engine may create a new `&`
-car:calculate(engine)      // legal: plain `T` accepts the same argument
-car!consume(Engine())      // ILLEGAL: temporary cannot bind to `&` parameter
-car:calculate(Engine())    // legal: plain T parameter accepts a temporary
+car!setEngine(engine)      // legal: engine may create a new `&`
+car:calculate(engine)      // legal: read-only reference to engine
+car!setEngine(Engine())    // ILLEGAL: temporary cannot bind to `&` parameter
 ```
 
 ### 2.9 Subscripts are place projections
@@ -352,10 +354,10 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
 | Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a verb with one marker, not a separate mechanism. |
 | `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
-| Plain `T` parameters are read-only borrows | A caller is not required to supply a stable storage location for a plain parameter; restricting plain parameters from populating `&` fields prevents hidden dependency on call-site expression form. |
+| Plain `T` parameters cannot populate `&` fields | A caller is not required to supply a stable storage location for a plain parameter, so a value parameter is a read-only borrow and a reference parameter is swallowed; restricting either from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
 | Subscripts are place projections only | Keeps `[]` predictable: an indexed expression always projects existing storage rather than running arbitrary computation. |
-| No overloads that differ only by `&` | Call syntax stays uniform while avoiding overload ambiguity between read-only-borrow and place-required contracts. |
+| No overloads that differ only by `&` | Call syntax stays uniform while avoiding overload ambiguity between plain and place-required contracts. |
 | Overload identity ignores `mut` | The call contract (parameter types and arity) is the same; `mut` only adjusts the permission granted to `this`, so it cannot disambiguate two otherwise-identical declarations. |
 | Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
 | Generic match infers type parameters | A call carries no `<>` list, so the generic-match phase is purely an inference step driven by the argument types (see [`generics.md`](generics.md) §5). |
@@ -376,7 +378,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; the receiver is a borrow of the caller's storage (value or reference type); may mutate `this` and its owned subtree in place |
+| `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate `this` and its owned subtree in place |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |

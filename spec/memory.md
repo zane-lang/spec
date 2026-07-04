@@ -130,36 +130,45 @@ engine Engine()         // legal: plain owner binding; Engine() temporary is mat
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
 
 ### 2.9 Function parameters: borrows and `&`
-A **borrow** is non-owning, non-escaping access to a caller's storage for the duration of a call. Unlike an `&` (§2.4), a borrow has no anchor, cannot be stored in a field, and cannot be returned; it exists only while the call runs.
+A **borrow** is non-owning, non-escaping access to a caller's storage for the duration of a call. Unlike an `&` (§2.4), a borrow has no anchor, cannot be stored in a field, and cannot be returned; it exists only while the call runs. Borrowing is the passing mode for **value types**, which have no `&` of their own. A value-type parameter is a **read-only borrow** of the caller's slot, and a value is **copied** only when it is bound into a fresh slot — an assignment, a new declaration, or a field or return store. The one writable borrow is a value-type `mut` receiver (see [`functions.md`](functions.md) §2.4).
 
-A parameter declared as plain `T` is a **read-only borrow**: the callee accesses the caller's storage — for a value type its slot, for a reference type the object — but may only read it. Because a plain parameter does not guarantee a stable `&`-rootable source location, it **MUST NOT** be bound into `&` storage or returned as a new `&T`, and inside the callee body it is not a place expression for `&`-binding purposes. The one writable borrow is the `mut` receiver (see [`functions.md`](functions.md) §2.4).
+A **reference type** is passed through the ownership/`&` system instead, in one of two modes:
 
-A parameter declared as `&T` requires the caller to supply a source that may create a new `&` under §2.8, so `T` is a reference type (§2.4). Inside the callee body it acts as a place expression and may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7.
+- A parameter declared as plain `#T` **swallows** its argument: ownership moves into the callee.
+- A parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. To read a reference object *without* consuming it, pass it as `&T`.
 
-Because a value type is passed as a borrow rather than copied, a value is **copied** only when it is bound into a fresh slot — an assignment, a new declaration, or a field or return store. Passing by borrow is the semantic model; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
+A reference-type `mut` receiver is neither of these: `this` is an implicit `&` reference to the object, never swallowed, so it composes with `&T` parameters (see [`functions.md`](functions.md) §2.4).
+
+Passing a value by borrow is the semantic model; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
 
 ```zane
 type Car = #struct {
-    engine &Engine;
+    engine &Engine;   // an `&` field
+    spare Engine;     // an owned field
     _value Int;
 }
 
-// legal: `&` parameter allows storing into `&` field
-Void consume(this Car, engine &Engine) mut {
-    this.engine = engine   // legal
+// `&` parameter is a reference; it may be stored into an `&` field
+Void setEngine(this Car, engine &Engine) mut {
+    this.engine = engine
 }
 
-// different function with a plain parameter
-Void inspect(this Car, engine Engine) {
-    return this._value + engine.speed   // legal: reading only
+// plain `#T` parameter swallows: ownership moves into an owned field
+Void setSpare(this Car, engine Engine) mut {
+    this.spare = engine
+}
+
+// `&` parameter, read only: a reference object passed without consuming it
+Int inspect(this Car, engine &Engine) {
+    return this._value + engine.speed
 }
 ```
 
-Binding a plain parameter into `&` storage is illegal:
+Binding a plain (swallowed) parameter into `&` storage is illegal, because the swallowed value is frame-local and an `&` into it would outlive it:
 
 ```zane
-Void consumeWrong(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL: plain parameter is not `&`-rootable
+Void setEngineWrong(this Car, engine Engine) mut {
+    this.engine = engine   // ILLEGAL: a swallowed owner is not an `&` source
 }
 ```
 
@@ -393,9 +402,10 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
 | New `&` value | May be initialized only from a named symbol, a field access of a place, or an `&` parameter; temporaries and `[]` expressions are rejected |
 | `&` parameter | Declares that the caller must supply an `&`-creating source; the parameter is place-like inside the callee |
-| Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; no anchor, not storable, not returnable |
-| Plain `T` parameter | A read-only borrow; caller need not supply an `&`-creating source; MUST NOT be bound into `&` storage or returned as a new `&T` |
-| Value copy | A value type is passed as a borrow; it is copied only when bound into a fresh slot (assignment, declaration, field or return store) |
+| Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; the passing mode for value types; no anchor, not storable, not returnable |
+| Value-type parameter | A read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
+| Reference-type parameter | Plain `#T` swallows (ownership moves in); `&T` is a reference (may be stored into `&` storage or returned) |
+| Reference-type `mut` receiver | `this` is an implicit `&` reference, never swallowed; composes with `&T` parameters |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
