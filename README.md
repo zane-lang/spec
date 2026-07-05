@@ -61,7 +61,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | Document | Tells the story behind |
 |---|---|
 | [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, strictness-as-performance, and the collapse of value/reference into one `#` axis |
-| [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md) — the two-axis value/reference model, why `#` marks a distinct type rather than a box, constructing a type by what it is, and confining `#` to the body forms |
+| [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md) — the two-axis value/reference model, why `#` marks a distinct type rather than a box, constructing a type by what it is, confining `#` to the body forms, and why every type must be named |
 | [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |
 | [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, the browsable global cache, the package-graph acyclicity rule, and the opt-in remapping model |
 | [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, the rooted-ref rules, and the collapse to one value/reference axis with a borrowed receiver |
