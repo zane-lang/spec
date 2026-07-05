@@ -57,7 +57,7 @@ pos = Vec2(3, 4)   // whole-slot overwrite
 ```
 
 ### 2.4 `&` is non-owning storage
-`&` creates non-owning storage, and it references a **reference type** only: an `&T` requires `T` to be a `#`-marked type, because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving reference needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored `&`. Writing `&#Int` names a non-owning handle to a reference cell; a bare `&Int` over a value type is ill-formed.
+`&` creates non-owning storage, and it references a **reference type** only: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving reference needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored `&`. Writing `&Node` names a non-owning handle to a reference type; a bare `&Int` over a value type is ill-formed.
 
 An `&` value may be declared as:
 
@@ -134,7 +134,7 @@ A **borrow** is non-owning, non-escaping access to a caller's storage for the du
 
 A **reference type** is passed through the ownership/`&` system instead, in one of two modes:
 
-- A parameter declared as plain `#T` **swallows** its argument: ownership moves into the callee.
+- A parameter declared as a plain reference type `T` **swallows** its argument: ownership moves into the callee.
 - A parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. To read a reference object *without* consuming it, pass it as `&T`.
 
 A reference-type `mut` receiver is neither of these: `this` is an implicit `&` reference to the object, never swallowed, so it composes with `&T` parameters (see [`functions.md`](functions.md) §2.4).
@@ -153,7 +153,7 @@ Void setEngine(this Car, engine &Engine) mut {
     this.engine = engine
 }
 
-// plain `#T` parameter swallows: ownership moves into an owned field
+// plain reference-type parameter swallows: ownership moves into an owned field
 Void setSpare(this Car, engine Engine) mut {
     this.spare = engine
 }
@@ -404,7 +404,7 @@ The genuine cost of any anchor scheme is **one extra dependent load per ref dere
 | `&` parameter | Declares that the caller must supply an `&`-creating source; the parameter is place-like inside the callee |
 | Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; the passing mode for value types; no anchor, not storable, not returnable |
 | Value-type parameter | A read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
-| Reference-type parameter | Plain `#T` swallows (ownership moves in); `&T` is a reference (may be stored into `&` storage or returned) |
+| Reference-type parameter | Plain `T` swallows (ownership moves in); `&T` is a reference (may be stored into `&` storage or returned) |
 | Reference-type `mut` receiver | `this` is an implicit `&` reference, never swallowed; composes with `&T` parameters |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |

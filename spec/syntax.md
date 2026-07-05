@@ -163,12 +163,15 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
-An inline body-form type expression — `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear directly wherever a type is expected, including as a member's type inside another body. A leading `#` on any of these, or on any type expression, marks a reference type (§2.10).
+A **type-defining** type expression — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — may appear **only** as the right-hand side of a `type` or `alias` declaration (§1.6). It **MUST NOT** appear at a use site: a field, parameter, or return type names a declared type or an instantiation instead (see [`types.md`](types.md) §5.3). A leading `#` marks a reference body (§2.10).
 
 ```zane
+type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
+type QualifiedIdent = tuple[String, String];
+
 type Expr = #variant {
-    op #struct { left &Expr; right &Expr; };
-    args tuple[String, String];
+    op BinOp;                    // names a declared type, not an inline body
+    qualifiedIdent QualifiedIdent;
 }
 ```
 
@@ -253,16 +256,14 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.10 The `#` reference modifier
 
-A leading `#` on a type expression marks a **reference type**. It composes with any type: a body form (`#struct { ... }`, `#variant { ... }`), a named type or applied generic (`#Colors`, `#Vector<Int>`), or a primitive (`#Int`). The unmarked form is a value type.
+A leading `#` marks a **reference type**. It attaches only to a **body form** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§2.4). It does **not** attach to a named type, an applied generic, or a primitive: `#Colors`, `#Vector<Int>`, and `#Int` are not types. The unmarked body forms are value types.
 
 ```zane
-#struct { field FieldType; ... }   // reference product
-#variant { member FieldType; ... } // reference sum
-#Int                               // reference cell over a primitive
-&#Int                              // non-owning reference to a reference cell
+type Cell = #struct { value Int; }               // reference product, declared and named
+type Tree = #variant { leaf Int; node &Tree; }   // reference sum
 ```
 
-`&` combines with `#` and never with a bare value type: an `&T` requires `T` to be a reference type, so a stored reference over a value is written `&#T` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored reference is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ---
 
