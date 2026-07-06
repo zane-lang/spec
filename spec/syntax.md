@@ -256,7 +256,7 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.10 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **body form** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§2.4). It does **not** attach to a named type, an applied generic, or a primitive: `#Colors`, `#Vector<Int>`, and `#Int` are not types. The unmarked body forms are value types.
+A leading `#` marks a **reference type**. It attaches only to a **body form** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). It does **not** attach to a named type, an applied generic, or a primitive: `#Colors`, `#Vector<Int>`, and `#Int` are not types. The unmarked body forms are value types.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product, declared and named
