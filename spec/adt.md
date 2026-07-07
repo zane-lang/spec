@@ -37,6 +37,8 @@ The property that distinguishes an `enum` is **uniformity** — the substitutabi
 
 Per-member associated data is attached externally through an enum map (§7), which keeps the members themselves payloadless and interchangeable. The consumers of an enum are iteration, ordinal use, total mapping, and exhaustive matching.
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
+
 ---
 
 ## 3. Variants
@@ -82,6 +84,8 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 
 > **See also:** [`types.md`](types.md) §2.5 for the same relationship from the struct side.
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
+
 ---
 
 ## 4. Recursion and Storage
@@ -91,6 +95,8 @@ A directly inline self-reference would have infinite size, which the uniform-str
 - A value type — `struct` or `variant` — **cannot** hold an `&` or contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
 - The `#` modifier is what carries recursion: a `variant` is an inline value sum, while a `#variant` is a reference sum that carries a tag, boxes its recursive cases through `&`, and is placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
 - Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that ownership and refs are explicit.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
 
 ---
 
@@ -115,6 +121,8 @@ This is **runtime tag dispatch**, distinct from the static overload resolution i
 This exhaustiveness rule is *per match set*, not per variant. A variant's cases are fixed at its definition, but operations stay open: any package may import a variant and declare its own complete match over every case, because the variant is closed and all its cases are visible. What is forbidden is *splitting one match* across packages — handling some cases in one package and the rest in another — because then no single compilation unit could verify completeness. (The inline `match` expression of §6 is a single local expression and is always checkable in place.)
 
 > **See also:** [`functions.md`](functions.md) §4.4 for the same rule from the overload side.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#escaping-the-matcher-machine) — "Escaping the matcher machine".
 
 ---
 
@@ -159,6 +167,8 @@ The two dispatch surfaces relate directly. Case-overload dispatch (§5) dispatch
 
 > **See also:** [`error-handling.md`](error-handling.md) §3.5 for the `?` integration.
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#variants-not-patterns) — "Variants, not patterns".
+
 ---
 
 ## 7. Enum Maps
@@ -179,6 +189,8 @@ The form is `<Enum>.<property> <Type> [ member = value, ... ]`. It uses `[ ]` br
 
 - An enum map is **not a passable value**. The mapping is static, so there is nothing to dispatch over; only its *result* is a value. A genuinely dynamic `Colors → String` transform is a lambda (`String[Colors]`), not a map.
 - Enum maps belong to enums specifically — uniform peers paired with uniform external data. A `variant` would never want one, because its data is intrinsic to each case.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#payloadless-peers-keep-their-data-outside) — "Payloadless peers keep their data outside".
 
 ---
 
@@ -215,28 +227,11 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | Iteration / total tables | available, but mixed with payload cases | first-class on `enum`, whose members stay payloadless |
 | Recursive boxing | `Box<T>` on the recursive field | explicit `&` on the recursive member |
 
----
-
-## 9. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| `enum` and `variant` are distinct constructs | Uniform peers and heterogeneous sums are different ideas. Keeping them separate lets enums stay iterable and tabulatable while variants carry per-case payloads, instead of overloading one keyword with both roles. |
-| `variant` shares the `struct` body grammar | One body shape with the keyword flipping product into sum keeps the surface minimal and makes the and/or duality obvious at a glance. |
-| Variant member reads are abortable | A case may not be live, so a partial read is naturally a bifurcated return rather than a silent failure or a sentinel. |
-| Dispatch is tag-directed and exhaustive | Closing the case set lets the compiler guarantee every case is handled and lower a whole-variant value to an O(1) tag jump. |
-| Exhaustiveness is checked per package | A package compiles as one unit, so requiring a match's arms to be co-located lets the compiler verify completeness locally and early — while still letting any package add its own complete match over an imported variant, keeping the type closed but operations open. |
-| Mutual exclusion of whole-variant and case overloads | A call on a whole-variant value would otherwise be ambiguous between matching the variant directly and unwrapping into a case; forbidding the coexistence removes the ambiguity by construction. |
-| `match` arms are ordinary callables | Reusing lambda literals and lambda-variables avoids inventing special arm syntax and lets arms be named, reused, and passed like any other function value. |
-| Recursion boxes through explicit `&` | Inline self-reference breaks uniform stride; explicit `&` keeps indirection visible and consistent with Zane's explicit-ownership stance, with no hidden auto-boxing. |
-| A value type can never be recursive | Value types are closed inline storage that cannot hold `&`; a recursive shape must therefore be a reference type — a `#variant` or `#struct` — which the symmetric body grammar still permits. |
-| Enum maps instead of per-member payloads | Attaching uniform data externally keeps enum members payloadless and interchangeable, and naming the property at the read site needs no new keyword. |
-| Enum maps are access-only, not values | The mapping is static, so there is nothing to dispatch over; a dynamic transform is just a lambda. |
-| No interfaces or constraints | If two enums travel together constantly, that is evidence they are one enum and should be merged. If they don't, wrapping them in a `variant` plus a few matching functions is a fair price for a rare case. Building open-extension machinery for a situation that resolves itself is overengineering. |
+> **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
 
 ---
 
-## 10. Summary
+## 9. Summary
 
 | Concept | Rule |
 |---|---|
