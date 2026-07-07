@@ -12,7 +12,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 
 - **`enum is uniform peers`.** A closed set of lowercase, payloadless members that mean one uniform thing. Per-member data is attached externally by an enum map.
 - **`variant is a sum type`.** A value holds exactly one of its named members. Its body grammar is byte-for-byte identical to a `struct`; the keyword flips product into sum.
-- **`The # axis applies to sums`.** `variant` is a value sum; `#variant` is a reference sum (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum` body; it marks only body forms, never a primitive or a named type.
+- **`The # axis applies to sums`.** `variant` is a value sum; `#variant` is a reference sum (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum` body.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
 - **`Dispatch is tag-directed and exhaustive`.** Case overloads (§5) and the `match` expression (§6) both lower a whole-variant value to a runtime tag jump that must cover every case.
 - **`Recursion requires a reference type`.** A recursive sum must be a `#variant`, never a value `variant`, because a value type is transitively value and cannot hold the `&` a recursive member boxes through.
@@ -37,9 +37,6 @@ The property that distinguishes an `enum` is **uniformity** — the substitutabi
 
 Per-member associated data is attached externally through an enum map (§7), which keeps the members themselves payloadless and interchangeable. The consumers of an enum are iteration, ordinal use, total mapping, and exhaustive matching.
 
-### 2.2 `#enum` is a reference cell
-An `enum` is a value type: a bare tag, copied on assignment. Marking the body form with `#` ([`types.md`](types.md) §2.1) declares a distinct reference type — a `#enum` is a **reference cell** that holds one of the enum's members, has identity, and may be aliased through `&`. Because the payloadless tag has no content to recurse into or hold references to, `#` adds nothing to an enum but that shared-mutable-cell identity; a `type Modes = #enum [ ... ]` is a shared mode flag several holders can observe and one can mutate. Each `#enum` is declared and named like any other reference type (there is no `#` on an already-named value enum); its member set, iteration, ordinals, and enum maps read identically whether or not the `#` is present.
-
 ---
 
 ## 3. Variants
@@ -58,8 +55,8 @@ type Expr = #variant {
     strLit String;
     boolLit Bool;
     ident String;
-    qualifiedIdent QualifiedIdent;   // a declared type, not an inline tuple
-    op BinOp;                        // a declared type, not an inline body
+    qualifiedIdent QualifiedIdent;
+    op BinOp;
     flip &Expr;
     parenthesized &Expr;
     funcCall FuncCall;
