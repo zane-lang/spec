@@ -130,6 +130,8 @@ The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same 
 - **Body.** `=> expr` is shorthand for `{ return expr }`; a larger arm uses a `{ }` block body.
 - **One result type.** All arms share one return type, which is the type of the `match`.
 
+A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
+
 ### 5.2 Exhaustive, with no default arm
 
 Every case **MUST** be covered by exactly one arm, singly or inside one `[ ]` group. The block lowers to an O(1) runtime **tag jump**; if the scrutinee's static type is already a single case (`Expr.strLit`), that arm is chosen statically with no jump.
@@ -170,6 +172,28 @@ String render(e Expr) => match e { ... }
 
 The type is closed; the operations are open.
 
+### 5.6 Matching several scrutinees
+
+A `match` may take **several scrutinees**, written as a bare comma-separated list — never parenthesised. Each arm then gives one selector per scrutinee position, in order and comma-separated, and the block dispatches on all the tags jointly.
+
+```zane
+type State = enum [ idle, running, paused ]
+type Event = enum [ keyPress, timeout, reset ]
+
+newState State = match state, event {
+    [idle, running, paused], keyPress => State.running;
+    running,                 timeout  => State.paused;
+    [idle, paused],          timeout  => State.idle;
+    [idle, running, paused], reset    => State.idle;
+}
+```
+
+- **Bare list, not a tuple.** The scrutinees are independent values matched together, not a product value taken apart. Parenthesising them as `(state, event)` would imply a tuple to destructure — the pattern-matching road (§5.3) — so the list stays bare.
+- **Per-position selectors.** Each arm carries one `[binder] selector` per scrutinee, in order. A `[ ]` group's commas sit inside its brackets and the position commas sit outside them, so the two never collide.
+- **Cross-product exhaustiveness.** Every combination of cases **MUST** be covered, with no default. Because there is no wildcard, a "regardless of `state`" arm names every state in a `[ ]` group; adding a case to either variant is a compile-time error until the new combinations are placed.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#variants-deserve-a-central-place) — "Variants deserve a central place".
+
 ---
 
 ## 6. Enum Maps
@@ -207,6 +231,7 @@ The form is `<Enum>.<property> <Type> [ member = value, ... ]`. It uses `[ ]` br
 | Matching model | **pattern matching**: an arm dispatches on the tag *and* destructures shape — nested patterns, tuple/record/literal patterns, guards | **variant matching**: an arm dispatches on the tag only and binds the payload whole; `match` again to go deeper (§5.3) |
 | Match arms | dedicated pattern-match arm syntax | a central `match` block of `;`-terminated tag arms; a `[ ]` group shares one arm across several cases |
 | Default arm | `_` wildcard absorbs unlisted cases | no default; every case is named, so adding a case is a compile error until placed (§5.2) |
+| Multiple scrutinees | matched as a tuple pattern | a bare comma list of scrutinees, matched jointly on tags — no tuple, so no shape destructuring (§5.6) |
 
 ### 7.2 Zane vs. Rust
 
@@ -250,5 +275,6 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a single-case binder is the payload, a group binder widens to the variant; the bracket is a selector, not a type |
 | Exhaustiveness, no default | Every case covered by exactly one arm, singly or in a `[ ]` group; no wildcard, so adding a case is a compile error until placed |
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |
+| Multiple scrutinees | `match a, b { sel, sel => body; ... }`; bare comma list, never a tuple; one selector per position; cross-product exhaustiveness, no default |
 | Open operations | The variant is closed; any package may match it in its own function |
 | Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <Type> [ member = value, ... ]`; read field-style; not a passable value |
