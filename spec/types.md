@@ -360,7 +360,7 @@ An implicit constructor is **never** inserted at any other position. In particul
 - `return` expressions, even when the return type is declared
 - Named field entries of an `init{ field = expr }` initializer inside a constructor body
 
-At each of these positions the destination type is written locally — a declaration, a store into existing storage, a `return`, or a field of the value the constructor is itself building through `init{ }` — so the conversion must be written explicitly.
+At each of these positions the destination type is one you fix yourself — a local declaration, existing storage, the return type in the enclosing signature, or the fields the constructor builds through `init{ }` — rather than a contract you pass a value into, so the conversion must be written explicitly.
 
 Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [operators.md](operators.md) §2.2); each operand is a positional argument of that call.
 
@@ -497,7 +497,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
 | Implicit constructors for coercion | Allows ergonomic conversions when passing arguments to function and constructor calls, without operator overloading or hidden multi-step chaining. |
-| Implicit conversion at call and constructor arguments | A call, positional-constructor, or field-constructor argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying — this includes the named field entries of a `Type{field = value}` call. Declarations, assignments, field and subscript stores, `return`, and the `init{field = value}` a constructor writes its own value through either write the destination type locally or store into existing storage, where a hidden conversion would be surprising, so they stay explicit. |
+| Implicit conversion at call and constructor arguments | A call, positional-constructor, or field-constructor argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying — this includes the named field entries of a `Type{field = value}` call. Declarations, assignments, field and subscript stores, `return`, and the `init{field = value}` a constructor writes its own value through instead fix the destination type themselves — a local declaration, existing storage, the enclosing return type, or the constructor's own fields — rather than adapting to a contract, where a hidden conversion would be surprising, so they stay explicit. |
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
 | No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
