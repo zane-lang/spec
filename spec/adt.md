@@ -210,7 +210,7 @@ Colors.colorName String [
 Colors.red.colorName   // "Red" — a String value
 ```
 
-The form is `<Enum>.<property> <Type> [ member = value, ... ]`. It uses `[ ]` brackets with `,` separators, names the property where it is read, and reserves **no keyword**, so `Map` and `Dict` stay free for a future dictionary type.
+The form is `<Enum>.<property> <VarType> [ member = value, ... ]`. It uses `[ ]` brackets with `,` separators, names the property where it is read, and reserves **no keyword**, so `Map` and `Dict` stay free for a future dictionary type.
 
 - An enum map is **not a passable value**. The mapping is static, so there is nothing to dispatch over; only its *result* is a value. A genuinely dynamic `Colors → String` transform is a lambda (`String[Colors]`), not a map.
 - Enum maps belong to enums specifically — uniform peers paired with uniform external data. A `variant` would never want one, because its data is intrinsic to each case.
@@ -277,4 +277,4 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |
 | Multiple scrutinees | `match a, b { sel, sel => body; ... }`; bare comma list, never a tuple; one selector per position; cross-product exhaustiveness, no default |
 | Open operations | The variant is closed; any package may match it in its own function |
-| Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <Type> [ member = value, ... ]`; read field-style; not a passable value |
+| Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <VarType> [ member = value, ... ]`; read field-style; not a passable value |
