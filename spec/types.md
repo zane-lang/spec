@@ -316,14 +316,14 @@ implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
 Void printDistance(d Meters) { ... }
 ```
 
-At a **coercion site** — a positional argument of a function or constructor call, or a named field entry of a field-constructor call or `init{ }` initializer (see §4.2) — if the source expression has a different type than the parameter or field and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
+At a **coercion site** — a positional argument of a function or constructor call, or a named field entry of a field-constructor call (see §4.2) — if the source expression has a different type than the parameter or field and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
 
 ```zane
 printDistance(Feet(Float(10)))   // coercion site: parameter expects Meters, Feet provided
 // desugars to: printDistance(Meters(Feet(Float(10))))
 ```
 
-A named field entry is a coercion site too, so the conversion fires inside a field-constructor call and inside the `init{ }` that builds the value:
+A named field entry of a field-constructor call is a coercion site too, so the conversion fires inside the braces:
 
 ```zane
 type Trip = struct { distance Meters; label String; }
@@ -332,6 +332,8 @@ Trip{distance Meters, label String} => init{distance, label}
 Trip{distance = Feet(Float(10)), label = "hike"}   // field entry expects Meters, Feet provided
 // desugars to: Trip{distance = Meters(Feet(Float(10))), label = "hike"}
 ```
+
+The `init{ }` inside a constructor body is **not** a coercion site: there the constructor writes its own value's fields, so like a `return` the conversion is written explicitly (see §4.2).
 
 A declaration is **not** a coercion site, so the conversion must be written explicitly there:
 
@@ -346,9 +348,9 @@ A coercion site is a position that passes a value into a **call or constructor**
 - Positional arguments of a function call
 - Positional arguments of a method call (the receiver is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
-- Named field entries of a field-constructor call `Type{ field = expr }`, including the `init{ field = expr }` form used inside a constructor body
+- Named field entries of a field-constructor call `Type{ field = expr }`
 
-A field entry fills a slot whose type is fixed by the type's declaration, exactly as a positional argument fills a slot whose type is fixed by the callee's signature; the two forms coerce alike.
+A field-constructor call entry fills the constructor's declared slot, exactly as a positional argument fills a slot whose type is fixed by the callee's signature, so the two coerce alike.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
@@ -356,8 +358,9 @@ An implicit constructor is **never** inserted at any other position. In particul
 - Assignments to already-declared symbols: `name = expr`
 - Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
 - `return` expressions, even when the return type is declared
+- Named field entries of an `init{ field = expr }` initializer inside a constructor body
 
-At each of these positions the destination type is either written locally or names existing storage, so the conversion must be written explicitly.
+At each of these positions the destination type is written locally — a declaration, a store into existing storage, a `return`, or a field of the value the constructor is itself building through `init{ }` — so the conversion must be written explicitly.
 
 Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [operators.md](operators.md) §2.2); each operand is a positional argument of that call.
 
@@ -494,7 +497,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
 | Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
 | Implicit constructors for coercion | Allows ergonomic conversions when passing arguments to function and constructor calls, without operator overloading or hidden multi-step chaining. |
-| Implicit conversion at call and constructor arguments | A call, positional-constructor, or field-constructor argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying — this includes the named field entries of a `Type{field = value}` call and of the `init{field = value}` that builds it, which fill the constructor's declared field slots. Declarations, assignments, field and subscript stores, and `return` either write the destination type locally or store into existing storage, where a hidden conversion would be surprising, so they stay explicit. |
+| Implicit conversion at call and constructor arguments | A call, positional-constructor, or field-constructor argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying — this includes the named field entries of a `Type{field = value}` call. Declarations, assignments, field and subscript stores, `return`, and the `init{field = value}` a constructor writes its own value through either write the destination type locally or store into existing storage, where a hidden conversion would be surprising, so they stay explicit. |
 | Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
 | No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
 | No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
@@ -518,7 +521,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at positional arguments of function and constructor calls and at named field entries of `Type{field = value}` / `init{field = value}` calls — never at declarations, assignments, stores, or `return`; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted automatically at positional arguments of function and constructor calls and at named field entries of a `Type{field = value}` call — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be struct or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
