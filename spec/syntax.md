@@ -120,7 +120,7 @@ EnumName.property FieldType [
 ]
 ```
 
-> **See also:** [`adt.md`](adt.md) §7 for enum-map semantics.
+> **See also:** [`adt.md`](adt.md) §6 for enum-map semantics.
 
 ---
 
@@ -567,26 +567,34 @@ number Int = (3 + 2) * 2
 
 ### 4.8 `match` expressions
 
-A `match` expression names a scrutinee, then a `[ ]` list of `,`-separated callables (lambda literals or lambda-variables). A `match` is an expression and may carry a trailing `?` (or `??`) handler when its arms are abortable.
+A `match` expression names one or more scrutinees — a bare `,`-separated list, never parenthesised — then a `{ }` block of `;`-terminated arms. Each arm is an optional binder, a case selector, `=>`, and a body. A `match` is an expression and may carry a trailing `?` (or `??`) handler when its arms are abortable.
 
 ```zane
-match scrutinee [ callable, callable, ... ]
-name VarType = match scrutinee [ callable, callable, ... ]
-name VarType = match scrutinee [ callable, callable, ... ] ? binder { ... }
+match scrutinee { arm; arm; ... }
+match scrutinee, scrutinee { arm; arm; ... }
+name VarType = match scrutinee { arm; arm; ... }
+name VarType = match scrutinee { arm; arm; ... } ? binder { ... }
 ```
 
-The arms are ordinary function values, so each may be a lambda literal (block- or `=>`-bodied) or a named lambda-variable.
+An arm is `[binder] selector => body`, with one `[binder] selector` per scrutinee position, `,`-separated in order. A selector is a single case name or a `[ ]` list of `,`-separated case names, written bare (rooted at that scrutinee's type). The body is an expression (`=> expr`) or a `{ }` block.
 
 ```zane
-result Int = match value [
-    Int(x Num.int)   => 2 * x,
-    Int(x Num.float) => Int(6 * x)
-]
+result String = match e {
+    x strLit            => x;
+    [intLit, floatLit]  => "number";
+    b op                => render(b);
+    // every case must be covered — see adt.md §5
+}
 
-result Int = match x [intCase, floatCase]
+// several scrutinees: one selector per position
+newState State = match state, event {
+    [idle, running], keyPress => State.running;
+    running,         timeout  => State.idle;
+    // every combination must be covered — see adt.md §5.6
+}
 ```
 
-> **See also:** [`adt.md`](adt.md) §6 for `match` semantics.
+> **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
 
 ---
 
