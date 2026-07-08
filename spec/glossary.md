@@ -149,23 +149,23 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The label states the shared property directly: one body shape serves both kinds, distinguished only by keyword.
 - **Canonical home:** [`adt.md`](adt.md) §3.1
 
-### 3.18 case-overload dispatch
-- **Meaning:** Pattern matching expressed by overloading a function on a variant's cases (`f(x V.case)`). A value of the whole-variant type lowers to a runtime tag jump over the case overloads, which must be exhaustive. A whole-variant overload and its case overloads cannot coexist for one function name.
-- **Why this name:** Dispatch is performed through the ordinary overload mechanism, selecting a per-case overload by the live tag, so the name pairs "case" with "overload."
-- **Canonical home:** [`adt.md`](adt.md) §5
+### 3.18 variant matching
+- **Meaning:** Consuming a `variant` by dispatching on its live tag in a central `match` block and binding the payload whole. It is **not** pattern matching: it does not destructure payload shape, nest into inner variants, test literals, or apply guards. A `[ ]` group in an arm selects a set of tags, not a shape.
+- **Why this name:** It matches a variant's tag, distinguishing it from ML-style pattern matching, which also destructures shape.
+- **Canonical home:** [`adt.md`](adt.md) §5.3
 
 ### 3.19 `match`
-- **Meaning:** An expression that takes a scrutinee and a flat list of callables (lambda literals or lambda-variables) and dispatches on the variant's tag to the callable whose parameter type handles the live case. It is exhaustive, all arms share one return type, and abort flows through.
-- **Why this name:** "Match" is the familiar name for tag-directed selection, here surfaced as a dispatch over a collection of function values rather than special arm syntax.
-- **Canonical home:** [`adt.md`](adt.md) §6
+- **Meaning:** An expression that names a scrutinee and a `{ }` block of `;`-terminated arms; each arm has an optional binder, a case (or `[ ]` group of cases) selector, and a body. It dispatches on the live tag, is exhaustive with no default arm, all arms share one return type, and abort flows through.
+- **Why this name:** "Match" is the familiar name for tag-directed selection, here surfaced as a single central block over a variant's cases.
+- **Canonical home:** [`adt.md`](adt.md) §5
 
 ### 3.20 enum map property
 - **Meaning:** A package-scope, exhaustive, access-only declaration that attaches uniform external data to an enum's members and is read field-style (`Colors.red.colorName`). It is not a passable value; its result is a value.
 - **Why this name:** It maps each enum member to a value of a named property, and it is named where the value is read, so "enum map property" describes both the table and its access form.
-- **Canonical home:** [`adt.md`](adt.md) §7
+- **Canonical home:** [`adt.md`](adt.md) §6
 
 ### 3.21 member-versus-value delimiter
-- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` arms) and is never trailing; a newline separates statements.
+- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and every arm of a `match` block, and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, and the case list of a `match` group `[ … ]`) and is never trailing; a newline separates statements.
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 

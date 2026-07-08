@@ -99,13 +99,16 @@ Calls whose primary return type is `Void` may not be assigned to variables. When
 A `match` expression passes the output of its selected arm straight up. If the arms are abortable, the whole `match` is abortable and takes a `?` (or `??`) handler exactly like any other abortable expression. Abortability is not introduced or swallowed by `match`; it simply flows through.
 
 ```zane
-result Int = match x [intCase, floatCase] ? msg {
+result Int = match token {
+    x number => parse(x);
+    x symbol => lookup(x);
+} ? msg {
     print(msg)
     resolve Int(20)
 }
 ```
 
-> **See also:** [`adt.md`](adt.md) §6 for the `match` expression.
+> **See also:** [`adt.md`](adt.md) §5 for the `match` expression.
 
 ---
 
