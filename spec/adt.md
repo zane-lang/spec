@@ -124,7 +124,7 @@ The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same 
 [binder] selector => body ;
 ```
 
-- **Optional binder.** `x strLit => body` binds the payload as `x`; a bare `strLit => body` handles the case without binding. An arm head reads exactly like a declaration `x Type`, with the `Expr.` supplied by the scrutinee — the casing rule (see [`lexical.md`](lexical.md) §3) carries it with no new syntax.
+- **Optional binder.** `x strLit => body` binds the payload as `x`; a bare `strLit => body` handles the case without binding. An arm head reads exactly like a declaration `x VarType`, with the `Expr.` supplied by the scrutinee — the casing rule (see [`lexical.md`](lexical.md) §3) carries it with no new syntax.
 - **Selector.** A single case name (`strLit`) or a `[ ]` group of `,`-separated case names (`[intLit, floatLit]`), written bare like an enum member.
 - **Binder type.** A single-case binder behaves as that case's payload (§3). A group binder — whose cases have differing payloads — widens to the whole variant. The bracket is a **case selector, not a type**: no anonymous type is formed, so every type stays named (see [`types.md`](types.md) §1).
 - **Body.** `=> expr` is shorthand for `{ return expr }`; a larger arm uses a `{ }` block body.
