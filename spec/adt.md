@@ -126,11 +126,15 @@ The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same 
 
 - **Optional binder.** `x strLit => body` binds the payload as `x`; a bare `strLit => body` handles the case without binding. An arm head reads exactly like a declaration `x VarType`, with the `Expr.` supplied by the scrutinee — the casing rule (see [`lexical.md`](lexical.md) §3) carries it with no new syntax.
 - **Selector.** A single case name (`strLit`) or a `[ ]` group of `,`-separated case names (`[intLit, floatLit]`), written bare like an enum member.
-- **Binder type.** A single-case binder behaves as that case's payload (§3). A group binder — whose cases have differing payloads — widens to the whole variant. The bracket is a **case selector, not a type**: no anonymous type is formed, so every type stays named (see [`types.md`](types.md) §1).
+- **Binder type.** A single-case binder behaves as that case's payload (§3). A `[ ]` group is **shorthand for one arm per listed case**: `x [ident, qualifiedIdent] => body` expands to `x ident => body;` and `x qualifiedIdent => body;`, each binding `x` at *its own* case's payload. A single case and a group are therefore the same mechanism — a group is just the arm written once. The bracket is a **case selector, not a type**: no anonymous sub-variant is formed, so every type stays named (see [`types.md`](types.md) §1). Because the binder is always a case's payload, it never stands for the whole variant; when an arm needs the variant itself, it names the scrutinee, which stays in scope.
 - **Body.** `=> expr` is shorthand for `{ return expr }`; a larger arm uses a `{ }` block body.
 - **One result type.** All arms share one return type, which is the type of the `match`.
 
+Because a group is just its arms written once, its cases need not share a payload type. Each expanded arm is checked independently against its own case's payload, so an operation on the binder — `nameOf(x)` above — must resolve for every grouped payload, ordinarily by being overloaded across them. A grouped arm that only ever wants the whole variant simply omits the binder and reads the scrutinee. Zane has no interfaces or constraints over arbitrary types, so a binder shared across *differing* payloads is useful exactly where such an overload family exists, and a heterogeneous "everything else" group is normally left unbound.
+
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#the-group-is-sugar-not-a-widening) — "The group is sugar, not a widening".
 
 ### 5.2 Exhaustive, with no default arm
 
@@ -272,7 +276,7 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `#variant` or `#struct`, never a value type |
 | Variant storage | `variant` is an inline value sum; `#variant` is a reference sum that carries a tag, may recurse, and is placed by the reference-type rules |
 | `match` block | Central expression `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
-| Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a single-case binder is the payload, a group binder widens to the variant; the bracket is a selector, not a type |
+| Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |
 | Exhaustiveness, no default | Every case covered by exactly one arm, singly or in a `[ ]` group; no wildcard, so adding a case is a compile error until placed |
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |
 | Multiple scrutinees | `match a, b { sel, sel => body; ... }`; bare comma list, never a tuple; one selector per position; cross-product exhaustiveness, no default |
