@@ -130,7 +130,7 @@ The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same 
 - **Body.** `=> expr` is shorthand for `{ return expr }`; a larger arm uses a `{ }` block body.
 - **One result type.** All arms share one return type, which is the type of the `match`.
 
-Because a group is just its arms written once, its cases need not share a payload type. Each expanded arm is checked independently against its own case's payload, so an operation on the binder — `nameOf(x)` above — must resolve for every grouped payload, ordinarily by being overloaded across them. A grouped arm that only ever wants the whole variant simply omits the binder and reads the scrutinee. Zane has no interfaces or constraints over arbitrary types (§1), so a binder shared across *differing* payloads is useful exactly where such an overload family exists, and a heterogeneous "everything else" group is normally left unbound.
+Because a group is just its arms written once, its cases need not share a payload type. Each expanded arm is checked independently against its own case's payload, so an operation on the binder — `nameOf(x)` above — must resolve for every grouped payload, ordinarily by being overloaded across them. A grouped arm that only ever wants the whole variant simply omits the binder and reads the scrutinee. Zane has no interfaces or constraints over arbitrary types, so a binder shared across *differing* payloads is useful exactly where such an overload family exists, and a heterogeneous "everything else" group is normally left unbound.
 
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
 
