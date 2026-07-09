@@ -134,6 +134,8 @@ Because a group is just its arms written once, its cases need not share a payloa
 
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#the-group-is-sugar-not-a-widening) — "The group is sugar, not a widening".
+
 ### 5.2 Exhaustive, with no default arm
 
 Every case **MUST** be covered by exactly one arm, singly or inside one `[ ]` group. The block lowers to an O(1) runtime **tag jump**; if the scrutinee's static type is already a single case (`Expr.strLit`), that arm is chosen statically with no jump.
