@@ -18,7 +18,7 @@ The reasoning lives in its own folder, rather than in a table at the foot of eac
 
 ## 2. Document Shape
 
-A stories document is a title, an optional pointer to the spec, and a small number of **chapters** in the order the thinking moved through them. Each chapter is a *theme* — a phase of the design in which one pressure was met and resolved — and it reads as flowing prose that runs from one chapter into the next. Chapters are marked by `## ` headings and **nothing else**: there are no `---` separators between them, and the prose carries the reader across each boundary on the thread of cause and consequence.
+A stories document is a title, a `> **See also:**` pointer to the spec, and a small number of **chapters** in the order the thinking moved through them. Each chapter is a *theme* — a phase of the design in which one pressure was met and resolved — and it reads as flowing prose that runs from one chapter into the next. Chapters are marked by `## ` headings and **nothing else**: there are no `---` separators between them, and the prose carries the reader across each boundary on the thread of cause and consequence.
 
 ```
 # Stories: <Topic>
@@ -37,7 +37,7 @@ when it discusses them (§4), and to sibling chapters by anchor (§4.3).>
 ...
 ```
 
-Do **not** open the file with a paragraph explaining what stories documents are or how they work — that is this guide's job, not the file's. A reader who opens `stories/generics.md` wants the generics story, not a preamble. Start with the title, an optional `> **See also:**` line pointing at the matching spec doc, and then the first chapter.
+Do **not** open the file with a paragraph explaining what stories documents are or how they work — that is this guide's job, not the file's. A reader who opens `stories/generics.md` wants the generics story, not a preamble. Start with the title, the `> **See also:**` line pointing at the matching spec doc, and then the first chapter.
 
 ### 2.1 File name and location
 
@@ -124,7 +124,8 @@ The contrast to hold in mind: the **spec** is rewritten to the present on every 
 
 Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` `backticks` `` for identifiers, `**bold**` for a term's first definition or a key claim, italics only for document names and semantic categories. But the register is looser than the spec's, because this is a story, not a definition:
 
-- **First person and judgement are welcome.** "We rejected X because…", "the elegant framing oversells this" — a stories doc is where opinion and honest doubt belong. The spec stays neutral; the story need not.
+- **The voice is the first-person plural "we" — always.** A stories doc is written as the collective voice of the design: *"we rejected X because…"*, *"we had already committed to…"*. Use **"we" even for a decision one person made alone** — the story speaks for the design, not the individual — and **never the singular "I."** This is a firm rule, not a preference: a story that slips into "I" is fixed to "we." Judgement and honest doubt belong in this voice too (*"the elegant framing oversells this"*): the spec stays neutral, the story need not — but it is always neutral about *who*, because it is always "we."
+- **Past tense for the reasoning, present tense for the standing design.** Recount how a decision was reached in the past — *"we rejected that"*, *"we had already committed"* — because that is history. State what the design *is* in the present — *"an `enum` is a closed set of peers"*, *"a call never carries a `<>` list"* — because that is still true. A chapter typically opens in the present to frame the situation, then moves into the past to tell the deliberation.
 - **Long-form prose is the point.** The spec keeps sentences short and clipped; a story can breathe, run longer sentences, and carry a narrative thread within and across chapters. Readability as a history matters more than terse rule-statement here.
 - **Be honest about costs.** The reason anyone will trust the record later is that it admits what the decision gave up. Honesty cuts both ways, though: where a decision genuinely cost little, saying so is more trustworthy than inventing a drawback to look balanced (§3).
 
@@ -141,7 +142,7 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 ## 8. Adding a New Stories Document
 
 1. Create `stories/<topic>.md`, matching the spec file name exactly (§2.1).
-2. Follow the shape in §2 — title, optional `> **See also:**`, then a handful of thematic chapters with `## ` headings and no `---` separators.
-3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule.
+2. Follow the shape in §2 — title, the `> **See also:**` pointer, then a handful of thematic chapters with `## ` headings and no `---` separators.
+3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule, in the first-person-plural "we" voice throughout (§6).
 4. Add a `> **Story:**` pointer from each non-trivially-justified section of the matching spec doc (§4.4), and pin in-prose spec references by permalink (§4.2).
 5. Add a row to the stories table in [`README.md`](../README.md).
