@@ -256,7 +256,7 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.10 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, `#enum [ ... ]`, or `#tuple [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds are value types.
+A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, `#enum [ ... ]`, or `#tuple [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named

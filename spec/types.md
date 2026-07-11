@@ -493,7 +493,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Concept | Rule |
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
-| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum`/`#tuple` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds are value types |
+| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum`/`#tuple` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
 | Mould | One of the four type-shaping forms — `struct`, `variant`, `enum`, or `tuple`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
