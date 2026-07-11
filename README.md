@@ -77,3 +77,4 @@ Style and structural conventions live in two sibling guides; read the relevant o
 
 - [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
 - [`contributing/writing-stories-docs.md`](contributing/writing-stories-docs.md) — stories docs in [`stories/`](stories/).
+- [`contributing/naming-terms.md`](contributing/naming-terms.md) — how the coined terms of art in [`glossary.md`](spec/glossary.md) are chosen.

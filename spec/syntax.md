@@ -163,7 +163,7 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
-A **type-defining** type expression — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference body (§2.10).
+A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference body (§2.10).
 
 ```zane
 type BinOp = #struct { left &Expr; right &Expr; operator Operator; }

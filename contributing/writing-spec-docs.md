@@ -118,6 +118,9 @@ Rules:
 - why that name was chosen
 - the canonical home document for the full rule
 
+For how a coined term is chosen in the first place — what makes a good name and
+how to weigh candidates — see [`naming-terms.md`](naming-terms.md).
+
 ---
 
 ## 3. Section Types

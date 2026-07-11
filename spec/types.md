@@ -476,7 +476,7 @@ type Wrapper = struct {
 
 A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`). There is no standalone `struct Name { ... }` declaration form — the body forms are type expressions that only name a type through a `type` (or `alias`) declaration.
 
-A **type-defining** expression — a `struct`/`variant`/`enum` body, its `#` form, or a `tuple [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1).
+These four forms — a `struct`/`variant`/`enum` body, its `#` form, or a `tuple [ ... ]` — are the **moulds**: the constructs that give a type its shape. A mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). A mould reaches all the way down: even a primitive such as `Int` is a `struct` mould over machine storage (see [`syntax.md`](syntax.md) §2.1).
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
 
@@ -493,7 +493,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
 | Value/reference axis | A type is a value type unless marked `#`; `#` marks only the body forms `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; `struct`/`variant` are value types |
-| Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); type-defining bodies and `tuple[...]` appear only as a `type`/`alias` right-hand side |
+| Mould | One of the four type-shaping forms — a `struct`/`variant`/`enum` body (with its `#` variant) or a `tuple[...]`; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
+| Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |

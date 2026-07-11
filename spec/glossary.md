@@ -204,6 +204,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. Each coercion is still backed by a user-declared `implicit` constructor — the site says where one may be inserted, not that the conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
+### 3.29 mould
+- **Meaning:** One of the four constructs that give a type its shape: a `struct`, `variant`, or `enum` body (each with its `#` variant) or a `tuple [ ... ]`. A mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named. Even the primitives are moulds: `Int`, `Float`, and `Bool` are `struct` moulds over machine storage (see [`syntax.md`](syntax.md) §2.1).
+- **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that the mould is not the type but the thing the type is cast from. The three that take `#` are the *body forms* ([`types.md`](types.md) §2.1); `tuple` is the fourth mould, positional and value-only.
+- **Canonical home:** [`types.md`](types.md) §5.3
+
 ---
 
 ## 4. Packages, Operators, and Versioning
