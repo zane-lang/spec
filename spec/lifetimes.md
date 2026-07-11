@@ -2,7 +2,7 @@
 
 This document specifies Zane's lexical lifetime rules: `&` assignment scope checks, ownership moves, and deterministic destruction. It builds on the ownership and storage forms defined in [`memory.md`](memory.md).
 
-> **See also:** [`memory.md`](memory.md) §2 for ownership and storage, §4 for anchors and refs. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`effects.md`](effects.md) §2 for `mut`.
+> **See also:** [`memory.md`](memory.md) §2 for ownership and storage, §4 for anchors and tethers. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`effects.md`](effects.md) §2 for `mut`.
 
 ---
 
@@ -16,7 +16,7 @@ outer Node()
 r &Node = outer
 {
     innerNode Node()
-    r = innerNode // ILLEGAL: owner's scope is nested relative to the ref
+    r = innerNode // ILLEGAL: owner's scope is nested relative to the tether
 }
 ```
 
@@ -33,7 +33,7 @@ A move-source must denote an **owned value the expression is entitled to consume
 A verb that returns an owned `T` produces a fresh value that no symbol, field, or container owns yet. Moving it transfers ownership of that temporary straight into the destination, so it re-parents nothing.
 
 The following are **not** move-sources:
-- an `&` value, including a verb that returns `&T` (refs are non-owning and cannot transfer ownership; see [`memory.md`](memory.md) §2.4)
+- an `&` value, including a verb that returns `&T` (tethers are non-owning and cannot transfer ownership; see [`memory.md`](memory.md) §2.4)
 - a field access such as `car.engine`
 - a container element access such as `cars[1]`
 - any other access path that projects into an existing owner
@@ -149,11 +149,11 @@ Class instances are destroyed when their owner dies, their owning container dies
 ### 2.2 Scopes drain before destruction
 If a scope launches concurrent work, objects owned by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
-### 2.3 Ref storage never extends lifetime
-Refs do not participate in ownership and cannot prolong object lifetime. They only track a live object whose owner is already guaranteed to outlive them.
+### 2.3 Tether storage never extends lifetime
+Tethers do not participate in ownership and cannot prolong object lifetime. They only track a live object whose owner is already guaranteed to outlive them.
 
-### 2.4 Null refs are not a user-facing state
-Because scope rules (§1.1) prevent refs from outliving their owners, the runtime does not expose a normal “null ref” programming model to the user.
+### 2.4 Null tethers are not a user-facing state
+Because scope rules (§1.1) prevent tethers from outliving their owners, the runtime does not expose a normal “null tether” programming model to the user.
 
 ---
 
@@ -165,7 +165,7 @@ Because scope rules (§1.1) prevent refs from outliving their owners, the runtim
 |---|---|---|---|---|
 | Destruction timing | deterministic | non-deterministic | deterministic | manual / RAII |
 | GC pauses | ❌ | ✅ | ❌ | ❌ |
-| Dangling ref risk | ❌ | ❌ | ❌ | ✅ |
+| Dangling tether risk | ❌ | ❌ | ❌ | ✅ |
 | Lifetime annotations | ❌ | ❌ | ✅ | ❌ |
 
 ---
@@ -175,7 +175,7 @@ Because scope rules (§1.1) prevent refs from outliving their owners, the runtim
 | Concept | Rule |
 |---|---|
 | `&` return | Returned `&T` must be rooted in a parameter; `this` counts |
-| Ref assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the ref |
+| Tether assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the tether |
 | Move-source | A direct owning symbol (local or parameter) or an owned verb result; not an `&`, field, container element, or other access path |
 | Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters are treated as declared at function body top |
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |

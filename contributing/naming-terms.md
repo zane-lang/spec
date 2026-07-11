@@ -2,8 +2,8 @@
 
 This guide describes how the spec chooses the coined terms it reuses — the named
 concepts recorded in [`glossary.md`](../spec/glossary.md), such as `verb`,
-`mould`, `borrow`, and `anchor`. It governs the *terms of art* the documentation
-leans on, not the surface keywords of the language itself.
+`mould`, `borrow`, `anchor`, and `tether`. It governs the *terms of art* the
+documentation leans on, not the surface keywords of the language itself.
 
 Terminology is worth naming deliberately because a good term is used on nearly
 every page: it is the handle a reader carries the concept around by. A term that
@@ -25,8 +25,11 @@ does the teaching before the definition is even read.
   is cast from them.
 - **`borrow`** — the passing mode for a value type. The callee is *lent* the
   caller's storage for the call and must give it back; it cannot keep it.
-- **`anchor`** — the stable indirection a ref reads through. An anchor is a fixed
+- **`anchor`** — the stable indirection a tether reads through. An anchor is a fixed
   point that holds something in place while the world around it moves.
+- **`tether`** — the non-owning `&` handle to a reference type. A tether ties to a
+  fixed point without owning it and can be re-tied; what it is fastened to *bounds*
+  it, as an owner's scope bounds every tether taken on it.
 
 In each case the everyday meaning is not decoration — it is a true structural
 analogy. The word's real-world role maps onto the concept's role, so the name
@@ -92,9 +95,9 @@ seen rarely and gains its meaning slowly, so an oblique reference like *Ariadne*
 (the thread through the labyrinth) is a strength.
 
 A **term** is the opposite case: read constantly, and needed to teach on contact.
-Terms therefore lean plain and everyday — `verb`, `mould`, `borrow`, `anchor` —
-even when the underlying instinct (name by metaphor, keep the link oblique) is
-the same. When in doubt for a term, choose the ordinary word over the exotic one.
+Terms therefore lean plain and everyday — `verb`, `mould`, `borrow`, `anchor`,
+`tether` — even when the underlying instinct (name by metaphor, keep the link
+oblique) is the same. When in doubt for a term, choose the ordinary word over the exotic one.
 
 ---
 

@@ -69,7 +69,7 @@ A method without `mut` may not assign to fields of `this` or call `mut` methods 
 Even a `mut` method may write only within the receiver-owned subtree. It does not gain permission to mutate unrelated parameters. This applies whether the receiver is a value type or a reference type: a value receiver is mutated in place through its borrow (see [`functions.md`](functions.md) §2.4), not by returning a replacement.
 
 ### 4.3 `&` use sites follow ordinary call rules
-Reading through an `&` value is not a side effect by itself. At use sites, `&` values follow the same field-access and method-call rules as owners. Mutation of referenced state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
+Reading through a tether is not a side effect by itself. At use sites, tethers follow the same field-access and method-call rules as owners. Mutation of the tethered object's state must still be expressed through a `mut` method call on a receiver that has the proper ownership or capability relationship.
 
 ---
 
@@ -81,7 +81,7 @@ The compiler uses the ownership graph of `this` to determine which fields and de
 ### 5.2 Call-graph propagation
 If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
 
-### 5.3 Refs do not by themselves raise effect level
+### 5.3 Tethers do not by themselves raise effect level
 A function does not leave the pure levels merely because it reads through an `&`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is owning or non-owning.
 
 ### 5.4 Unknown callees are conservatively classified
