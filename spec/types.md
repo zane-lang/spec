@@ -65,6 +65,8 @@ All fields whose names do not begin with `_` are public.
 
 This is intentional: private-field access in Zane is method-based, not package-based.
 
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
+
 ### 2.4 Type bodies contain no behavior
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
@@ -485,32 +487,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 
 ---
 
-## 6. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Type bodies contain fields only | Separates layout from behavior and makes storage inspectable at a glance. |
-| One kind axis with the `#` modifier | Value versus reference is orthogonal to product versus sum, so one modifier (`#`) spans `struct`/`variant`/`enum` rather than a separate keyword per combination. `#` marks only a body form: a reference type is a distinct type, declared and named, that reuses only its body's layout. |
-| Every type is named | Construction is name-based — a constructor is a verb named after its type — so a type with no name has no constructor. A use-site position therefore names a declared type; type-defining bodies and `tuple[...]` appear only as a declaration right-hand side. |
-| Value types cannot contain reference-type or `&` fields | A value is copied inline; embedding an identity-bearing or ref-bearing field would silently duplicate ownership or anchor state. The restriction (checked transitively) is what keeps a value alias-free and safe to snapshot. |
-| Value types mutate in place through a borrowed receiver | A `mut` method borrows the caller's storage, so a value is mutated without the return-a-replacement dance and without gaining identity. |
-| Name-based field privacy | Privacy follows method receivers, not packages. A method declared in any package gets the same private-field access as one declared in the home package. |
-| Constructors are package-scope declarations | Avoids partial-object semantics and keeps construction in the same model as functions and methods. |
-| Field constructors, defaults, and `init{}` shorthand | Removes repetitive `field = field` boilerplate when names already match, while still allowing direct field-parameter constructors to supply sensible defaults. |
-| Implicit constructors for coercion | Allows ergonomic conversions when passing arguments to function and constructor calls, without operator overloading or hidden multi-step chaining. |
-| Implicit conversion at call and constructor arguments | A call, positional-constructor, or field-constructor argument fills a slot whose type is fixed entirely by the callee's signature, so the conversion serves a contract the caller is satisfying — this includes the named field entries of a `Type{field = value}` call. Declarations, assignments, field and subscript stores, `return`, and the `init{field = value}` a constructor writes its own value through instead fix the destination type themselves — a local declaration, existing storage, the enclosing return type, or the constructor's own fields — rather than adapting to a contract, where a hidden conversion would be surprising, so they stay explicit. |
-| Single-parameter requirement for implicit constructors | Keeps conversion semantics unambiguous: one source value produces one destination value. |
-| No field-constructor form for implicit constructors | Field constructors name their parameters after fields; implicit constructors name their parameter after the source type. The forms serve different purposes. |
-| No chaining of implicit conversions | Prevents hidden complexity and keeps conversion cost bounded and predictable. |
-| Source type must be a value type or compiler concept | Reference types have ownership and identity; implicitly converting one would hide ownership transfer. Compiler concept types in `@concepts$...` are designed for ergonomic lowering. |
-| Coherence: orphan rule for implicit constructors | Prevents third-party packages from introducing conflicting conversions between types they do not own. |
-| Method receivers never implicitly converted | Preserves dispatch clarity: the method is selected by the receiver's actual type, not by a conversion that happens to make the call legal. |
-| `type` vs `alias` keywords | The choice between a new distinct type and an interchangeable alias lives in the keyword, not in a single mid-declaration character, so intent is unambiguous at a glance. |
-| `Type` / `Number` constructor parameters | A constructor call carries no `<>` list, so a parameterized type's constructor receives its template parameters as ordinary arguments — inferred from inline introduction (on a value parameter's type or a nested type) or passed explicitly as `Type`/`Number` value parameters. Reusing the concept-type machinery avoids a bespoke parameter-kind keyword. |
-
----
-
-## 7. Summary
+## 6. Summary
 
 | Concept | Rule |
 |---|---|
