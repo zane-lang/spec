@@ -85,7 +85,7 @@ So the rules should not be read as a usability tax levied next to the performanc
 
 ## 7. Identity Is Opt-In
 
-Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark attaches only to a mould — `#struct`, `#variant`, `#enum`, `#tuple` — declared and named; each such reference type is a distinct type with identity that can be pointed at.
+Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark attaches only to a mould — `#struct`, `#variant`, `#enum`, `#tuple` — declared and named; each such reference type is a distinct type with identity that can be pointed at.
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
