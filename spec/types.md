@@ -11,7 +11,7 @@ This document specifies Zane's data types: value and reference types, the `#` mo
 Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
-- **`One kind axis`.** A type is a **value type** unless marked `#`, which makes it a **reference type**. `struct` is the value product; `#struct` is the reference product — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse.
+- **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse. `struct` is a value mould; `#struct` a reference mould.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
@@ -21,7 +21,7 @@ Zane keeps data layout and construction separate from behavior.
 ## 2. Value and Reference Types
 
 ### 2.1 The value/reference axis and the `#` modifier
-Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This axis is orthogonal to the *shape* of the body (a product `struct` or a sum `variant`, see §2.5). The value product is `struct`; the reference product is `#struct`. The `#` mark applies only to the **body forms** — `#struct`, `#variant`, and `#enum` (see [`adt.md`](adt.md) §3) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its body and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, `#enum`, or `#tuple` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -71,14 +71,14 @@ This is intentional: private-field access in Zane is method-based, not package-b
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
 ### 2.5 `struct` and `variant` share one body grammar
-A `struct` is a product type: it has all of its members at once. A `variant` is a sum type with the same body grammar: it has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
+A `struct` is a **product mould**: a value of the type it declares has all of its members at once. A `variant` is a **sum mould** with the same body grammar: a value has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
 
 ```zane
-type Color = struct { r Int; g Int; b Int; }    // value product: has r and g and b
-type Shape = variant { dot Dot; line Line; }      // value sum: has dot or line
+type Color = struct { r Int; g Int; b Int; }    // value product type: has r and g and b
+type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis and applies to both shapes: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value type — `struct` or `variant` — is transitively value and **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference type — `#struct` or `#variant` — may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across all four; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a body form, a reference type comes into being only through such a declaration and is always named there (§5.3).
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 
@@ -465,7 +465,7 @@ alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression
-The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, a `#`-marked reference body, or an inline `struct { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` (and the `#` forms of the bodies).
+The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline mould — `struct { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — in either its value form or its `#` reference form.
 
 ```zane
 type Wrapper = struct {
@@ -474,11 +474,12 @@ type Wrapper = struct {
 }
 ```
 
-A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`). There is no standalone `struct Name { ... }` declaration form — the body forms are type expressions that only name a type through a `type` (or `alias`) declaration.
+A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`/`tuple`). There is no standalone `struct Name { ... }` declaration form — a mould is a type expression that only names a type through a `type` (or `alias`) declaration.
 
-A **type-defining** expression — a `struct`/`variant`/`enum` body, its `#` form, or a `tuple [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1).
+These four forms — `struct`, `variant`, `enum`, and `tuple` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). A mould reaches all the way down: even a core type such as `Int` is *declared with* one — `Int`, `Float`, and `Bool` are wrapper `struct`s over machine-storage primitives in the `@primitives$` namespace (see [`syntax.md`](syntax.md) §2.1).
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
 
 ### 5.4 The keyword carries the distinction
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
@@ -492,8 +493,9 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Concept | Rule |
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
-| Value/reference axis | A type is a value type unless marked `#`; `#` marks only the body forms `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; `struct`/`variant` are value types |
-| Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); type-defining bodies and `tuple[...]` appear only as a `type`/`alias` right-hand side |
+| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum`/`#tuple` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
+| Mould | One of the four type-shaping forms — `struct`, `variant`, `enum`, or `tuple`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
+| Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |

@@ -134,13 +134,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
-### 3.15 variant (sum type)
-- **Meaning:** A `variant` is a sum type: a value holds exactly one of its named members at a time. Its body grammar is identical to a `struct`; the keyword flips product into sum. Reading a member is partial and therefore abortable.
+### 3.15 variant (sum mould)
+- **Meaning:** A `variant` is a **sum mould**: a value of the type it declares holds exactly one of its named members at a time. Its body grammar is identical to a `struct` — the product mould — with the keyword flipping product into sum. Reading a member is partial and therefore abortable.
 - **Why this name:** "Variant" is the established name for a tagged sum of alternatives, and it reads as a peer of `struct` since the two share one body grammar.
 - **Canonical home:** [`adt.md`](adt.md) §3
 
 ### 3.16 enum (uniform peers)
-- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum type; per-member data is attached externally by an enum map.
+- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map.
 - **Why this name:** "Enum" matches the common meaning of an enumeration of equal-rank constants, and the spec reserves it for that uniform-peer role rather than overloading it with the sum-type role given to `variant`.
 - **Canonical home:** [`adt.md`](adt.md) §2
 
@@ -203,6 +203,21 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A position where the compiler inserts an applicable `implicit` constructor automatically: a positional argument of a function or constructor call, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{}` — where the conversion is written explicitly.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. Each coercion is still backed by a user-declared `implicit` constructor — the site says where one may be inserted, not that the conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
+
+### 3.29 mould
+- **Meaning:** One of the four constructs that give a type its shape: `struct`, `variant`, `enum`, and `tuple`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named. The reach is total: even a core type such as `Int` is declared with a mould — `Int`, `Float`, and `Bool` are wrapper `struct`s over machine-storage primitives in the `@primitives$` namespace (see [`syntax.md`](syntax.md) §2.1). A mould shapes a type; the type is what it declares.
+- **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that a mould is the form a type is cast from. The `#` value/reference axis applies to every mould uniformly ([`types.md`](types.md) §2.1); `struct` and `variant` share one `{ }` body grammar, while `enum` and `tuple` are `[ ]` lists.
+- **Canonical home:** [`types.md`](types.md) §5.3
+
+### 3.30 value mould / reference mould
+- **Meaning:** A mould is written in one of two **forms**: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. A mould in its value form is a **value mould** (`struct`, `variant`, `enum`, `tuple`); in its reference form, a **reference mould** (`#struct`, `#variant`, `#enum`, `#tuple`). The form decides the kind of the type the mould declares: a value mould declares a *value type* (copied, transitively value); a reference mould declares a *reference type* (identity-bearing, aliasable through `&`, may recurse).
+- **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould, so each mould has two forms; "form" names the position on that axis and "value/reference mould" names a mould occupying it. Because a mould shapes a type, a *reference mould* stays distinct from the *reference type* it declares.
+- **Canonical home:** [`types.md`](types.md) §2.1
+
+### 3.31 product mould / sum mould
+- **Meaning:** The two moulds that share one `{ }` body grammar, told apart by keyword. A `struct` is the **product mould**: a value of the type it declares has *all* its members at once, so that type is a **product type**. A `variant` is the **sum mould**: a value has *exactly one* member at a time, so that type is a **sum type**. `enum` and `tuple` are moulds of other shapes and keep their own names.
+- **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" names the *construct* (parallel to value mould / reference mould, §3.30), while "product type" / "sum type" name the *type* the mould declares — so construct and type stay distinct.
+- **Canonical home:** [`types.md`](types.md) §2.5
 
 ---
 
