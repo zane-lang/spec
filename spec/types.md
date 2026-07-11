@@ -316,7 +316,7 @@ implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
 Void printDistance(d Meters) { ... }
 ```
 
-At a **coercion site** — a positional argument of a function or constructor call, or a named field entry of a field-constructor call (see §4.2) — if the source expression has a different type than the parameter or field and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
+At a **coercion site** — a positional argument of a function or constructor call, or a named field entry of a field-constructor call (see §4.2) — if the source expression has a different type from the parameter or field and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
 
 ```zane
 printDistance(Feet(Float(10)))   // coercion site: parameter expects Meters, Feet provided
