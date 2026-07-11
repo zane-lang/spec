@@ -479,6 +479,7 @@ A named type is therefore always declared this way: `type Name = struct { ... }`
 These four forms — `struct`, `variant`, `enum`, and `tuple` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). A mould reaches all the way down: even a primitive such as `Int` is a `struct` mould over machine storage (see [`syntax.md`](syntax.md) §2.1).
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
 
 ### 5.4 The keyword carries the distinction
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
