@@ -209,6 +209,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that the mould is not the type but the thing the type is cast from. The `#` value/reference axis applies to every mould uniformly ([`types.md`](types.md) §2.1); `struct` and `variant` share one `{ }` body grammar, while `enum` and `tuple` are `[ ]` lists.
 - **Canonical home:** [`types.md`](types.md) §5.3
 
+### 3.30 value mould / reference mould
+- **Meaning:** A mould is written in one of two **forms**: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. A mould in its value form is a **value mould** (`struct`, `variant`, `enum`, `tuple`); in its reference form, a **reference mould** (`#struct`, `#variant`, `#enum`, `#tuple`). The form decides the kind of the type the mould declares: a value mould declares a *value type* (copied, transitively value); a reference mould declares a *reference type* (identity-bearing, aliasable through `&`, may recurse).
+- **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould, so each mould has two forms; "form" names the position on that axis and "value/reference mould" names a mould occupying it. Because a mould shapes a type but is not a type, a *reference mould* stays distinct from the *reference type* it declares.
+- **Canonical home:** [`types.md`](types.md) §2.1
+
 ---
 
 ## 4. Packages, Operators, and Versioning
