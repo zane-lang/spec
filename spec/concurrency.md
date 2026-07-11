@@ -136,8 +136,8 @@ The effect system classifies resource access as **read** or **write**. Concurren
 
 The compiler enforces this from effect signatures; the programmer does not add locks.
 
-### 4.6 Refs passed to spawned work remain independent
-When an `&` value is passed to a spawned call, the callee receives its own `&` value to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the `&` value already held by spawned work.
+### 4.6 Tethers passed to spawned work remain independent
+When a tether is passed to a spawned call, the callee receives its own tether to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the tether already held by spawned work.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 

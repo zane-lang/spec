@@ -175,13 +175,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor table
-- **Meaning:** A single heap-resident array of fixed-size cells, each holding the current address of one referenced owner. It is reached through `anchor_ptr`, the one fixed word reserved at the base of the memory region, and grows on demand.
-- **Why this name:** Each cell *anchors* a referenced owner — a stable indirection point that refs read through — and the cells are collected into one table rather than scattered as individual allocations.
+- **Meaning:** A single heap-resident array of fixed-size cells, each holding the current address of one tethered owner. It is reached through `anchor_ptr`, the one fixed word reserved at the base of the memory region, and grows on demand.
+- **Why this name:** Each cell *anchors* a tethered owner — a stable indirection point that tethers read through — and the cells are collected into one table rather than scattered as individual allocations.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
-### 3.24 index-form ref
-- **Meaning:** An `&` value is represented as a `u32`, 1-based index into the anchor table, not a raw pointer. The value `0` means unreferenced, and physical slot `0` is a reserved null/trap cell.
-- **Why this name:** The reference is a table *index*, which is half a pointer's size, survives table relocation, and resolves through the table to the owner's current address.
+### 3.24 index-form tether
+- **Meaning:** A tether is represented as a `u32`, 1-based index into the anchor table, not a raw pointer. The value `0` means untethered, and physical slot `0` is a reserved null/trap cell.
+- **Why this name:** The tether is a table *index*, which is half a pointer's size, survives table relocation, and resolves through the table to the owner's current address.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 stack-first placement
@@ -218,6 +218,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The two moulds that share one `{ }` body grammar, told apart by keyword. A `struct` is the **product mould**: a value of the type it declares has *all* its members at once, so that type is a **product type**. A `variant` is the **sum mould**: a value has *exactly one* member at a time, so that type is a **sum type**. `enum` and `tuple` are moulds of other shapes and keep their own names.
 - **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" names the *construct* (parallel to value mould / reference mould, §3.30), while "product type" / "sum type" name the *type* the mould declares — so construct and type stay distinct.
 - **Canonical home:** [`types.md`](types.md) §2.5
+
+### 3.32 tether
+- **Meaning:** The `&` value: non-owning storage that points at a **reference type**, resolved through the anchor table (§3.23) to the owner's current address. A tether is repointable, is copied when assigned or passed, may be stored in an `&` field or returned as `&T`, and carries no ownership — the owner's lifetime bounds the tether, never the reverse. It is represented as a `u32` index (§3.24), half the size of a pointer. A tether is distinct from the **reference type** (§3.30) it points at: the reference type is the kind of the owner, the tether is the non-owning handle to it.
+- **Why this name:** A tether fastens a holder to a fixed point without owning it and can be re-tied elsewhere — exactly how an `&` attaches to an anchored owner and may be repointed. What a tether is fastened to also *bounds* it, which mirrors the rule that an owner's lexical scope bounds every tether taken on it (see [`lifetimes.md`](lifetimes.md) §1.1). It pairs with **anchor** (§3.23): the anchor holds fast, and the tether reads through it.
+- **Canonical home:** [`memory.md`](memory.md) §2.4
 
 ---
 

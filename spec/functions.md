@@ -336,7 +336,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 ## 9. Connection to the Effect Model
 
-Read-only methods and functions are effect-free with respect to their receiver unless they touch refs or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+Read-only methods and functions are effect-free with respect to their receiver unless they touch tethers or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -348,7 +348,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 |---|---|
 | Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
 | Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a verb with one marker, not a separate mechanism. |
-| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost refs or hidden storage creation. |
+| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost tethers or hidden storage creation. |
 | Plain `T` parameters cannot populate `&` fields | A caller is not required to supply a stable storage location for a plain parameter, so a value parameter is a read-only borrow and a reference parameter is swallowed; restricting either from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
 | Subscripts are place projections only | Keeps `[]` predictable: an indexed expression always projects existing storage rather than running arbitrary computation. |

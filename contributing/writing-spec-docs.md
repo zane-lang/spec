@@ -138,7 +138,7 @@ Every topic document begins with `## 1. Overview`. It contains:
 Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
 
 - **Single ownership.** Every heap object has exactly one owner at all times.
-- **Anchor-based refs.** An `&` points through a stable anchor, never directly at an object.
+- **Anchor-based tethers.** An `&` points through a stable anchor, never directly at an object.
 ```
 
 The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
@@ -310,8 +310,8 @@ Void[Int, this Node] // ILLEGAL: this must be the first parameter
 
 Keep sentences short. One idea per sentence. Avoid nested clauses. Use active voice.
 
-Good: *The compiler nulls all refs to the object via the anchor.*
-Bad: *The refs that are registered against the anchor of the object that was destroyed are nulled by the anchor mechanism.*
+Good: *The compiler nulls all tethers to the object via the anchor.*
+Bad: *The tethers that are registered against the anchor of the object that was destroyed are nulled by the anchor mechanism.*
 
 ### 6.2 Emphasis
 
