@@ -61,6 +61,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | Document | Tells the story behind |
 |---|---|
 | [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, casing-determines-kind, strictness-as-performance, and the collapse of value/reference into one `#` axis |
+| [`stories/lexical.md`](stories/lexical.md) | [`spec/lexical.md`](spec/lexical.md) — casing as a hard-error kind signal and the `<>` disambiguation it buys, why field privacy lives in the name and reaches across packages, and a delimiter for each kind of separated thing |
 | [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md) — the two-axis value/reference model, why `#` marks a distinct type rather than a box, constructing a type by what it is, confining `#` to the body forms, and why every type must be named |
 | [`stories/adt.md`](stories/adt.md) | [`spec/adt.md`](spec/adt.md) — splitting `enum` from `variant` against the hype, the shared struct body, escaping the matcher machine with case overloads and the turn to a central `match` block, matching variants rather than patterns, keeping enum data outside the members, and reducing a match group to sugar for one arm per case |
 | [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, and the deferred features |

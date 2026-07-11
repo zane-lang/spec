@@ -64,6 +64,8 @@ type Buffer<T Type, n Number> = struct {   // T is a type parameter, n is a numb
 
 A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time number. A parameter is introduced by a type's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+
 ---
 
 ## 4. Identifiers
@@ -83,6 +85,8 @@ Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, 
 ### 4.2 Leading underscore
 
 A leading `_` marks a field as private to methods whose first parameter is `this` for that type. The underscore does not change the lexical class set by the first letter. See [`types.md`](types.md) §2.3.
+
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
 ### 4.3 Reserved sigils
 
@@ -111,6 +115,7 @@ ok Bool = a < b          // comparison: a is lowercase, so < is the comparison o
 A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The casing rule therefore tells the two apart by inspecting a single token's first letter.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
 
 ---
 
@@ -159,26 +164,11 @@ Void main() {
 Because the parser always knows whether it is inside a type-expression body or a code block, it always knows whether a newline separates statements or is insignificant.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing".
 
 ---
 
-## 7. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Case-sensitive parsing | Casing can carry meaning only if it is never normalised. Two cases of one spelling being one identifier would erase the kind distinction below. |
-| Casing determines kind | Encoding type-vs-value in the first letter removes a class of ambiguity at the lexical layer, so later grammar rules do not need declarations or lookahead to know what a bare name is. |
-| Lowercase types are an error | A hard error, rather than a warning or a convention, is what lets the parser and reader rely on casing as ground truth everywhere. |
-| Digits allowed inside names | Names such as `Vec2` and `Matrix3` read naturally, and with parameters supplied only through `<>` there is no need to reserve digits for a baked-in size form. |
-| Casing disambiguates `<>` | Reusing `<` and `>` for type arguments is only safe because the left operand's casing distinguishes a type application from a comparison. |
-| Delimiter follows the separated thing | Tying `;`, `,`, and the newline each to one kind of separated thing means a character never carries two meanings in one context, so the parser never needs lookahead to know what a separator separates. |
-| `;` always trailing, `,` never trailing | A terminator that follows every member (and a separator that never follows the last element) makes both rules positional and uniform: every member ends in `;`, no value collection ends in `,`, inline or multiline. The asymmetry also keeps the two characters visually distinct in role. |
-| `;` always, newlines insignificant in member bodies | Making the member delimiter explicit and uniform inline and multiline removes the need for newline-sensitivity rules inside `struct`/`variant` bodies. |
-| `{ }` for bodies, `[ ]` for flat lists | One bracket marks a named-member body or code block and the other a flat list, so the bracket itself signals whether newlines are structural. |
-
----
-
-## 8. Summary
+## 7. Summary
 
 | Concept | Rule |
 |---|---|
