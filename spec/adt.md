@@ -1,6 +1,6 @@
 # Zane Algebraic Data Types
 
-This document specifies Zane's algebraic data types: the `enum` of uniform peer members, the `variant` sum type, the body symmetry that ties `variant` to `struct`, matching a variant through the central `match` block, and enum maps.
+This document specifies Zane's algebraic data types: the `enum` of uniform peer members, the `variant` sum mould, the body symmetry that ties `variant` to `struct`, matching a variant through the central `match` block, and enum maps.
 
 > **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.10 for why a value type cannot hold `&` or recurse. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
 
@@ -8,11 +8,11 @@ This document specifies Zane's algebraic data types: the `enum` of uniform peer 
 
 ## 1. Overview
 
-Zane separates two ideas that other languages often merge. An `enum` is a closed set of interchangeable, payloadless peers. A `variant` is a sum type whose members each carry a payload. Keeping them distinct lets each stay simple: enums are uniform and tabulatable, variants are heterogeneous and dispatched.
+Zane separates two ideas that other languages often merge. An `enum` is a closed set of interchangeable, payloadless peers. A `variant` is a sum mould whose members each carry a payload. Keeping them distinct lets each stay simple: enums are uniform and tabulatable, variants are heterogeneous and dispatched.
 
 - **`enum is uniform peers`.** A closed set of lowercase, payloadless members that mean one uniform thing. Per-member data is attached externally by an enum map.
-- **`variant is a sum type`.** A value holds exactly one of its named members. Its body grammar is byte-for-byte identical to a `struct`; the keyword flips product into sum.
-- **`The # axis applies to sums`.** `variant` is a value sum; `#variant` is a reference sum (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum` body.
+- **`variant is a sum mould`.** A value of the type it declares holds exactly one of its named members. Its body grammar is byte-for-byte identical to a `struct`; the keyword flips product into sum.
+- **`The # axis applies to the sum mould`.** A plain `variant` is its value form; `#variant` is its reference form (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum`.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
 - **`A variant is matched in one central block`.** A `match` block (§5) dispatches a variant on its live tag — variant matching, not pattern matching: no nested destructuring, guards, or shape tests — and must cover every case, with no default arm.
 - **`Recursion requires a reference type`.** A recursive sum must be a `#variant`, never a value `variant`, because a value type is transitively value and cannot hold the `&` a recursive member boxes through.
@@ -21,7 +21,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 
 ## 2. Enums
 
-An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is **not** a sum type. Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
+An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is **not** a sum mould. Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
 
 ```zane
 type Operator = enum [ add, sub, mul, div, eq, lessEq, moreEq, less, more ]
@@ -43,7 +43,7 @@ Per-member associated data is attached externally through an enum map (§6), whi
 
 ## 3. Variants
 
-A `variant` is a sum type. A value holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
+A `variant` is a **sum mould**. A value of the type it declares holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
 
 A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4). A recursive sum such as `Expr` — whose members refer back to `Expr` through `&` — must therefore be a `#variant`:
 
@@ -93,7 +93,7 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 A directly inline self-reference would have infinite size, which the uniform-stride rule forbids (see [`generics.md`](generics.md) §7). A recursive member must therefore **box through `&`**: directly, as `flip &Expr`, or inside a named reference type it names, as `op BinOp` where `BinOp` holds `left &Expr; right &Expr;`.
 
 - A value type — `struct` or `variant` — **cannot** hold an `&` or contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
-- The `#` modifier is what carries recursion: a `variant` is an inline value sum, while a `#variant` is a reference sum that carries a tag, boxes its recursive cases through `&`, and is placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
+- The `#` modifier is what carries recursion: a plain `variant` is the sum mould's value form, laid out inline, while a `#variant` is its reference form — carrying a tag, boxing its recursive cases through `&`, and placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
 - Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that ownership and refs are explicit.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
@@ -229,7 +229,7 @@ The form is `<Enum>.<property> <VarType> [ member = value, ... ]`. It uses `[ ]`
 
 | Difference | Rust / OCaml | Zane |
 |---|---|---|
-| Enum vs. sum type | a single construct (`enum` / variant type) serves both payloadless constants and payload-carrying alternatives | two distinct constructs: `enum` for uniform peers, `variant` for sum types |
+| Enum vs. sum type | a single construct (`enum` / variant type) serves both payloadless constants and payload-carrying alternatives | two distinct constructs: `enum` for uniform peers, `variant` as the sum mould |
 | Payloadless constants | a degenerate case of the sum type | a first-class `enum`, kept uniform and tabulatable |
 | Per-member data | attached by writing a payload on a case | attached externally by an enum map, keeping members interchangeable |
 | Matching model | **pattern matching**: an arm dispatches on the tag *and* destructures shape — nested patterns, tuple/record/literal patterns, guards | **variant matching**: an arm dispatches on the tag only and binds the payload whole; `match` again to go deeper (§5.3) |
@@ -268,13 +268,13 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 
 | Concept | Rule |
 |---|---|
-| `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum type |
-| `variant` | Sum type holding exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
+| `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum mould |
+| `variant` | Sum mould; a value holds exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout; the `#` modifier picks value versus reference |
-| `#variant` / `#enum` | `#variant` is a reference sum (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |
+| `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `#variant` or `#struct`, never a value type |
-| Variant storage | `variant` is an inline value sum; `#variant` is a reference sum that carries a tag, may recurse, and is placed by the reference-type rules |
+| Variant storage | `variant` is the sum mould's value form, laid out inline; `#variant` is its reference form, carrying a tag, may recurse, and is placed by the reference-type rules |
 | `match` block | Central expression `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
 | Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |
 | Exhaustiveness, no default | Every case covered by exactly one arm, singly or in a `[ ]` group; no wildcard, so adding a case is a compile error until placed |

@@ -11,7 +11,7 @@ This document specifies Zane's data types: value and reference types, the `#` mo
 Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
-- **`One kind axis`.** A type is a **value type** unless marked `#`, which makes it a **reference type**. `struct` is the value product; `#struct` is the reference product — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse.
+- **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse. `struct` is a value mould; `#struct` a reference mould.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Named types and aliases`.** `type` introduces a new distinct named type; `alias` introduces an interchangeable name for a type expression.
@@ -71,14 +71,14 @@ This is intentional: private-field access in Zane is method-based, not package-b
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
 ### 2.5 `struct` and `variant` share one body grammar
-A `struct` is a product type: it has all of its members at once. A `variant` is a sum type with the same body grammar: it has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
+A `struct` is a **product mould**: a value of the type it declares has all of its members at once. A `variant` is a **sum mould** with the same body grammar: a value has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
 
 ```zane
-type Color = struct { r Int; g Int; b Int; }    // value product: has r and g and b
-type Shape = variant { dot Dot; line Line; }      // value sum: has dot or line
+type Color = struct { r Int; g Int; b Int; }    // value product type: has r and g and b
+type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value type — `struct` or `variant` — is transitively value and **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference type — `#struct` or `#variant` — may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 

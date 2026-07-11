@@ -259,8 +259,8 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, `#enum [ ... ]`, or `#tuple [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds are value types.
 
 ```zane
-type Cell = #struct { value Int; }               // reference product, declared and named
-type Tree = #variant { leaf Int; node &Tree; }   // reference sum
+type Cell = #struct { value Int; }               // reference product type, declared and named
+type Tree = #variant { leaf Int; node &Tree; }   // reference sum type
 ```
 
 `&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`/`#tuple` — so a stored reference is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
