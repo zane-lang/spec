@@ -212,6 +212,7 @@ static inline int    zm_cls(size_t s)   { return (int)(s / ZM_ALIGN) - 1; }
 static void *zm_alloc(size_t s) {
     s = zm_round(s);
     size_t off = zm.top; zm.top += s;
+    assert(zm.top <= REGION_SIZE);
     return zm.base + off;
 }
 static void zm_free(void *p, size_t s) { (void)p; (void)s; }
@@ -219,6 +220,7 @@ static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 static inline uint32_t zm_seg(void *p) {
     assert((uint8_t*)p >= zm.base && (uint8_t*)p < zm.base + REGION_SIZE);
     size_t bo = (uint8_t*)p - zm.base;
+    assert((bo & 7) == 0);
     return ((uint32_t)(bo >> 20) << ZM_WORDBITS) | (uint32_t)((bo & (ZM_CHUNK - 1)) >> 3);
 }
 static inline void *zm_resolve(uint32_t seg) {
