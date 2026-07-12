@@ -202,9 +202,9 @@ static void zm_init(void) {
     assert(zm.base != MAP_FAILED);
     for (size_t i = 0; i < 256UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
     for (uint32_t c = 0; c < ZM_NCHUNKS; c++) zm.dir[c] = zm.base + (size_t)c * ZM_CHUNK;
-    zm.top = 0;
+    zm.top = ZM_ALIGN;
 }
-static void zm_reset(void) { zm.top = 0; }
+static void zm_reset(void) { zm.top = ZM_ALIGN; }
 
 static inline size_t zm_round(size_t s) { return (s + ZM_ALIGN-1) & ~(size_t)(ZM_ALIGN-1); }
 static inline int    zm_cls(size_t s)   { return (int)(s / ZM_ALIGN) - 1; }
@@ -217,11 +217,14 @@ static void *zm_alloc(size_t s) {
 static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 
 static inline uint32_t zm_seg(void *p) {
+    assert((uint8_t*)p >= zm.base && (uint8_t*)p < zm.base + REGION_SIZE);
     size_t bo = (uint8_t*)p - zm.base;
     return ((uint32_t)(bo >> 20) << ZM_WORDBITS) | (uint32_t)((bo & (ZM_CHUNK - 1)) >> 3);
 }
 static inline void *zm_resolve(uint32_t seg) {
-    return zm.dir[seg >> ZM_WORDBITS] + ((size_t)(seg & ZM_OFFMASK) << 3);
+    uint32_t chunk_id = seg >> ZM_WORDBITS;
+    assert(chunk_id < ZM_NCHUNKS);
+    return zm.dir[chunk_id] + ((size_t)(seg & ZM_OFFMASK) << 3);
 }
 
 static inline ZRef *zm_backptr(void *obj, size_t obj_size) {
@@ -245,11 +248,13 @@ static ZRef zm_create_ref(void *obj, size_t obj_size) {
 }
 
 static inline void *zm_deref(ZRef ref) {
+    assert(ref != 0);
     uint32_t *cell = (uint32_t*)zm_resolve(ref);
     return zm_resolve(*cell);
 }
 
 static inline void zm_anchor_update(ZRef ref, void *new_obj) {
+    assert(ref != 0);
     uint32_t *cell = (uint32_t*)zm_resolve(ref);
     *cell = zm_seg(new_obj);
 }
