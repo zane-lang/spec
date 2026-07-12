@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      20.45,
-      240.43,
-      502.12,
-      2877.77
+      13.87,
+      155.69,
+      229.04,
+      1736.08
     ],
     "colors": [
       "#3aab76",
@@ -94,7 +94,7 @@ const TESTS=[
       }
     ],
     "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Allocation is one frontier bump; free is a no-op \u2014 the arena reclaims in bulk on reset.",
-    "details": "Zane's bump-arena alloc (~240us median) comes in ~12x faster than malloc (~2.9ms) and ~2x faster than Pool (~500us). The raw Arena baseline (~20us) is faster still because Zane also zero-writes a 4-byte backpointer per object; with no tethers taken, that write is the only thing separating Zane from a pure bump allocator."
+    "details": "Zane's bump-arena alloc (~156us median) comes in ~11x faster than malloc (~1.74ms) and ~1.5x faster than Pool (~229us). The raw Arena baseline (~14us) is an order of magnitude quicker still because Zane also zero-writes a 4-byte backpointer into every object; with no tethers taken, that per-object write is the only thing separating Zane from a pure bump allocator."
   },
   {
     "t": "T2 \u2014 random-order free",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      0.1,
-      600.39,
-      1691.36
+      0.03,
+      182.62,
+      786.89
     ],
     "colors": [
       "#7c6ff7",
@@ -133,7 +133,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order \u2014 reclamation is bulk on reset, not per object.",
-    "details": "Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.1us regardless of order \u2014 effectively unmeasurable \u2014 while malloc (~1.7ms) and Pool (~600us) pay real per-object cost that a shuffled order makes worse. This is the bulk-reclaim model at its most extreme: nothing is returned per object."
+    "details": "Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us \u2014 effectively unmeasurable \u2014 while malloc (~787us) and Pool (~183us) pay real per-object cost. This is the bulk-reclaim model at its most extreme: nothing is returned per object, so free order cannot matter."
   },
   {
     "t": "T3 \u2014 mixed sizes",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      45.92,
-      500.18,
-      2777.88,
-      8477.64
+      28.45,
+      238.94,
+      948.37,
+      2872.01
     ],
     "colors": [
       "#3aab76",
@@ -175,29 +175,29 @@ const TESTS=[
       }
     ],
     "setup": "Raw block alloc/free of four sizes in random order.",
-    "details": "With four interleaved sizes Zane (~500us) stays ~17x ahead of malloc (~8.5ms) and ~5x ahead of Pool (~2.8ms): the bump arena has no size classes, so mixed sizes are just more frontier bumps. The raw Arena baseline (~46us) again leads because Zane carries the per-object backpointer write."
+    "details": "With four interleaved sizes Zane (~239us) stays ~12x ahead of malloc (~2.87ms) and ~4x ahead of Pool (~948us): the bump arena has no size classes, so mixed sizes are just more frontier bumps. The raw Arena baseline (~28us) again leads because Zane carries the per-object backpointer write."
   },
   {
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
       "Inline array  (Array[100000] of Entity)",
-      "UList (chunk=8, linked)",
       "CChunked (chunk=64, ptr-array)",
+      "UList (chunk=8, linked)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      119.24,
-      159.92,
-      163.61,
-      213.75,
-      314.22
+      27.38,
+      45.56,
+      47.11,
+      100.09,
+      100.28
     ],
     "colors": [
       "#3aab76",
-      "#3aab76",
       "#c45a8a",
+      "#3aab76",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -232,7 +232,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-    "details": "No allocation is timed here \u2014 this is pure layout cost. Contiguous inline storage (~119us) is the floor; the chunked layouts stay close on locality (UList and CChunked both ~160us), while the scattered pointer array costs ~1.8x sequentially (~214us) and ~2.6x shuffled (~314us) as cache misses take over."
+    "details": "No allocation is timed here \u2014 this is pure layout cost. Contiguous inline storage (~27us) is the clear floor; the chunked layouts stay close on locality (UList ~47us, CChunked ~46us). The scattered pointer array costs ~100us in both orders \u2014 on this CPU the hardware prefetcher hides most of the shuffle penalty that a slower machine would show."
   },
   {
     "t": "T5 \u2014 buffer growth",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      154.69,
-      365.12,
-      436.32,
-      1247.04
+      121.45,
+      186.16,
+      194.02,
+      728.56
     ],
     "colors": [
       "#7c6ff7",
@@ -282,20 +282,20 @@ const TESTS=[
       }
     ],
     "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
-    "details": "Growing an owned buffer, Zane's in-place frontier doublings (~155us) beat C's realloc vector (~365us) by ~2.4x: sitting at the arena frontier lets the buffer extend without copying. The chunked forms never copy but pay for many small allocations (CChunked ~436us, UList ~1.25ms)."
+    "details": "Growing an owned buffer, Zane's in-place frontier doublings (~121us) still beat C's realloc vector (~186us) by avoiding copies while the buffer sits at the arena frontier, and easily beat the never-copy chunked forms (CChunked ~194us, UList ~729us). Note this is the one test where the arena model is slower than the previous free-stack build on this hardware \u2014 see the PR discussion."
   },
   {
     "t": "T6 \u2014 ref access",
     "title": "Ref access via a segmented tether vs direct pointer",
     "labels": [
       "Direct pointer (baseline)",
-      "Segmented tether (chunk dir reloaded)",
-      "Segmented tether (chunk dir cached)"
+      "Segmented tether (chunk dir cached)",
+      "Segmented tether (chunk dir reloaded)"
     ],
     "data": [
-      235.64,
-      250.75,
-      267.14
+      99.04,
+      118.42,
+      121.34
     ],
     "colors": [
       "#4a9edd",
@@ -329,7 +329,7 @@ const TESTS=[
       }
     ],
     "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether \u2192 cell \u2192 owner \u2192 field). Both hops resolve through the chunk directory. The cell is bump-allocated beside the payload.",
-    "details": "The segmented tether adds one dependent load \u2014 the anchor cell \u2014 over a raw pointer: ~267us vs ~236us, roughly 1.1x. Whether the chunk directory is register-cached or reloaded each access barely moves the number (267us vs 251us, inside run-to-run noise), confirming the directory stays hot and the double indirection is close to free."
+    "details": "The segmented tether adds one dependent load \u2014 the anchor cell \u2014 over a raw pointer: ~118us vs ~99us, about 1.2x. Whether the chunk directory is register-cached or reloaded each access is within noise (118us vs 121us), confirming the directory stays hot and the double indirection is close to free."
   },
   {
     "t": "T7 \u2014 game loop",
@@ -340,9 +340,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2494.26,
-      2513.95,
-      2848.2
+      1122.93,
+      1135.89,
+      1325.59
     ],
     "colors": [
       "#c49a2a",
@@ -376,26 +376,26 @@ const TESTS=[
       }
     ],
     "setup": "Each spawn writes back-ptr = 0. Each kill is a no-op free \u2014 the arena reclaims dead entities in bulk on reset.",
-    "details": "At steady-state churn the three allocators converge (Zane ~2.51ms, Pool ~2.49ms, malloc ~2.85ms): once entity counts stabilize, per-frame update and simulation work dominate and the allocation gaps from Tests 1-3 mostly wash out."
+    "details": "At steady-state churn the allocators sit close (Zane ~1.14ms, Pool ~1.12ms, malloc ~1.33ms): once entity counts stabilize, per-frame update and simulation work dominate and the raw allocation gaps from Tests 1-3 mostly wash out."
   },
   {
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Pool (per-size free-list)",
       "Zane (bump arena)",
+      "Pool (per-size free-list)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      8137.68,
-      8194.91,
-      8918.89,
-      43391.42
+      3489.96,
+      3699.41,
+      4150.04,
+      23869.91
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -430,7 +430,7 @@ const TESTS=[
       }
     ],
     "setup": "Maximum churn. Every death is a no-op free \u2014 the arena reclaims dead particles in bulk on reset.",
-    "details": "Under maximum churn Zane (~8.2ms) and Pool (~8.1ms) edge out malloc (~8.9ms). The work-stealing update variant is far slower here (~43ms): the per-frame particle work is too small to amortize scheduling, so coordination overhead dominates \u2014 a caution against parallelizing fine-grained frame work."
+    "details": "Under maximum churn Zane (~3.49ms) leads Pool (~3.70ms) and malloc (~4.15ms). The work-stealing update variant is far slower (~23.9ms): the per-frame particle work is too small to amortize scheduling, so coordination overhead dominates \u2014 a caution against parallelizing fine-grained frame work."
   },
   {
     "t": "T9 \u2014 fragmentation",
@@ -441,9 +441,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      126.52,
-      1403.05,
-      2742.66
+      74.83,
+      437.78,
+      873.7
     ],
     "colors": [
       "#7c6ff7",
@@ -477,28 +477,28 @@ const TESTS=[
       }
     ],
     "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
-    "details": "Only the refill is timed. Zane just bumps the frontier for the 50k new objects (~127us), never touching the freed holes, so fragmentation history is irrelevant. malloc (~2.7ms) and Pool (~1.4ms) refill from the slots freed in Phase B and carry that history \u2014 roughly 22x and 11x slower on this run."
+    "details": "Only the refill is timed. Zane just bumps the frontier for the 50k new objects (~75us), never touching the freed holes, so fragmentation history is irrelevant. malloc (~874us) and Pool (~438us) refill from the slots freed in Phase B and carry that history \u2014 roughly 12x and 6x slower."
   },
   {
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
-      "Zane \u2014 no tethers",
       "Zane \u2014 single parent tether (root only)",
+      "Zane \u2014 no tethers",
       "Zane \u2014 individual tethers (1 per node)",
       "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      48.51,
-      48.98,
-      52.14,
-      74.35,
-      140.64
+      29.84,
+      30.12,
+      30.76,
+      40.98,
+      79.07
     ],
     "colors": [
-      "#7c6ff7",
       "#5a4faa",
+      "#7c6ff7",
       "#b8a4ff",
       "#c49a2a",
       "#e05a3a"
@@ -530,7 +530,7 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
-    "details": "All three Zane variants land together (~48-52us, the individual-tether case marginally higher for minting a cell per node) because arena teardown does no per-node free work \u2014 the timed cost is just the post-order walk. malloc's per-node free with coalescing is ~141us (~3x slower) and Pool is ~74us."
+    "details": "All three Zane variants land together (~30us) because arena teardown does no per-node free work \u2014 the timed cost is just the post-order walk. malloc's per-node free with coalescing is ~79us (~2.6x slower) and Pool is ~41us."
   },
   {
     "t": "T11 \u2014 stress test",
@@ -541,9 +541,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2447.92,
-      2453.2,
-      2706.27
+      1447.61,
+      1482.35,
+      1589.96
     ],
     "colors": [
       "#7c6ff7",
@@ -581,7 +581,7 @@ const TESTS=[
       }
     ],
     "setup": "All alloc through zm_alloc_lazy; frees are no-ops under the arena. Back-ptr always 0.",
-    "details": "The mixed workload compresses the field (Zane ~2.45ms, Pool ~2.45ms, malloc ~2.71ms): updates, scans, and randomized maintenance dominate the time, so the allocator strategy is only a small slice of the total \u2014 the expected outcome for a realistic churn pattern."
+    "details": "The mixed workload compresses the field (Zane ~1.45ms, Pool ~1.48ms, malloc ~1.59ms): updates, scans, and randomized maintenance dominate the time, so the allocator strategy is only a small slice of the total \u2014 the expected outcome for a realistic churn pattern."
   },
   {
     "t": "T12 \u2014 concurrent scan",
@@ -591,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      104.56,
-      153.43
+      26.11,
+      98.13
     ],
     "colors": [
       "#3aab76",
@@ -625,7 +625,7 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-    "details": "Four read-only shards summed sequentially (~105us) beat the concurrent variant (~153us) on this run: the shard work is small enough that pool coordination and memory bandwidth outweigh the parallelism. Both produce the asserted-identical total, which is the correctness point of the test."
+    "details": "Four read-only shards summed sequentially (~26us) beat the concurrent variant (~98us): the shard work is small enough that pool coordination and memory bandwidth outweigh the parallelism. Both produce the asserted-identical total, which is the correctness point of the test."
   }
 ];
 let chart=null;
