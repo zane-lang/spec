@@ -892,7 +892,7 @@ static void test10(void) {
     size_t znode_size = sizeof(TNode)+sizeof(ZRef);
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
-    print_result("Zane — no refs", T);
+    print_result("Zane — no tethers", T);
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
@@ -902,7 +902,7 @@ static void test10(void) {
         destroy_zane_indirefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
     }
-    print_result("Zane — individual refs (1 per node)", T);
+    print_result("Zane — individual tethers (1 per node)", T);
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
@@ -912,7 +912,7 @@ static void test10(void) {
         destroy_zane_norefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
     }
-    print_result("Zane — single parent ref (root only)", T);
+    print_result("Zane — single parent tether (root only)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,ma_af);double t0=now_ns();destroy_malloc(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("malloc cascade destroy", T);

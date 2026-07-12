@@ -7,93 +7,93 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 1 -- Sequential alloc + sequential free  [32 bytes x 100k]                                 |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena, lazy anchors)     median    267785.50 ns  min    214709.00 ns  max    947309.00 ns  (  267.786 us)
-    malloc / free                       median   2909891.00 ns  min   2854076.00 ns  max   5270802.00 ns  ( 2909.891 us)
-    Arena (bump + O(1) reset)           median     20454.50 ns  min     20444.00 ns  max     35603.00 ns  (   20.454 us)
-    Pool (per-size free-list)           median    524808.00 ns  min    468059.00 ns  max    629261.00 ns  (  524.808 us)
+    Zane (bump arena, lazy anchors)     median    245094.00 ns  min    218341.00 ns  max    918431.00 ns  (  245.094 us)
+    malloc / free                       median   3321062.50 ns  min   2866130.00 ns  max   5739158.00 ns  ( 3321.062 us)
+    Arena (bump + O(1) reset)           median     20458.50 ns  min     20452.00 ns  max     69155.00 ns  (   20.459 us)
+    Pool (per-size free-list)           median    540877.00 ns  min    474848.00 ns  max    585670.00 ns  (  540.877 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 2 -- Random-order free only  [32B x 100k  |  alloc+shuffle NOT timed]                      |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena, lazy anchors)     median       193.50 ns  min        90.00 ns  max       237.00 ns  (    0.194 us)
-    malloc / free                       median   1813959.50 ns  min   1641959.00 ns  max   2143002.00 ns  ( 1813.959 us)
-    Pool (per-size free-list)           median    588197.00 ns  min    552035.00 ns  max    666860.00 ns  (  588.197 us)
+    Zane (bump arena, lazy anchors)     median       108.00 ns  min        90.00 ns  max       213.00 ns  (    0.108 us)
+    malloc / free                       median   1867599.00 ns  min   1566627.00 ns  max   3053771.00 ns  ( 1867.599 us)
+    Pool (per-size free-list)           median    600468.50 ns  min    573514.00 ns  max    740136.00 ns  (  600.468 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 3 -- Mixed sizes (8/16/32/64B) alloc + random-order free  [100k total]                     |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena)                   median    496102.50 ns  min    461451.00 ns  max   1493248.00 ns  (  496.103 us)
-    malloc / free                       median   7971512.00 ns  min   7389392.00 ns  max   8252115.00 ns  ( 7971.512 us)
-    Arena (bulk reset)                  median     44673.50 ns  min     44302.00 ns  max     84217.00 ns  (   44.673 us)
-    Pool (per-size free-list)           median   2709227.50 ns  min   1609695.00 ns  max   2980404.00 ns  ( 2709.227 us)
+    Zane (bump arena)                   median    489416.50 ns  min    444778.00 ns  max   1352718.00 ns  (  489.416 us)
+    malloc / free                       median   8145777.00 ns  min   6864997.00 ns  max   8432333.00 ns  ( 8145.777 us)
+    Arena (bulk reset)                  median     48222.00 ns  min     47386.00 ns  max     81599.00 ns  (   48.222 us)
+    Pool (per-size free-list)           median   2762036.50 ns  min   1719551.00 ns  max   2865872.00 ns  ( 2762.037 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 4 -- Iteration: inline (owned) vs pointer-chase  [32B Entity x 100k]                       |
   +--------------------------------------------------------------------------------------------------+
-    Inline array  (Array[100000] of Entity)  median    110914.00 ns  min    108525.00 ns  max    178694.00 ns  (  110.914 us)
-    Pointer array, sequential           median    215259.00 ns  min    201042.00 ns  max    336775.00 ns  (  215.259 us)
-    Pointer array, shuffled             median    306619.50 ns  min    290200.00 ns  max    387678.00 ns  (  306.620 us)
-    UList (chunk=8, linked)             median    147725.00 ns  min    135354.00 ns  max    309058.00 ns  (  147.725 us)
-    CChunked (chunk=64, ptr-array)      median    161778.50 ns  min    151763.00 ns  max    390707.00 ns  (  161.779 us)
+    Inline array  (Array[100000] of Entity)  median    112517.50 ns  min    110532.00 ns  max    218740.00 ns  (  112.517 us)
+    Pointer array, sequential           median    210044.00 ns  min    208373.00 ns  max    278044.00 ns  (  210.044 us)
+    Pointer array, shuffled             median    308735.50 ns  min    298165.00 ns  max    397473.00 ns  (  308.736 us)
+    UList (chunk=8, linked)             median    154454.00 ns  min    140292.00 ns  max    300636.00 ns  (  154.454 us)
+    CChunked (chunk=64, ptr-array)      median    170545.50 ns  min    153766.00 ns  max    400811.00 ns  (  170.546 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 5 -- Owned buffer append growth  [push 100k x 32B Entity items]                            |
   +--------------------------------------------------------------------------------------------------+
-    Zane in-place buffer                median    153591.00 ns  min    143600.00 ns  max    574827.00 ns  (  153.591 us)
-    C realloc vector                    median    369038.00 ns  min    338503.00 ns  max    418442.00 ns  (  369.038 us)
-    UList (chunk=8, no realloc)         median   1143201.50 ns  min   1123339.00 ns  max   1283093.00 ns  ( 1143.201 us)
-    CChunked (chunk=64, ptr-array)      median    437328.50 ns  min    396741.00 ns  max    561303.00 ns  (  437.329 us)
+    Zane in-place buffer                median    153264.50 ns  min    147936.00 ns  max    536769.00 ns  (  153.264 us)
+    C realloc vector                    median    369710.50 ns  min    342308.00 ns  max    431092.00 ns  (  369.711 us)
+    UList (chunk=8, no realloc)         median   1241629.50 ns  min   1210553.00 ns  max   1279157.00 ns  ( 1241.630 us)
+    CChunked (chunk=64, ptr-array)      median    440014.50 ns  min    406374.00 ns  max    529726.00 ns  (  440.014 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 6 -- Ref access via segmented tether vs direct pointer  [100k accesses]                    |
   +--------------------------------------------------------------------------------------------------+
-    Direct pointer (baseline)           median    213353.50 ns  min    201813.00 ns  max    323794.00 ns  (  213.353 us)
-    Segmented tether (chunk dir cached)  median    256593.50 ns  min    240770.00 ns  max    297926.00 ns  (  256.594 us)
-    Segmented tether (chunk dir reloaded)  median    243125.50 ns  min    234414.00 ns  max    286413.00 ns  (  243.125 us)
+    Direct pointer (baseline)           median    209395.50 ns  min    206906.00 ns  max    314533.00 ns  (  209.395 us)
+    Segmented tether (chunk dir cached)  median    257033.50 ns  min    248272.00 ns  max    301421.00 ns  (  257.034 us)
+    Segmented tether (chunk dir reloaded)  median    241596.00 ns  min    239120.00 ns  max    289519.00 ns  (  241.596 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 7 -- Game loop  [500 frames: 30 spawns + 20+ kills + update per frame]                     |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena)                   median   2489051.50 ns  min   2448311.00 ns  max   2557847.00 ns  ( 2489.052 us)
-    malloc / free                       median   2808752.50 ns  min   2768230.00 ns  max   3207526.00 ns  ( 2808.753 us)
-    Pool (per-size free-list)           median   2472069.50 ns  min   2434699.00 ns  max   2546710.00 ns  ( 2472.070 us)
+    Zane (bump arena)                   median   2496145.50 ns  min   2461761.00 ns  max   2569049.00 ns  ( 2496.146 us)
+    malloc / free                       median   2794597.50 ns  min   2754895.00 ns  max   2869036.00 ns  ( 2794.597 us)
+    Pool (per-size free-list)           median   2505238.00 ns  min   2447664.00 ns  max   2864439.00 ns  ( 2505.238 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]           |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena)                   median   8043435.00 ns  min   7992336.00 ns  max   8148246.00 ns  ( 8043.435 us)
-    Zane + work-stealing update         median  43794940.50 ns  min  40130582.00 ns  max  48753068.00 ns  (43794.940 us)
-    malloc / free                       median   8824026.50 ns  min   8756881.00 ns  max  12249202.00 ns  ( 8824.026 us)
-    Pool (per-size free-list)           median   8025123.00 ns  min   7956324.00 ns  max   9163481.00 ns  ( 8025.123 us)
+    Zane (bump arena)                   median   8057864.00 ns  min   8004605.00 ns  max   8157669.00 ns  ( 8057.864 us)
+    Zane + work-stealing update         median  41579858.00 ns  min  40200094.00 ns  max  48047397.00 ns  (41579.858 us)
+    malloc / free                       median   8837352.00 ns  min   8768671.00 ns  max  10032688.00 ns  ( 8837.352 us)
+    Pool (per-size free-list)           median   8075090.50 ns  min   8008331.00 ns  max   8371382.00 ns  ( 8075.091 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 9 -- Checkerboard fragmentation + refill  [alloc 100k, free evens, alloc 50k (timed)]      |
   +--------------------------------------------------------------------------------------------------+
-    Zane -- refill (bump arena)         median    130020.50 ns  min    123845.00 ns  max    404180.00 ns  (  130.020 us)
-    malloc -- refill fragmented heap    median   2668544.00 ns  min    961811.00 ns  max   2885894.00 ns  ( 2668.544 us)
-    Pool -- refill from free-list       median   1444417.50 ns  min    418957.00 ns  max   2175579.00 ns  ( 1444.418 us)
+    Zane -- refill (bump arena)         median    126689.50 ns  min    120179.00 ns  max    452184.00 ns  (  126.689 us)
+    malloc -- refill fragmented heap    median   2736459.50 ns  min    967570.00 ns  max   3062963.00 ns  ( 2736.459 us)
+    Pool -- refill from free-list       median   1527575.50 ns  min    457568.00 ns  max   2796029.00 ns  ( 1527.575 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 10 -- Ownership tree teardown  [~4000 nodes, cascade post-order destroy]                   |
   +--------------------------------------------------------------------------------------------------+
-    Zane — no refs                    median     49721.50 ns  min        43.00 ns  max     83734.00 ns  (   49.721 us)
-    Zane — individual refs (1 per node)  median     52606.50 ns  min        39.00 ns  max     77006.00 ns  (   52.606 us)
-    Zane — single parent ref (root only)  median     50148.00 ns  min        44.00 ns  max    112243.00 ns  (   50.148 us)
-    malloc cascade destroy              median    141371.50 ns  min        98.00 ns  max    159057.00 ns  (  141.371 us)
-    Pool cascade destroy                median     74217.00 ns  min        52.00 ns  max     89886.00 ns  (   74.217 us)
+    Zane — no tethers                 median     48668.50 ns  min        42.00 ns  max     56379.00 ns  (   48.669 us)
+    Zane — individual tethers (1 per node)  median     52064.00 ns  min        39.00 ns  max     66572.00 ns  (   52.064 us)
+    Zane — single parent tether (root only)  median     48608.00 ns  min        40.00 ns  max     61490.00 ns  (   48.608 us)
+    malloc cascade destroy              median    140637.50 ns  min        66.00 ns  max    177756.00 ns  (  140.637 us)
+    Pool cascade destroy                median     73581.50 ns  min        39.00 ns  max     94554.00 ns  (   73.582 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 11 -- Fragmentation stress  [200 cycles: spawn+buffer-create+push+update+kill]             |
   +--------------------------------------------------------------------------------------------------+
-    Zane (bump arena)                   median   2244265.50 ns  min   2198887.00 ns  max   2448239.00 ns  ( 2244.265 us)
-    malloc / free                       median   2440600.00 ns  min   2413029.00 ns  max   2471711.00 ns  ( 2440.600 us)
-    Pool (per-size free-list)           median   2222950.00 ns  min   2196309.00 ns  max   2254364.00 ns  ( 2222.950 us)
+    Zane (bump arena)                   median   2444376.50 ns  min   2413137.00 ns  max   2516869.00 ns  ( 2444.376 us)
+    malloc / free                       median   2680277.00 ns  min   2624128.00 ns  max   2866033.00 ns  ( 2680.277 us)
+    Pool (per-size free-list)           median   2443919.50 ns  min   2414513.00 ns  max   2525550.00 ns  ( 2443.919 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 12 -- Concurrent shard scan  [4 x Array[25000] of Entity read-only shard sums]             |
   +--------------------------------------------------------------------------------------------------+
-    Owned Array shards, sequential      median    100440.00 ns  min     98454.00 ns  max    220132.00 ns  (  100.440 us)
-    Owned Array shards, concurrent (4 workers)  median    184877.50 ns  min    125887.00 ns  max    208641.00 ns  (  184.877 us)
+    Owned Array shards, sequential      median    105223.50 ns  min    103997.00 ns  max    184904.00 ns  (  105.224 us)
+    Owned Array shards, concurrent (4 workers)  median    173941.00 ns  min    122871.00 ns  max    248595.00 ns  (  173.941 us)
 
-  (sink = 20734700)
+  (sink = 56206060)
 
