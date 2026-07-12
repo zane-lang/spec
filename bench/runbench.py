@@ -102,7 +102,7 @@ TEST_META = {
     "Test 6": {
         "short": "T6 — ref access",
         "title": "Ref access via a segmented tether vs direct pointer",
-        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. The cell is bump-allocated beside the payload.",
+        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. Cells live in a dedicated anchor-cell region, separate from the payload stream.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
             ("Segmented tether, dir cached", "chunk directory hoisted; cell load → owner"),
