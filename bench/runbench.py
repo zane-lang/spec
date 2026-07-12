@@ -102,7 +102,7 @@ TEST_META = {
     "Test 6": {
         "short": "T6 — ref access",
         "title": "Ref access via a segmented tether vs direct pointer",
-        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. The added cost over a raw pointer is one dependent load — the cell — which is bump-allocated beside the payload and shares its cache line.",
+        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. The cell is bump-allocated beside the payload.",
         "details": "Direct pointer access is the lower bound at one load. The segmented tether adds the cell load; whether the chunk directory is hoisted into a register or reloaded per access barely moves the result, since the directory is tiny and hot. All variants land within a few percent, showing the double indirection is near-free when the cell is warm.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
@@ -159,7 +159,7 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
-        "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk, so the timed walk measures traversal, not per-node free.",
+        "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
         "details": "All three Zane variants stay close because the arena does no per-node free work — the recursive walk touches each node once and reclamation is bulk. Any spread is the cost of minting one anchor cell per node in the individual-tether variant.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),

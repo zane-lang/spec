@@ -57,9 +57,9 @@ const TESTS=[
     ],
     "data": [
       20.46,
-      245.09,
-      540.88,
-      3321.06
+      270.84,
+      614.62,
+      3125.31
     ],
     "colors": [
       "#3aab76",
@@ -106,8 +106,8 @@ const TESTS=[
     ],
     "data": [
       0.11,
-      600.47,
-      1867.6
+      660.79,
+      2003.51
     ],
     "colors": [
       "#7c6ff7",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      48.22,
-      489.42,
-      2762.04,
-      8145.78
+      47.12,
+      645.21,
+      2724.99,
+      8870.22
     ],
     "colors": [
       "#3aab76",
@@ -188,11 +188,11 @@ const TESTS=[
       "Pointer array, shuffled"
     ],
     "data": [
-      112.52,
-      154.45,
-      170.55,
-      210.04,
-      308.74
+      108.32,
+      155.13,
+      155.26,
+      223.57,
+      334.49
     ],
     "colors": [
       "#3aab76",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      153.26,
-      369.71,
-      440.01,
-      1241.63
+      159.71,
+      380.73,
+      493.19,
+      1183.32
     ],
     "colors": [
       "#7c6ff7",
@@ -293,9 +293,9 @@ const TESTS=[
       "Segmented tether (chunk dir cached)"
     ],
     "data": [
-      209.4,
-      241.6,
-      257.03
+      209.66,
+      243.53,
+      266.67
     ],
     "colors": [
       "#4a9edd",
@@ -328,25 +328,25 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether \u2192 cell \u2192 owner \u2192 field). Both hops resolve through the chunk directory. The added cost over a raw pointer is one dependent load \u2014 the cell \u2014 which is bump-allocated beside the payload and shares its cache line.",
+    "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether \u2192 cell \u2192 owner \u2192 field). Both hops resolve through the chunk directory. The cell is bump-allocated beside the payload.",
     "details": "Direct pointer access is the lower bound at one load. The segmented tether adds the cell load; whether the chunk directory is hoisted into a register or reloaded per access barely moves the result, since the directory is tiny and hot. All variants land within a few percent, showing the double indirection is near-free when the cell is warm."
   },
   {
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (bump arena)",
       "Pool (per-size free-list)",
+      "Zane (bump arena)",
       "malloc / free"
     ],
     "data": [
-      2496.15,
-      2505.24,
-      2794.6
+      2656.07,
+      2668.04,
+      2960.97
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -382,20 +382,20 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Zane (bump arena)",
       "Pool (per-size free-list)",
+      "Zane (bump arena)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      8057.86,
-      8075.09,
-      8837.35,
-      41579.86
+      8565.67,
+      8638.72,
+      9315.35,
+      43229.25
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -441,9 +441,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      126.69,
-      1527.58,
-      2736.46
+      131.16,
+      1902.75,
+      3079.3
     ],
     "colors": [
       "#7c6ff7",
@@ -483,22 +483,22 @@ const TESTS=[
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
-      "Zane \u2014 single parent tether (root only)",
       "Zane \u2014 no tethers",
+      "Zane \u2014 single parent tether (root only)",
       "Zane \u2014 individual tethers (1 per node)",
       "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      48.61,
-      48.67,
-      52.06,
-      73.58,
-      140.64
+      48.63,
+      48.89,
+      52.43,
+      74.83,
+      141.04
     ],
     "colors": [
-      "#5a4faa",
       "#7c6ff7",
+      "#5a4faa",
       "#b8a4ff",
       "#c49a2a",
       "#e05a3a"
@@ -529,7 +529,7 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk, so the timed walk measures traversal, not per-node free.",
+    "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
     "details": "All three Zane variants stay close because the arena does no per-node free work \u2014 the recursive walk touches each node once and reclamation is bulk. Any spread is the cost of minting one anchor cell per node in the individual-tether variant."
   },
   {
@@ -541,9 +541,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      2443.92,
-      2444.38,
-      2680.28
+      2530.56,
+      2549.93,
+      2789.26
     ],
     "colors": [
       "#c49a2a",
@@ -591,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      105.22,
-      173.94
+      124.4,
+      173.97
     ],
     "colors": [
       "#3aab76",
