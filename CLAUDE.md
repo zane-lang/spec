@@ -44,7 +44,13 @@ read it first when locating anything. Each `spec/*.md` owns one topic:
 
 Plus `contributing/` (the two style guides) and `bench/` (a reference **C**
 harness for runtime experiments — **not** Zane source; never treat its C as
-Zane, and only ever edit its comments/`printf` labels, never the code).
+Zane). The harness *models* the memory design (`spec/memory.md`), so when that
+design changes the harness code is updated to track it. The `.c` carries **no
+explanatory comments** — it is not part of the spec and holds no prose voice;
+keep it to code plus the output labels passed to `section()`/`print_result()`
+(those name the rows in the results table). `runbench.py` regenerates
+`benchmark.html`; its `TEST_META` descriptions are reader-facing HTML text, not
+code comments.
 
 ---
 
