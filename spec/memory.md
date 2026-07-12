@@ -296,6 +296,8 @@ Tethers are tracked through per-owner **anchor cells** rather than one shared ta
 
 Cells are bump-allocated in a **dedicated anchor-cell region** of the scope's arena, a separate chunk chain from the one holding payloads (§3.1). Keeping cells out of the payload stream means a scan over payloads never strides across interleaved cell metadata, so iteration stays dense and a payload's placement never depends on how many of its neighbours were tethered first. The cell region is itself compact and heavily reused, so resolving through a cell (§4.4) is a load into hot, cache-resident memory.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
+
 ### 4.2 Tethers are segmented offsets, not pointers
 A tether is a **`u32` segmented offset** (§3.1) pointing at the owner's anchor cell — not a raw pointer and not a table index. At half the width of a 64-bit pointer, twice as many tethers fit in a cache line, and the 32-bit encoding keeps resolution on cheap 32-bit CPU math. A cell is allocated only on the first tether of an owner (§4.3), so cells stay a small fraction of live memory, and the `u32`'s 32 GiB reach (§3.1) sits far beyond any realistic working set.
 
