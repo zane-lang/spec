@@ -175,7 +175,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor cell
-- **Meaning:** A single `u32` holding the current segmented offset of one tethered owner — a stable indirection point that tethers read through. It is bump-allocated in the owner's arena on the first tether, beside the payload, so the two usually share a cache line. There is no monolithic table: each tethered owner has its own cell.
+- **Meaning:** A single `u32` holding the current segmented offset of one tethered owner — a stable indirection point that tethers read through. It is bump-allocated on the first tether in a dedicated anchor-cell region of the owner's scope arena, kept separate from payloads so payload iteration stays dense. There is no monolithic table: each tethered owner has its own cell.
 - **Why this name:** The cell *anchors* a tethered owner: a fixed point a drifting value stays tethered to, so a move updates the one cell and every tether follows.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 

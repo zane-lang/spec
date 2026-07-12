@@ -228,6 +228,8 @@ The runtime does not reserve one flat region. Each lexical scope owns a **bump a
 
 Scopes nest last-in-first-out, and their arenas nest with them: a scope's chunks are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: memory a scope allocates outlives every tether taken on it and is released together when the scope drains.
 
+Within an arena, payloads and anchor cells (§4.1) occupy **separate regions** — distinct chunk chains — so a scan over payloads never strides across interleaved cell metadata. Both chains draw chunk ids from the same directory, so a segmented offset addresses either identically.
+
 Every in-arena location is a **`u32` segmented offset**, never a native pointer. The `u32` splits into two fields:
 
 ```
@@ -290,7 +292,9 @@ Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md
 ## 4. Anchors and Tethers
 
 ### 4.1 The anchor cell
-Tethers are tracked through per-owner **anchor cells** rather than one shared table. An anchor cell is a single **`u32`** holding the current segmented offset (§3.1) of one tethered owner; it stores nothing else. A cell is an ordinary arena allocation — bump-allocated on the owner's first tether (§4.3) — so there is no monolithic table to relocate as anchors accumulate: minting an anchor is one bump, never a resize. Because a cell is allocated next to the owner that mints it, the cell and the owner's payload almost always share a CPU cache line, which is what makes the tether's double indirection (§4.4) nearly free.
+Tethers are tracked through per-owner **anchor cells** rather than one shared table. An anchor cell is a single **`u32`** holding the current segmented offset (§3.1) of one tethered owner; it stores nothing else. A cell is an ordinary arena allocation — bump-allocated on the owner's first tether (§4.3) — so there is no monolithic table to relocate as anchors accumulate: minting an anchor is one bump, never a resize.
+
+Cells are bump-allocated in a **dedicated anchor-cell region** of the scope's arena, a separate chunk chain from the one holding payloads (§3.1). Keeping cells out of the payload stream means a scan over payloads never strides across interleaved cell metadata, so iteration stays dense and a payload's placement never depends on how many of its neighbours were tethered first. The cell region is itself compact and heavily reused, so resolving through a cell (§4.4) is a load into hot, cache-resident memory.
 
 ### 4.2 Tethers are segmented offsets, not pointers
 A tether is a **`u32` segmented offset** (§3.1) pointing at the owner's anchor cell — not a raw pointer and not a table index. At half the width of a 64-bit pointer, twice as many tethers fit in a cache line, and the 32-bit encoding keeps resolution on cheap 32-bit CPU math. A cell is allocated only on the first tether of an owner (§4.3), so cells stay a small fraction of live memory, and the `u32`'s 32 GiB reach (§3.1) sits far beyond any realistic working set.
@@ -341,17 +345,19 @@ dps Float = mainWeapon.dps
                        └────────────────────────┘
 ```
 
-The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the tether at a different owner's cell (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. Splitting each segmented offset is a shift and a mask that fold into machine addressing once the chunk base is in hand, so the encoding costs no arithmetic over a raw-pointer dereference. The added cost is one dependent load: the cell read between the tether and the field, and because the cell shares a cache line with the payload (§4.1) it is normally already warm. See §4.8.
+The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the tether at a different owner's cell (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. Splitting each segmented offset is a shift and a mask that fold into machine addressing once the chunk base is in hand, so the encoding costs no arithmetic over a raw-pointer dereference. The added cost is one dependent load: the cell read between the tether and the field, and because cells live packed together in the arena's compact anchor-cell region (§4.1) that load normally lands in hot, cache-resident memory. See §4.8.
 
 ### 4.5 Moves, overwrites, and promotion update one cell, not all tethers
-A tether follows the owner/anchor path rather than pointing at a fixed object address. When an owner moves (§3.7), is overwritten in place (§2.2), or is **promoted** into a parent arena on escape (§3.5), the runtime writes the payload's new segmented offset into its one anchor cell, located through the backpointer (§4.2). The cell itself does not move, so every existing tether — which points at the cell, not the payload — observes the owner's current location on its next resolution with no per-tether fixup.
+A tether follows the owner/anchor path rather than pointing at a fixed object address. When an owner is overwritten in place (§2.2) or moved within its scope, the runtime writes the payload's new segmented offset into its one anchor cell, located through the backpointer (§4.2). The cell itself does not move, so every existing tether — which points at the cell, not the payload — observes the owner's current location on its next resolution with no per-tether fixup.
+
+**Promotion** on escape (§3.5) carries one extra step, because the owner's anchor cell lives in the anchor-cell region of the scope that minted it (§4.1) — a scope that is about to drain. Every tether that already points at that cell was taken in that scope or deeper ([`lifetimes.md`](lifetimes.md) §1.1), so none of them outlives the cell. On promotion the runtime therefore does two things: it updates the old cell to the payload's new location, so those existing tethers keep resolving to the live promoted copy for the remainder of the source scope, and it **resets the payload's backpointer to `0`**. The reset re-arms lazy allocation (§4.3): the next tether taken in the destination scope mints a fresh cell in the destination arena's cell region — one that lives exactly as long as the promoted value. The old cell and the tethers reading it then expire together when the source scope drains.
 
 This is why relocation, overwrite, and promotion are all **O(1) with respect to the number of tethers**. It is also how a moved-from symbol stays readable: after a move the symbol downgrades to an `&` — a segmented offset to the cell — and reads resolve through the cell to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves". [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
 
 ### 4.6 Teardown releases cells in bulk
-Anchor cells are arena allocations, so they are never individually freed. When a scope drains, its chunks are unmapped (§3.2) and its cells vanish together with the owners and payloads they served.
+Anchor cells are arena allocations, so they are never individually freed. When a scope drains, its chunks — payload and anchor-cell regions alike — are unmapped (§3.2) and its cells vanish together with the owners and payloads they served.
 
 Because scope rules keep every tether inside its owner's lifetime ([`lifetimes.md`](lifetimes.md) §1.1, §1.4), no live tether can point at a cell that has been unmapped. Destruction therefore creates no dangling-tether state.
 
@@ -361,7 +367,7 @@ A dangling tether would require one of three failures: an owner overwrite breaki
 ### 4.8 Resolution cost
 The segmented encoding adds no arithmetic cost: the shift and mask that split a `u32` into a chunk id and a word offset fold into machine addressing once the chunk base is loaded. The chunk directory is the hottest table in the program — tiny, and normally resident in registers or L1 — so materializing an address from a segmented offset is effectively a single indexed load and add.
 
-The genuine cost of any anchor scheme is **one extra dependent load per tether resolution** — the cell read — versus an idealized raw pointer that cannot survive moves. Because a cell and its payload are bump-allocated together and share a cache line (§4.1), that load is usually already warm, a few cycles at most. It is paid only when resolving a tether; direct access to an owner never consults a cell. Across a run of accesses through the same tether with no intervening move, overwrite, or promotion, the compiler resolves the owner address once and reuses it, so hot loops do not re-pay the load.
+The genuine cost of any anchor scheme is **one extra dependent load per tether resolution** — the cell read — versus an idealized raw pointer that cannot survive moves. Because cells are packed together in the arena's compact anchor-cell region (§4.1), that load usually lands in hot, cache-resident memory, a few cycles at most. It is paid only when resolving a tether; direct access to an owner never consults a cell. Across a run of accesses through the same tether with no intervening move, overwrite, or promotion, the compiler resolves the owner address once and reuses it, so hot loops do not re-pay the load.
 
 ---
 
@@ -408,9 +414,9 @@ The genuine cost of any anchor scheme is **one extra dependent load per tether r
 | Reference-type placement | Bump-allocated in the creating scope's arena; promoted to a parent arena only on escape — an unobservable choice |
 | `&` representation | A `u32` segmented offset (chunk id + in-chunk offset) to the owner's anchor cell; `0` means untethered |
 | Addressing | Every location is a `u32` segmented offset resolved through the chunk directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
-| Anchor cell | One `u32` per tethered owner holding its current segmented offset; bump-allocated in the arena beside the payload, so the two share a cache line |
+| Anchor cell | One `u32` per tethered owner holding its current segmented offset; bump-allocated in the scope's dedicated anchor-cell region, kept out of the payload stream so payload iteration stays dense |
 | Backpointer | Each tethered owner stores the `u32` segmented offset of its anchor cell for move updates and tether minting |
-| Anchor lifecycle | Lazily allocated on first tether; released in bulk when the owner's scope drains |
+| Anchor lifecycle | Lazily allocated on first tether; on promotion the payload re-anchors in the destination arena; released in bulk when the owner's scope drains |
 | Tethered-instance cost | 12 bytes total: the 4-byte tether, the 4-byte anchor cell, and the 4-byte backpointer |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.
