@@ -220,9 +220,13 @@ static void *zm_alloc(size_t s) {
     return zm.base + off;
 }
 static void *zm_alloc_cell(void) {
+#ifdef ZM_INTERLEAVE
+    return zm_alloc(sizeof(uint32_t));
+#else
     size_t off = zm.ctop; zm.ctop += ZM_ALIGN;
     assert(zm.ctop <= REGION_SIZE);
     return zm.base + off;
+#endif
 }
 static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 
@@ -1156,6 +1160,64 @@ static void test12(void) {
     free(owned);
 }
 
+static void test13(void) {
+    section("Test 13 -- Partial-tether repeated scan  [100k obj, 20% tethered, payload-only]");
+    double T[RUNS];
+    zm_reset();
+    size_t osz = sizeof(Entity) + sizeof(ZRef);
+    Entity **objs = (Entity**)malloc(N * sizeof(Entity*));
+    for (int i = 0; i < N; i++) {
+        objs[i] = (Entity*)zm_alloc_lazy(osz);
+        objs[i]->hp = i % 100 + 1;
+        if (i % 5 == 0) zm_create_ref(objs[i], osz);
+    }
+    for (int r = 0; r < RUNS; r++) {
+        int64_t acc = 0;
+        for (int i = 0; i < N; i++) acc += objs[i]->hp;
+        double t0 = now_ns();
+        for (int p = 0; p < 8; p++)
+            for (int i = 0; i < N; i++) acc += objs[i]->hp;
+        T[r] = now_ns() - t0; sink ^= acc;
+    }
+    print_result("Payload scan (8 passes)", T);
+    for (int i = 0; i < N; i++) zm_free_lazy(objs[i], osz);
+    free(objs);
+}
+
+static void test14(void) {
+    section("Test 14 -- Scan-heavy mixed workload  [10 payload scans : 1 tether deref pass]");
+    double T[RUNS];
+    zm_reset();
+    size_t osz = sizeof(Entity) + sizeof(ZRef);
+    Entity **objs = (Entity**)malloc(N * sizeof(Entity*));
+    ZRef *refs = (ZRef*)malloc(N * sizeof(ZRef));
+    int nt = 0;
+    for (int i = 0; i < N; i++) {
+        objs[i] = (Entity*)zm_alloc_lazy(osz);
+        objs[i]->hp = i % 100 + 1;
+        if (i % 5 == 0) refs[nt++] = zm_create_ref(objs[i], osz);
+    }
+    for (int r = 0; r < RUNS; r++) {
+        int64_t acc = 0;
+        for (int i = 0; i < N; i++) acc += objs[i]->hp;
+        double t0 = now_ns();
+        for (int u = 0; u < 4; u++) {
+            for (int p = 0; p < 10; p++)
+                for (int i = 0; i < N; i++) acc += objs[i]->hp;
+            uint8_t **dir = zm.dir;
+            for (int k = 0; k < nt; k++) {
+                uint32_t cs = refs[k];
+                uint32_t os = *(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
+                acc += ((Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
+            }
+        }
+        T[r] = now_ns() - t0; sink ^= acc;
+    }
+    print_result("Mixed 10:1 (scan-heavy)", T);
+    for (int i = 0; i < N; i++) zm_free_lazy(objs[i], osz);
+    free(objs); free(refs);
+}
+
 int main(void) {
     printf("\n");
     printf("  +===================================================================================================+\n");
@@ -1167,6 +1229,7 @@ int main(void) {
 
     test1(); test2(); test3(); test4(); test5();
     test6(); test7(); test8(); test9(); test10(); test11(); test12();
+    test13(); test14();
 
     bench_pool_shutdown();
     printf("\n  (sink = %lld)\n\n", (long long)sink);
