@@ -228,6 +228,19 @@ static void *zm_alloc_cell(void) {
     return zm.base + off;
 #endif
 }
+
+#define ZM_LINE 64
+static void *zm_alloc_aligned(size_t s, size_t align) {
+    zm.top = (zm.top + (align - 1)) & ~(size_t)(align - 1);
+    return zm_alloc(s);
+}
+static void *zm_alloc_buf(size_t s) {
+#ifdef ZM_LINEALIGN
+    return zm_alloc_aligned(s, ZM_LINE);
+#else
+    return zm_alloc(s);
+#endif
+}
 static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 
 static inline uint32_t zm_seg(void *p) {
@@ -518,7 +531,7 @@ static void zlist_push(ZList *l, Entity e) {
     if (l->len==l->cap) {
         size_t ob=l->cap*sizeof(Entity);
         if ((uint8_t*)l->base+ob==zm.base+zm.top) { zm.top+=ob; }
-        else { Entity *nb=(Entity*)zm_alloc(ob*2); memcpy(nb,l->base,ob); zm_free(l->base,ob); l->base=nb; }
+        else { Entity *nb=(Entity*)zm_alloc_buf(ob*2); memcpy(nb,l->base,ob); zm_free(l->base,ob); l->base=nb; }
         l->cap*=2;
     }
     l->base[l->len++]=e;
@@ -533,7 +546,7 @@ static void test5(void) {
     double T[RUNS];
     Entity tmpl={42,1.5,2.5,99,0};
 
-    for(int r=0;r<RUNS;r++){zm_reset();ZList l={(Entity*)zm_alloc(8*sizeof(Entity)),0,8};double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
+    for(int r=0;r<RUNS;r++){zm_reset();ZList l={(Entity*)zm_alloc_buf(8*sizeof(Entity)),0,8};double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
     print_result("Zane in-place buffer", T);
 
     for(int r=0;r<RUNS;r++){CVec v={NULL,0,0};double t0=now_ns();for(int i=0;i<N;i++)cvec_push(&v,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)v.len;free(v.base);}
