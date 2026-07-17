@@ -163,13 +163,13 @@ truck Truck(car)      // ILLEGAL: car is a tether, not a move-source
 
 The value outlives the call (§1.5), so the downgraded tether always resolves to a live object. Where the value comes to rest — moved into another parameter's owning storage, moved into the return, or held in the call-site scope — the tether follows through the anchor ([`memory.md`](memory.md) §4.5).
 
-A verb treats an owner argument in one of three ways, each fixed by its signature:
+A verb treats a reference-type owner argument in one of three ways, each fixed by its signature:
 
-- it **borrows** the owner — declares the parameter `&T`, taking a tether for the call ([`memory.md`](memory.md) §2.9); the caller stays a full owner.
+- it takes a **tether** — declares the parameter `&T` ([`memory.md`](memory.md) §2.9); the caller stays a full owner and lends only a tether for the call.
 - it **relays** the owner — declares a swallowing `T` and returns an owner; the caller downgrades to a tether but may rebind the returned owner to re-own it (§1.9).
 - it **consumes** the owner — declares a swallowing `T` and returns no owner; the caller downgrades to a tether, and the value stays wherever the verb placed it.
 
-Borrowing keeps the caller an owner; relaying and consuming both downgrade it, differing only in whether an owner is handed back. So to keep or recover ownership, either pass `&T` (borrow) or bind a relayed return:
+Passing a tether keeps the caller an owner; relaying and consuming both downgrade it, differing only in whether an owner is handed back. So to keep or recover ownership, either pass `&T` or bind a relayed return:
 
 ```zane
 weapon Weapon()
@@ -253,6 +253,6 @@ Because scope rules (§1.1) prevent tethers from outliving their owners, the run
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by owning access outlives the call |
-| Owning argument | A verb **borrows** an owner (`&T`, caller keeps it), **relays** it (`T` and returns an owner, caller may rebind to re-own), or **consumes** it (`T`, no owner returned, caller keeps a tether); passing to a plain `T` downgrades the caller to a tether whatever the body does |
+| Owning argument | A verb takes a **tether** (`&T`, caller keeps it), **relays** the owner (`T` and returns an owner, caller may rebind to re-own), or **consumes** it (`T`, no owner returned, caller keeps a tether); passing to a plain `T` downgrades the caller to a tether whatever the body does |
 | Return value | A non-`Void` return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous owner, and the caller keeps only a tether to it |
 | Destruction | Deterministic and delayed until the owning scope drains |
