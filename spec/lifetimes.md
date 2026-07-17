@@ -173,7 +173,7 @@ weapon Weapon()
 weapon2 Weapon = reforge(weapon)   // reforge returns the owner; weapon2 is a fresh owner
 ```
 
-A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for an owner, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller an owner. Because the signature alone decides the caller's state, there is no interprocedural consumption inference and no rule whose result depends on the build.
+A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for an owner, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller an owner. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed owner downgrades never depends on the callee's body or on the build. Using an owner only to read it is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it is an owner or not.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
