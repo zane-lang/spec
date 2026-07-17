@@ -163,17 +163,20 @@ truck Truck(car)      // ILLEGAL: car is a tether, not a move-source
 
 The value outlives the call (§1.5), so the downgraded tether always resolves to a live object. Where the value comes to rest — moved into another parameter's owning storage, moved into the return, or held in the call-site scope — the tether follows through the anchor ([`memory.md`](memory.md) §4.5).
 
-To keep a full owner, do not hand it to a plain `T`:
+A verb treats an owner argument in one of three ways, each fixed by its signature:
 
-- pass `&T` to lend the value for the duration of the call — the passing mode for reading a reference object ([`memory.md`](memory.md) §2.9); or
-- have the verb **return** the owner, and bind it at the call site (§1.9).
+- it **borrows** the owner — declares the parameter `&T`, taking a tether for the call ([`memory.md`](memory.md) §2.9); the caller stays a full owner.
+- it **relays** the owner — declares a swallowing `T` and returns an owner; the caller downgrades to a tether but may rebind the returned owner to re-own it (§1.9).
+- it **consumes** the owner — declares a swallowing `T` and returns no owner; the caller downgrades to a tether, and the value stays wherever the verb placed it.
+
+Borrowing keeps the caller an owner; relaying and consuming both downgrade it, differing only in whether an owner is handed back. So to keep or recover ownership, either pass `&T` (borrow) or bind a relayed return:
 
 ```zane
 weapon Weapon()
-weapon2 Weapon = reforge(weapon)   // reforge returns the owner; weapon2 is a fresh owner
+weapon2 Weapon = reforge(weapon)   // reforge relays the owner; weapon2 re-owns the result
 ```
 
-A verb that both consumes a value and hands it back uses the same return path. Here `startMatch` consumes `player` into `island`, so `player` downgrades to a tether; `enterMatch` then recovers ownership from a return. Reassigning `player` overwrites its owning slot ([`memory.md`](memory.md) §2.2), so the moved-from symbol holds an owner again and `return player` is an ordinary move:
+A relay that swallows a value and hands it back uses the return path. Here `startMatch` consumes `player` into `island`, so `player` downgrades to a tether; `enterMatch` then recovers ownership from `returnPlayer`'s return. Reassigning `player` overwrites its owning slot ([`memory.md`](memory.md) §2.2), so the moved-from symbol holds an owner again and `return player` is an ordinary move:
 
 ```zane
 Player enterMatch(player Player) {
@@ -186,7 +189,7 @@ Player enterMatch(player Player) {
 
 Void main() {
     player Player = makePlayer()
-    player = enterMatch(player)            // the returned owner cannot be ignored (§1.9)
+    player = enterMatch(player)            // bind to regain owning privilege; unbound, the owner floats (§1.9)
 }
 ```
 
@@ -194,16 +197,19 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
-### 1.9 A non-`Void` return value cannot be ignored
-Returning an owner is how a verb hands ownership back to the caller (§1.8), so discarding a return could silently drop an owned value — and strand any tether the caller still holds to it. Every non-`Void` return value must therefore be **bound or consumed** at the call site; it may not be discarded.
+### 1.9 An ignored owned result floats to the enclosing scope
+A non-`Void` return need not be bound. When a call's result is a reference-type owner and the call stands as a bare statement, that owner is not destroyed at the end of the statement — it **floats**: it becomes an anonymous owner in the enclosing scope and lives until that scope drains, like any scope-owned value (§2.1).
+
+Binding the return is how the caller takes **owning privilege**. A bound owner may be moved again; a floated one may not — the caller reaches it only through whatever tether it already holds (§1.8).
 
 ```zane
-render(player)                       // legal: render returns Void
-newPlayer Player = respawn(player)   // legal: non-Void return is bound
-respawn(player)                      // ILLEGAL: a non-Void return may not be ignored
+car2 Car = repair(car)   // bind: car2 is a full owner, and may be moved again
+repair(car)              // legal: the returned owner floats to the enclosing scope
 ```
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
+Because a floated result is kept rather than dropped, no tether dangles and no owned value is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable owner or is merely reachable through a tether. This makes the caller's intent visible — a bound return is the signal that the caller wanted ownership back. A value-type result has no owner or tether; ignoring one simply discards the value.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
 ---
 
@@ -247,6 +253,6 @@ Because scope rules (§1.1) prevent tethers from outliving their owners, the run
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by owning access outlives the call |
-| Owning argument | Passing an owning value to a plain `T` parameter downgrades the caller's symbol to a tether, whatever the body does; `&T` lends the value and keeps ownership, and a verb hands an owner back by returning it |
-| Return value | A non-`Void` return must be bound or consumed at the call site; it cannot be ignored |
+| Owning argument | A verb **borrows** an owner (`&T`, caller keeps it), **relays** it (`T` and returns an owner, caller may rebind to re-own), or **consumes** it (`T`, no owner returned, caller keeps a tether); passing to a plain `T` downgrades the caller to a tether whatever the body does |
+| Return value | A non-`Void` return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous owner, and the caller keeps only a tether to it |
 | Destruction | Deterministic and delayed until the owning scope drains |

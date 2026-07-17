@@ -229,6 +229,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** "Swallow" says the parameter takes the value in by owning access — the caller's owner goes in and is left holding only a non-owning tether — as opposed to `&T`, which merely lends a tether and keeps the caller an owner. The name marks the passing mode whose defining consequence is the caller's downgrade.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
+### 3.34 borrow / relay / consume
+- **Meaning:** The three ways a verb can treat a reference-type owner passed to it, each fixed by the signature. It **borrows** the owner when the parameter is `&T` — a tether (§3.32); for a value type the analogue is the value-type borrow (§3.27) — and the caller keeps a full owner. It **relays** the owner when the parameter is a swallowing `T` (§3.33) and the verb returns an owner: the caller downgrades to a tether but may rebind the returned owner to re-own it. It **consumes** the owner when the parameter is a swallowing `T` and the verb returns no owner: the caller downgrades to a tether and the value stays wherever the verb placed it, or floats to scope end if left unbound.
+- **Why this name:** "Borrow" matches the general sense of non-owning access with the owner kept; "consume" matches the established name (Swift `consuming`, Val `sink`) for taking a value for good; "relay" names the middle case, where the owner passes through and is handed back out. Together they classify a verb's effect on an owner you give it, read straight off its signature — the `&`-versus-`T` mark, then whether the return carries an owner.
+- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
+
 ---
 
 ## 4. Packages, Operators, and Versioning
