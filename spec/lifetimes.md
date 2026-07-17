@@ -173,6 +173,23 @@ weapon Weapon()
 weapon2 Weapon = reforge(weapon)   // reforge returns the owner; weapon2 is a fresh owner
 ```
 
+A verb that both consumes a value and hands it back uses the same return path. Here `startMatch` consumes `player` into `island`, so `player` downgrades to a tether; `enterMatch` then recovers ownership from a return. Reassigning `player` overwrites its owning slot ([`memory.md`](memory.md) §2.2), so the moved-from symbol holds an owner again and `return player` is an ordinary move:
+
+```zane
+Player enterMatch(player Player) {
+    island Island = makeIsland()
+    playerId Int = player.id
+    island!startMatch(player)              // startMatch consumes player; player is now a tether
+    player = island!returnPlayer(playerId) // recover ownership; player is a full owner again
+    return player
+}
+
+Void main() {
+    player Player = makePlayer()
+    player = enterMatch(player)            // the returned owner cannot be ignored (§1.9)
+}
+```
+
 A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for an owner, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller an owner. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed owner downgrades never depends on the callee's body or on the build. Using an owner only to read it is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it is an owner or not.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
