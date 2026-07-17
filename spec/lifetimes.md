@@ -53,7 +53,7 @@ This rule keeps containers stable ownership subtrees. Once a value is owned by a
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-may-be-moved-keeping-ownership-subtrees-whole) — "What may be moved: keeping ownership subtrees whole".
 
 ### 1.3 Moves are restricted to the declaration block
-A direct owning symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Owning parameters are treated as declared at the top of the function body block.
+A direct owning symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Owning parameters may be used as move-sources at the top level of the function body. A parameter is not part of the body scope, though: it belongs to the **call-site scope** (§1.5), and whether using it as a move-source transfers ownership is governed by §1.8.
 
 ```zane
 engine Engine()
@@ -76,7 +76,7 @@ car Car()
 
 ```zane
 Void loadCar(this Boat, car Car) mut {
-    this.cars!append(car) // legal: parameter car is treated as declared at function body block top
+    this.cars!append(car) // legal: car is moved into this.cars at the top level of the body
 }
 ```
 
@@ -99,13 +99,25 @@ node Node()
 
 An owned verb result (§1.2) has no source owner; its source scope is the expression that produces it. That scope is always nested within or equal to the destination owner's scope, so this restriction is trivially satisfied and never blocks moving a verb result into any owner.
 
-### 1.5 Callee-decides move semantics
-When a value is passed to a function, the callee decides whether a move happens by what it does internally:
+A parameter's value is exempt. Because a parameter belongs to the call-site scope and is not part of the body (§1.5), lending it into a local or a nested call does not sink ownership into that lower scope: the value returns to the call site when the local exits, unless the callee consumes it into another parameter or the return (§1.8).
 
-- storing the value in an owning slot moves it
-- not storing it leaves ownership in place
+### 1.5 Parameters belong to the call site
+A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing an owned reference value to a plain `T` parameter lends it in with owning access, but the value's lifetime stays with the call site.
 
-For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Attempting to bind a plain `T` parameter into `&` storage is a compile-time error. This means the callee's signature signals whether an `&`-creating source ([`memory.md`](memory.md) §2.8) is required at the call site.
+Because the parameter is not part of the body scope, the body draining never destroys the value. The body may read it, move it into a local, or pass it to a nested call; when a local that received it exits, the value is not dropped — the compiler moves it back up to the call site. A parameter is therefore handed back to the caller unless the callee **consumes** it (§1.8).
+
+```zane
+Void enterMatch(player Player) {
+    island Island = makeIsland()
+    island!startMatch(player) // player is lent into the local island
+}
+```
+
+`startMatch` puts `player` into the local `island`. Because `player` belongs to the call site, `island` draining does not destroy it, and `enterMatch` moves `player` into no parameter of its own and into no return — so the caller keeps `player` as a full owner (§1.8).
+
+For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Attempting to bind a plain `T` parameter into `&` storage is a compile-time error, because a swallowed value is owned at the call site while an `&` field lives with the object that holds it, which may outlive the call. The callee's signature therefore signals whether an `&`-creating source ([`memory.md`](memory.md) §2.8) is required at the call site.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
 ### 1.6 Moved symbols downgrade to `&` values and are no longer movable
 After a direct owning symbol is moved, that symbol is downgraded to an `&` value through the anchor (see [`memory.md`](memory.md) §4.5). The symbol remains readable but cannot be moved again.
@@ -117,7 +129,7 @@ engine:inspect()         // legal: engine is now an `&`, still readable
 truck Truck(engine)      // ILLEGAL: engine is an `&`, not a move-source
 ```
 
-This also applies across calls: if a callee moves a caller-owned value, the caller can still read the symbol afterward through the downgraded `&`. Zane therefore has no user-visible use-after-move error class for reads.
+This also applies across calls, but only when the callee actually **consumes** the value (§1.8): the caller can still read the symbol afterward through the downgraded `&`. A callee that merely borrows a parameter moves nothing, so the caller's argument symbol stays a full owner. Either way Zane has no user-visible use-after-move error class for reads.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#downgrade-not-poison-why-there-is-no-use-after-move-read) — "Downgrade, not poison: why there is no use-after-move-read".
 
@@ -138,6 +150,32 @@ A function may return an `&T` only when the returned reference is rooted in one 
 ```
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
+
+### 1.8 Parameter consumption is inferred
+A verb **consumes** a parameter when the parameter's value escapes into either **another parameter's** owning storage — a field or container reachable from `this` — or the verb's **return value**. If the value only ever enters locals, the parameter is **borrowed** and handed back (§1.5).
+
+Whether a verb consumes each of its parameters is a property the compiler **infers**, the same way it infers effect levels ([`effects.md`](effects.md) §1). The inference is interprocedural: a verb's classification follows from the verbs it calls, grounded in the verbs that store or return a value directly. It is **not flow-dependent**, because a parameter may only be moved in its declaration block (§1.3) — a value entering a local versus escaping into a parameter or return is two statically separate cases, never a move on one control-flow path only.
+
+The classification decides the caller's state after the call:
+
+- a **borrowed** parameter leaves the caller's argument symbol a full owner
+- a parameter **consumed into another parameter** downgrades the caller's symbol to `&` (§1.6), which resolves to the value's new home
+- a parameter **consumed into the return** is caught by the caller as the return value (§1.9)
+
+A plain `T` reference parameter that a verb never moves into anything — one it only reads — needs no owning access; `&T` would serve. A development build permits it, favoring fast iteration. A release build rejects it: a read-only reference parameter must be declared `&T` ([`memory.md`](memory.md) §2.9). A parameter that is forwarded to a consuming callee is a move-source, so it legitimately stays a plain `T`.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
+
+### 1.9 A non-`Void` return value cannot be ignored
+A verb may consume a parameter into its return value (§1.8), so discarding a return could silently drop an owned value. Every non-`Void` return value must therefore be **bound or consumed** at the call site; it may not be discarded.
+
+```zane
+render(player)                       // legal: render returns Void
+newPlayer Player = respawn(player)   // legal: non-Void return is bound
+respawn(player)                      // ILLEGAL: a non-Void return may not be ignored
+```
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
 ---
 
@@ -177,8 +215,10 @@ Because scope rules (§1.1) prevent tethers from outliving their owners, the run
 | `&` return | Returned `&T` must be rooted in a parameter; `this` counts |
 | Tether assignment | Only from a place expression whose owner is in the same or a higher lexical scope than the tether |
 | Move-source | A direct owning symbol (local or parameter) or an owned verb result; not an `&`, field, container element, or other access path |
-| Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters are treated as declared at function body top |
+| Move declaration-block restriction | A direct owning symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination owner must be in the same or a higher lexical scope than the source owner |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
-| Function call | Callee decides move; caller symbol remains usable |
+| Parameter scope | A reference parameter belongs to the call-site scope, not the body; it is handed back to the caller unless consumed |
+| Parameter consumption | Inferred per parameter: consumed if its value escapes into another parameter or the return, otherwise borrowed and handed back; a read-only reference parameter must be `&T` on release builds |
+| Return value | A non-`Void` return must be bound or consumed at the call site; it cannot be ignored |
 | Destruction | Deterministic and delayed until the owning scope drains |
