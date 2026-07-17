@@ -224,6 +224,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** A tether fastens a holder to a fixed point without owning it and can be re-tied elsewhere — exactly how an `&` attaches to an anchored owner and may be repointed. What a tether is fastened to also *bounds* it, which mirrors the rule that an owner's lexical scope bounds every tether taken on it (see [`lifetimes.md`](lifetimes.md) §1.1). It pairs with **anchor** (§3.23): the anchor holds fast, and the tether reads through it.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
+### 3.33 consumed parameter / borrowed parameter
+- **Meaning:** The two outcomes for a plain reference-type (`T`) parameter, which takes its argument by owning access at the call-site scope. A parameter is **consumed** when its value escapes into another parameter's owning storage or into the return; it is **borrowed** when the value only enters locals and is handed back to the caller. A consumed argument downgrades the caller's symbol to `&` (or is caught as the return); a borrowed argument leaves the caller a full owner. Which one applies is inferred per parameter, like effect levels.
+- **Why this name:** "Consume" says the callee takes the value for good — into a longer-lived owner the caller can still reach; "borrow" says the callee only uses it for the call and returns it, matching the value-type borrow (§3.27) even though the mechanism differs. The pair names the two branches of the same passing mode, so a reader can say which one a given parameter is.
+- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
+
 ---
 
 ## 4. Packages, Operators, and Versioning

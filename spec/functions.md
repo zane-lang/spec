@@ -91,7 +91,7 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the receiver. How each parameter is passed — a value borrow, or a reference `&`/swallow — is covered in [`memory.md`](memory.md) §2.9.
 
 ### 2.8 `&` and swallowing method parameters
-A method parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field. A parameter declared as a plain reference type `T` **swallows** its argument — ownership moves into the callee — so it cannot be bound into `&` storage, because a swallowed owner is frame-local (see [`memory.md`](memory.md) §2.9). A value-type parameter is a read-only borrow. To pass a reference object for reading only, use `&T`.
+A method parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field. A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by owning access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5) — so it cannot be bound into `&` storage, because a swallowed value is owned at the call site while an `&` field may outlive the call (see [`memory.md`](memory.md) §2.9). A value-type parameter is a read-only borrow. To pass a reference object for reading only, use `&T`.
 
 ```zane
 type Car = #struct {
