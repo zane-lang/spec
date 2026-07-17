@@ -343,6 +343,10 @@ At the end of a section that is closely connected to another document, add a `> 
 > **See also:** [`effects.md`](effects.md) for the complete effect model.
 ```
 
+### 6.5 Describe the present, not a migration
+
+Do not frame a rule in terms of backward compatibility or migrating existing code. The toolchain versions itself (see [`dependencies.md`](../spec/dependencies.md) §14), so code keeps compiling against the version it was written for; the spec describes only the language as it is now, never a migration path from an older form.
+
 ---
 
 ## 7. Adding a New Spec Document
