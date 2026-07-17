@@ -136,7 +136,7 @@ A **borrow** is non-owning, non-escaping access to a caller's storage for the du
 
 A **reference type** is passed through the ownership/`&` system instead, in one of two modes:
 
-- A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by owning access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5): the callee either **consumes** it, moving it into another parameter or the return, or **borrows** it and hands it back, a distinction the compiler infers ([`lifetimes.md`](lifetimes.md) §1.8). A swallowing parameter the callee only reads must instead be declared `&T` on a release build.
+- A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by owning access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing an owning value to such a parameter downgrades the caller's symbol to a tether ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it. A swallowing parameter the callee only reads consumes the caller's owner all the same; declaring it `&T` is what keeps the caller an owner.
 - A parameter declared as `&T` is a **tether**: the caller supplies a source that may create a new tether under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. To read a reference-type object *without* taking owning access, pass it as `&T`.
 
 A reference-type `mut` receiver is neither of these: `this` is an implicit tether to the object, never swallowed, so it composes with `&T` parameters (see [`functions.md`](functions.md) §2.4).
@@ -155,7 +155,7 @@ Void setEngine(this Car, engine &Engine) mut {
     this.engine = engine
 }
 
-// plain reference-type parameter is consumed: it moves into an owned field of this
+// plain reference-type parameter: taken by owning access, then moved into an owned field of this
 Void setSpare(this Car, engine Engine) mut {
     this.spare = engine
 }
@@ -406,7 +406,7 @@ The genuine cost of any anchor scheme is **one extra dependent load per tether r
 | `&` parameter | Declares that the caller must supply an `&`-creating source; the parameter is place-like inside the callee |
 | Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; the passing mode for value types; no anchor, not storable, not returnable |
 | Value-type parameter | A read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
-| Reference-type parameter | Plain `T` swallows (owning access; the value belongs to the call site and is consumed or borrowed, inferred — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` is a tether (may be stored into `&` storage or returned) |
+| Reference-type parameter | Plain `T` swallows (owning access; passing an owner downgrades the caller's symbol to a tether whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` is a tether the caller lends while keeping ownership (may be stored into `&` storage or returned) |
 | Reference-type `mut` receiver | `this` is an implicit `&` reference, never swallowed; composes with `&T` parameters |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
