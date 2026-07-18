@@ -180,7 +180,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
 ### 3.24 segmented-offset tether
-- **Meaning:** A tether is represented as a `u32` **segmented offset** — a chunk id in the high bits and an in-chunk word offset in the low bits — pointing at the owner's anchor cell, not a raw pointer. The value `0` (chunk `0`, word `0`) is the reserved null location and means untethered.
+- **Meaning:** A tether is represented as a `u32` **segmented offset** — a chunk id in the high bits and an in-chunk word offset in the low bits — pointing at the owner's anchor cell, not a raw pointer. The value `0` (chunk `0`, word `0`) means untethered; it needs no reserved memory because anchor cells are never placed there, so `0` can never name a real cell.
 - **Why this name:** The tether is a *segmented offset*: half a pointer's size, resolved through the chunk directory to an address, and stable across arena teardown because it names a chunk-relative position rather than a native pointer.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 

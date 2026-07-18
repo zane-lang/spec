@@ -189,6 +189,12 @@ static void bench_pool_shutdown(void) {
 #define ZM_NCHUNKS   (REGION_SIZE / ZM_CHUNK)
 #define ZM_CELL_BASE (448UL * 1024 * 1024)
 
+#ifdef ZM_INTERLEAVE
+#define ZM_TOP0 ((size_t)ZM_ALIGN)
+#else
+#define ZM_TOP0 ((size_t)0)
+#endif
+
 typedef uint32_t ZRef;
 
 static struct {
@@ -205,10 +211,10 @@ static void zm_init(void) {
     for (size_t i = 0; i < 256UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
     for (size_t i = ZM_CELL_BASE; i < ZM_CELL_BASE + 16UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
     for (uint32_t c = 0; c < ZM_NCHUNKS; c++) zm.dir[c] = zm.base + (size_t)c * ZM_CHUNK;
-    zm.top = ZM_ALIGN;
+    zm.top = ZM_TOP0;
     zm.ctop = ZM_CELL_BASE;
 }
-static void zm_reset(void) { zm.top = ZM_ALIGN; zm.ctop = ZM_CELL_BASE; }
+static void zm_reset(void) { zm.top = ZM_TOP0; zm.ctop = ZM_CELL_BASE; }
 
 static inline size_t zm_round(size_t s) { return (s + ZM_ALIGN-1) & ~(size_t)(ZM_ALIGN-1); }
 static inline int    zm_cls(size_t s)   { return (int)(s / ZM_ALIGN) - 1; }
@@ -235,11 +241,7 @@ static void *zm_alloc_aligned(size_t s, size_t align) {
     return zm_alloc(s);
 }
 static void *zm_alloc_buf(size_t s) {
-#ifdef ZM_LINEALIGN
     return zm_alloc_aligned(s, ZM_LINE);
-#else
-    return zm_alloc(s);
-#endif
 }
 static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 

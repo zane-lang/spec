@@ -240,7 +240,7 @@ Every in-arena location is a **`u32` segmented offset**, never a native pointer.
   └───────────────┴─────────────────────────┘
 ```
 
-Allocations are 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. A small **chunk directory** maps a chunk id to that chunk's native base address, so an address is materialized only at use, as `directory[chunk id] + word offset × 8`: splitting the `u32` is a shift and a mask, and the directory lookup is one load. Tethers (§4.2), the per-owner backpointer (§4.2), and the anchor cells (§4.1) are all `u32` segmented offsets. The value `0` — chunk `0`, word `0` — is reserved as a null cell and never handed out, so a `0` backpointer or tether reads as *untethered*.
+Allocations are 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. A small **chunk directory** maps a chunk id to that chunk's native base address, so an address is materialized only at use, as `directory[chunk id] + word offset × 8`: splitting the `u32` is a shift and a mask, and the directory lookup is one load. Tethers (§4.2), the per-owner backpointer (§4.2), and the anchor cells (§4.1) are all `u32` segmented offsets. The value `0` — chunk `0`, word `0` — is the *untethered* sentinel. It costs no reserved memory: because anchor cells are allocated only in the anchor-cell region (§4.1), which never includes that slot, no cell is ever at `0`, so a `0` backpointer or tether can never name a real cell. Owner payloads carry no such restriction and may occupy offset `0` — so a scope's first payload sits at a chunk base, which is why the frontier needs no reserved gap.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
 
@@ -279,6 +279,10 @@ type Inventory = #struct {
 
 This is what keeps arena placement (§3.5) broadly applicable: almost every value is statically sized at its own level, so dynamic size appears only inside the backing stores of handle types.
 
+A backing store is allocated **cache-line-aligned**: before it is placed the arena frontier is advanced to the next cache-line boundary. A backing store is streamed and grown in bulk, and an unaligned base would let its elements straddle cache lines, so sequential access would touch a line more than it needs. Aligning the base packs whole elements within lines. Small inline allocations keep the ordinary 8-byte alignment (§3.1) — cache-line-aligning every small object would waste most of a line per object for no locality gain, since the cost only arises when streaming across many elements. The padding to reach the boundary is at most one line, negligible against a backing store's size.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
+
 ### 3.7 Moving a value reuses the destination slot
 A move transfers ownership into a destination owner of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). Because both sides have identical, statically known size, a move is a fixed-size overwrite of the destination slot:
 
@@ -301,7 +305,7 @@ Cells are bump-allocated in a **dedicated anchor-cell region** of the scope's ar
 ### 4.2 Tethers are segmented offsets, not pointers
 A tether is a **`u32` segmented offset** (§3.1) pointing at the owner's anchor cell — not a raw pointer and not a table index. At half the width of a 64-bit pointer, twice as many tethers fit in a cache line, and the 32-bit encoding keeps resolution on cheap 32-bit CPU math. A cell is allocated only on the first tether of an owner (§4.3), so cells stay a small fraction of live memory, and the `u32`'s 32 GiB reach (§3.1) sits far beyond any realistic working set.
 
-The value `0` — the reserved null location (chunk `0`, word `0`, §3.1) — means *untethered*. It is never a real cell, so a stray resolution of an untethered `0` traps rather than reading live memory.
+The value `0` (chunk `0`, word `0`, §3.1) means *untethered*. A cell is never placed at `0` (§4.1, §3.1), so `0` is never a real cell, and a stray resolution of an untethered `0` traps rather than reading live memory.
 
 Every reference-type instance reserves a **`u32` backpointer** field, initialized to `0`; the first tether records the segmented offset of the instance's anchor cell there. The cell is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the owner mint new tethers — `&x` copies the offset — and lets a move locate and update the owner's cell (§4.5). It is a single offset, not a list of tethers: the owner never enumerates the tethers that point at it, which is what keeps moves O(1) (§4.5).
 
@@ -315,7 +319,7 @@ An owner that is never tethered consumes no cell: its backpointer field stays `0
 > **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor, and not paying when there are no refs".
 
 ### 4.4 Resolving a tether
-Resolving a tether reads the anchor cell it points at, reads the owner's segmented offset from that cell, materializes the owner address through the chunk directory (§3.1), then accesses the field. The reserved null location means a resolution of an untethered `0` never reads a live cell.
+Resolving a tether reads the anchor cell it points at, reads the owner's segmented offset from that cell, materializes the owner address through the chunk directory (§3.1), then accesses the field. Because a cell is never at `0`, a resolution of an untethered `0` never reads a live cell.
 
 Consider reading a field through a tether, where `mainWeapon` is an `&Weapon`:
 
@@ -416,6 +420,8 @@ The genuine cost of any anchor scheme is **one extra dependent load per tether r
 | Reference-type placement | Bump-allocated in the creating scope's arena; promoted to a parent arena only on escape — an unobservable choice |
 | `&` representation | A `u32` segmented offset (chunk id + in-chunk offset) to the owner's anchor cell; `0` means untethered |
 | Addressing | Every location is a `u32` segmented offset resolved through the chunk directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
+| Untethered sentinel | `0` (chunk `0`, word `0`); costs no reserved memory because cells never occupy it — payloads may sit at offset `0` |
+| Backing-store alignment | Dynamically-sized backing stores (§3.6) are cache-line-aligned so sequential element access does not straddle lines; small inline allocations stay 8-byte aligned |
 | Anchor cell | One `u32` per tethered owner holding its current segmented offset; bump-allocated in the scope's dedicated anchor-cell region, kept out of the payload stream so payload iteration stays dense |
 | Backpointer | Each tethered owner stores the `u32` segmented offset of its anchor cell for move updates and tether minting |
 | Anchor lifecycle | Lazily allocated on first tether; on promotion the payload re-anchors in the destination arena; released in bulk when the owner's scope drains |
