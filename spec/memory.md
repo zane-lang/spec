@@ -322,32 +322,59 @@ Consider reading a field through a tether, where `mainWeapon` is an `&Weapon`:
 dps Float = mainWeapon.dps
 ```
 
-`mainWeapon` holds a `u32` index, not the Weapon's address. Field access uses `.`: it reads the owner's current offset from the cell, materializes the address as `region base + offset`, then adds the field offset. The walk is index → cell → owner offset → owner address → field:
+#### Illustrative resolution walkthrough
 
+A tether contains a segmented offset to an anchor cell, not directly to its
+owner. Reading `mainWeapon.dps` therefore resolves two segmented offsets.
+
+```text
+mainWeapon: &Weapon
+│
+│ tether segmented offset
+│ [ anchor-cell chunk id | anchor-cell word offset ]
+▼
+chunk directory
+│
+▼
+anchor-cell chunk
+│
+▼
+anchor cell
+│
+│ owner segmented offset
+│ [ payload chunk id | payload word offset ]
+▼
+chunk directory
+│
+▼
+payload chunk
+│
+▼
+Weapon payload
+│
+│ ordinary field offset within Weapon
+▼
+Weapon.dps
 ```
-  region base  (the one native pointer, held in a register)
-  anchor_ptr (u32) ──▶ anchor table
 
-  mainWeapon : &Weapon  =  index n  (u32)
+The first segmented offset locates the anchor cell. The cell contains the
+second segmented offset, which locates the owner's current payload. Both use
+the same chunk-directory resolution rule.
 
-  ┌──────────────── anchor table ────────────────┐
-  │  slot 0 │ slot 1 │  …  │       slot n         │
-  │  (null) │  off   │     │       off            │
-  └─────────────────────────────────┼────────────┘
-                                     │  cell = owner offset (u32)
-                                     ▼
-        owner address  =  region base + owner offset
-                                     │
-                                     ▼
-                       ┌────────────────────────┐
-                       │  Weapon  (stack/heap)   │
-                       │  name   String          │
-                       │  dps    Float  ◀── read │  = *(owner address + offset(dps))
-                       │  range  Float           │
-                       └────────────────────────┘
+If the `Weapon` moves or its owner is overwritten, the runtime updates only
+the owner offset stored in the anchor cell. `mainWeapon` continues to point at
+the same cell, and its next access reaches the payload's new location.
+
+This makes the visual hierarchy much clearer:
+
+```text
+tether
+  → cell
+    → owner location
+      → field
 ```
 
-The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the tether's index at a different Weapon (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. The address arithmetic — the 1-based slot offset, the cell stride, the `region base +`, and the field offset — folds into machine addressing modes, so the index costs no extra instruction over a raw-pointer dereference. The added cost is one dependent load: the cell read between the index and the field. See §4.8.
+and avoids duplicating a full object-layout diagram in §4.4.
 
 ### 4.5 Moves and overwrites update one cell, not all tethers
 A tether follows the owner/anchor path rather than pointing at a fixed object address. When an owner moves (§3.7) or an owning slot is overwritten, the runtime writes the owner's new address into its one anchor cell, located through the backpointer (§4.2). Every tether reads that cell on its next resolution, so all tethers observe the owner's current value with no per-tether fixup.
