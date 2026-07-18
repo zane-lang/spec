@@ -230,6 +230,31 @@ Scopes nest last-in-first-out, and their arenas nest with them: a scope's chunks
 
 Within an arena, payloads and anchor cells (§4.1) occupy **separate regions** — distinct chunk chains — so a scan over payloads never strides across interleaved cell metadata. Both chains draw chunk ids from the same directory, so a segmented offset addresses either identically.
 
+```text
+one scope arena
+
+payload region                         anchor-cell region
+──────────────────                     ──────────────────
+
+payload chunk                          anchor-cell chunk
++--------------------+                 +--------------------+
+| Weapon payload     |                 | Weapon's cell      |
+| Player payload     |                 | Player's cell      |
+| Enemy payload      |                 | Enemy's cell       |
+| ...                |                 | ...                |
++--------------------+                 +--------------------+
+
+payload chunk                          anchor-cell chunk
++--------------------+                 +--------------------+
+| more payloads      |                 | more cells         |
++--------------------+                 +--------------------+
+```
+
+The two regions are separate allocation streams: a scan of payloads does
+not step across anchor-cell metadata. Their chunks need not be adjacent in
+native memory. Both kinds of chunk have ordinary chunk ids and are resolved
+through the same chunk directory.
+
 Every in-arena location is a **`u32` segmented offset**, never a native pointer. The `u32` splits into two fields:
 
 ```
@@ -329,27 +354,48 @@ dps Float = mainWeapon.dps
 
 `mainWeapon` holds a segmented offset to an anchor cell, not the Weapon's address. Field access uses `.`: it resolves the cell, reads the owner's current offset from it, resolves that offset to the owner's address, then adds the field offset. The walk is tether → cell → owner offset → owner address → field:
 
-```
-  chunk directory  (chunk id → native base; small, hot, register/L1-resident)
+#### Illustrative resolution walkthrough
 
-  mainWeapon : &Weapon  =  segmented offset ──▶ anchor cell
+A tether contains a segmented offset to an anchor cell, not directly to its
+owner. Reading `mainWeapon.dps` therefore resolves two segmented offsets.
 
-                       ┌── anchor cell (u32) ──┐
-                       │     owner offset       │
-                       └───────────┼───────────┘
-                                   │  cell = owner segmented offset
-                                   ▼
-        owner address  =  directory[owner chunk id] + owner word offset × 8
-                                   │
-                                   ▼
-                       ┌────────────────────────┐
-                       │  Weapon  (in an arena)  │
-                       │  name        String     │
-                       │  dps         Float ◀─ read │ = *(owner address + offset(dps))
-                       │  range       Float      │
-                       │  backpointer u32        │
-                       └────────────────────────┘
+```text
+mainWeapon: &Weapon
+│
+│ tether segmented offset
+│ [ anchor-cell chunk id | anchor-cell word offset ]
+▼
+chunk directory
+│
+▼
+anchor-cell chunk
+│
+▼
+anchor cell
+│
+│ owner segmented offset
+│ [ payload chunk id | payload word offset ]
+▼
+chunk directory
+│
+▼
+payload chunk
+│
+▼
+Weapon payload
+│
+│ ordinary field offset within Weapon
+▼
+Weapon.dps
 ```
+
+The first segmented offset locates the anchor cell. The cell contains the
+second segmented offset, which locates the owner's current payload. Both use
+the same chunk-directory resolution rule.
+
+If the `Weapon` moves or its owner is overwritten, the runtime updates only
+the owner offset stored in the anchor cell. `mainWeapon` continues to point at
+the same cell, and its next access reaches the payload's new location.
 
 The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the tether at a different owner's cell (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. Splitting each segmented offset is a shift and a mask that fold into machine addressing once the chunk base is in hand, so the encoding costs no arithmetic over a raw-pointer dereference. The added cost is one dependent load: the cell read between the tether and the field, and because cells live packed together in the arena's compact anchor-cell region (§4.1) that load normally lands in hot, cache-resident memory. See §4.8.
 
