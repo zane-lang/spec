@@ -174,19 +174,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
-### 3.23 anchor table
-- **Meaning:** A single heap-resident array of fixed-size cells, each holding the current address of one tethered owner. It is reached through `anchor_ptr`, the one fixed word reserved at the base of the memory region, and grows on demand.
-- **Why this name:** Each cell *anchors* a tethered owner — a stable indirection point that tethers read through — and the cells are collected into one table rather than scattered as individual allocations.
+### 3.23 anchor cell
+- **Meaning:** A single `u32` holding the current segmented offset of one tethered owner — a stable indirection point that tethers read through. It is bump-allocated on the first tether in a dedicated anchor-cell region of the owner's scope arena, kept separate from payloads so payload iteration stays dense. There is no monolithic table: each tethered owner has its own cell.
+- **Why this name:** The cell *anchors* a tethered owner: a fixed point a drifting value stays tethered to, so a move updates the one cell and every tether follows.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
-### 3.24 index-form tether
-- **Meaning:** A tether is represented as a `u32`, 1-based index into the anchor table, not a raw pointer. The value `0` means untethered, and physical slot `0` is a reserved null/trap cell.
-- **Why this name:** The tether is a table *index*, which is half a pointer's size, survives table relocation, and resolves through the table to the owner's current address.
+### 3.24 segmented-offset tether
+- **Meaning:** A tether is represented as a `u32` **segmented offset** — a chunk id in the high bits and an in-chunk word offset in the low bits — pointing at the owner's anchor cell, not a raw pointer. The value `0` (chunk `0`, word `0`) means untethered; it needs no reserved memory because anchor cells are never placed there, so `0` can never name a real cell.
+- **Why this name:** The tether is a *segmented offset*: half a pointer's size, resolved through the chunk directory to an address, and stable across arena teardown because it names a chunk-relative position rather than a native pointer.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
-### 3.25 stack-first placement
-- **Meaning:** A reference-type instance is placed on the stack unless its size is dynamic or it escapes its creating frame; only dynamically-sized data is forced onto the heap. Placement is an unobservable implementation choice.
-- **Why this name:** The stack is the default location a reference-type instance is considered for first; the heap is the fallback reserved for the cases the stack cannot serve.
+### 3.25 arena placement
+- **Meaning:** A reference-type instance is bump-allocated in the arena of the scope that creates it, and is copied (promoted) into a parent arena only if it escapes that scope. Only dynamic size or escape changes where an instance lives. Placement is an unobservable implementation choice.
+- **Why this name:** Placement is a choice among **arenas** — the per-scope bump regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker
@@ -220,7 +220,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §2.5
 
 ### 3.32 tether
-- **Meaning:** The `&` value: non-owning storage that points at a **reference type**, resolved through the anchor table (§3.23) to the owner's current address. A tether is repointable, is copied when assigned or passed, may be stored in an `&` field or returned as `&T`, and carries no ownership — the owner's lifetime bounds the tether, never the reverse. It is represented as a `u32` index (§3.24), half the size of a pointer. A tether is distinct from the **reference type** (§3.30) it points at: the reference type is the kind of the owner, the tether is the non-owning handle to it.
+- **Meaning:** The `&` value: non-owning storage that points at a **reference type**, resolved through the owner's anchor cell (§3.23) to the owner's current address. A tether is repointable, is copied when assigned or passed, may be stored in an `&` field or returned as `&T`, and carries no ownership — the owner's lifetime bounds the tether, never the reverse. It is represented as a `u32` segmented offset (§3.24), half the size of a pointer. A tether is distinct from the **reference type** (§3.30) it points at: the reference type is the kind of the owner, the tether is the non-owning handle to it.
 - **Why this name:** A tether fastens a holder to a fixed point without owning it and can be re-tied elsewhere — exactly how an `&` attaches to an anchored owner and may be repointed. What a tether is fastened to also *bounds* it, which mirrors the rule that an owner's lexical scope bounds every tether taken on it (see [`lifetimes.md`](lifetimes.md) §1.1). It pairs with **anchor** (§3.23): the anchor holds fast, and the tether reads through it.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 

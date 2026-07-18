@@ -1,0 +1,117 @@
+# Benchmark result explanations.
+#
+# Authored after inspecting a real run of zane_bench (see
+# zane_bench_results.txt), measured on the maintainer's laptop with the process
+# pinned to one core (taskset -c 0) — a physical, steal-free machine, but
+# noisier than the 285K desktop earlier numbers came from. Across the three
+# builds the unchanged-code controls varied ~13% run-to-run (malloc/free min
+# 1.92-2.22 ms), so absolute times and close calls here are noisy; the notes
+# lean on relative ordering and on the large, repeatable effects.
+#
+# runbench.py reads this file alongside the results and renders each block as
+# the "Details:" note for its test. Some tests (T13, T14) are a compile-time
+# A/B: the committed run is the default (separate) layout, and the note carries
+# the comparison against the -DZM_INTERLEAVE build.
+#
+# Format: one block per test, opened by "[Test N]". Lines starting with '#'
+# are comments; blank lines separate blocks.
+#
+# Keeping this in sync: these notes are pinned to the committed
+# zane_bench_results.txt. After editing them, rebuild the HTML with
+#   python3 runbench.py --from-file
+# which reuses that results file instead of re-running.
+
+[Test 1]
+Zane's bump-arena alloc (~175us median) comes in ~13x faster than malloc
+(~2.21ms) and ~1.5x faster than Pool (~263us). The raw Arena baseline (~16us)
+is an order of magnitude quicker still because Zane also zero-writes a 4-byte
+backpointer into every object; with no tethers taken, that per-object write is
+the only thing separating Zane from a pure bump allocator.
+
+[Test 2]
+Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us
+— effectively unmeasurable — while malloc (~928us) and Pool (~192us) pay real
+per-object cost. This is the bulk-reclaim model at its most extreme: nothing is
+returned per object, so free order cannot matter.
+
+[Test 3]
+With four interleaved sizes Zane (~285us) stays ~12x ahead of malloc (~3.46ms)
+and ~4x ahead of Pool (~1.18ms): the bump arena has no size classes, so mixed
+sizes are just more frontier bumps. The raw Arena baseline (~31us) again leads
+because Zane carries the per-object backpointer write.
+
+[Test 4]
+No allocation is timed here — this is pure layout cost. Contiguous inline
+storage (~56us) is the clear floor; the chunked layouts stay close on locality
+(UList ~60us, CChunked ~79us). The scattered pointer array costs ~79us walked in
+order and ~117us shuffled — the shuffle is where a pointer-chase actually hurts,
+since the prefetcher can no longer hide the random hops.
+
+[Test 5]
+Growing an owned buffer, Zane's in-place frontier doublings (~80us median, ~74us
+min) now come in *below* the old free-stack build (~85us min) — the regression
+this test used to show is gone. The backing store is cache-line-aligned, so its
+32-byte entities no longer straddle 64-byte lines during the write-heavy fill.
+Zane also beats C's realloc vector (~230us) and the never-copy chunked forms
+(CChunked ~272us, UList ~861us).
+
+[Test 6]
+The segmented tether adds one dependent load — the anchor cell — over a raw
+pointer: ~82us min baseline vs ~100us min tether, about 1.22x. With cells in
+their own region the payload-only baseline stays dense, and the deref pays for
+the cell load it no longer shares with the payload's line (see T13/T14 for the
+scan-vs-deref tradeoff at scale). Whether the chunk directory is register-cached
+or reloaded is within noise here.
+
+[Test 7]
+At steady-state churn the allocators sit close (Zane ~2.07ms, Pool ~2.05ms,
+malloc ~2.45ms): once entity counts stabilize, per-frame update and simulation
+work dominate and the raw allocation gaps from Tests 1-3 mostly wash out.
+
+[Test 8]
+Under maximum churn Zane (~6.33ms) leads malloc (~7.22ms) and sits close to Pool
+(~6.56ms). The work-stealing update variant is far slower (~11.7ms): the
+per-frame particle work is too small to amortize scheduling, so coordination
+overhead dominates — a caution against parallelizing fine-grained frame work.
+
+[Test 9]
+Only the refill is timed. Zane just bumps the frontier for the 50k new objects
+(~94us), never touching the freed holes, so fragmentation history is
+irrelevant. malloc (~1.21ms) and Pool (~554us) refill from the slots freed in
+Phase B and carry that history — roughly 13x and 6x slower.
+
+[Test 10]
+All three Zane variants land together (~33-48us) because arena teardown does no
+per-node free work — the timed cost is just the post-order walk, and the tether
+count barely moves it. malloc's per-node free with coalescing is ~119us (~3.6x
+slower) and Pool is ~61us.
+
+[Test 11]
+The mixed workload compresses the field (Zane ~1.83ms, malloc ~1.98ms, Pool
+~2.07ms): updates, scans, and randomized maintenance dominate the time, so the
+allocator strategy is only a small slice of the total — the expected outcome for
+a realistic churn pattern.
+
+[Test 12]
+Four read-only shards summed sequentially (~77us) and concurrently (~79us) land
+in a tie on this machine — the shard work is small enough that pool coordination
+cancels the parallelism. Both produce the asserted-identical total, which is the
+correctness point of the test.
+
+[Test 13]
+Eight payload-only scans over 100k objects with ~20% tethered: ~764us median
+(~657us min). Against the -DZM_INTERLEAVE build (~628us min) the two are within
+this run's noise. That is the honest result at a realistic tether density: the
+interleaving penalty scales with the tethered fraction (~cell_size/object_size
+per tethered object), so at 20% it is only a few percent — below the run-to-run
+variance a single scan can resolve. Test 14 is where the weighting makes it
+visible.
+
+[Test 14]
+Ten payload scans per one tether-deref pass: ~4.07ms median (~3.48ms min) versus
+the -DZM_INTERLEAVE build's ~3.78ms min — the separate layout is ~8% faster.
+Multiplying the payload scan ten-to-one lifts its density advantage above the
+noise floor, even though the separate layout's individual deref is dearer (T6).
+This is the real-world weighting the 1:1 micro-tests hide: pervasive scans are
+common and un-hoistable, tether derefs occasional, so protecting the scan wins
+the aggregate.

@@ -20,48 +20,51 @@ import argparse
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 C_SOURCE   = os.path.join(SCRIPT_DIR, "zane_bench.c")
 BINARY     = os.path.join(SCRIPT_DIR, "zane_bench")
-RESULTS    = os.path.join(SCRIPT_DIR, "zane_bench_results.txt")
-HTML_OUT   = os.path.join(SCRIPT_DIR, "benchmark.html")
+RESULTS      = os.path.join(SCRIPT_DIR, "zane_bench_results.txt")
+EXPLANATIONS = os.path.join(SCRIPT_DIR, "explanations.txt")
+HTML_OUT     = os.path.join(SCRIPT_DIR, "benchmark.html")
 
 # ─────────────────────────────────────────────────────────────
-# Test metadata: descriptions, details, and per-impl info.
-# These match the updated Zane memory model (no 'store' keyword,
-# ownership is default, ref is opt-in, refs are u32 indices into a
-# single heap-resident anchor table; each owner stores a u32 backpointer).
+# Test metadata: short name, title, setup, and per-impl facts.
+# These match the Zane memory model: ownership is default, the tether (&)
+# is opt-in, allocation is a per-scope bump arena over 1 MiB chunks, and a
+# tether is a u32 segmented offset to a bump-allocated anchor cell; each
+# owner stores a u32 backpointer to its cell.
+#
+# The "Details:" note for each test is NOT stored here. It is read from
+# explanations.txt — result interpretation authored after looking at a real
+# run — so it describes the measured numbers rather than predicting them.
 # ─────────────────────────────────────────────────────────────
 
 TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
-        "details": "If Zane stays in the same rough performance band as Pool here (for example within about a 10–20% gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery.",
+        "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Allocation is one frontier bump; free is a no-op — the arena reclaims in bulk on reset.",
         "meta": [
             ("Object size", "32B + 4B back-ptr"),
             ("Back-ptr init", "0 — no anchor at creation"),
-            ("Alloc cost", "one zm_alloc + zero-write"),
-            ("Free cost", "read back-ptr → 0 → single zm_free"),
-            ("Anchor created", "never — no refs in this test"),
+            ("Alloc cost", "one frontier bump + zero-write"),
+            ("Free cost", "no-op — arena reclaims in bulk on reset"),
+            ("Anchor created", "never — no tethers in this test"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 2": {
         "short": "T2 — random-order free",
         "title": "Sequential alloc, then random-order free (only free timed)",
-        "setup": "Alloc and shuffle untimed. Back-ptr is 0 so free is one stack push per object.",
-        "details": "Zane and Pool are expected to stay relatively flat even when free order is shuffled. If random-order free slows an implementation sharply, that usually means the free path depends on heap history or coalescing work.",
+        "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order — reclamation is bulk on reset, not per object.",
         "meta": [
             ("Object size", "40B runtime"),
-            ("Back-ptr", "0 — free is a single zm_free"),
+            ("Back-ptr", "0 — untethered"),
             ("Timed phase", "free loop only"),
-            ("Anchor overhead", "none — back-ptr is 0"),
+            ("Free path", "no-op — bulk reclaim on reset"),
         ],
     },
     "Test 3": {
         "short": "T3 — mixed sizes",
         "title": "Mixed-size alloc and random-order free",
         "setup": "Raw block alloc/free of four sizes in random order.",
-        "details": "If Zane remains stable across the four sizes, the size-indexed free stacks are handling mixed-size reuse predictably. A larger spread usually means the allocator is paying extra per-size dispatch or reuse cost.",
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),
@@ -73,7 +76,6 @@ TEST_META = {
         "short": "T4 — iteration",
         "title": "Iterating 100k entity objects — five layouts",
         "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-        "details": "Contiguous inline storage is the expected lower bound. If chunked layouts stay close, their locality is working well; if pointer-chase falls behind, the gap mostly reflects cache-miss and indirection cost.",
         "meta": [
             ("Object type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Object size", "32 bytes"),
@@ -88,7 +90,6 @@ TEST_META = {
         "short": "T5 — buffer growth",
         "title": "Growing an owned contiguous buffer by appending 100k items",
         "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
-        "details": "An in-place frontier grower is expected to do well when the buffer can expand without copying. If chunked forms or realloc-based growth win instead, that suggests avoided copies or allocator behavior mattered more in that run.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Spec analogue", "growable buffer layered over Array-like inline storage"),
@@ -100,26 +101,24 @@ TEST_META = {
     },
     "Test 6": {
         "short": "T6 — ref access",
-        "title": "Ref access via the index-form anchor table vs direct pointer",
-        "setup": "Ref dereference path: a ref is a u32, 1-based index into one heap-resident anchor table (anchor_ptr[index] → owner offset → owner → field). The added cost over a raw pointer is a single dependent load — the cell — plus loading the table base, which is normally register-resident.",
-        "details": "Direct pointer access is the lower bound at one load. The index ref with a cached base adds only the cell load; reloading the base each access (the non-hoisted case) adds a little more. All variants land within a few percent, showing the index indirection is near-free when the table is warm.",
+        "title": "Ref access via a segmented tether vs direct pointer",
+        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. Cells live in a dedicated anchor-cell region, separate from the payload stream.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Index ref, base cached", "anchor_ptr hoisted; one cell load → owner"),
-            ("Index ref, base reloaded", "anchor_ptr re-fetched per access (non-hoisted)"),
-            ("Ref size", "u32 index — half a 64-bit pointer"),
-            ("Slot 0", "reserved null cell; index 0 = unreferenced"),
+            ("Segmented tether, dir cached", "chunk directory hoisted; cell load → owner"),
+            ("Segmented tether, dir reloaded", "chunk directory re-fetched per access"),
+            ("Tether size", "u32 segmented offset — half a 64-bit pointer"),
+            ("Offset 0", "0 = untethered; no cell is ever placed at offset 0"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 7": {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
-        "setup": "Each spawn writes back-ptr = 0. Each kill reads back-ptr (0), single zm_free.",
-        "details": "Once the entity pool reaches steady state, update work is expected to dominate. If allocator gaps widen, churn is contributing more; if results converge, per-frame simulation work is dominating allocator differences.",
+        "setup": "Each spawn writes back-ptr = 0. Each kill is a no-op free — the arena reclaims dead entities in bulk on reset.",
         "meta": [
             ("Entity size", "32B + 4B back-ptr"),
-            ("Anchor", "never created — no refs"),
+            ("Anchor", "never created — no tethers"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "30 new entities"),
             ("Kills/frame", "20 oldest + hp-drained deaths"),
@@ -129,11 +128,10 @@ TEST_META = {
     "Test 8": {
         "short": "T8 — particle system",
         "title": "Particle system: burst-spawn short-lifetime objects every frame",
-        "setup": "Maximum churn. Every death reads back-ptr (0), single zm_free.",
-        "details": "The sequential baseline shows pure churn cost. If the work-stealing variant pulls ahead, the per-frame particle update has enough independent work to amortize coordination; if it falls behind, scheduler and shard overhead are larger than the frame work on this machine.",
+        "setup": "Maximum churn. Every death is a no-op free — the arena reclaims dead particles in bulk on reset.",
         "meta": [
             ("Particle size", "24B + 4B back-ptr"),
-            ("Anchor", "never created — no refs"),
+            ("Anchor", "never created — no tethers"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "60 particles"),
             ("Lifetime", "TTL = random 10–30 frames"),
@@ -144,8 +142,7 @@ TEST_META = {
     "Test 9": {
         "short": "T9 — fragmentation",
         "title": "Checkerboard fragmentation then refill — only refill timed",
-        "setup": "Phases A+B untimed. Phase C timed. Free-stacks fully populated after Phase B.",
-        "details": "Zane and Pool are expected to refill from prepared free slots with relatively stable cost. If an implementation slows markedly after fragmentation, the refill path is doing more than exact-size reuse.",
+        "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
         "meta": [
             ("Object size", "32B + 4B back-ptr"),
             ("Anchor", "never created"),
@@ -158,13 +155,12 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
-        "setup": "Three Zane variants: no refs (backpointer stays 0), single parent ref (only the root gets an anchor slot), individual refs (every node gets its own anchor-table slot). All use post-order DFS destruction; freeing a referenced node returns its slot to a cell-threaded free list.",
-        "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never get a slot. If the individual-ref variant is slower, the extra cost is the per-node slot alloc/free — there is no ref-list teardown, since refs are indices that cannot outlive the owner.",
+        "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
-            ("No refs", "backpointer = 0, single zm_free per node"),
-            ("Single parent ref", "one ref to root only; 3,999 nodes ref-free"),
-            ("Individual refs", "every node frees its anchor slot, then itself"),
+            ("No tethers", "backpointer = 0; no per-node free"),
+            ("Single parent tether", "one tether to root; 3,999 nodes untethered"),
+            ("Individual tethers", "every node mints its own anchor cell"),
             ("malloc", "free(node) per node, coalescing on each"),
             ("Runs", "20 — median reported"),
         ],
@@ -172,12 +168,11 @@ TEST_META = {
     "Test 11": {
         "short": "T11 — stress test",
         "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
-        "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
-        "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here. The shared push/kill phases would otherwise mostly measure synchronization and ordering changes rather than the benchmark's existing workload.",
+        "setup": "All alloc through zm_alloc_lazy; frees are no-ops under the arena. Back-ptr always 0.",
         "meta": [
             ("Object size", "32B + 4B back-ptr"),
             ("Owned buffers", "256–512B + 4B back-ptr"),
-            ("Anchor", "never created — no refs"),
+            ("Anchor", "never created — no tethers"),
             ("Cycles", "200 cycles"),
             ("Per cycle", "spawn + create buffers + push + update + kill"),
             ("Concurrency", "not added — shared randomized mutation would distort the workload"),
@@ -188,13 +183,36 @@ TEST_META = {
         "short": "T12 — concurrent scan",
         "title": "Concurrent shard scan over four independent Array[25000]<Entity> workloads",
         "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-        "details": "Sequential and concurrent totals should match every run. If the concurrent variant improves, the independent shard work is large enough to amortize the pre-started worker pool; if not, scheduling and memory bandwidth are dominating.",
         "meta": [
             ("Workers", "4"),
             ("Shard size", "25,000 entities"),
             ("Total layout", "Array[100000]<Entity> split into 4 independent shards"),
             ("Scheduler", "persistent work-stealing pool pre-started and warmed before timed runs"),
             ("Correctness", "aggregate hp sum asserted every run"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 13": {
+        "short": "T13 — partial-tether scan",
+        "title": "Partial-tether repeated payload scan (cell placement A/B)",
+        "setup": "100k objects, ~20% tethered, then repeated payload-only field scans. Under the default separate region the payload stream is dense; built with -DZM_INTERLEAVE the anchor cells sit between payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic tether density.",
+        "meta": [
+            ("Objects", "100,000"),
+            ("Tethered", "~20% (every 5th)"),
+            ("Passes", "8 per timed run"),
+            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 14": {
+        "short": "T14 — scan-heavy mixed",
+        "title": "Scan-heavy mixed workload, 10 scans : 1 deref (cell placement A/B)",
+        "setup": "Aggregates 10 payload scans per 1 tether-deref pass over the tethered subset. Models the real-world weighting the 1:1 micro-tests hide: the separate region should win the aggregate because the pervasive scan dominates, even though its individual deref is dearer than the interleaved layout's.",
+        "meta": [
+            ("Objects", "100,000"),
+            ("Tethered", "~20% (every 5th)"),
+            ("Ratio", "10 payload scans : 1 deref pass"),
+            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -218,9 +236,9 @@ IMPL_COLORS = {
 
 # Second-level colour variants for Zane sub-variants
 ZANE_VARIANTS = {
-    "no refs":           "#7c6ff7",
+    "no tethers":        "#7c6ff7",
     "single parent":     "#5a4faa",
-    "individual refs":   "#b8a4ff",
+    "individual tethers":"#b8a4ff",
     "lazy anchors":      "#7c6ff7",
     "mmap":              "#7c6ff7",
     "in-place":          "#7c6ff7",
@@ -231,7 +249,7 @@ def get_color(impl_name):
     """Pick a colour based on the implementation name."""
     # Check Zane variants first
     lower = impl_name.lower()
-    if "zane" in lower or "anchor" in lower or "ref path" in lower:
+    if "zane" in lower or "anchor" in lower or "tether" in lower or "ref path" in lower:
         for key, color in ZANE_VARIANTS.items():
             if key in lower:
                 return color
@@ -321,8 +339,44 @@ def parse_results(text):
 # Generate HTML
 # ─────────────────────────────────────────────────────────────
 
-def build_test_js(tests):
-    """Build the JS TESTS array from parsed results + metadata."""
+def parse_explanations(text):
+    """Parse explanations.txt into {"Test N": "note"}.
+
+    Format: one block per test, opened by a line "[Test N]", followed by the
+    note text. Lines starting with '#' are comments; blank lines separate
+    blocks. Each block's lines are joined into a single paragraph.
+    """
+    out = {}
+    key = None
+    buf = []
+    header_re = re.compile(r"^\[(Test \d+)\]\s*$")
+    for line in text.splitlines():
+        stripped = line.strip()
+        m = header_re.match(stripped)
+        if m:
+            if key:
+                out[key] = " ".join(buf).strip()
+            key = m.group(1)
+            buf = []
+        elif key is not None:
+            if stripped.startswith("#") or not stripped:
+                continue
+            buf.append(stripped)
+    if key:
+        out[key] = " ".join(buf).strip()
+    return out
+
+
+def load_explanations():
+    """Read explanations.txt if present; return {} otherwise."""
+    if os.path.exists(EXPLANATIONS):
+        with open(EXPLANATIONS) as f:
+            return parse_explanations(f.read())
+    return {}
+
+
+def build_test_js(tests, explanations):
+    """Build the JS TESTS array from parsed results + metadata + explanations."""
     js_tests = []
     for t in tests:
         key = t["test_key"]
@@ -345,7 +399,7 @@ def build_test_js(tests):
             "colors":  colors,
             "meta":    js_meta,
             "setup":   meta.get("setup", ""),
-            "details": meta.get("details", ""),
+            "details": explanations.get(key, ""),
         }
         js_tests.append(entry)
 
@@ -410,7 +464,7 @@ function renderInfo(t){{
     `<div class="info-col">${{rows(t.meta.slice(0,half))}}</div>`+
     `<div class="info-col">${{rows(t.meta.slice(half))}}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-details"><strong>Setup: </strong>${{t.setup}} <strong>Details: </strong>${{t.details}}</div>`;
+    `<div class="info-details"><strong>Setup: </strong>${{t.setup}}${{t.details ? ' <strong>Details: </strong>'+t.details : ''}}</div>`;
 }}
 function show(idx){{
   const t=TESTS[idx];
@@ -497,7 +551,11 @@ def main():
         print(f"  {t['test_key']}: {n_results} results — {impls}")
 
     # Generate HTML
-    tests_json = build_test_js(tests)
+    explanations = load_explanations()
+    missing = [t["test_key"] for t in tests if t["test_key"] not in explanations]
+    if missing:
+        print(f"Note: no explanation in {os.path.basename(EXPLANATIONS)} for: {', '.join(missing)}")
+    tests_json = build_test_js(tests, explanations)
     html = generate_html(tests_json)
 
     with open(HTML_OUT, "w") as f:

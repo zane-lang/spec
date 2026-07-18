@@ -51,20 +51,20 @@ const TESTS=[
     "title": "Sequential alloc then sequential free",
     "labels": [
       "Arena (bump + O(1) reset)",
+      "Zane (bump arena, lazy anchors)",
       "Pool (per-size free-list)",
-      "Zane (lazy anchors)",
       "malloc / free"
     ],
     "data": [
-      58.86,
-      439.05,
-      510.54,
-      3082.93
+      16.34,
+      174.67,
+      263.29,
+      2212.84
     ],
     "colors": [
       "#3aab76",
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a"
     ],
     "meta": [
@@ -78,40 +78,40 @@ const TESTS=[
       },
       {
         "label": "Alloc cost",
-        "val": "one zm_alloc + zero-write"
+        "val": "one frontier bump + zero-write"
       },
       {
         "label": "Free cost",
-        "val": "read back-ptr \u2192 0 \u2192 single zm_free"
+        "val": "no-op \u2014 arena reclaims in bulk on reset"
       },
       {
         "label": "Anchor created",
-        "val": "never \u2014 no refs in this test"
+        "val": "never \u2014 no tethers in this test"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Free reads back-ptr, sees 0, single zm_free.",
-    "details": "If Zane stays in the same rough performance band as Pool here (for example within about a 10\u201320% gap on the same machine), lazy anchors are not adding meaningful fixed cost when no refs exist. A larger gap to malloc usually reflects allocator bookkeeping and coalescing differences rather than ref machinery."
+    "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Allocation is one frontier bump; free is a no-op \u2014 the arena reclaims in bulk on reset.",
+    "details": "Zane's bump-arena alloc (~175us median) comes in ~13x faster than malloc (~2.21ms) and ~1.5x faster than Pool (~263us). The raw Arena baseline (~16us) is an order of magnitude quicker still because Zane also zero-writes a 4-byte backpointer into every object; with no tethers taken, that per-object write is the only thing separating Zane from a pure bump allocator."
   },
   {
     "t": "T2 \u2014 random-order free",
     "title": "Sequential alloc, then random-order free (only free timed)",
     "labels": [
+      "Zane (bump arena, lazy anchors)",
       "Pool (per-size free-list)",
-      "Zane (lazy anchors)",
       "malloc / free"
     ],
     "data": [
-      325.87,
-      462.28,
-      1674.27
+      0.03,
+      192.49,
+      927.94
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a"
     ],
     "meta": [
@@ -121,34 +121,34 @@ const TESTS=[
       },
       {
         "label": "Back-ptr",
-        "val": "0 \u2014 free is a single zm_free"
+        "val": "0 \u2014 untethered"
       },
       {
         "label": "Timed phase",
         "val": "free loop only"
       },
       {
-        "label": "Anchor overhead",
-        "val": "none \u2014 back-ptr is 0"
+        "label": "Free path",
+        "val": "no-op \u2014 bulk reclaim on reset"
       }
     ],
-    "setup": "Alloc and shuffle untimed. Back-ptr is 0 so free is one stack push per object.",
-    "details": "Zane and Pool are expected to stay relatively flat even when free order is shuffled. If random-order free slows an implementation sharply, that usually means the free path depends on heap history or coalescing work."
+    "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order \u2014 reclamation is bulk on reset, not per object.",
+    "details": "Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us \u2014 effectively unmeasurable \u2014 while malloc (~928us) and Pool (~192us) pay real per-object cost. This is the bulk-reclaim model at its most extreme: nothing is returned per object, so free order cannot matter."
   },
   {
     "t": "T3 \u2014 mixed sizes",
     "title": "Mixed-size alloc and random-order free",
     "labels": [
       "Arena (bulk reset)",
-      "Zane (mmap + free-stacks)",
+      "Zane (bump arena)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      66.97,
-      799.44,
-      1612.5,
-      5766.93
+      31.05,
+      285.29,
+      1184.9,
+      3459.98
     ],
     "colors": [
       "#3aab76",
@@ -175,29 +175,29 @@ const TESTS=[
       }
     ],
     "setup": "Raw block alloc/free of four sizes in random order.",
-    "details": "If Zane remains stable across the four sizes, the size-indexed free stacks are handling mixed-size reuse predictably. A larger spread usually means the allocator is paying extra per-size dispatch or reuse cost."
+    "details": "With four interleaved sizes Zane (~285us) stays ~12x ahead of malloc (~3.46ms) and ~4x ahead of Pool (~1.18ms): the bump arena has no size classes, so mixed sizes are just more frontier bumps. The raw Arena baseline (~31us) again leads because Zane carries the per-object backpointer write."
   },
   {
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
       "Inline array  (Array[100000] of Entity)",
-      "CChunked (chunk=64, ptr-array)",
       "UList (chunk=8, linked)",
+      "CChunked (chunk=64, ptr-array)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      89.85,
-      97.55,
-      109.7,
-      158.93,
-      199.95
+      56.16,
+      59.72,
+      78.86,
+      78.97,
+      116.93
     ],
     "colors": [
       "#3aab76",
-      "#c45a8a",
       "#3aab76",
+      "#c45a8a",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -232,7 +232,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-    "details": "Contiguous inline storage is the expected lower bound. If chunked layouts stay close, their locality is working well; if pointer-chase falls behind, the gap mostly reflects cache-miss and indirection cost."
+    "details": "No allocation is timed here \u2014 this is pure layout cost. Contiguous inline storage (~56us) is the clear floor; the chunked layouts stay close on locality (UList ~60us, CChunked ~79us). The scattered pointer array costs ~79us walked in order and ~117us shuffled \u2014 the shuffle is where a pointer-chase actually hurts, since the prefetcher can no longer hide the random hops."
   },
   {
     "t": "T5 \u2014 buffer growth",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      104.58,
-      366.69,
-      458.16,
-      1175.16
+      79.89,
+      230.04,
+      271.98,
+      861.27
     ],
     "colors": [
       "#7c6ff7",
@@ -282,23 +282,23 @@ const TESTS=[
       }
     ],
     "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
-    "details": "An in-place frontier grower is expected to do well when the buffer can expand without copying. If chunked forms or realloc-based growth win instead, that suggests avoided copies or allocator behavior mattered more in that run."
+    "details": "Growing an owned buffer, Zane's in-place frontier doublings (~80us median, ~74us min) now come in *below* the old free-stack build (~85us min) \u2014 the regression this test used to show is gone. The backing store is cache-line-aligned, so its 32-byte entities no longer straddle 64-byte lines during the write-heavy fill. Zane also beats C's realloc vector (~230us) and the never-copy chunked forms (CChunked ~272us, UList ~861us)."
   },
   {
     "t": "T6 \u2014 ref access",
-    "title": "Ref access via the index-form anchor table vs direct pointer",
+    "title": "Ref access via a segmented tether vs direct pointer",
     "labels": [
-      "Index ref (base reloaded per access)",
+      "Segmented tether (chunk dir reloaded)",
       "Direct pointer (baseline)",
-      "Index ref (anchor table, base cached)"
+      "Segmented tether (chunk dir cached)"
     ],
     "data": [
-      144.34,
-      145.71,
-      149.04
+      92.36,
+      97.39,
+      113.42
     ],
     "colors": [
-      "#6b7280",
+      "#7c6ff7",
       "#4a9edd",
       "#7c6ff7"
     ],
@@ -308,41 +308,41 @@ const TESTS=[
         "val": "raw C pointer dereference \u2014 baseline"
       },
       {
-        "label": "Index ref, base cached",
-        "val": "anchor_ptr hoisted; one cell load \u2192 owner"
+        "label": "Segmented tether, dir cached",
+        "val": "chunk directory hoisted; cell load \u2192 owner"
       },
       {
-        "label": "Index ref, base reloaded",
-        "val": "anchor_ptr re-fetched per access (non-hoisted)"
+        "label": "Segmented tether, dir reloaded",
+        "val": "chunk directory re-fetched per access"
       },
       {
-        "label": "Ref size",
-        "val": "u32 index \u2014 half a 64-bit pointer"
+        "label": "Tether size",
+        "val": "u32 segmented offset \u2014 half a 64-bit pointer"
       },
       {
-        "label": "Slot 0",
-        "val": "reserved null cell; index 0 = unreferenced"
+        "label": "Offset 0",
+        "val": "0 = untethered; no cell is ever placed at offset 0"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Ref dereference path: a ref is a u32, 1-based index into one heap-resident anchor table (anchor_ptr[index] \u2192 owner offset \u2192 owner \u2192 field). The added cost over a raw pointer is a single dependent load \u2014 the cell \u2014 plus loading the table base, which is normally register-resident.",
-    "details": "Direct pointer access is the lower bound at one load. The index ref with a cached base adds only the cell load; reloading the base each access (the non-hoisted case) adds a little more. All variants land within a few percent, showing the index indirection is near-free when the table is warm."
+    "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether \u2192 cell \u2192 owner \u2192 field). Both hops resolve through the chunk directory. Cells live in a dedicated anchor-cell region, separate from the payload stream.",
+    "details": "The segmented tether adds one dependent load \u2014 the anchor cell \u2014 over a raw pointer: ~82us min baseline vs ~100us min tether, about 1.22x. With cells in their own region the payload-only baseline stays dense, and the deref pays for the cell load it no longer shares with the payload's line (see T13/T14 for the scan-vs-deref tradeoff at scale). Whether the chunk directory is register-cached or reloaded is within noise here."
   },
   {
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
       "Pool (per-size free-list)",
-      "Zane (mmap + free-stacks)",
+      "Zane (bump arena)",
       "malloc / free"
     ],
     "data": [
-      3017.33,
-      3089.43,
-      3320.6
+      2054.08,
+      2071.79,
+      2452.21
     ],
     "colors": [
       "#c49a2a",
@@ -356,7 +356,7 @@ const TESTS=[
       },
       {
         "label": "Anchor",
-        "val": "never created \u2014 no refs"
+        "val": "never created \u2014 no tethers"
       },
       {
         "label": "Frame count",
@@ -375,28 +375,28 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Each spawn writes back-ptr = 0. Each kill reads back-ptr (0), single zm_free.",
-    "details": "Once the entity pool reaches steady state, update work is expected to dominate. If allocator gaps widen, churn is contributing more; if results converge, per-frame simulation work is dominating allocator differences."
+    "setup": "Each spawn writes back-ptr = 0. Each kill is a no-op free \u2014 the arena reclaims dead entities in bulk on reset.",
+    "details": "At steady-state churn the allocators sit close (Zane ~2.07ms, Pool ~2.05ms, malloc ~2.45ms): once entity counts stabilize, per-frame update and simulation work dominate and the raw allocation gaps from Tests 1-3 mostly wash out."
   },
   {
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
+      "Zane (bump arena)",
       "Pool (per-size free-list)",
       "malloc / free",
-      "Zane (mmap + free-stacks)",
       "Zane + work-stealing update"
     ],
     "data": [
-      10767.9,
-      11708.79,
-      11924.74,
-      46643.74
+      6334.5,
+      6556.72,
+      7216.32,
+      11724.24
     ],
     "colors": [
+      "#7c6ff7",
       "#c49a2a",
       "#e05a3a",
-      "#7c6ff7",
       "#7c6ff7"
     ],
     "meta": [
@@ -406,7 +406,7 @@ const TESTS=[
       },
       {
         "label": "Anchor",
-        "val": "never created \u2014 no refs"
+        "val": "never created \u2014 no tethers"
       },
       {
         "label": "Frame count",
@@ -429,21 +429,21 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Maximum churn. Every death reads back-ptr (0), single zm_free.",
-    "details": "The sequential baseline shows pure churn cost. If the work-stealing variant pulls ahead, the per-frame particle update has enough independent work to amortize coordination; if it falls behind, scheduler and shard overhead are larger than the frame work on this machine."
+    "setup": "Maximum churn. Every death is a no-op free \u2014 the arena reclaims dead particles in bulk on reset.",
+    "details": "Under maximum churn Zane (~6.33ms) leads malloc (~7.22ms) and sits close to Pool (~6.56ms). The work-stealing update variant is far slower (~11.7ms): the per-frame particle work is too small to amortize scheduling, so coordination overhead dominates \u2014 a caution against parallelizing fine-grained frame work."
   },
   {
     "t": "T9 \u2014 fragmentation",
     "title": "Checkerboard fragmentation then refill \u2014 only refill timed",
     "labels": [
-      "Zane -- refill (lazy anchors)",
+      "Zane -- refill (bump arena)",
       "Pool -- refill from free-list",
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      159.27,
-      1003.6,
-      1859.27
+      94.48,
+      554.19,
+      1205.04
     ],
     "colors": [
       "#7c6ff7",
@@ -476,31 +476,31 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Phases A+B untimed. Phase C timed. Free-stacks fully populated after Phase B.",
-    "details": "Zane and Pool are expected to refill from prepared free slots with relatively stable cost. If an implementation slows markedly after fragmentation, the refill path is doing more than exact-size reuse."
+    "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
+    "details": "Only the refill is timed. Zane just bumps the frontier for the 50k new objects (~94us), never touching the freed holes, so fragmentation history is irrelevant. malloc (~1.21ms) and Pool (~554us) refill from the slots freed in Phase B and carry that history \u2014 roughly 13x and 6x slower."
   },
   {
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
+      "Zane \u2014 no tethers",
+      "Zane \u2014 individual tethers (1 per node)",
+      "Zane \u2014 single parent tether (root only)",
       "Pool cascade destroy",
-      "Zane \u2014 no refs",
-      "Zane \u2014 single parent ref (root only)",
-      "Zane \u2014 individual refs (1 per node)",
       "malloc cascade destroy"
     ],
     "data": [
-      89.12,
-      96.35,
-      96.4,
-      104.75,
-      153.11
+      32.96,
+      36.44,
+      47.94,
+      60.65,
+      119.13
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
-      "#5a4faa",
       "#b8a4ff",
+      "#5a4faa",
+      "#c49a2a",
       "#e05a3a"
     ],
     "meta": [
@@ -509,16 +509,16 @@ const TESTS=[
         "val": "~4,000 nodes, branch 0\u20136"
       },
       {
-        "label": "No refs",
-        "val": "backpointer = 0, single zm_free per node"
+        "label": "No tethers",
+        "val": "backpointer = 0; no per-node free"
       },
       {
-        "label": "Single parent ref",
-        "val": "one ref to root only; 3,999 nodes ref-free"
+        "label": "Single parent tether",
+        "val": "one tether to root; 3,999 nodes untethered"
       },
       {
-        "label": "Individual refs",
-        "val": "every node frees its anchor slot, then itself"
+        "label": "Individual tethers",
+        "val": "every node mints its own anchor cell"
       },
       {
         "label": "malloc",
@@ -529,26 +529,26 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Three Zane variants: no refs (backpointer stays 0), single parent ref (only the root gets an anchor slot), individual refs (every node gets its own anchor-table slot). All use post-order DFS destruction; freeing a referenced node returns its slot to a cell-threaded free list.",
-    "details": "No-refs and single-parent-ref variants are expected to stay close because most nodes never get a slot. If the individual-ref variant is slower, the extra cost is the per-node slot alloc/free \u2014 there is no ref-list teardown, since refs are indices that cannot outlive the owner."
+    "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
+    "details": "All three Zane variants land together (~33-48us) because arena teardown does no per-node free work \u2014 the timed cost is just the post-order walk, and the tether count barely moves it. malloc's per-node free with coalescing is ~119us (~3.6x slower) and Pool is ~61us."
   },
   {
     "t": "T11 \u2014 stress test",
     "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
     "labels": [
-      "Pool (per-size free-list)",
-      "Zane (mmap + free-stacks)",
-      "malloc / free"
+      "Zane (bump arena)",
+      "malloc / free",
+      "Pool (per-size free-list)"
     ],
     "data": [
-      2706.32,
-      2727.92,
-      2951.18
+      1829.83,
+      1983.82,
+      2067.58
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
-      "#e05a3a"
+      "#e05a3a",
+      "#c49a2a"
     ],
     "meta": [
       {
@@ -561,7 +561,7 @@ const TESTS=[
       },
       {
         "label": "Anchor",
-        "val": "never created \u2014 no refs"
+        "val": "never created \u2014 no tethers"
       },
       {
         "label": "Cycles",
@@ -580,8 +580,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "All alloc/free through zm_alloc_lazy / zm_free_lazy. Back-ptr always 0.",
-    "details": "This mixed workload is expected to compress allocator differences because updates, scans, and randomized maintenance all contribute. A concurrent variant is intentionally omitted here. The shared push/kill phases would otherwise mostly measure synchronization and ordering changes rather than the benchmark's existing workload."
+    "setup": "All alloc through zm_alloc_lazy; frees are no-ops under the arena. Back-ptr always 0.",
+    "details": "The mixed workload compresses the field (Zane ~1.83ms, malloc ~1.98ms, Pool ~2.07ms): updates, scans, and randomized maintenance dominate the time, so the allocator strategy is only a small slice of the total \u2014 the expected outcome for a realistic churn pattern."
   },
   {
     "t": "T12 \u2014 concurrent scan",
@@ -591,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      92.42,
-      218.57
+      77.27,
+      78.67
     ],
     "colors": [
       "#3aab76",
@@ -625,7 +625,81 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-    "details": "Sequential and concurrent totals should match every run. If the concurrent variant improves, the independent shard work is large enough to amortize the pre-started worker pool; if not, scheduling and memory bandwidth are dominating."
+    "details": "Four read-only shards summed sequentially (~77us) and concurrently (~79us) land in a tie on this machine \u2014 the shard work is small enough that pool coordination cancels the parallelism. Both produce the asserted-identical total, which is the correctness point of the test."
+  },
+  {
+    "t": "T13 \u2014 partial-tether scan",
+    "title": "Partial-tether repeated payload scan (cell placement A/B)",
+    "labels": [
+      "Payload scan (8 passes)"
+    ],
+    "data": [
+      763.99
+    ],
+    "colors": [
+      "#6b7280"
+    ],
+    "meta": [
+      {
+        "label": "Objects",
+        "val": "100,000"
+      },
+      {
+        "label": "Tethered",
+        "val": "~20% (every 5th)"
+      },
+      {
+        "label": "Passes",
+        "val": "8 per timed run"
+      },
+      {
+        "label": "A/B",
+        "val": "default = separate region; -DZM_INTERLEAVE = cells beside payloads"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "100k objects, ~20% tethered, then repeated payload-only field scans. Under the default separate region the payload stream is dense; built with -DZM_INTERLEAVE the anchor cells sit between payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic tether density.",
+    "details": "Eight payload-only scans over 100k objects with ~20% tethered: ~764us median (~657us min). Against the -DZM_INTERLEAVE build (~628us min) the two are within this run's noise. That is the honest result at a realistic tether density: the interleaving penalty scales with the tethered fraction (~cell_size/object_size per tethered object), so at 20% it is only a few percent \u2014 below the run-to-run variance a single scan can resolve. Test 14 is where the weighting makes it visible."
+  },
+  {
+    "t": "T14 \u2014 scan-heavy mixed",
+    "title": "Scan-heavy mixed workload, 10 scans : 1 deref (cell placement A/B)",
+    "labels": [
+      "Mixed 10:1 (scan-heavy)"
+    ],
+    "data": [
+      4074.5
+    ],
+    "colors": [
+      "#6b7280"
+    ],
+    "meta": [
+      {
+        "label": "Objects",
+        "val": "100,000"
+      },
+      {
+        "label": "Tethered",
+        "val": "~20% (every 5th)"
+      },
+      {
+        "label": "Ratio",
+        "val": "10 payload scans : 1 deref pass"
+      },
+      {
+        "label": "A/B",
+        "val": "default = separate region; -DZM_INTERLEAVE = cells beside payloads"
+      },
+      {
+        "label": "Runs",
+        "val": "20 \u2014 median reported"
+      }
+    ],
+    "setup": "Aggregates 10 payload scans per 1 tether-deref pass over the tethered subset. Models the real-world weighting the 1:1 micro-tests hide: the separate region should win the aggregate because the pervasive scan dominates, even though its individual deref is dearer than the interleaved layout's.",
+    "details": "Ten payload scans per one tether-deref pass: ~4.07ms median (~3.48ms min) versus the -DZM_INTERLEAVE build's ~3.78ms min \u2014 the separate layout is ~8% faster. Multiplying the payload scan ten-to-one lifts its density advantage above the noise floor, even though the separate layout's individual deref is dearer (T6). This is the real-world weighting the 1:1 micro-tests hide: pervasive scans are common and un-hoistable, tether derefs occasional, so protecting the scan wins the aggregate."
   }
 ];
 let chart=null;
@@ -637,7 +711,7 @@ function renderInfo(t){
     `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
     `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-details"><strong>Setup: </strong>${t.setup} <strong>Details: </strong>${t.details}</div>`;
+    `<div class="info-details"><strong>Setup: </strong>${t.setup}${t.details ? ' <strong>Details: </strong>'+t.details : ''}</div>`;
 }
 function show(idx){
   const t=TESTS[idx];
