@@ -25,10 +25,10 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 
 ### 1.2 Move-sources are host symbols or hosting verb results
-A move-source must denote an **hosted value the expression is entitled to consume**. Two forms qualify:
+A move-source must denote a **hosted value the expression is entitled to consume**. Two forms qualify:
 
 - a **direct host symbol**: a local binding or parameter that hosts the object and is named directly by an identifier expression
-- an **hosted verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosted `T`
+- a **hosted verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosted `T`. A hosted verb result has no source host; its source scope is the producing expression, which is always nested within or equal to the destination host's scope, so it satisfies the destination-scope restriction trivially.
 
 A verb that returns a hosting `T` produces a fresh value that no symbol, field, or container hosts yet. Moving it transfers hosting of that temporary straight into the destination, so it re-parents nothing.
 

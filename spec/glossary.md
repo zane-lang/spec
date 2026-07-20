@@ -180,7 +180,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
 ### 3.24 segmented-offset tether
-- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at the host's anchor cell, not a raw pointer. The value `0` means no tether. A tether is runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
+- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at the host's anchor cell, not a raw pointer. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
 - **Why this name:** The tether connects a guest's stored representation to the anchor through which it reaches the hosted object.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
