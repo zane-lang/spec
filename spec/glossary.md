@@ -221,7 +221,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.32 host
 - **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
-- **Why this name:** A real-life host provides both accommodation and the duration of a guest's stay. The term emphasizes where an object resides and how long it remains available.
+- **Why this name:** A host is the role commonly called an **owner** in other languages. Zane says **host** because a real-life host provides both accommodation and the duration of a guest's stay; the term emphasizes where an object resides and how long it remains available.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
@@ -230,8 +230,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
 ### 3.34 swallowed parameter
-- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosted value to a swallowing parameter downgrades the caller's symbol to a guest (§3.33), regardless of what the callee does with the value.
-- **Why this name:** "Swallow" says the parameter takes the hosted value in; the caller's host goes in and is left holding only a guest.
+- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol to a guest (§3.33), regardless of what the callee does with the value.
+- **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and is left holding only a guest.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.35 relay / consume

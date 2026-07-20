@@ -138,7 +138,7 @@ A **borrow** is non-hosting, non-escaping access to a caller's storage for the d
 
 A **reference type** is passed through the hosting/`&` system instead, in one of two modes:
 
-- A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosted value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright. A swallowing parameter the callee only reads downgrades the caller's host all the same; declaring it `&T` (a guest) is what keeps the caller as host.
+- A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright. A swallowing parameter the callee only reads downgrades the caller's host all the same; declaring it `&T` (a guest) is what keeps the caller as host.
 - A parameter declared as `&T` is a **guest**: the caller supplies a source that may create a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. To read a reference-type object *without* taking hosting access, pass it as `&T`.
 
 A reference-type `mut` receiver is neither of these: `this` is an implicit guest to the object, never swallowed, so it composes with `&T` parameters (see [`functions.md`](functions.md) §2.4).
@@ -148,7 +148,7 @@ Passing a value by borrow is the semantic model; where a read-only borrow is ind
 ```zane
 type Car = #struct {
     engine &Engine;   // an `&` field
-    spare Engine;     // a hosted field
+    spare Engine;     // a hosting field
     _value Int;
 }
 
@@ -157,7 +157,7 @@ Void setEngine(this Car, engine &Engine) mut {
     this.engine = engine
 }
 
-// plain reference-type parameter: taken by hosting access, then moved into a hosted field of this
+// plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
 Void setSpare(this Car, engine Engine) mut {
     this.spare = engine
 }

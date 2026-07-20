@@ -25,10 +25,10 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 
 ### 1.2 Move-sources are host symbols or hosting verb results
-A move-source must denote a **hosted value the expression is entitled to consume**. Two forms qualify:
+A move-source must denote a **hosting value the expression is entitled to consume**. Two forms qualify:
 
 - a **direct host symbol**: a local binding or parameter that hosts the object and is named directly by an identifier expression
-- a **hosted verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosted `T`. A hosted verb result has no source host; its source scope is the producing expression, which is always nested within or equal to the destination host's scope, so it satisfies the destination-scope restriction trivially.
+- a **hosting verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosting `T`. A hosting verb result has no source host; its source scope is the producing expression, which is always nested within or equal to the destination host's scope, so it satisfies the destination-scope restriction trivially.
 
 A verb that returns a hosting `T` produces a fresh value that no symbol, field, or container hosts yet. Moving it transfers hosting of that temporary straight into the destination, so it re-parents nothing.
 
@@ -48,7 +48,7 @@ truck2 Truck(makeCar().engine) // ILLEGAL: field access on temporary is not a mo
 garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
 ```
 
-This rule keeps containers stable hosted subtrees. Once a value is hosted by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. A hosting verb result is exempt from the access-path restriction because it has no host until the move binds it.
+This rule keeps containers stable hosting subtrees. Once a value is hosted by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. A hosting verb result is exempt from the access-path restriction because it has no host until the move binds it.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-may-be-moved-keeping-ownership-subtrees-whole) — "What may be moved: keeping ownership subtrees whole".
 
@@ -102,7 +102,7 @@ A hosting verb result (§1.2) has no source host; its source scope is the expres
 A parameter's value is exempt. Because a parameter belongs to the call-site scope and is not part of the body (§1.5), lending it into a local or a nested call does not sink hosting into that lower scope: the value returns to the call site when the local exits, unless the callee moves it into another parameter's hosting storage or into the return (§1.8).
 
 ### 1.5 Parameters belong to the call site
-A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosted reference-type value to a plain `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
+A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosting reference-type value to a plain `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
 
 This is what makes the passing rule safe. Because the parameter is not part of the body scope, the body draining never destroys the value. The body may read it, move it into a local, or pass it to a nested call; when a local that received it exits, the value is not dropped — the compiler moves it back up to the call site, and the chain repeats outward until the scope that first hosted the value drains. A value passed by hosting access therefore always outlives the call, which is what lets the caller's symbol downgrade to a live guest (§1.8) rather than a dangling one.
 
@@ -197,8 +197,8 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
-### 1.9 An ignored hosted result floats to the enclosing scope
-A non-`Void` return need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any scope-hosted value (§2.1).
+### 1.9 An ignored hosting result floats to the enclosing scope
+A non-`Void` return need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1).
 
 Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through whatever guest it already holds (§1.8).
 
@@ -207,7 +207,7 @@ car2 Car = repair(car)   // bind: car2 is a full host, and may be moved again
 repair(car)              // legal: the returned host floats to the enclosing scope
 ```
 
-Because a floated result is kept rather than dropped, no guest dangles and no hosted value is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable host or is merely reachable through a guest. This makes the caller's intent visible — a bound return is the signal that the caller wanted hosting back. A value-type result has no host or guest; ignoring one simply discards the value.
+Because a floated result is kept rather than dropped, no guest dangles and no hosted object is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable host or is merely reachable through a guest. This makes the caller's intent visible — a bound return is the signal that the caller wanted hosting back. A value-type result has no host or guest; ignoring one simply discards the value.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 

@@ -1,6 +1,6 @@
 # Zane Foundations
 
-This document states the few ideas the rest of the specification rests on. Every topic document assumes them; this one names them in a single place and points to where each is specified in full. It introduces no rules of its own — each foundation is hosted canonically by another document, and this is the map that shows how they fit together.
+This document states the few ideas the rest of the specification rests on. Every topic document assumes them; this one names them in a single place and points to where each is specified in full. It introduces no rules of its own — each foundation is specified canonically by another document, and this is the map that shows how they fit together.
 
 > **See also:** [`lexical.md`](lexical.md) §3 for the casing rule. [`generics.md`](generics.md) §2 and §7 for types-as-functions and uniform stride. [`memory.md`](memory.md) §3 for layout. [`effects.md`](effects.md) for how the strictness is enforced.
 
@@ -47,7 +47,7 @@ Three consequences that other documents depend on:
 
 ## 4. Casing Determines Kind
 
-A name's initial case is semantic. An uppercase-initial name is a type; a lowercase-initial name is a value (including a compile-time number). The full rule, and its effect on parsing, are hosted by [`lexical.md`](lexical.md) §3 and §5.
+A name's initial case is semantic. An uppercase-initial name is a type; a lowercase-initial name is a value (including a compile-time number). The full rule, and its effect on parsing, are specified by [`lexical.md`](lexical.md) §3 and §5.
 
 This is a foundation, not a style convention, because the whole surface grammar leans on it:
 
@@ -92,7 +92,7 @@ A value type is copied on assignment, has no identity, and — the load-bearing 
 Both kinds are mutated in place through a `mut` method, but the receiver reaches the caller differently: a value-type `this` is a *borrow* of the caller's slot (so a value is mutable without gaining identity), while a reference-type `this` is an implicit `&` to the object. Borrowing is the value world's device; the reference world already has `&`.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
-- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is hosted by [`memory.md`](memory.md) §2.10.
+- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
 - **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed receiver, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
@@ -102,7 +102,7 @@ Both kinds are mutated in place through a `mut` method, but the receiver reaches
 
 ## 8. Summary
 
-| Foundation | Commitment | Hosted by |
+| Foundation | Commitment | Canonical home |
 |---|---|---|
 | Captured intent | Source expresses architecture and intent, not machine steps; high-level on purpose | this document |
 | Staged compilation | Types are compile-time values executed in an earlier stage; `<>` and `()` are different stages | [`generics.md`](generics.md) §2, §4–§5 |

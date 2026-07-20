@@ -1,6 +1,6 @@
 # Zane Functions, Methods, and Lambdas
 
-This document specifies Zane's function model: functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that host these declarations live in [`packages.md`](packages.md).
+This document specifies Zane's function model: functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that govern these declarations live in [`packages.md`](packages.md).
 
 > **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for hosting and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
 
@@ -44,10 +44,10 @@ Int scaledIdWrong(node Node, factor Int) {
 ```
 
 ### 2.3 Read-only methods are the default
-A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write to `this` or hosted descendants.
+A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write through `this`.
 
 ### 2.4 Mutating methods use `mut`
-A method marked `mut` may write to `this` and objects hosted by `this`.
+A method marked `mut` may write to any state reachable through `this`, whether through a hosting field or a guest.
 
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
@@ -336,7 +336,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 ## 9. Connection to the Effect Model
 
-Read-only methods and functions are effect-free with respect to their receiver unless they touch guests or capabilities. `mut` marks the only direct path for writing receiver-hosted state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+Read-only methods and functions are effect-free with respect to their receiver unless they touch guests or capabilities. `mut` marks the path for writing state reachable through `this`. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -373,7 +373,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate `this` and its hosted subtree in place |
+| `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate state reachable through `this` |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
