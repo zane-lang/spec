@@ -64,6 +64,8 @@ if firstChoice {
 
 In the example above, `print(value)` runs only when `finished` is `false`.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-that-opens-no-scope-of-its-own) — "An exit that opens no scope of its own".
+
 ### 3.2 `guard` may run a pre-exit block
 `guard condition { ... }` first executes the attached block and then exits the same enclosing scope when the condition is `true`. If the condition is `false`, the attached block is skipped.
 
@@ -77,6 +79,8 @@ In the example above, `print(value)` runs only when `finished` is `false`.
     print("still inside")
 }
 ```
+
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-that-opens-no-scope-of-its-own) — "An exit that opens no scope of its own".
 
 ---
 
@@ -92,6 +96,8 @@ loop i from 1 to 3 {
 ```
 
 The loop above visits `i = 1`, then `2`, then `3`.
+
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#counting-from-one) — "Counting from one".
 
 ### 4.2 `loop ... to ...` starts at `1`
 `loop name to end { ... }` is shorthand for `loop name from 1 to end { ... }`.
@@ -116,6 +122,8 @@ loop i from 1 to 10 {
 
 When `reachedLimit` becomes `true`, the `guard` exits the loop body scope and the loop stops.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#doing-without-while) — "Doing without `while`".
+
 ---
 
 ## 5. 1-Based Ordinal Counting
@@ -130,17 +138,7 @@ element Int = list[lastPosition]
 
 The example above selects the last element by using the sequence size directly as the final valid position.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#counting-from-one) — "Counting from one".
+
 ### 5.2 Bounds behavior remains separate
 This document specifies the ordinal base only. The language-level behavior for out-of-range element access remains a separate question from whether indexing starts at `0` or `1`.
-
----
-
-## 6. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| `elif` as one keyword | Keeps chained conditionals visually compact and makes the continuation of an `if` chain explicit in the token stream. |
-| `guard` as conditional scope exit | Lets early exits stay at the same indentation level instead of forcing the remaining code into an extra nested `if`. |
-| Inclusive counted `loop` | Makes `loop i to n` run `n` times and makes the final loop value match the written upper bound. |
-| No dedicated `while` | Keeps repeated condition checks explicit in the loop body rather than automatically reevaluating a header condition; every loop retains a written bound. |
-| 1-based ordinal counting | Aligns loop counts and positional indexing so that the final position in an ordered sequence is its size. |
