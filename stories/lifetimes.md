@@ -75,3 +75,72 @@ Getting an owner back, when you genuinely need it, is an explicit act rather tha
 We first drew that last line too hard. To stop a dropped return from stranding the caller's tether, we made binding *mandatory* — a non-`Void` return could not be ignored. But the danger dissolves the moment you notice the value need not die when it goes unbound: it can [float to the enclosing scope](https://github.com/zane-lang/spec/blob/b932c539f2cb9c313fa1efabcd482481ec3b107a/spec/lifetimes.md#19-an-ignored-owned-result-floats-to-the-enclosing-scope), an anonymous owner living exactly as long as any scope-owned value, the caller's tether resolving into it. Nothing dangles, nothing is silently destroyed. And floating turned out *more* uniform than the mandate it replaced: passing an owner already leaves you a tether to a value that floats at the call-site scope, and ignoring a returned owner now does the identical thing — one rule, not a rule plus an exception. So binding stopped being an obligation and became a choice: take owning privilege, or don't. The choice even reads at the call site, since a caught return is exactly the mark that the caller wanted ownership back.
 
 The cost is real and we name it. Handing an owner to a verb that only reads it is still perfectly legal — it just downgrades you to a tether, like any `T` pass. What is gone is the convenience of keeping *owner privilege* afterward for free; to keep it now you pass `&T`, deciding at the parameter's declaration that reading was all you meant. The loss is a genuine one in terseness, paid at every call that wants to lend-and-keep: what the inference used to hand back for free now costs either an `&T` at the parameter's declaration or a bound return at the call site. We took it deliberately, because the terseness it bought was precisely the terseness that hid the answer to *is this still mine*, and the standing bet of this whole document is that a rule you can see beats a rule that saves a keystroke. We also gave up the small elegance of parameter modes being inferable rather than declared: `&` on a read-only parameter is load-bearing now where it used to be optional, and a signature that gets it wrong is wrong at the call site rather than merely suboptimal. That, too, is a fair price for a contract that says what it means in the one place everyone reads.
+
+## No rule to spare: the specific hole each restriction plugs
+
+The chapters to here have each defended a *choice*: lexical scope over a borrow checker, downgrade over poison, the signature over inferred consumption. Set end to end they argue well for the *shape* of the system and hardly at all for its individual rules, and on re-reading that gap worried us. A reader could finish convinced that Zane simply favours blunt lexical rules as a matter of taste, and draw the reasonable-sounding conclusion that any one of them could be loosened a little, for convenience, at no real cost. That conclusion is wrong, and wrong in a specific way: each restriction is the minimal guard on one particular way a host and the value it hosts can be prised apart, and every one we imagined relaxing let back in exactly one concrete corruption. We had described the rules; we had never lined them up beside the disasters they exist to prevent. This chapter does that, once, because the honest case for the strictness is not the elegance of the system but the ugliness of what each rule is holding back. (The terms shift here from the earlier chapters' *owner* and *tether* to **host** and **guest**; the [memory story](memory.md#two-vocabularies-host-and-guest-above-anchor-and-tether) records why the names changed. The rules are the same rules.)
+
+Start with the guest-assignment rule ([`lifetimes.md` §1.1](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#11--assignment-uses-host-scope)). It forbids binding an `&` to a host that lives in a *lower* scope than the guest, and only that direction — binding to a host in the same or a strictly higher scope is always fine, because a scope that encloses the guest outlives it by construction. The rule looks like fussy bookkeeping until you write the program it rejects:
+
+```zane
+outer Node()
+r &Node = outer
+{
+    inner Node()
+    r = inner
+}
+r:inspect()          // inner drained at the closing brace; r resolves to reclaimed storage
+```
+
+Nothing here is exotic — a guest reassigned inside a block, the sort of line anyone writes without thinking. And the runtime does its half perfectly: the anchor keeps `r` resolving to wherever `inner`'s value went, which after the brace is storage the scope has already reclaimed. The rule is the one thing standing between "the anchor tracks the value faithfully" and "the anchor tracks the value straight into its grave." Loosen it to allow the nested host and you have not bought a small convenience; you have reopened use-after-free, dressed in ordinary syntax.
+
+The returned-reference rule ([§1.7](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter)) is the same hole seen from across a call boundary, which is why it needs its own guard rather than folding into §1.1: a return leaves the function's scopes entirely, into a caller the function cannot see. Let a function return an `&` to anything at all and this compiles:
+
+```zane
+&Int bad() {
+    value Int = 1
+    return value   // value dies as the frame unwinds; the caller is handed an & into reclaimed stack
+}
+```
+
+`value` is gone the instant `bad` returns; the caller receives a live-looking guest onto a dead slot. Rooting the returned `&` in a parameter is exactly the condition that rules this out — a parameter's host necessarily lives in the caller's scope, so a reference that traces back to one is guaranteed to rest on ground the caller still holds. And "rooted in a parameter" is read transitively: the returned `&` may pass through an intermediate `&` binding, so long as that binding itself roots in a parameter. The coarseness is the whole point — the rule never tries to name *which* caller scope the result is valid for, only that it traces to one the caller already owns, which is all safety requires and needs no annotation to state.
+
+The destination-scope rule ([§1.4](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#14-destination-scope-must-contain-or-match-source-scope)) closes the mirror image of §1.1. There the danger was a guest reaching down to a short-lived host; here it is a *value* moved down into one:
+
+```zane
+node Node()
+{
+    sink Node()
+    sink = node       // node's value is now hosted by sink
+}
+node:inspect()        // sink drained at the brace, taking the value with it
+```
+
+The move re-parents `node`'s value into `sink`, whose scope closes at the brace and destroys everything it hosts. But `node` did not vanish when it was moved — it downgraded to a guest ([§1.6](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#16-moved-symbols-downgrade-to--values-and-are-no-longer-movable)) that stays readable, and after the brace that guest resolves, through the anchor, to a value the inner scope already destroyed. The rule permits the move in the other direction without a second thought — a value born in the inner block moved *up* into `node` is safe, because the destination then outlives the source — so it bites only on the lifetime-sinking direction, the only one that can strand a guest. It is close kin to the declaration-block rule, and for the same reason: both are about a move crossing a scope boundary it has no business crossing.
+
+That declaration-block rule ([§1.3](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#13-moves-are-restricted-to-the-declaration-block)) guards a subtler failure — not where a value goes, but *whether it went at all.* Allow a symbol to be moved from inside a nested or conditional block and you get this:
+
+```zane
+car Car()
+if damaged {
+    scrapyard!crush(car)   // consumes car — but only on one path
+}
+car:inspect()              // on the crushed path, a read of a value already consumed
+```
+
+Now `car`'s state at the last line depends on a runtime condition: hosted on one path, downgraded on the other. A compiler that wanted to allow the conditional move would have to track that split — the *maybe-moved* state that flow-sensitive move analysis exists to compute, and whose errors ("use of partially moved value") are among the least legible any ownership language produces. The loop case is sharper still: a move inside a loop body consumes on the first iteration, and the second iteration moves an already-downgraded guest — a double consume with no single line to blame. Confining moves to the declaration block makes the move straight-line code, where it either always runs or never does, so the maybe-moved state cannot arise and the analysis that would chase it is never needed. The rigidity *is* the simplification: you restructure the conditional move — decide first, move once — and in exchange the whole category of partial-move errors does not exist.
+
+The last of the five is the one whose loosening looks most innocent and costs the most to allow: the move-source restriction ([§1.2](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#12-move-sources-are-host-symbols-or-hosting-verb-results)), which refuses to let a field or a container element be moved out. `Truck(car.engine)` reads like the most natural thing in the world — take the engine, give it to the truck — and that is precisely the theft the rule forbids:
+
+```zane
+engine Engine()
+car Car(engine)
+truck Truck(car.engine)   // imagine it allowed: engine spirited out of car
+// car and truck now both host the one engine — and both destroy it when their scopes drain
+```
+
+Move the engine out and `car` is left hosting a gap the type system still swears is full; the single engine has two hosts, and deterministic destruction — the thing the whole document is built to deliver — dutifully destroys it twice. A container element is worse, because pulling element 1 out either leaves a hole every later index must dodge or forces a shift the container's own move-and-drop machinery cannot account for. We could have tracked the holes — mark a field or slot as moved-from and forbid its later use — but that is the per-element flow bookkeeping the entire design exists to avoid. So the rule forbids the fine-grained theft at the source and leaves the natural-grained operation intact: a whole `car` may be moved when it is itself a move-source; only reaching *into* a live host to steal a piece is denied.
+
+Laid side by side, the five stop looking like a taste for blunt rules and start looking like what they are: five different doors onto the same room, each the minimal lock on one specific way a host and its value come apart — a guest outliving its host (§1.1, §1.7), a value sinking below a guest that still tracks it (§1.4), a value consumed on some paths but not others (§1.3), a value stolen from a host that still counts it (§1.2). None substitutes for another; each closes a gap the others leave open. That is the answer to the reader who finds them rigid and wonders where the slack is: there is none to give, because loosening any one is not a gentler version of the same safety but a specific, nameable crash let back in. This is [restriction as information](foundations.md#restriction-is-information-and-the-test-of-a-good-one) at the level of a single document — every rule that forbids a program is carrying a fact the compiler would otherwise have to prove — and [that the readable rule and the fast language coincide](foundations.md#strictness-is-the-performance-model) is the standing bet, not a coincidence.
+
+The cost of buying safety this way is real, and it is not the false rejections — those the first chapter already owned. It is that the safety arrives as a *list* rather than a principle. A borrow checker derives every one of these cases from a single notion, a lifetime outliving a borrow; learn that idea and you hold all of it at once. Zane asks its reader to carry five separate rules instead, and nothing but a chapter like this one tells them the five are a set with no member removable. We think that is the right trade — five rules you can each check by eye against the code in front of you beat one proof you must trust a solver to have carried — but it is a genuine trade, and the chapter that pretends the rules are self-evidently a system, rather than a hard-won set each earning its place, is the chapter we had before this one.
