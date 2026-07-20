@@ -105,7 +105,7 @@ loop i to 3 {
 This loop runs exactly three times and visits `i = 1`, `2`, and `3`.
 
 ### 4.3 There is no dedicated `while`
-Zane does not define a separate `while` form. Bounded repetition uses `loop`, and early exit from that loop uses `guard`.
+Zane does not define a separate `while` form. Repetition has a written bound through `loop`; a condition checked during repetition is written explicitly in the body through `guard`.
 
 ```zane
 loop i from 1 to 10 {
@@ -142,5 +142,5 @@ This document specifies the ordinal base only. The language-level behavior for o
 | `elif` as one keyword | Keeps chained conditionals visually compact and makes the continuation of an `if` chain explicit in the token stream. |
 | `guard` as conditional scope exit | Lets early exits stay at the same indentation level instead of forcing the remaining code into an extra nested `if`. |
 | Inclusive counted `loop` | Makes `loop i to n` run `n` times and makes the final loop value match the written upper bound. |
-| No dedicated `while` | Keeps the control-flow surface small while still allowing bounded loops to stop early through an explicit exit point. |
+| No dedicated `while` | Keeps repeated condition checks explicit in the loop body rather than automatically reevaluating a header condition; every loop retains a written bound. |
 | 1-based ordinal counting | Aligns loop counts and positional indexing so that the final position in an ordered sequence is its size. |
