@@ -70,6 +70,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md) — lexical scope in place of a borrow checker, what may be moved, the declaration-block rule that kills flow analysis, downgrade instead of use-after-move, parameter-rooted returned guests, and why each strict rule is the minimal guard against one specific memory corruption |
 | [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md) — inferring effects instead of annotating them, receiver-scoped `mut`, capabilities in place of ambient I/O, the four-level ladder and the Total-Pure/Pure split, what deliberately is not an effect, and mutation through a borrowed receiver |
 | [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based safety without locks, and value-typed mutation closing the aliased-write gap |
+| [`stories/error-handling.md`](stories/error-handling.md) | [`spec/error-handling.md`](spec/error-handling.md) — the two-doors model and why failure is control flow rather than a `Result` value, `resolve` as expression-substitution rather than assignment, typed abort paths and the deliberately-absent propagate operator, and keeping abortability orthogonal to effects |
 
 ## Contributing
 
