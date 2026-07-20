@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §6
 
 ### 3.21 member-versus-value delimiter
-- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and every arm of a `match` block, and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, and the case list of a `match` group `[ … ]`) and is never trailing; a newline separates statements.
+- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and every arm of a `match` block, and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, and the case list of a `match` group `[ … ]`) and is never trailing; a newline separates statements.
 - **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
@@ -205,8 +205,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould
-- **Meaning:** One of the four constructs that give a type its shape: `struct`, `variant`, `enum`, and `tuple`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named.
-- **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that a mould is the form a type is cast from.
+- **Meaning:** One of the three constructs that give a type its shape: `struct`, `variant`, and `enum`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named.
+- **Why this name:** A mould gives shapeless material a fixed form, which is what these three do to a type; the word also carries that a mould is the form a type is cast from.
 - **Canonical home:** [`types.md`](types.md) §5.3
 
 ### 3.30 value mould / reference mould
@@ -215,7 +215,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §2.1
 
 ### 3.31 product mould / sum mould
-- **Meaning:** The two moulds that share one `{ }` body grammar. A `struct` is a **product mould** and a `variant` is a **sum mould**; `enum` and `tuple` are moulds of other shapes.
+- **Meaning:** The two moulds that share one `{ }` body grammar. A `struct` is a **product mould** and a `variant` is a **sum mould**; `enum` is a mould of another shape.
 - **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" distinguishes the construct from the type it declares.
 - **Canonical home:** [`types.md`](types.md) §2.5
 
