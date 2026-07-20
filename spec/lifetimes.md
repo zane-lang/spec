@@ -143,8 +143,8 @@ A function may return an `&T` only when the returned reference is rooted in one 
 ```
 
 ```zane
-&Int bad() {
-    value Int = 1
+&Node bad() {
+    value Node()
     return value   // ILLEGAL: returned `&` is not rooted in a parameter
 }
 ```
