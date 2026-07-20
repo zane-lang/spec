@@ -70,6 +70,12 @@ Let the length flex with the episode: a minor turn is a paragraph, a foundationa
 
 **Order chapters by the path the thinking took**, not by spec section order and not by tidy importance. A chapter usually opens where the previous one left off — one choice creates the problem the next one solves — so the natural order is causal and roughly chronological, and because there are no separators, the opening sentence of each chapter should carry the reader across the seam ("With identity settled, the next question is…", "Shipping prebuilt objects raises a problem the moment…"). "When" here means *relative to the other decisions* ("once we had settled X, the next pressure was Y"), not a calendar date; record a real date or commit only if it genuinely matters. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead.
 
+### 3.1 Coined terms are defended here
+
+When the topic **coins, renames, or reserves a term of art** — one that earns a [`glossary.md`](../spec/glossary.md) entry (`verb`, `mould`, `host`, `guest`, `anchor`, `tether`, and their kin) — the story is where its name is argued, and this is a requirement, not an optional flourish. The glossary records only the short "why this name"; the developed case — the candidates weighed, why each rival lost, why the winner won — is design history like any other decision, and it belongs in the chapter that introduces the concept the term names, told as prose (see [`naming-terms.md`](naming-terms.md) §6). A term whose name was a genuine choice is not fully recorded until that choice is defended in a story. The one exception is a term whose name is self-evident — its everyday sense maps straight onto the concept, with no rival to reject — which needs no such passage.
+
+When a term is **renamed**, do not back-date the old name out of earlier chapters. The old chapters were written when the old name was true, and that history stands; open a *new* chapter (or extend the relevant one) that records the change and why it came — the way [`stories/memory.md`](../stories/memory.md) added a chapter for the host/guest rename rather than rewriting the chapters that still say "owner" and "tether". This is the [append-don't-overwrite](#5-updating-a-story-when-the-spec-changes) rule applied to vocabulary.
+
 ---
 
 ## 4. Linking to the Spec
@@ -147,4 +153,5 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 2. Follow the shape in §2 — title, the `> **See also:**` pointer, then a handful of thematic chapters with `## ` headings and no `---` separators.
 3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule, in the first-person-plural "we" voice throughout (§6).
 4. Add a `> **Story:**` pointer from each non-trivially-justified section of the matching spec doc (§4.4), and pin in-prose spec references by permalink (§4.2).
-5. Add a row to the stories table in [`README.md`](../README.md).
+5. For every term of art the topic coins that carries a [`glossary.md`](../spec/glossary.md) entry, make sure some chapter defends its name — the developed rationale the glossary only summarizes (§3.1).
+6. Add a row to the stories table in [`README.md`](../README.md).
