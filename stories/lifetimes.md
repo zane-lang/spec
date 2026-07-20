@@ -109,9 +109,9 @@ Here `r` is the short-lived one; it is gone at the brace while `outer` lives on,
 The returned-reference rule ([§1.7](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter)) is the same hole seen from across a call boundary, which is why it needs its own guard rather than folding into §1.1: a return leaves the function's scopes entirely, into a caller the function cannot see. Let a function return an `&` to anything at all and this compiles:
 
 ```zane
-&Int bad() {
-    value Int = 1
-    return value   // value dies as the frame unwinds; the caller is handed an & into reclaimed stack
+&Node bad() {
+    value Node()
+    return value   // value dies as the frame unwinds; the caller is handed an & into reclaimed storage
 }
 ```
 
