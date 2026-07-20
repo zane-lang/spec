@@ -62,7 +62,6 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 spawn runServer(8080)             // ok: function call
 spawn server:listen(8080)         // ok: read-only method call
 spawn server!refreshConnections() // ok: mutating method call
-spawn [runServer(8080)]           // ILLEGAL
 spawn if cond { f() }             // ILLEGAL
 ```
 
