@@ -15,6 +15,8 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
 - **`Short-circuit logic`.** Boolean `and`/`or` are keywords, not operators, to preserve control flow semantics.
 
+> **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
+
 ---
 
 ## 2. Operator Set
@@ -46,6 +48,8 @@ Vec2 +(left Int, right Vec2) {
 
 The example above is legal only in the home package of `Int` or `Vec2`.
 
+> **Story:** [`stories/operators.md`](../stories/operators.md#imports-may-add-names-not-meanings) — "Imports may add names, not meanings".
+
 ### 2.3 Derived operators
 Derived operators are fixed desugarings and are **not** independently implementable:
 
@@ -59,6 +63,8 @@ Derived operators are fixed desugarings and are **not** independently implementa
 
 If a type provides `<` for an operand pair, users automatically get `>`, `<=`, and `>=` for that same pair.
 
+> **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
+
 ### 2.4 Boolean keywords
 `and` and `or` are **keywords**, not operators. They are short-circuiting and therefore not implementable as regular functions.
 
@@ -69,6 +75,8 @@ if ok or fallback() { ... }
 
 `or` is defined as a law: `a or b = ~(~a and ~b)`.
 
+> **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
+
 ### 2.5 Reserved meanings for `!` and `~`
 `!` is reserved for mutating method calls and is not boolean NOT in Zane. `~` is the unary complement/flip operator instead:
 
@@ -77,6 +85,8 @@ if ok or fallback() { ... }
 - composite numeric types may define `~` as component-wise negation
 
 Zane does not specify a separate bitwise-complement meaning for `~`.
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#one-operator-for-flipping-a-value) — "One operator for flipping a value".
 
 ---
 
@@ -96,12 +106,14 @@ number Int = (3 + 2) * 2
 | 2 | <code>|</code> pipe syntax | left |
 | 3 | `*` `/` | left |
 | 4 | `+` `-` | left |
-| 5 | `<` `>` `<=` `>=` `==` `~=` | non-associative |
+| 5 | `<` `>` `<=` `>=` `==` `~=` | left |
 
-Comparison operators are non-associative. Chaining `a < b < c` or `a == b == c` is a compile-time error.
+Comparison operators group left. For example, `a < b < c` groups as `(a < b) < c`. The expression is valid only when overload resolution finds an implementation for each grouped operation.
 
 ### 3.1 Precedence is fixed syntax
 Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering.
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
 
 ---
 
@@ -115,6 +127,8 @@ Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide
 
 ### 4.3 Division is not derived
 `/` is a primitive operator. The compiler **MAY** apply algebraic expectations such as `a / b = a * (1/b)` only for types that explicitly opt into field-like semantics (e.g., `Float` under fast-math settings).
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
 ### 4.4 Boolean logic is not regular operator overloading
 `and` and `or` cannot be expressed as ordinary overloaded operators because they must short-circuit. A regular operator/function receives already-evaluated arguments, which would destroy the control-flow property that defines boolean conjunction and disjunction.
@@ -138,19 +152,18 @@ An operator token may appear only in operator position; it has no value form. Th
 
 > **See also:** [`functions.md`](functions.md) §7.1 for the general call-only rule on callables.
 
+> **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
+
 ---
 
-## 6. Design Rationale
+## 6. Summary
 
-| Decision | Rationale |
+| Concept | Rule |
 |---|---|
-| Fixed operator set | Operators are for math; a small stable set keeps code readable and parsing simple. |
-| Fixed precedence in syntax | Parsing must be determined by tokens alone so refactors and tooling do not need type information to know grouping. |
-| `~` as the only unary operator | Unifies negation and complement without overloading `-`/`!`. |
-| `!` reserved for mutating calls | Keeps mutation explicit at method call sites instead of overloading `!` for boolean negation. |
-| Home-package operator definitions | Keeps imported helper packages from silently changing operator meaning. |
-| Derived `-`, `~=`, `>`, `<=`, and `>=` | Makes law violations inexpressible and keeps comparison surfaces consistent once `<` exists. |
-| `/` remains primitive | Multiplicative inverse is not universally available, and `a / b` is not definitionally identical to `a * (1/b)` across all types. |
-| `and`/`or` as keywords | Preserves short-circuit control flow. |
-| Non-associative equality | Prevents accidental chaining bugs. |
-| Operators are call-only | An operator with no value form is never resolved without operands, so an overloaded operator is always disambiguated by its operands. |
+| Operator vocabulary | Only the fixed built-in operator set may be overloaded; programs cannot declare new tokens or precedence. |
+| Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
+| Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
+| Operator definitions | An implementation must live in the home package of at least one operand type. |
+| Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
+| Boolean logic | `and` and `or` are short-circuiting keywords rather than overloadable operators. |
+| Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |
