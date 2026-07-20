@@ -132,9 +132,9 @@ Read both contributing guides first (they are normative and detailed), and read
 **`stories/generics.md`** as the quality bar — dense, opinionated, long-form
 prose. Reference docs **`syntax.md` and `glossary.md` get no story** (spec guide
 §7). Stories currently exist for `adt`, `concurrency`, `dependencies`,
-`effects`, `foundations`, `generics`, `lexical`, `lifetimes`, `memory`,
-`types`; still missing (and each still carries its rationale in-spec until
-written): `control-flow`, `error-handling`, `functions`, `operators`,
+`effects`, `error-handling`, `foundations`, `generics`, `lexical`,
+`lifetimes`, `memory`, `types`; still missing (and each still carries its
+rationale in-spec until written): `control-flow`, `functions`, `operators`,
 `packages`.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning

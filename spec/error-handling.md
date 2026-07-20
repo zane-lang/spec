@@ -14,6 +14,8 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 - **`Abort path`.** The failure path uses the abort type on the right of `?`.
 - **`Mandatory handling`.** Every abortable call must attach a `?` or `??` handler at the call site.
 
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
+
 ---
 
 ## 2. Core Concepts
@@ -38,6 +40,8 @@ Abortability and mutation are independent. A method may be:
 - `mut`, non-aborting
 - `mut`, aborting
 
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failing-is-not-an-effect) — "Failing is not an effect".
+
 ### 2.4 Abort type is structural, not behavioral
 Changing a function's abort type changes its function type. Abort types cannot be silently discarded when function values are passed around. Because callables are call-only, a function value is always a lambda-variable, and its declared function type must preserve the abort type of the lambda it holds.
 
@@ -46,6 +50,8 @@ parserOk Int?ParseError[String] = Int?ParseError(text String) { ... } // ok
 
 parserBad Int[String] = Int?ParseError(text String) { ... } // ILLEGAL: abort type would be dropped
 ```
+
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
 
 ---
 
@@ -76,6 +82,8 @@ value Int = parse(input) ? err {
 }
 ```
 
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#typed-doors-and-the-propagate-operator-we-dont-have) — "Typed doors, and the propagate operator we don't have".
+
 ### 3.2 Handler outcomes are exhaustive
 Every path through a handler block must end in one of:
 
@@ -84,6 +92,8 @@ Every path through a handler block must end in one of:
 - `abort ...`
 
 Falling through a handler block is a compile-time error.
+
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#handling-a-fork-resolve-and-why-it-isnt-assignment) — "Handling a fork: `resolve`, and why it isn't assignment".
 
 ### 3.3 `??` is resolve-only shorthand
 `expr ?? fallback` desugars to a `?` block that only resolves a default value.
@@ -110,6 +120,8 @@ result Int = match token {
 
 > **See also:** [`adt.md`](adt.md) §5 for the `match` expression.
 
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
+
 ---
 
 ## 4. The `resolve` Keyword
@@ -124,11 +136,15 @@ result Int = match token {
 
 When the primary return type is `Void`, `resolve` takes no value.
 
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#handling-a-fork-resolve-and-why-it-isnt-assignment) — "Handling a fork: `resolve`, and why it isn't assignment".
+
 ---
 
 ## 5. Connection to the Effect Model
 
 Abortability is not itself a side effect. A function can be pure and abortable, impure and non-aborting, or both. The effect system and the abort system are analyzed independently and combined by the compiler at the call site.
+
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failing-is-not-an-effect) — "Failing is not an effect".
 
 ---
 
@@ -265,21 +281,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 
 ---
 
-## 8. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| `?` splits primary and abort paths | Makes success and failure equally visible in signatures. |
-| Handler blocks are mandatory | Prevents silent propagation or ignored failure. |
-| `resolve` is distinct from `return` | Separates local recovery from exiting the parent function. |
-| `Void` is an explicit abort type | Keeps payload-free failure visible rather than implicit. |
-| `??` is only shorthand, not a new mechanism | Preserves one mental model while reducing boilerplate. |
-| Abortability is structural | Function values must preserve exact call contracts. |
-| No required user-facing `Result` wrapper at the call site | Language-level bifurcated returns remove the need for explicit wrapper values at ordinary call sites. |
-
----
-
-## 9. Summary
+## 8. Summary
 
 | Concept | Rule |
 |---|---|
