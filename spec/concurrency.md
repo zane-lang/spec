@@ -12,7 +12,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 
 - **`Implicit parallelism`.** The compiler may run provably independent work in parallel when it cannot change program results.
 - **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility.
-- **`Water-tower lifetimes`.** A scope’s owned objects live until all spawned work in that scope completes.
+- **`Water-tower lifetimes`.** A scope’s hosted objects live until all spawned work in that scope completes.
 - **`Mutation needs a value receiver`.** A spawned call may mutate only a value-typed receiver; a value type's transitive alias-freedom lets the compiler rule out a data race from the receiver's type, and at most one spawn may mutably borrow a given location.
 - **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
 
@@ -98,7 +98,7 @@ The compiler does not reorder `spawn` calls. The order in the source is the orde
 Independent work may still be parallelized only when doing so preserves those source-visible points.
 
 ### 3.7 No serial-equivalence guarantee
-`spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
+`spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and hosting rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#spawn-and-why-it-marks-only-a-call) — "`spawn`, and why it marks only a call".
 
@@ -107,7 +107,7 @@ Independent work may still be parallelized only when doing so preserves those so
 ## 4. Safety Rules Under Concurrency
 
 ### 4.1 Water-tower lifetime extension
-A scope does not complete until all `spawn`ed calls inside it have completed. Owned objects in that scope are destroyed only when the scope is **drained**.
+A scope does not complete until all `spawn`ed calls inside it have completed. Hosted objects in that scope are destroyed only when the scope is **drained**.
 
 The analogy is a vertical water tower with water at the top and one horizontal plate for each still-running spawned call in that scope. The water cannot fall past a plate that is still in place, so destruction cannot pass that still-live concurrent work either.
 
@@ -121,7 +121,7 @@ A spawned call may **mutate** state only through a value-typed receiver. A spawn
 A direct consequence is that reference types are never mutated by spawned work, so every concurrent **read** of the reference-typed object graph is safe by construction.
 
 ### 4.3 Single writer per storage location
-For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` receiver of a spawned `mut` call. Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two receivers denote the same slot — so this disjointness is checked at the spawn site by inspecting the receivers, not by tracing the program. The owning scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
+For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` receiver of a spawned `mut` call. Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two receivers denote the same slot — so this disjointness is checked at the spawn site by inspecting the receivers, not by tracing the program. The hosting scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
 
 ### 4.4 Reads take a coherent snapshot
 A spawned call may read a value that another live spawn is mutating; the read observes a **coherent snapshot** of the value rather than blocking. Reading a shared value into a fresh binding — `snap VarType = shared` — is what takes the snapshot, and the copy is tear-free even when the writer is mid-update. This replaces lock-based serialization for in-memory value state, so a real-time reader never waits on a writer. Serialization still applies to external, capability-backed resources (§4.5).
@@ -137,8 +137,8 @@ The effect system classifies resource access as **read** or **write**. Concurren
 
 The compiler enforces this from effect signatures; the programmer does not add locks.
 
-### 4.6 Tethers passed to spawned work remain independent
-When a tether is passed to a spawned call, the callee receives its own tether to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the tether already held by spawned work.
+### 4.6 Guests passed to spawned work remain independent
+When a guest is passed to a spawned call, the callee receives its own guest to the same host. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the guest already held by spawned work.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
@@ -162,7 +162,7 @@ Zane does not define `async` or `await`. Concurrency is expressed only through `
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
 ### 5.4 No language-level process or channel abstraction
-Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by ownership and effect rules.
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by hosting and effect rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 

@@ -77,7 +77,7 @@ Always `Zane` followed by a descriptive noun phrase. Examples:
 One or two sentences immediately after the title, before the first `---`. Describes in plain English what the document covers. No heading — just body text.
 
 ```markdown
-This document specifies Zane's memory model: how objects are owned and destroyed, how memory is laid out and allocated, and how non-owning references are safely tracked through the anchor system.
+This document specifies Zane's memory model: how objects are hosted and destroyed, how memory is laid out and allocated, and how non-hosting references are safely tracked through the anchor system.
 ```
 
 ### 2.3 See also block
@@ -137,8 +137,8 @@ Every topic document begins with `## 1. Overview`. It contains:
 
 Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
 
-- **Single ownership.** Every heap object has exactly one owner at all times.
-- **Anchor-based tethers.** An `&` points through a stable anchor, never directly at an object.
+- **Single hosting.** Every heap object has exactly one host at all times.
+- **Host and guest.** An object lives in a host; an `&` guest may access it without controlling its lifetime.
 ```
 
 The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
@@ -310,13 +310,13 @@ Void[Int, this Node] // ILLEGAL: this must be the first parameter
 
 Keep sentences short. One idea per sentence. Avoid nested clauses. Use active voice.
 
-Good: *The compiler nulls all tethers to the object via the anchor.*
-Bad: *The tethers that are registered against the anchor of the object that was destroyed are nulled by the anchor mechanism.*
+Good: *A guest never outlives its host.*
+Bad: *The lifetime associated with a guest is prevented from extending beyond the lifetime associated with its host.*
 
 ### 6.2 Emphasis
 
-Use `**bold**` for the first occurrence of a term being defined or for a key constraint.  
-Use `` `backtick` `` for all code identifiers, keywords, operators, and type names.  
+Use `**bold**` for the first occurrence of a term being defined or for a key constraint.
+Use `` `backtick` `` for all code identifiers, keywords, operators, and type names.
 Do not use *italics* for emphasis. Italics are reserved for the names of other documents or for semantic categories the user is not expected to write (e.g., *Total Pure*).
 
 ### 6.3 Neutral register
