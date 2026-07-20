@@ -323,7 +323,7 @@ Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md
 ## 4. Anchors and Tethers
 
 ### 4.1 The anchor cell
-Tethers are tracked through per-host **anchor cells** rather than one shared table. An anchor cell is a single **`u32`** holding the current segmented offset (§3.1) of one tethered host; it stores nothing else. A cell is an ordinary arena allocation — bump-allocated on the host's first tether (§4.3) — so there is no monolithic table to relocate as anchors accumulate: minting an anchor is one bump, never a resize.
+Tethers are tracked through per-host **anchor cells** rather than one shared table. An anchor cell is a single **`u32`** holding the current segmented offset (§3.1) of one hosted object; it stores nothing else. A cell is an ordinary arena allocation — bump-allocated on the host's first tether (§4.3) — so there is no monolithic table to relocate as anchors accumulate: minting an anchor is one bump, never a resize.
 
 Cells are bump-allocated in a **dedicated anchor-cell region** of the scope's arena, a separate chunk chain from the one holding payloads (§3.1). Keeping cells out of the payload stream means a scan over payloads never strides across interleaved cell metadata, so iteration stays dense and a payload's placement never depends on how many of its neighbours were tethered first. The cell region is itself compact and heavily reused, so resolving through a cell (§4.4) is a load into hot, cache-resident memory.
 
@@ -334,19 +334,19 @@ A tether is a **`u32` segmented offset** (§3.1) pointing at the host's anchor c
 
 The value `0` (chunk `0`, word `0`, §3.1) means *untethered*. A cell is never placed at `0` (§4.1, §3.1), so `0` is never a real cell, and a stray resolution of an untethered `0` traps rather than reading live memory.
 
-Every reference-type instance reserves a **`u32` backpointer** field, initialized to `0`; the first tether records the segmented offset of the instance's anchor cell there. The cell is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets the host mint new tethers — `&x` copies the offset — and lets a move locate and update the host's cell (§4.5). It is a single offset, not a list of tethers: the host never enumerates the tethers that point at it, which is what keeps moves O(1) (§4.5).
+Every reference-type instance reserves a **`u32` backpointer** field, initialized to `0`; the first tether records the segmented offset of the instance's anchor cell there. The cell is allocated lazily (§4.3), whereas the backpointer field is always present in the layout, so object size is fixed and array layout stays uniform. The backpointer lets a host mint new tethers from the object — `&x` copies the offset — and lets a move locate and update the object's cell (§4.5). It is a single offset, not a list of tethers: the runtime never enumerates the tethers that point at the object, which is what keeps moves O(1) (§4.5).
 
 A tethered reference-type instance therefore costs **12 bytes** across the whole chain: the 4-byte tether (wherever it is stored), the 4-byte anchor cell, and the 4-byte backpointer in the payload.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
 
 ### 4.3 Anchors are created lazily
-A host that is never tethered consumes no cell: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on a host bump-allocates a cell in the arena, writes the host's current segmented offset into it, and records the cell's own segmented offset in the host's backpointer. Every subsequent `&` of that host copies the backpointer.
+A hosted object that never gains a tether consumes no cell: its backpointer field stays `0` and no cell is allocated (it still carries the 4-byte field, §4.2). The first `&` taken on its host bump-allocates a cell in the arena, writes the hosted object's current segmented offset into it, and records the cell's own segmented offset in the object's backpointer. Every subsequent `&` from that host copies the backpointer.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor, and not paying when there are no refs".
 
 ### 4.4 Resolving a tether
-Resolving a tether reads the anchor cell it points at, reads the host's segmented offset from that cell, materializes the host address through the chunk directory (§3.1), then accesses the field. Because a cell is never at `0`, a resolution of an untethered `0` never reads a live cell.
+Resolving a tether reads the anchor cell it points at, reads the hosted object's segmented offset from that cell, materializes the object's address through the chunk directory (§3.1), then accesses the field. Because a cell is never at `0`, a resolution of an untethered `0` never reads a live cell.
 
 Consider reading a field through a tether, where `mainWeapon` is an `&Weapon`:
 
@@ -354,12 +354,12 @@ Consider reading a field through a tether, where `mainWeapon` is an `&Weapon`:
 dps Float = mainWeapon.dps
 ```
 
-`mainWeapon` holds a segmented offset to an anchor cell, not the Weapon's address. Field access uses `.`: it resolves the cell, reads the host's current offset from it, resolves that offset to the host's address, then adds the field offset. The walk is tether → cell → host offset → host address → field:
+`mainWeapon` holds a segmented offset to an anchor cell, not the Weapon's address. Field access uses `.`: it resolves the cell, reads the hosted object's current offset from it, resolves that offset to the object's address, then adds the field offset. The walk is tether → cell → payload offset → payload address → field:
 
 #### Illustrative resolution walkthrough
 
-A tether contains a segmented offset to an anchor cell, not directly to its
-host. Reading `mainWeapon.dps` therefore resolves two segmented offsets.
+A tether contains a segmented offset to an anchor cell, not directly to the
+hosted object. Reading `mainWeapon.dps` therefore resolves two segmented offsets.
 
 ```text
 mainWeapon: &Weapon
@@ -375,7 +375,7 @@ anchor-cell chunk
 ▼
 anchor cell
 │
-│ host segmented offset
+│ hosted object segmented offset
 │ [ payload chunk id | payload word offset ]
 ▼
 chunk directory
@@ -392,19 +392,19 @@ Weapon.dps
 ```
 
 The first segmented offset locates the anchor cell. The cell contains the
-second segmented offset, which locates the host's current payload. Both use
-the same chunk-directory resolution rule.
+second segmented offset, which locates the hosted object's current payload.
+Both use the same chunk-directory resolution rule.
 
 If the `Weapon` moves or its host is overwritten, the runtime updates only
-the host offset stored in the anchor cell. `mainWeapon` continues to point at
-the same cell, and its next access reaches the payload's new location.
+the hosted object's offset stored in the anchor cell. `mainWeapon` continues
+to point at the same cell, and its next access reaches the payload's new location.
 
 The `.` reads the field; it never reassigns the Weapon. Rebinding `mainWeapon` itself would only repoint the tether at a different host's cell (subject to the scope rule in [`lifetimes.md`](lifetimes.md) §1.1) — it would not overwrite any field. Splitting each segmented offset is a shift and a mask that fold into machine addressing once the chunk base is in hand, so the encoding costs no arithmetic over a raw-pointer dereference. The added cost is one dependent load: the cell read between the tether and the field, and because cells live packed together in the arena's compact anchor-cell region (§4.1) that load normally lands in hot, cache-resident memory. See §4.8.
 
 ### 4.5 Moves, overwrites, and promotion update one cell, not all tethers
-A tether follows the host/anchor path rather than pointing at a fixed object address. When a host is overwritten in place (§2.2) or moved within its scope, the runtime writes the payload's new segmented offset into its one anchor cell, located through the backpointer (§4.2). The cell itself does not move, so every existing tether — which points at the cell, not the payload — observes the host's current location on its next resolution with no per-tether fixup.
+A tether follows the host/anchor path rather than pointing at a fixed object address. When a host is overwritten in place (§2.2) or its object is moved within the scope, the runtime writes the payload's new segmented offset into the object's one anchor cell, located through the backpointer (§4.2). The cell itself does not move, so every existing tether — which points at the cell, not the payload — observes the hosted object's current location on its next resolution with no per-tether fixup.
 
-**Promotion** on escape (§3.5) carries one extra step, because the host's anchor cell lives in the anchor-cell region of the scope that minted it (§4.1) — a scope that is about to drain. Every tether that already points at that cell was taken in that scope or deeper ([`lifetimes.md`](lifetimes.md) §1.1), so none of them outlives the cell. On promotion the runtime therefore does two things: it updates the old cell to the payload's new location, so those existing tethers keep resolving to the live promoted copy for the remainder of the source scope, and it **resets the payload's backpointer to `0`**. The reset re-arms lazy allocation (§4.3): the next tether taken in the destination scope mints a fresh cell in the destination arena's cell region — one that lives exactly as long as the promoted value. The old cell and the tethers reading it then expire together when the source scope drains.
+**Promotion** on escape (§3.5) carries one extra step, because the hosted object's anchor cell lives in the anchor-cell region of the scope that minted it (§4.1) — a scope that is about to drain. Every tether that already points at that cell was taken in that scope or deeper ([`lifetimes.md`](lifetimes.md) §1.1), so none of them outlives the cell. On promotion the runtime therefore does two things: it updates the old cell to the payload's new location, so those existing tethers keep resolving to the live promoted copy for the remainder of the source scope, and it **resets the payload's backpointer to `0`**. The reset re-arms lazy allocation (§4.3): the next tether taken in the destination scope mints a fresh cell in the destination arena's cell region — one that lives exactly as long as the promoted value. The old cell and the tethers reading it then expire together when the source scope drains.
 
 This is why relocation, overwrite, and promotion are all **O(1) with respect to the number of tethers**. It is also how a moved-from symbol stays readable: after a move the symbol downgrades to an `&` — a segmented offset to the cell — and reads resolve through the cell to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
@@ -470,8 +470,8 @@ The genuine cost of any anchor scheme is **one extra dependent load per tether r
 | Addressing | Every location is a `u32` segmented offset resolved through the chunk directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
 | Untethered sentinel | `0` (chunk `0`, word `0`); costs no reserved memory because cells never occupy it — payloads may sit at offset `0` |
 | Backing-store alignment | Dynamically-sized backing stores (§3.6) are cache-line-aligned so sequential element access does not straddle lines; small inline allocations stay 8-byte aligned |
-| Anchor cell | One `u32` per tethered host holding its current segmented offset; bump-allocated in the scope's dedicated anchor-cell region, kept out of the payload stream so payload iteration stays dense |
-| Backpointer | Each tethered host stores the `u32` segmented offset of its anchor cell for move updates and tether minting |
+| Anchor cell | One `u32` per hosted object that has at least one tether, holding the object's current segmented offset; bump-allocated in the scope's dedicated anchor-cell region, kept out of the payload stream so payload iteration stays dense |
+| Backpointer | Each hosted object stores the `u32` segmented offset of its anchor cell for move updates and tether minting; `0` means no cell has been allocated |
 | Anchor lifecycle | Lazily allocated on first guest; on promotion the payload re-anchors in the destination arena; released in bulk when the host's scope drains |
 | Tethered-instance cost | 12 bytes total: the 4-byte tether, the 4-byte anchor cell, and the 4-byte backpointer |
 
