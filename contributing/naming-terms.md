@@ -138,7 +138,21 @@ Every coined term gets an entry in [`glossary.md`](../spec/glossary.md) with its
 preferred label, a short meaning, *why that name was chosen*, and the canonical
 home document for the full rule (see
 [`writing-spec-docs.md`](writing-spec-docs.md) §2.6). Keep the glossary's "why
-this name" to the short version. The developed reasoning — the candidates weighed
-and rejected, the argument for the winner — is design history and belongs in the
-matching `stories/` doc, not in the spec (see
-[`writing-stories-docs.md`](writing-stories-docs.md)).
+this name" to the short version — a one-line pointer, not the argument.
+
+The developed reasoning — the candidates weighed and rejected, the argument for
+the winner — is design history, so it **must be told in the matching `stories/`
+doc**, in the chapter that introduces the concept the term names, and never in
+the spec (see [`writing-stories-docs.md`](writing-stories-docs.md) §3.1). This is
+a requirement, not a nicety: a coined term whose name was a real choice is not
+fully recorded until that choice is argued in a story. The exception is a term
+whose name is self-evident — its everyday meaning maps straight onto the concept
+with no rival candidate to reject (a `borrow` is lent and given back); there,
+the short glossary "why this name" is the whole story and no story passage is
+owed.
+
+If the term's home document has no `stories/` doc yet, the naming rationale is
+*owed* to that story rather than dropped: coin the term and give it its glossary
+entry now, and carry the argument into the story as part of writing it. The
+glossary is the index of which terms exist; the stories are where the names that
+were chosen get defended.
