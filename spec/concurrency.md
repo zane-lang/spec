@@ -59,11 +59,11 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 `spawn` starts a concurrent **function or method call**. Both forms expose a verb signature for effect and conflict analysis. It is illegal on blocks or control flow.
 
 ```zane
-spawn runServer(8080)            // ok: function call
+spawn runServer(8080)             // ok: function call
 spawn server:listen(8080)         // ok: read-only method call
 spawn server!refreshConnections() // ok: mutating method call
-spawn [runServer(8080)]          // ILLEGAL
-spawn if cond { f() }            // ILLEGAL
+spawn [runServer(8080)]           // ILLEGAL
+spawn if cond { f() }             // ILLEGAL
 ```
 
 ### 3.2 Spawned values block on read

@@ -525,10 +525,12 @@ spawn functionName(args...)
 spawn receiver:methodName(args...)
 spawn receiver!methodName(args...)
 spawn functionName(args...) ? binder { ... }
-spawn receiver:methodName(args...) ?? fallbackExpr
+spawn receiver:methodName(args...) ? { ... }
+spawn receiver!methodName(args...) ?? fallbackExpr
 name VarType = spawn functionName(args...)
-name VarType = spawn receiver:methodName(args...)
-name VarType = spawn receiver!methodName(args...) ? binder { ... }
+name VarType = spawn receiver:methodName(args...) ? binder { ... }
+name VarType = spawn receiver!methodName(args...) ? { ... }
+name VarType = spawn functionName(args...) ?? fallbackExpr
 ```
 
 `spawn` is legal only on function-call and method-call expressions. Package-qualified function and method calls use their ordinary forms (§4.1–§4.2). An abortable call may carry a `?` or `??` handler, whether its result is bound or ignored.
