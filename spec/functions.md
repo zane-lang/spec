@@ -17,6 +17,8 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+
 ---
 
 ## 2. Methods
@@ -42,6 +44,8 @@ Int scaledIdWrong(node Node, factor Int) {
     return node._id * factor   // ILLEGAL: node is not `this`
 }
 ```
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 
 ### 2.3 Read-only methods are the default
 A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write through `this`.
@@ -77,6 +81,8 @@ node!setScale(Float(3))
 ```
 
 Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#mutation-you-can-see-at-the-call-site) — "Mutation you can see at the call site".
 
 ### 2.6 Method desugaring
 
@@ -145,6 +151,8 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+
 ---
 
 ## 3. Functions
@@ -194,6 +202,8 @@ Declarations that differ only by return type, parameter names, `this`, or `mut` 
 ### 4.3 Valid overloads differ by arity or parameter type
 Legal overload sets must differ in the number of parameters or in at least one parameter type other than bare `&`-ness at the same position.
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#overloading-on-shapes-and-only-shapes) — "Overloading on shapes, and only shapes".
+
 ---
 
 ## 5. Overload Resolution with Implicit Constructors
@@ -212,6 +222,8 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 
 > **See also:** [`types.md`](types.md) §4 for the definition and constraints of implicit constructors. [`adt.md`](adt.md) §5 for variant matching.
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#overloading-on-shapes-and-only-shapes) — "Overloading on shapes, and only shapes".
+
 ---
 
 ## 6. Method Name Resolution and Extension Methods
@@ -222,7 +234,7 @@ For `receiver:methodName(...)` or `receiver!methodName(...)`, the compiler resol
 1. the receiver type's home package
 2. the current package
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's home package first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
 ### 6.2 Qualified method calls
 Cross-package extension methods are written explicitly:
@@ -233,6 +245,8 @@ vec:Physics$kineticEnergy()
 
 ### 6.3 Extension methods may be declared in any package
 Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 
 ---
 
@@ -249,6 +263,8 @@ Graph$scaledId                 // ILLEGAL: callables cannot be referenced as val
 The reason is the same one that makes operators safe to overload. An overloaded name is not a single value; it is a set of candidates that only collapses to one when arguments are supplied at a call site. In value position there are no arguments, so nothing selects a member of the set. Passing an overloaded callable into an overloaded parameter would have to choose on both sides at once with no information to choose from. Making callables call-only removes that whole class of ambiguity by construction.
 
 > **See also:** [`operators.md`](operators.md) §5.3 for the parallel rule on operators.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
 
 ### 7.2 Lambdas are self-typed function values
 A lambda literal is a function declaration with the name removed. It writes its own parameter types, return type, abort type, and `mut` (see [`syntax.md`](syntax.md) §3.8). Nothing is inferred from context.
@@ -292,6 +308,8 @@ A lambda-variable is an ordinary symbol with a single function type. Because a s
 ### 7.4 Lambdas do not capture
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency.md`](concurrency.md) §5.2 ("Lambdas do not capture").
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
+
 ### 7.5 No bound method references
 Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
 
@@ -332,6 +350,8 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 > **See also:** [`syntax.md`](syntax.md) §3 for the declaration forms of each verb kind. [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+
 ---
 
 ## 9. Connection to the Effect Model
@@ -342,31 +362,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 
 ---
 
-## 10. Design Rationale
-
-| Decision | Rationale |
-|---|---|
-| Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
-| Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a verb with one marker, not a separate mechanism. |
-| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost guests or hidden storage creation. |
-| Plain `T` parameters cannot populate `&` fields | A caller is not required to supply a stable storage location for a plain parameter, so a value parameter is a read-only borrow and a reference parameter is swallowed; restricting either from populating `&` fields prevents hidden dependency on call-site expression form. |
-| `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
-| Subscripts are place projections only | Keeps `[]` predictable: an indexed expression always projects existing storage rather than running arbitrary computation. |
-| No overloads that differ only by `&` | Call syntax stays uniform while avoiding overload ambiguity between plain and place-required contracts. |
-| Overload identity ignores `mut` | The call contract (parameter types and arity) is the same; `mut` only adjusts the permission granted to `this`, so it cannot disambiguate two otherwise-identical declarations. |
-| Overload resolution phases: direct, generic, implicit | Makes implicit conversions a fallback after exact matches, preventing surprising behavior when an exact match exists. |
-| Generic match infers type parameters | A call carries no `<>` list, so the generic-match phase is purely an inference step driven by the argument types (see [`generics.md`](generics.md) §5). |
-| One pass handles types and numbers | Both type parameters and number parameters of the called declaration are inferred from the argument types in the same pass, since the two kinds share one inline introduction form (see [`generics.md`](generics.md) §3). |
-| Callables are call-only | An overloaded name is a candidate set, not a value; it only collapses when arguments are supplied at a call site. Keeping methods, functions, and operators call-only removes the ambiguity of passing an overloaded name into an overloaded parameter, exactly as operators already avoid it. |
-| Self-typed lambdas | A lambda carries its own complete type, so it is a single value with one exact type. The circularity that bars overloaded *names* from value position (a candidate set with nothing to collapse it) never arises, so a lambda matches an overloaded callable by exact shape — even if that type were a generic function type. |
-| Generic function values deferred | Overloading and type-checking already handle a generic function type as a unique parameter shape; what remains open is its runtime representation (monomorphization versus dictionary passing), a memory-model decision left unspecified rather than an overload-resolution problem. |
-| Lambda-variables for function values | A named lambda-variable has one function type and cannot accumulate an overload set, so it is always unambiguous in value position. |
-| No lambda capture | Preserves explicit data flow and keeps effect analysis tractable. |
-| Home-package-first method lookup | Makes unqualified method calls locally understandable and unaffected by imports. |
-
----
-
-## 11. Summary
+## 10. Summary
 
 | Concept | Rule |
 |---|---|
