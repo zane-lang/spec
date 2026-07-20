@@ -72,6 +72,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based safety without locks, and value-typed mutation closing the aliased-write gap |
 | [`stories/error-handling.md`](stories/error-handling.md) | [`spec/error-handling.md`](spec/error-handling.md) — the two-doors model and why failure is control flow rather than a `Result` value, `resolve` as expression-substitution rather than assignment, typed abort paths and the deliberately-absent propagate operator, and keeping abortability orthogonal to effects |
 | [`stories/functions.md`](stories/functions.md) | [`spec/functions.md`](spec/functions.md) — pulling methods out of the type body and the verb model that revealed, mutation made visible with `:`/`!`, overloading on parameter shape alone, and why callables are call-only while self-typed lambdas are values |
+| [`stories/operators.md`](stories/operators.md) | [`spec/operators.md`](spec/operators.md) — the fixed vocabulary worth overloading, `~` as the universal flip, laws enforced through derived operators, grammar-only grouping, and home-package coherence |
 
 ## Contributing
 
