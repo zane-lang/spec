@@ -51,7 +51,7 @@ A method marked `mut` may write to `this` and objects owned by `this`.
 
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
-- For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. This is what makes value types mutable in place, retiring the older pattern of returning a replacement. Because the borrow is scoped and non-escaping, the value keeps its value semantics: `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
+- For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
 - For a **reference-type** receiver, `this` is an implicit **`&` reference** to the object (never swallowed). A `mut` method mutates through it as through any `&`, and `this` composes with the `&` system — it may be passed where an `&T` is expected.
 
 ```zane
@@ -239,7 +239,7 @@ Because methods are package-scope verbs, any package may define methods on impor
 ## 7. Function Values and Lambdas
 
 ### 7.1 Callables cannot be referenced as values
-Methods, functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. This is exactly the rule that already governs operators: `+` can be called, but `+` cannot be written as a value.
+Methods, functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. For example, `+` can be called, but `+` cannot be written as a value.
 
 ```zane
 Graph$scaledId(node, Int(2))   // legal: call position
@@ -263,7 +263,7 @@ receiver(Float(x Int) {
 })
 ```
 
-Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** receiver without ambiguity: the lambda fixes its own type, so overload resolution on the receiver proceeds with ordinary argument types and no circularity. Self-typed lambdas can also be written and passed directly in the same expression, since they no longer depend on a surrounding context to fix their type.
+Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** receiver without ambiguity: the lambda fixes its own type, so overload resolution on the receiver proceeds with ordinary argument types and no circularity. Its complete written type also allows it to be defined and passed directly in the same expression without depending on surrounding context.
 
 `mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned to a non-`mut` function type:
 
@@ -328,7 +328,7 @@ So `init{ }` is a capability gated by a naming convention, exactly as `this` is.
 
 ### 8.3 What is shared, and what the markers change
 
-All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two things: whether a return type is written, and which private-state capability (`this` private-field access or `init{ }` initialization) is granted. (The operator and lambda markers additionally change call syntax and value representation; see the §8.1 table.) Bringing functions and constructors "closer together" is therefore not a missing feature — they are already the same verb, separated only by the name-is-a-type marker.
+All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two things: whether a return type is written, and which private-state capability (`this` private-field access or `init{ }` initialization) is granted. (The operator and lambda markers additionally change call syntax and value representation; see the §8.1 table.) Functions and constructors share the same verb model, separated only by the name-is-a-type marker.
 
 > **See also:** [`syntax.md`](syntax.md) §3 for the declaration forms of each verb kind. [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 

@@ -131,7 +131,7 @@ The following are not operators in Zane:
 
 - `!` (reserved for mutating calls; see [`functions.md`](functions.md) §2.5)
 - `++`, `--`, `+=`, `-=` and other mutation operators
-- `!=` (replaced by `~=` as a derived operator)
+- `!=` (`~=` is the derived inequality operator)
 
 ### 5.3 Operators are call-only
 An operator token may appear only in operator position; it has no value form. There is no syntax that references `+` or `<` as a value. This is the same rule that makes methods and functions call-only, and it is why an overloaded operator never has to be resolved without operands. To pass behavior as a value, use a lambda-variable.
