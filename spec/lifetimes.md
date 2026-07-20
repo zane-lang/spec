@@ -256,3 +256,5 @@ Because scope rules (§1.1) prevent guests from outliving their hosts, the runti
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
 | Return value | A non-`Void` return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous host, and the caller keeps only a guest to it |
 | Destruction | Deterministic and delayed until the hosting scope drains |
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#no-rule-to-spare-the-specific-hole-each-restriction-plugs) — "No rule to spare: the specific hole each restriction plugs".
