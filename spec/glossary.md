@@ -220,8 +220,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §2.5
 
 ### 3.32 host
-- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
-- **Why this name:** A host is the role commonly called an **owner** in other languages. Zane says **host** because a real-life host provides both accommodation and the duration of a guest's stay; the term emphasizes where an object resides and how long it remains available.
+- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. This is the role commonly called an **owner** in other languages. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
+- **Why this name:** Zane says **host** because a real-life host provides both accommodation and the duration of a guest's stay; the term emphasizes where an object resides and how long it remains available.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
