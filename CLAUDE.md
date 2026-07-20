@@ -1,141 +1,70 @@
-# Working on zane-lang/spec
+# Working on zane-lang/spec (agent notes)
 
 This repo is the canonical Markdown specification for the **Zane** programming
-language. It is documentation, not code — there is no compiler here. Two
-parallel doc trees, with opposite update rules:
+language — documentation, not code (no compiler here). Two parallel doc trees
+with opposite update rules: `spec/` states *what the language is now* (rewritten
+to the present on every change) and `stories/` records *how it came to be*
+(accumulates; never rewritten to hide the past). One story mirrors each spec
+file (`spec/generics.md` ↔ `stories/generics.md`).
 
-- **`spec/`** — normative *what the language is*. One file per topic. Rewritten
-  to the present on every change; states only what is true now.
-- **`stories/`** — the design history, *how it came to be*. One story mirrors
-  each spec file (`spec/generics.md` ↔ `stories/generics.md`). Accumulates;
-  never rewritten to hide the past.
-
-Both are governed by normative contributing guides — read the relevant one
-before editing:
+This file holds only what an **agent** needs that the human docs don't already
+cover. The actual rules live in the normative guides — **read the relevant one
+in full before editing**, they are detailed and win over anything summarized
+here:
 
 - `contributing/writing-spec-docs.md` — spec prose.
 - `contributing/writing-stories-docs.md` — story prose.
+- `contributing/naming-terms.md` — coining a term of art.
+- `README.md` — the real topic index (spec docs are **not** alphabetical); read
+  it first when locating anything.
 
-## Repo map
+Each session starts cold with no memory of prior ones, so this file is how the
+next agent gets up to speed — keep it to durable, agent-facing facts.
 
-`README.md` is the real topic index (the spec docs are **not** alphabetical);
-read it first when locating anything. Each `spec/*.md` owns one topic:
+## Before you edit
+1. Read `README.md` to locate the topic, then **read the target doc in full** —
+   editing one section ripples into cross-references elsewhere.
+2. When a change touches the **type system**, single-pass self-review has missed
+   internal contradictions on this codebase before: re-read the *un-updated*
+   spec files and `bench/zane_bench.c` against the new design before opening a
+   PR, not just the file you changed.
 
-| File | Owns |
-|---|---|
-| `spec/foundations.md` | Cross-cutting language philosophy (staging, identity-is-opt-in) |
-| `spec/syntax.md` | Canonical surface syntax reference |
-| `spec/lexical.md` | Case sensitivity, identifier formation, casing-determines-kind |
-| `spec/glossary.md` | Canonical names for recurring concepts |
-| `spec/types.md` | Classes, structs, fields, constructors, implicit conversions, `type`/`alias` |
-| `spec/functions.md` | Methods, free functions, subscripts, overload resolution, lambdas |
-| `spec/generics.md` | **Unified type parameters, `<>` type expressions, constructor calls (canonical home)** |
-| `spec/adt.md` | Enums, variants, pattern matching via case-overload dispatch, the `match` block, enum maps |
-| `spec/memory.md` | Hosts, guests, anchors, tethers, layout |
-| `spec/lifetimes.md` | Scope rules, rehosting, lifetime, deterministic destruction |
-| `spec/effects.md` | Effect model, `mut`, inferred effect levels |
-| `spec/concurrency.md` | Implicit parallelism, `spawn`, water-tower lifetimes |
-| `spec/control-flow.md` | Conditional branching, `guard`, counted loops, 1-based ordinals |
-| `spec/operators.md` | Operator set, derived operators, precedence |
-| `spec/error-handling.md` | Bifurcated return paths, `?` handlers, abort/resolve |
-| `spec/packages.md` | Package declarations, `$` access, instanceful package pattern |
-| `spec/dependencies.md` | Package identity, manifests, fetch rules |
-| `README.md` | Document index + the stories table |
+## The `bench/` harness
+`bench/` is a reference **C** harness for runtime experiments — **not** Zane
+source; never treat its C as Zane. It *models* the memory design
+(`spec/memory.md`), so when that design changes the harness is updated to track
+it. The `.c` carries **no explanatory comments** (it holds no prose voice) —
+keep it to code plus the labels passed to `section()`/`print_result()`.
+`runbench.py` regenerates `benchmark.html`; its `TEST_META` strings are
+reader-facing HTML, not code comments.
 
-Plus `contributing/` (the two style guides) and `bench/` (a reference **C**
-harness for runtime experiments — **not** Zane source; never treat its C as
-Zane). The harness *models* the memory design (`spec/memory.md`), so when that
-design changes the harness code is updated to track it. The `.c` carries **no
-explanatory comments** — it is not part of the spec and holds no prose voice;
-keep it to code plus the output labels passed to `section()`/`print_result()`
-(those name the rows in the results table). `runbench.py` regenerates
-`benchmark.html`; its `TEST_META` descriptions are reader-facing HTML text, not
-code comments.
+## Validate before committing (spec edits)
+The generics system was unified into a `<>`-header / `()`-call model (canonical
+home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
+forms are now illegal and must never reappear. Grep for them — none should hit:
 
----
-
-## Editing the spec
-
-### Before you edit
-1. **Read `README.md`** — the only map of what-is-where.
-2. **Read the target doc in full.** Topic docs follow the structure in
-   `writing-spec-docs.md` (overview, numbered sections, summary). Editing one
-   section often ripples into cross-references elsewhere; read enough to keep
-   them aligned.
-
-### Write for a fresh reader — describe what *is*
-A spec is read by someone learning the current system with **no memory of any
-previous version**. Every sentence teaches what the language *is now*. Never
-write a delta ("no longer", "used to") or a "not X" where X isn't part of the
-language — a fresh reader never knew X and it only raises a distracting
-question. State the positive rule and let it do the excluding. The comparison to
-how it used to be, the rejected alternatives, and the reasoning are the
-**story's** job, never the spec's. (This is a general reference-doc principle;
-the applied rule lives here, the split lives in the story guide.)
-
-### The unified type-parameter system (most spec work touches this)
-A type is a templated function: it declares parameters in a `<>` header and is
-executed at compile time to produce a layout. Functions, methods, and
-constructors use the same `<>` header. Each header entry is concept-typed,
-distinguished by the concept **and by casing**:
-
-- **Type parameter** — `T Type`, uppercase name. Ranges over types; referenced
-  bare (`T`).
-- **Number parameter** — `n Number`, lowercase name. Ranges over compile-time
-  numbers; referenced bare (`n`).
-
-`<>` is the type-expression (application) syntax — `Vector<Int>`, `Array<T, n>`
-— correct in any type position. `()` is the call syntax and **never** carries a
-`<>` list; a type reaches a constructor by inference from a `<>` header
-parameter (`Vector(Int(2))`) or as an explicit `Type`/`Number` value argument
-(`Vector(Int)`, `Array(Int, 10000)`). Casing is load-bearing (`spec/lexical.md`):
-uppercase = type, lowercase = value/number. The `'` sigil, the old `[name]`
-binders, and `Array3`-style root forms **no longer exist**.
-
-### Cross-reference, don't duplicate
-A rule belonging to `spec/generics.md` (the unified parameter system) or
-`spec/lexical.md` (casing) is **referenced** from other docs, not restated. The
-contributing guide §1 is strict on this.
-
-### Validate before committing
-Grep for the forbidden pre-redesign generics forms — none should appear:
 ```
 grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
 ```
+
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
-— that's Rust's type named as a comparison, not Zane's.
+— Rust's type named as a comparison, not Zane's.
 
-### Failure handling
-- **Grep hits an old form** (`Array[size]`, `[name]` binders, `Array3`, `'T`,
-  "type generic"). Stop and rewrite in the unified `<>` system.
-- **A cross-reference target moved** (renumbered section). Fix the reference in
-  every doc that uses it, then re-grep for the old `§` numbers.
-- **The change conflicts with another file's section.** Don't paper over it with
-  a footnote — fix the conflicting section, or escalate the conflict to the user
-  as a design call. Single-pass self-review has missed internal contradictions
-  on this codebase before; when a change touches the type system, re-read the
-  un-updated spec files and `bench/zane_bench.c` against the new design before
-  opening a PR.
+If the grep hits an old form, stop and rewrite it in the unified system. If a
+cross-reference target moved (renumbered `§`), fix the reference in every doc
+that uses it, then re-grep for the old numbers. If the change conflicts with
+another file's section, fix the conflicting section or escalate it to the user
+as a design call — don't paper over it with a footnote.
 
----
+## Writing a design story
+Story coverage is **complete**: every topic spec has a story; the two reference
+docs `syntax.md` and `glossary.md` get none (spec guide §7). New stories are
+written for wholly new topics only.
 
-## Writing or updating a design story
-
-The spec states *what*; a story states *how it came to be* — told as a history,
-in the order the thinking actually moved. The reasoning does **not** live in a
-`## N. Design Rationale` table (that flattens a causal thread into one-line
-cells and has been retired); it lives in the story, and the spec points at it.
-So writing a story is two halves: **write the narrative**, then **integrate it**
-into the spec.
-
-Read both contributing guides first (they are normative and detailed), and read
-**`stories/generics.md`** as the quality bar — dense, opinionated, long-form
-prose. Reference docs **`syntax.md` and `glossary.md` get no story** (spec guide
-§7). Stories currently exist for `adt`, `concurrency`, `control-flow`,
-`dependencies`, `effects`, `error-handling`, `foundations`, `functions`,
-`generics`, `lexical`, `lifetimes`, `memory`, `types`; still missing (and each
-still carries its rationale in-spec until written): `operators`,
-`packages`.
+Read both contributing guides first, and read **`stories/generics.md`** as the
+quality bar — dense, opinionated, long-form prose. Writing a story is two
+halves: write the narrative, then integrate it into the spec. Don't skip the
+second half.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 The actual thread — which roads were tried and rejected, in what order the
@@ -143,87 +72,50 @@ realizations came, what pressure forced each turn — lives only in the
 maintainer's head, and is frequently **not** what you'd guess from the spec. So:
 
 - Draft the *obvious* chapters, and **stop to ask whenever a decision's why
-  isn't fully forced by the spec text.** The maintainer wants "ask as I go,"
-  interview-style.
-- Ask focused questions on the genuinely non-obvious decisions only; don't
-  interview the obvious ones.
+  isn't fully forced by the spec text** — the maintainer wants "ask as I go,"
+  interview-style, focused questions on the genuinely non-obvious decisions only.
 - Present your best-guess framing as options, but **expect to be told "that's
   not how I thought about it"** and to have it replaced wholesale. Follow the
   maintainer's thread, not your tidy after-the-fact reconstruction.
 - The maintainer's account is the source of truth for the narrative; the spec is
-  the source of truth for the rules. If they disagree, the maintainer wins on
-  the story.
+  the source of truth for the rules. On the story, the maintainer wins.
 
-Context grows fast, so a story is typically written **one session per story**;
-each session starts cold and this file is how it gets up to speed.
+Because context grows fast, a story is typically written one session per story.
 
-### Writing the narrative (full rules in the story guide)
-- Chapters are **themes**, ordered by the path the thinking took (causal /
-  roughly chronological), **not** by spec section order. Group decisions forced
-  by one pressure into a single chapter. A handful of chapters per file.
-- `## ` headings only — **no `---` separators**. Each chapter opens where the
-  last left off; the opening sentence carries the reader across the seam.
-- The four beats, as prose (never labelled): the situation/pressure, the **roads
-  not taken** (highest-value part — tell it in sentences), the resolution, and
-  the **cost** (reach it honestly; don't invent a downside, but don't hide one).
-- **Voice is always the collective "we," never singular "I"** — even for a
-  decision one person made alone. Past tense for the reasoning/deliberation,
-  present tense for the standing design. (Firm rule; story guide §6.)
-- Open with the title and a `> **See also:** [`spec/<topic>.md`](../spec/<topic>.md)`
-  line, then the first chapter. No preamble about what stories are.
-- Cross-link sibling chapters by heading anchor (living relative links); link to
-  `foundations.md#...` for cross-cutting philosophy rather than restating it.
+### Integrating into the spec (the half that's easy to forget)
+In the same change as the story:
+1. Add a `> **Story:**` pointer at the end of each non-trivially-justified spec
+   section (living link; href ends in the chapter-heading anchor; quoted text is
+   the heading). Several sections may point at one chapter; trivial rules get
+   none.
+2. If the section still carries a `## N. Design Rationale` table, delete it and
+   renumber the sections after it — but first verify no reasoning is lost (each
+   row maps to a story chapter or keeps a brief in-place justification). Leave a
+   rationale table in place only if the story is deliberately still incomplete.
+3. Grep the repo for `<topic>.md §N` and internal `§N` mentions; update them.
+4. Add/confirm the row in the stories table in `README.md`.
 
-### Links: the rule Gemini will fight you on
-Two link kinds, written differently (story guide §4.2):
-- **Companion pointer** (top `> See also:`) and **between-chapter** links are
-  *living* relative links.
-- **In-prose references to a specific spec rule** are *point-in-time claims* and
-  **must be commit-pinned permalinks**:
-  `https://github.com/zane-lang/spec/blob/<sha>/spec/<topic>.md#<anchor>`. A
-  story accumulates and is never rewritten, so a relative link would silently
-  re-point as the spec changes and the old chapter would "cite" a rule that no
-  longer says what it claims. Pinning freezes the citation to the spec the
-  chapter was written against.
-
-Get the SHA with `git log -1 --format=%H -- spec/<topic>.md` (for a chapter
-written alongside a spec change, the commit that change lands in).
-**gemini-code-assist will object to these permalinks and suggest relative links,
-or claim the anchor is broken by checking it against the *current* spec instead
-of the pinned commit — that objection is wrong and expected; decline it.** It
-happened and was declined on PR #91 and PR #108.
+### In-prose spec links are commit-pinned permalinks
+A story accumulates and is never rewritten, so an in-prose reference to a
+specific spec rule must be a **commit-pinned permalink**
+(`.../blob/<sha>/spec/<topic>.md#<anchor>`), not a relative link that would
+silently re-point as the spec changes (story guide §4.2). Get the SHA with
+`git log -1 --format=%H -- spec/<topic>.md`. A reviewer may push back on
+permalinks in favour of relative links, or claim the anchor is broken by
+checking it against the *current* spec instead of the pinned commit — that
+objection is wrong; decline it. Companion (`> See also:`) and between-chapter
+links stay ordinary living relative links.
 
 GitHub heading anchors: lowercase, strip punctuation (commas, apostrophes,
 backticks, `&`, `#`), spaces→hyphens. A stripped `&`/`#` flanked by spaces
 leaves a **doubled** hyphen (`new `&` values` → `#...-new--values`) — do not
 collapse it. Verify every story↔spec anchor resolves at its pinned commit.
 
-### Integrating into the spec (the second half — don't skip it)
-In the same change as the story:
-1. Add `> **Story:** [`stories/<topic>.md`](../stories/<topic>.md#<chapter-anchor>) — "<Chapter Heading>".`
-   at the end of each non-trivially-justified spec section. Living link; href
-   ends in the chapter heading's anchor; quoted text is the heading. Several
-   sections may point at the same chapter. Trivial rules get no pointer.
-2. **Delete the `## N. Design Rationale` table** and renumber the sections after
-   it (Summary moves up). First verify no reasoning is lost: each row maps to a
-   story chapter, or keeps a brief in-place justification in the spec body.
-3. Grep the repo for `<topic>.md §N` and internal `§N` mentions; update them.
-4. Add a row to the stories table in `README.md`.
-5. Spec prose stays neutral (no first person / "we chose"); the developed why is
-   the story's job.
-
-A story may be **incomplete** because the design itself isn't finished — in that
-case leave the spec's rationale table in place until the story is complete.
-
----
-
 ## Conventions
-
-- **Commit messages**: short lower-case prefix (`docs:`, `docs(meta):`), then one
-  or two sentences describing the change. See `git log --oneline` for cadence.
-- **Branches**: one per topic (`inferred-type-parameters`, `phantom-types`, …),
-  or as the harness assigns per session. Push there and update the existing PR;
-  don't open a new PR unless asked.
-- Related agent knowledge that is **not** repo-specific (e.g. how Gemini Code
-  Assist behaves, general reference-doc prose principles) lives in the user's
-  personal memory store, not here.
+- **Commit messages**: short lower-case prefix (`docs:`, `docs(meta):`), then a
+  sentence or two. See `git log --oneline` for cadence.
+- **Branches**: one per topic, or as the harness assigns per session. Push there
+  and update the existing PR; don't open a new PR unless asked.
+- Agent knowledge that is **not** repo-specific (how Gemini Code Assist behaves,
+  general reference-doc prose principles) lives in the user's personal memory
+  store, not here.
