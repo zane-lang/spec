@@ -31,8 +31,8 @@ read it first when locating anything. Each `spec/*.md` owns one topic:
 | `spec/functions.md` | Methods, free functions, subscripts, overload resolution, lambdas |
 | `spec/generics.md` | **Unified type parameters, `<>` type expressions, constructor calls (canonical home)** |
 | `spec/adt.md` | Enums, variants, pattern matching via case-overload dispatch, the `match` block, enum maps |
-| `spec/memory.md` | Ownership, refs, anchors, layout |
-| `spec/lifetimes.md` | Scope rules, ownership moves, lifetime, deterministic destruction |
+| `spec/memory.md` | Hosts, guests, anchors, tethers, layout |
+| `spec/lifetimes.md` | Scope rules, rehosting, lifetime, deterministic destruction |
 | `spec/effects.md` | Effect model, `mut`, inferred effect levels |
 | `spec/concurrency.md` | Implicit parallelism, `spawn`, water-tower lifetimes |
 | `spec/control-flow.md` | Conditional branching, `guard`, counted loops, 1-based ordinals |

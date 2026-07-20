@@ -2,7 +2,7 @@
 
 This document specifies Zane's function model: functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that host these declarations live in [`packages.md`](packages.md).
 
-> **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for ownership and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
+> **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for hosting and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
 
 ---
 
@@ -44,10 +44,10 @@ Int scaledIdWrong(node Node, factor Int) {
 ```
 
 ### 2.3 Read-only methods are the default
-A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write to `this` or owned descendants.
+A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write to `this` or hosted descendants.
 
 ### 2.4 Mutating methods use `mut`
-A method marked `mut` may write to `this` and objects owned by `this`.
+A method marked `mut` may write to `this` and objects hosted by `this`.
 
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
@@ -91,7 +91,7 @@ receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
 Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the receiver. How each parameter is passed — a value borrow, or a reference `&`/swallow — is covered in [`memory.md`](memory.md) §2.9.
 
 ### 2.8 `&` and swallowing method parameters
-A method parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field. A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by owning access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5) — so it cannot be bound into `&` storage, because a swallowed value is owned at the call site while an `&` field may outlive the call (see [`memory.md`](memory.md) §2.9). A value-type parameter is a read-only borrow. To pass a reference object for reading only, use `&T`.
+A method parameter declared as `&T` is a **reference**: the caller supplies a source that may create a new `&` under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field. A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5) — so it cannot be bound into `&` storage, because a swallowed value is hosted at the call site while an `&` field may outlive the call (see [`memory.md`](memory.md) §2.9). A value-type parameter is a read-only borrow. To pass a reference object for reading only, use `&T`.
 
 ```zane
 type Car = #struct {
@@ -109,9 +109,9 @@ Int calculate(this Car, engine &Engine) {
     return this._value + engine.speed   // legal: reading through the reference
 }
 
-// plain reference-type parameter swallows; a swallowed owner is not an `&` source
+// plain reference-type parameter swallows; a swallowed host is not an `&` source
 Void setEngineWrong(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL: cannot store a swallowed owner into an `&` field
+    this.engine = engine   // ILLEGAL: cannot store a swallowed host into an `&` field
 }
 ```
 
@@ -336,7 +336,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 ## 9. Connection to the Effect Model
 
-Read-only methods and functions are effect-free with respect to their receiver unless they touch tethers or capabilities. `mut` marks the only direct path for writing receiver-owned state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+Read-only methods and functions are effect-free with respect to their receiver unless they touch guests or capabilities. `mut` marks the only direct path for writing receiver-hosted state. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -348,7 +348,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 |---|---|
 | Methods are verbs with `this` | Keeps the language model flat: methods are ordinary verbs with one extra permission token. |
 | Constructors are verbs named after their type | Naming a verb after a type implies its return type and unlocks `init{ }`, exactly as naming the first parameter `this` makes a method and unlocks private-field access. A constructor is a verb with one marker, not a separate mechanism. |
-| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost tethers or hidden storage creation. |
+| `&` parameters in constructors and methods | An `&` field must be initialized from an allowed `&` source; requiring `&` on the corresponding parameter makes this constraint visible in the signature without ghost guests or hidden storage creation. |
 | Plain `T` parameters cannot populate `&` fields | A caller is not required to supply a stable storage location for a plain parameter, so a value parameter is a read-only borrow and a reference parameter is swallowed; restricting either from populating `&` fields prevents hidden dependency on call-site expression form. |
 | `:` and `!` are distinct call markers | Makes mutation visible at the call site without adding mutable-reference types. |
 | Subscripts are place projections only | Keeps `[]` predictable: an indexed expression always projects existing storage rather than running arbitrary computation. |
@@ -373,7 +373,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate `this` and its owned subtree in place |
+| `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate `this` and its hosted subtree in place |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |

@@ -94,7 +94,7 @@ A directly inline self-reference would have infinite size, which the uniform-str
 
 - A value type — `struct` or `variant` — **cannot** hold an `&` or contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
 - The `#` modifier is what carries recursion: a plain `variant` is the sum mould's value form, laid out inline, while a `#variant` is its reference form — carrying a tag, boxing its recursive cases through `&`, and placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
-- Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that ownership and tethers are explicit.
+- Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that hosting and guests are explicit.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
 

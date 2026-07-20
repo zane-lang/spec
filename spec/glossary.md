@@ -41,12 +41,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
 
 ### 2.5 water-tower lifetimes
-- **Meaning:** Scope-owned objects stay alive until every `spawn`ed call in that scope has completed and the scope drains.
+- **Meaning:** Scope-hosted objects stay alive until every `spawn`ed call in that scope has completed and the scope drains.
 - **Why this name:** The source document explains the rule through a water-tower analogy in which each still-running spawned call acts like a plate holding the water level up.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.1
 
 ### 2.6 structural effect model
-- **Meaning:** Effect level is inferred from `mut`, ownership, call structure, and reachable capabilities rather than from a large set of written annotations.
+- **Meaning:** Effect level is inferred from `mut`, hosting, call structure, and reachable capabilities rather than from a large set of written annotations.
 - **Why this name:** The model is "structural" because the compiler derives effects from program structure and reachable state, not from separate effect declarations.
 - **Canonical home:** [`effects.md`](effects.md) §1 and §5
 
@@ -175,13 +175,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor cell
-- **Meaning:** A single `u32` holding the current segmented offset of one tethered owner — a stable indirection point that tethers read through. It is bump-allocated on the first tether in a dedicated anchor-cell region of the owner's scope arena, kept separate from payloads so payload iteration stays dense. There is no monolithic table: each tethered owner has its own cell.
-- **Why this name:** The cell *anchors* a tethered owner: a fixed point a drifting value stays tethered to, so a move updates the one cell and every tether follows.
+- **Meaning:** A runtime `u32` cell holding the current segmented offset of one hosted object — the stable indirection point through which tethers resolve. It is bump-allocated when the first guest is created, in a dedicated anchor-cell region of the host's scope arena.
+- **Why this name:** The cell is the fixed point that lets a moving object remain reachable: rehosting updates the cell while existing tethers keep pointing to it.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
 ### 3.24 segmented-offset tether
-- **Meaning:** A tether is represented as a `u32` **segmented offset** — a chunk id in the high bits and an in-chunk word offset in the low bits — pointing at the owner's anchor cell, not a raw pointer. The value `0` (chunk `0`, word `0`) means untethered; it needs no reserved memory because anchor cells are never placed there, so `0` can never name a real cell.
-- **Why this name:** The tether is a *segmented offset*: half a pointer's size, resolved through the chunk directory to an address, and stable across arena teardown because it names a chunk-relative position rather than a native pointer.
+- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at the host's anchor cell, not a raw pointer. The value `0` means no tether. A tether is runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
+- **Why this name:** The tether connects a guest's stored representation to the anchor through which it reaches the hosted object.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
@@ -195,43 +195,48 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed by `&` or swallowed instead, and a reference-type `this` is an implicit `&`.
-- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not own it and cannot keep it. Unlike an `&`, a borrow has no anchor and cannot be stored or returned, which is what lets a value be mutated in place without becoming aliasable.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed as guests or swallowed instead, and a reference-type `this` is an implicit guest.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, a borrow has no anchor or tether and cannot be stored or returned.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable `implicit` constructor automatically: a positional argument of a function or constructor call, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{}` — where the conversion is written explicitly.
+- **Meaning:** A position where the compiler inserts an applicable `implicit` constructor automatically: a positional argument of a function or constructor call, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. Each coercion is still backed by a user-declared `implicit` constructor — the site says where one may be inserted, not that the conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould
-- **Meaning:** One of the four constructs that give a type its shape: `struct`, `variant`, `enum`, and `tuple`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named. The reach is total: even a core type such as `Int` is declared with a mould — `Int`, `Float`, and `Bool` are wrapper `struct`s over machine-storage primitives in the `@primitives$` namespace (see [`syntax.md`](syntax.md) §2.1). A mould shapes a type; the type is what it declares.
-- **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that a mould is the form a type is cast from. The `#` value/reference axis applies to every mould uniformly ([`types.md`](types.md) §2.1); `struct` and `variant` share one `{ }` body grammar, while `enum` and `tuple` are `[ ]` lists.
+- **Meaning:** One of the four constructs that give a type its shape: `struct`, `variant`, `enum`, and `tuple`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named.
+- **Why this name:** A mould gives shapeless material a fixed form, which is what these four do to a type; the word also carries that a mould is the form a type is cast from.
 - **Canonical home:** [`types.md`](types.md) §5.3
 
 ### 3.30 value mould / reference mould
-- **Meaning:** A mould is written in one of two **forms**: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. A mould in its value form is a **value mould** (`struct`, `variant`, `enum`, `tuple`); in its reference form, a **reference mould** (`#struct`, `#variant`, `#enum`, `#tuple`). The form decides the kind of the type the mould declares: a value mould declares a *value type* (copied, transitively value); a reference mould declares a *reference type* (identity-bearing, aliasable through `&`, may recurse).
-- **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould, so each mould has two forms; "form" names the position on that axis and "value/reference mould" names a mould occupying it. Because a mould shapes a type, a *reference mould* stays distinct from the *reference type* it declares.
+- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value or identity-bearing and accessible through guests.
+- **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
 ### 3.31 product mould / sum mould
-- **Meaning:** The two moulds that share one `{ }` body grammar, told apart by keyword. A `struct` is the **product mould**: a value of the type it declares has *all* its members at once, so that type is a **product type**. A `variant` is the **sum mould**: a value has *exactly one* member at a time, so that type is a **sum type**. `enum` and `tuple` are moulds of other shapes and keep their own names.
-- **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" names the *construct* (parallel to value mould / reference mould, §3.30), while "product type" / "sum type" name the *type* the mould declares — so construct and type stay distinct.
+- **Meaning:** The two moulds that share one `{ }` body grammar. A `struct` is a **product mould** and a `variant` is a **sum mould**; `enum` and `tuple` are moulds of other shapes.
+- **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" distinguishes the construct from the type it declares.
 - **Canonical home:** [`types.md`](types.md) §2.5
 
-### 3.32 tether
-- **Meaning:** The `&` value: non-owning storage that points at a **reference type**, resolved through the owner's anchor cell (§3.23) to the owner's current address. A tether is repointable, is copied when assigned or passed, may be stored in an `&` field or returned as `&T`, and carries no ownership — the owner's lifetime bounds the tether, never the reverse. It is represented as a `u32` segmented offset (§3.24), half the size of a pointer. A tether is distinct from the **reference type** (§3.30) it points at: the reference type is the kind of the owner, the tether is the non-owning handle to it.
-- **Why this name:** A tether fastens a holder to a fixed point without owning it and can be re-tied elsewhere — exactly how an `&` attaches to an anchored owner and may be repointed. What a tether is fastened to also *bounds* it, which mirrors the rule that an owner's lexical scope bounds every tether taken on it (see [`lifetimes.md`](lifetimes.md) §1.1). It pairs with **anchor** (§3.23): the anchor holds fast, and the tether reads through it.
+### 3.32 host
+- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
+- **Why this name:** A real-life host provides both accommodation and the duration of a guest's stay. The term emphasizes where an object resides and how long it remains available.
+- **Canonical home:** [`memory.md`](memory.md) §2.1
+
+### 3.33 guest
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
-### 3.33 swallowed parameter
-- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **owning access** at the call-site scope. Passing an owning value to a swallowing parameter downgrades the caller's symbol to a tether (§3.32), regardless of what the callee does with the value — the signature, not the body, decides the caller's state. A caller keeps a full owner only by lending the value as `&T` or by binding an owner the verb returns. There is no borrowed-versus-consumed distinction and no interprocedural inference.
-- **Why this name:** "Swallow" says the parameter takes the value in by owning access — the caller's owner goes in and is left holding only a non-owning tether — as opposed to `&T`, which merely lends a tether and keeps the caller an owner. The name marks the passing mode whose defining consequence is the caller's downgrade.
+### 3.34 swallowed parameter
+- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosted value to a swallowing parameter downgrades the caller's symbol to a guest (§3.33), regardless of what the callee does with the value.
+- **Why this name:** "Swallow" says the parameter takes the hosted value in; the caller's host goes in and is left holding only a guest.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
-### 3.34 relay / consume
-- **Meaning:** The two ways a verb can treat a reference-type owner it **swallows** (a plain `T` parameter, §3.33), told apart by its return. It **relays** the owner when it returns an owner: the caller downgrades to a tether but may rebind the returned owner to re-own it. It **consumes** the owner when it returns no owner: the caller downgrades to a tether and the value stays wherever the verb placed it, or floats to scope end if left unbound ([`lifetimes.md`](lifetimes.md) §1.9). A verb that instead declares `&T` swallows nothing — it takes a tether (§3.32) and leaves the caller a full owner; a value-type argument is a borrow (§3.27). Relay and consume name only the two swallowing cases.
-- **Why this name:** "Consume" matches the established name (Swift `consuming`, Val `sink`) for taking a value for good; "relay" names the case where the swallowed owner passes through and is handed back out. Both are read straight off the signature — a swallowing `T` parameter, then whether the return carries an owner.
+### 3.35 relay / consume
+- **Meaning:** The two ways a verb can treat a reference-type host it swallows, told apart by its return. It **relays** the host when it returns a hosting handle; the caller may bind that return to host the object again. It **consumes** the host when it returns no hosting handle. A verb that declares `&T` instead takes a guest and leaves the caller's host unchanged.
+- **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ---
