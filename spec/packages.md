@@ -40,6 +40,8 @@ The directory determines package membership; the declaration asserts that the fi
 
 All source files directly in one package directory form a single compilation unit. Declaration order within a file and file order within the directory are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#the-directory-is-the-package) — "The directory is the package".
+
 ---
 
 ## 3. Imports and Member Access
@@ -70,6 +72,8 @@ The method-call lookup rules in [`functions.md`](functions.md) §6 are a distinc
 
 The parser treats the left operand of `$` as a package namespace and the right operand as one of its members. `$` is distinct from `.`, which is field access, and from `:` and `!`, which mark method calls.
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-barrier-that-still-joins-the-name) — "A barrier that still joins the name".
+
 ---
 
 ## 4. Package Visibility
@@ -79,6 +83,8 @@ The parser treats the left operand of `$` as a package namespace and the right o
 A named package-scope declaration whose name begins with `_` is accessible from every source file in its own package and inaccessible from every other package. This applies to all named declarations, including types, aliases, constants, functions, methods, and constructors. The leading underscore does not change the identifier's lexical class; see [`lexical.md`](lexical.md) §4.2.
 
 An access from another package is illegal even when it uses an explicit `packageName$` qualifier.
+
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
 ### 4.2 Operators are public
 
@@ -93,6 +99,8 @@ Operators are symbol-named rather than identifier-named and cannot carry a leadi
 Package scope may contain immutable constants and verbs. It **MUST NOT** contain mutable variables or any other time-varying package state.
 
 State that changes over time must live in a value, such as a `struct` or reference-typed object, and reach operations through ordinary parameters, receivers, or capability wiring. This keeps mutation visible to the effect model in [`effects.md`](effects.md).
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#state-has-to-be-a-value) — "State has to be a value".
 
 ---
 
