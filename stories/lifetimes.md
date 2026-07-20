@@ -92,7 +92,19 @@ r &Node = outer
 r:inspect()          // inner drained at the closing brace; r resolves to reclaimed storage
 ```
 
-Nothing here is exotic — a guest reassigned inside a block, the sort of line anyone writes without thinking. And the runtime does its half perfectly: the anchor keeps `r` resolving to wherever `inner`'s value went, which after the brace is storage the scope has already reclaimed. The rule is the one thing standing between "the anchor tracks the value faithfully" and "the anchor tracks the value straight into its grave." Loosen it to allow the nested host and you have not bought a small convenience; you have reopened use-after-free, dressed in ordinary syntax.
+Nothing here is exotic — a guest reassigned inside a block, the sort of line anyone writes without thinking. And the runtime does its half perfectly: the anchor keeps `r` resolving to wherever `inner`'s value went, which after the brace is storage the scope has already reclaimed. The rule is the one thing standing between "the anchor tracks the value faithfully" and "the anchor tracks the value straight into its grave."
+
+What keeps the rule from being mere caution is that it waves the mirror image straight through. Bind a guest to a host that *encloses* it and there is nothing to check — the host cannot drain before the guest does:
+
+```zane
+outer Node()
+{
+    r &Node = outer   // legal: outer encloses the block, so it outlives r
+    r:inspect()
+}
+```
+
+Here `r` is the short-lived one; it is gone at the brace while `outer` lives on, never for a moment tracking a value younger than itself. The restriction bites on exactly one direction because only one direction is dangerous — loosen it to admit the nested host and you have not bought a small convenience but reopened use-after-free in ordinary syntax.
 
 The returned-reference rule ([§1.7](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter)) is the same hole seen from across a call boundary, which is why it needs its own guard rather than folding into §1.1: a return leaves the function's scopes entirely, into a caller the function cannot see. Let a function return an `&` to anything at all and this compiles:
 
@@ -116,7 +128,20 @@ node Node()
 node:inspect()        // sink drained at the brace, taking the value with it
 ```
 
-The move re-parents `node`'s value into `sink`, whose scope closes at the brace and destroys everything it hosts. But `node` did not vanish when it was moved — it downgraded to a guest ([§1.6](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#16-moved-symbols-downgrade-to--values-and-are-no-longer-movable)) that stays readable, and after the brace that guest resolves, through the anchor, to a value the inner scope already destroyed. The rule permits the move in the other direction without a second thought — a value born in the inner block moved *up* into `node` is safe, because the destination then outlives the source — so it bites only on the lifetime-sinking direction, the only one that can strand a guest. It is close kin to the declaration-block rule, and for the same reason: both are about a move crossing a scope boundary it has no business crossing.
+The move re-parents `node`'s value into `sink`, whose scope closes at the brace and destroys everything it hosts. But `node` did not vanish when it was moved — it downgraded to a guest ([§1.6](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#16-moved-symbols-downgrade-to--values-and-are-no-longer-movable)) that stays readable, and after the brace that guest resolves, through the anchor, to a value the inner scope already destroyed.
+
+The rule waves the opposite move through, and the symmetry with §1.1 is exact — swap which host is nested and the same assignment is safe:
+
+```zane
+sink Node()
+{
+    inner Node()
+    sink = inner      // legal: sink encloses the block, so it outlives inner's value
+}
+sink:inspect()        // sink now hosts the value; nothing was stranded
+```
+
+A value born in the inner block and moved *up* into `sink` lands in a host that outlives the scope it came from, so no guest is left tracking something short-lived. The rule bites only on the lifetime-sinking direction, the only one that can strand a guest. It is close kin to the declaration-block rule, and for the same reason: both are about a move crossing a scope boundary it has no business crossing.
 
 That declaration-block rule ([§1.3](https://github.com/zane-lang/spec/blob/54ac140005b0f4f330b24e86e0351bfd74b8fa25/spec/lifetimes.md#13-moves-are-restricted-to-the-declaration-block)) guards a subtler failure — not where a value goes, but *whether it went at all.* Allow a symbol to be moved from inside a nested or conditional block and you get this:
 
