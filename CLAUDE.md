@@ -108,7 +108,7 @@ links stay ordinary living relative links.
 
 GitHub heading anchors: lowercase, strip punctuation (commas, apostrophes,
 backticks, `&`, `#`), spaces→hyphens. A stripped `&`/`#` flanked by spaces
-leaves a **doubled** hyphen (`new `&` values` → `#...-new--values`) — do not
+leaves a **doubled** hyphen (``new `&` values`` → `#...-new--values`) — do not
 collapse it. Verify every story↔spec anchor resolves at its pinned commit.
 
 ## Conventions
