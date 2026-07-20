@@ -51,7 +51,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/control-flow.md`](spec/control-flow.md) | `if`/`elif`/`else`, `guard`, counted loops, and 1-based ordinal rules |
 | [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, and boolean keywords |
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
-| [`spec/packages.md`](spec/packages.md) | Package declarations and member access |
+| [`spec/packages.md`](spec/packages.md) | Directory-defined namespaces and compilation units, file-scoped imports, explicit member access, package visibility, and package-scope state |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
 
 ## Design stories
@@ -74,6 +74,7 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 | [`stories/control-flow.md`](stories/control-flow.md) | [`spec/control-flow.md`](spec/control-flow.md) — `guard` as an active exit that opens no scope of its own, doing without `while` behind a written loop bound, and one-based counting after the loop that forced the question |
 | [`stories/functions.md`](stories/functions.md) | [`spec/functions.md`](spec/functions.md) — pulling methods out of the type body and the verb model that revealed, mutation made visible with `:`/`!`, overloading on parameter shape alone, and why callables are call-only while self-typed lambdas are values |
 | [`stories/operators.md`](stories/operators.md) | [`spec/operators.md`](spec/operators.md) — the fixed vocabulary worth overloading, `~` as the universal flip, laws enforced through derived operators, grammar-only grouping, and home-package coherence |
+| [`stories/packages.md`](stories/packages.md) | [`spec/packages.md`](spec/packages.md) — the directory as namespace and compilation unit, declarations as move checks, explicit qualified access through `$`, and keeping mutable state inside values so the effect model can see it |
 
 ## Contributing
 
