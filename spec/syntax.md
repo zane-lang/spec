@@ -169,7 +169,7 @@ A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#vari
 
 ```zane
 type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
-type QualifiedIdent = struct { package String; name String; }
+type QualifiedIdent = struct { packageName String; member String; }
 
 type Expr = #variant {
     op BinOp;
