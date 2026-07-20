@@ -2,7 +2,7 @@
 
 This document specifies Zane's package model: directory-defined namespaces and compilation units, package declarations, imports, member access, visibility, and package-scope state. Manifests, fetching, and version pinning live in [`dependencies.md`](dependencies.md).
 
-> **See also:** [`lexical.md`](lexical.md) for identifier formation and leading-`_` privacy. [`functions.md`](functions.md) for methods and functions. [`dependencies.md`](dependencies.md) for package identity, manifests, and the dependency graph. [`syntax.md`](syntax.md) §8 for `package`, `import`, and `$` syntax.
+> **See also:** [`lexical.md`](lexical.md) for identifier formation and leading-`_` privacy. [`functions.md`](functions.md) for methods and functions. [`dependencies.md`](dependencies.md) for package identity, manifests, and the dependency graph. [`syntax.md`](syntax.md) §1.5 and §8 for `import`, `package`, and `$` syntax.
 
 ---
 
