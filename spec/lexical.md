@@ -84,7 +84,10 @@ Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, 
 
 ### 4.2 Leading underscore
 
-A leading `_` marks a field as private to methods whose first parameter is `this` for that type. The underscore does not change the lexical class set by the first letter. See [`types.md`](types.md) §2.3.
+A leading `_` marks an identifier as private without changing the lexical class set by the first letter.
+
+- A field beginning with `_` is private to methods whose first parameter is `this` for that type. See [`types.md`](types.md) §2.3.
+- A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are symbol-named and remain public. See [`packages.md`](packages.md) §4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
@@ -179,6 +182,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Number parameter | A lowercase name (`n`) declared `n Number` (in a type's `<>` header or inline in a verb); a number, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
+| Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`variant` body (marked or unmarked with `#`) and every arm of a `match` block; always trailing, inline or multiline; newlines are insignificant there |
 | Value separator | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |
