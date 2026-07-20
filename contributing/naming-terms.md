@@ -20,7 +20,7 @@ does the teaching before the definition is even read.
 
 - **`verb`** — a function, method, operator, constructor, or lambda. In grammar
   a verb is the word that *acts*; a callable is the construct that *does* work.
-- **`mould`** — a `struct`/`variant`/`enum`/`tuple` form. A mould gives shapeless
+- **`mould`** — a `struct`/`variant`/`enum` form. A mould gives shapeless
   material a fixed form; these forms give a type its shape, and the type is what
   is cast from them.
 - **`borrow`** — the passing mode for a value type. The callee is *lent* the
@@ -107,8 +107,8 @@ oblique) is the same. When in doubt for a term, choose the ordinary word over th
 
 ## 5. Worked Example: `mould`
 
-The concept: the four constructs that give a type its shape — `struct`,
-`variant`, `enum`, `tuple` — which had been spelled out longhand as
+The concept: the three constructs that give a type its shape — `struct`,
+`variant`, `enum` — which had been spelled out longhand as
 "type-defining expressions" with no single name.
 
 - **`origin form`** — accurate (every type originates in one of the four) but

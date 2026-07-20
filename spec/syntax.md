@@ -218,7 +218,6 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 ```zane
 @concepts$Number
 @concepts$Text
-@concepts$Tuple
 @concepts$Collection
 ```
 
