@@ -11,7 +11,7 @@ This document specifies Zane's concurrency model: compiler-managed parallelism, 
 Zane separates **parallelism** (compiler-managed, unobservable) from **concurrency** (explicit, programmer-controlled).
 
 - **`Implicit parallelism`.** The compiler may run provably independent work in parallel when it cannot change program results.
-- **`Explicit concurrency`.** `spawn` starts a concurrent function call; ordering is the programmer’s responsibility.
+- **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility.
 - **`Water-tower lifetimes`.** A scope’s owned objects live until all spawned work in that scope completes.
 - **`Mutation needs a value receiver`.** A spawned call may mutate only a value-typed receiver; a value type's transitive alias-freedom lets the compiler rule out a data race from the receiver's type, and at most one spawn may mutably borrow a given location.
 - **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
@@ -55,13 +55,14 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 
 ## 3. `spawn` and Explicit Concurrency
 
-### 3.1 `spawn` targets function calls only
-`spawn` starts a concurrent **function call**. It is illegal on blocks or control flow.
+### 3.1 `spawn` targets function and method calls only
+`spawn` starts a concurrent **function or method call**. Both forms expose a verb signature for effect and conflict analysis. It is illegal on blocks or control flow.
 
 ```zane
-spawn runServer(8080)        // ok
-spawn [runServer(8080)]      // ILLEGAL
-spawn if cond { f() }        // ILLEGAL
+spawn runServer(8080)             // ok: function call
+spawn server:listen(8080)         // ok: read-only method call
+spawn server!refreshConnections() // ok: mutating method call
+spawn if cond { f() }             // ILLEGAL
 ```
 
 ### 3.2 Spawned values block on read
@@ -85,11 +86,11 @@ fallback Int = spawn listen(8081) ?? Int(404)
 
 The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.
 
-### 3.4 Stalling functions are parked
-A stalling function called without `spawn` blocks the caller. A stalling function called with `spawn` is parked by the runtime so it does not consume a worker thread while waiting.
+### 3.4 Stalling calls are parked
+A stalling function or method called without `spawn` blocks the caller. The same call made with `spawn` is parked by the runtime so it does not consume a worker thread while waiting.
 
 ### 3.5 Stalling without `spawn` is ordinary blocking
-A stalling function does not require `spawn`. When called normally, it simply blocks the current execution until it returns.
+A stalling function or method does not require `spawn`. When called normally, it simply blocks the current execution until it returns.
 
 ### 3.6 Ordering is explicit
 The compiler does not reorder `spawn` calls. The order in the source is the order in which spawns are started, and any blocking read happens exactly where written.
@@ -146,7 +147,7 @@ When a tether is passed to a spawned call, the callee receives its own tether to
 ## 5. Concurrency Boundaries
 
 ### 5.1 No cancellation or shutdown ordering
-The language does not provide cancellation, kill groups, or shutdown ordering. A spawned function runs until it returns or the process is terminated externally.
+The language does not provide cancellation, kill groups, or shutdown ordering. A spawned call runs until it returns or the process is terminated externally.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
@@ -156,12 +157,12 @@ Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All de
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
 ### 5.3 No `async`/`await` syntax
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism. This avoids function coloring: a function does not become a different kind of thing merely because some caller chooses to run it concurrently.
+Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of thing merely because some caller chooses to run it concurrently.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
 ### 5.4 No language-level process or channel abstraction
-Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function calls plus explicit state flow governed by ownership and effect rules.
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by ownership and effect rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
@@ -172,7 +173,7 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | Concept | Rule |
 |---|---|
 | Implicit parallelism | Compiler may parallelize only when results are unchanged |
-| `spawn` | Starts a concurrent function call; blocks only when results are read |
+| `spawn` | Starts a concurrent function or method call; blocks only when results are read |
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
 | Mutation | A spawned mutating call requires a value-typed receiver; at most one mutable borrow per storage location; concurrent reads take a coherent snapshot |

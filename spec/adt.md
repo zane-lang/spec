@@ -102,7 +102,7 @@ A directly inline self-reference would have infinite size, which the uniform-str
 
 ## 5. Matching a Variant
 
-A `variant` is consumed by a **`match` block**: one central place that lays out every case and dispatches on the live tag. It is Zane's single construct for consuming a variant, and it is an expression.
+A `variant` is consumed by a **`match` block**: one central place that lays out every case and dispatches on the live tag. It is Zane's single construct for consuming a variant. A `match` produces the selected arm's value and may appear anywhere an expression is legal, including an initializer, return expression, or call argument.
 
 ```zane
 result String = match e {
@@ -112,6 +112,12 @@ result String = match e {
     b op                       => render(b);
     [boolLit, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
 }
+
+print(match e {
+    x strLit                   => x;
+    [intLit, floatLit]         => "number";
+    [boolLit, ident, qualifiedIdent, op, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
+})
 ```
 
 > **See also:** [`syntax.md`](syntax.md) §4.8 for the surface grammar.
@@ -275,7 +281,7 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |
 | Recursion | Recursive members box through explicit `&`; a recursive type is a `#variant` or `#struct`, never a value type |
 | Variant storage | `variant` is the sum mould's value form, laid out inline; `#variant` is its reference form, carrying a tag, may recurse, and is placed by the reference-type rules |
-| `match` block | Central expression `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
+| `match` block | Expression legal in any expression position; `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
 | Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |
 | Exhaustiveness, no default | Every case covered by exactly one arm, singly or in a `[ ]` group; no wildcard, so adding a case is a compile error until placed |
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |

@@ -155,7 +155,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §5.3
 
 ### 3.19 `match`
-- **Meaning:** An expression that names a scrutinee and a `{ }` block of `;`-terminated arms; each arm has an optional binder, a case (or `[ ]` group of cases) selector, and a body. It dispatches on the live tag, is exhaustive with no default arm, all arms share one return type, and abort flows through.
+- **Meaning:** An expression, legal anywhere an expression is accepted, that names a scrutinee and a `{ }` block of `;`-terminated arms; each arm has an optional binder, a case (or `[ ]` group of cases) selector, and a body. It dispatches on the live tag, is exhaustive with no default arm, all arms share one return type, and abort flows through.
 - **Why this name:** "Match" is the familiar name for tag-directed selection, here surfaced as a single central block over a variant's cases.
 - **Canonical home:** [`adt.md`](adt.md) §5
 

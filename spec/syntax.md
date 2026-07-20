@@ -521,17 +521,19 @@ Vec2(2)|100      // groups as Vec2(2)|100
 ### 4.5 `spawn`
 
 ```zane
-spawn packageName$fn(args...)
-spawn packageName$fn(args...) ? binder { ... }
-spawn packageName$fn(args...) ? { ... }
-spawn packageName$fn(args...) ?? fallbackExpr
-name VarType = spawn packageName$fn(args...)
-name VarType = spawn packageName$fn(args...) ? binder { ... }
-name VarType = spawn packageName$fn(args...) ? { ... }
-name VarType = spawn packageName$fn(args...) ?? fallbackExpr
+spawn functionName(args...)
+spawn receiver:methodName(args...)
+spawn receiver!methodName(args...)
+spawn functionName(args...) ? binder { ... }
+spawn receiver:methodName(args...) ? { ... }
+spawn receiver!methodName(args...) ?? fallbackExpr
+name VarType = spawn functionName(args...)
+name VarType = spawn receiver:methodName(args...) ? binder { ... }
+name VarType = spawn receiver!methodName(args...) ? { ... }
+name VarType = spawn functionName(args...) ?? fallbackExpr
 ```
 
-`spawn` is legal only on function-call expressions.
+`spawn` is legal only on function-call and method-call expressions. Package-qualified function and method calls use their ordinary forms (§4.1–§4.2). An abortable call may carry a `?` or `??` handler, whether its result is bound or ignored.
 
 ### 4.6 Subscript expressions
 
@@ -567,13 +569,15 @@ number Int = (3 + 2) * 2
 
 ### 4.8 `match` expressions
 
-A `match` expression names one or more scrutinees — a bare `,`-separated list, never parenthesised — then a `{ }` block of `;`-terminated arms. Each arm is an optional binder, a case selector, `=>`, and a body. A `match` is an expression and may carry a trailing `?` (or `??`) handler when its arms are abortable.
+A `match` expression names one or more scrutinees — a bare `,`-separated list, never parenthesised — then a `{ }` block of `;`-terminated arms. Each arm is an optional binder, a case selector, `=>`, and a body. A `match` may appear anywhere an expression is legal and may carry a trailing `?` (or `??`) handler when its arms are abortable.
 
 ```zane
 match scrutinee { arm; arm; ... }
 match scrutinee, scrutinee { arm; arm; ... }
 name VarType = match scrutinee { arm; arm; ... }
 name VarType = match scrutinee { arm; arm; ... } ? binder { ... }
+return match scrutinee { arm; arm; ... }
+functionName(match scrutinee { arm; arm; ... })
 ```
 
 An arm is `[binder] selector => body`, with one `[binder] selector` per scrutinee position, `,`-separated in order. A selector is a single case name or a `[ ]` list of `,`-separated case names, written bare (rooted at that scrutinee's type). The body is an expression (`=> expr`) or a `{ }` block.
