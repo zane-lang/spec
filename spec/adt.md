@@ -10,7 +10,7 @@ This document specifies Zane's algebraic data types: the `enum` of uniform peer 
 
 Zane separates two ideas that other languages often merge. An `enum` is a closed set of interchangeable, payloadless peers. A `variant` is a sum mould whose members each carry a payload. Keeping them distinct lets each stay simple: enums are uniform and tabulatable, variants are heterogeneous and dispatched.
 
-- **`enum is uniform peers`.** A closed set of lowercase, payloadless members that mean one uniform thing. Per-member data is attached externally by an enum map.
+- **`enum is the peer mould`.** A closed set of lowercase, payloadless peer members that mean one uniform thing; its representations number its members, not their payloads. Per-member data is attached externally by an enum map.
 - **`variant is a sum mould`.** A value of the type it declares holds exactly one of its named members. Its body grammar is byte-for-byte identical to a `struct`; the keyword flips product into sum.
 - **`The # axis applies to the sum mould`.** A plain `variant` is its value form; `#variant` is its reference form (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum`.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
@@ -21,7 +21,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 
 ## 2. Enums
 
-An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is **not** a sum mould. Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
+An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is not a sum mould but the **peer mould** — the third mould shape beside the product `struct` and the sum `variant`, declaring a **peer type**. Because its members carry no payload, a peer type has exactly as many representations as it has members, where a sum has as many as its cases' payloads summed; that payloadless uniformity, not a shared body, is what sets it apart (§2.1). Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
 
 ```zane
 type Operator = enum [ add, sub, mul, div, eq, lessEq, moreEq, less, more ]
@@ -308,7 +308,7 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 
 | Concept | Rule |
 |---|---|
-| `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum mould |
+| `enum` | The **peer mould**: a closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; representations number its members, not a sum mould |
 | `variant` | Sum mould; a value holds exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
 | Variant construction | Built-in syntax `Variant.case(payload)` — not a constructor verb — names one case and yields the whole variant; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate; shares its `Type.member(args)` surface with a named constructor ([`types.md`](types.md) §3.4) but not its mechanism |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |

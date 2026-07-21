@@ -214,10 +214,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
-### 3.31 product mould / sum mould
-- **Meaning:** The two moulds that share one `{ }` body grammar. A `struct` is a **product mould** and a `variant` is a **sum mould**; `enum` is a mould of another shape.
-- **Why this name:** Product and sum are the standard names for the two shapes; pairing each with "mould" distinguishes the construct from the type it declares.
-- **Canonical home:** [`types.md`](types.md) §2.5
+### 3.31 product mould / sum mould / peer mould
+- **Meaning:** The three mould shapes, named by how a value's representations count. A `struct` is a **product mould** (its representations are the product of its fields'); a `variant` is a **sum mould** (the sum of its cases' payloads'); an `enum` is a **peer mould** — a flat set of payloadless, equal-rank peers, so its representations number exactly its members. `struct` and `variant` share one `{ }` body grammar; an `enum`'s peers are a flat `[ ]` list.
+- **Why this name:** Product and sum are the standard algebraic names for the two `{ }`-bodied shapes; "peer" names the third from the `enum`'s own defining property — uniform, interchangeable, payloadless members — rather than forcing it into the sum family it degenerately belongs to.
+- **Canonical home:** [`types.md`](types.md) §2.5 (product, sum); [`adt.md`](adt.md) §2 (peer)
 
 ### 3.32 host
 - **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. This is the role commonly called an **owner** in other languages. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
