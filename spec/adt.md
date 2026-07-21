@@ -38,6 +38,7 @@ The property that distinguishes an `enum` is **uniformity** — the substitutabi
 Per-member associated data is attached externally through an enum map (§6), which keeps the members themselves payloadless and interchangeable. The consumers of an enum are iteration, ordinal use, total mapping, and exhaustive matching.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-the-last-shape-the-peer-mould) — "Naming the last shape: the peer mould".
 
 ---
 
