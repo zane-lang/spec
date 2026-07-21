@@ -201,7 +201,7 @@ The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous:
 
 A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
 
-Because a named constructor builds through `init{ }`, it belongs to a type that has fields — a `struct`, value or `#` (§3). A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
+Because a named constructor builds through `init{ }`, it belongs to a type that has fields — a `struct`, in either its value or `#` reference form (§3). A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
 
 > **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
 
