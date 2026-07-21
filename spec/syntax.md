@@ -24,7 +24,7 @@ name ReturnType(param ParamType, ...) => expr
 
 `VarType{fieldA, fieldB}` is shorthand for `VarType{fieldA = fieldA, fieldB = fieldB}`.
 
-The constructor position of `name VarType(args, ...)` may also name a variant **case constructor** — `e Expr.intLit("5")` selects a case and yields the variant; the declared symbol still holds the variant type (see [`adt.md`](adt.md) §3.2).
+The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.zeros(3)` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.zeros` or a per-case type.
 
 The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
@@ -324,7 +324,19 @@ TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = ex
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
-A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
+A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
+
+A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
+
+```zane
+TypeName.zeros() => init{ field = expr, ... }
+TypeName.fromParts(param ParamType, ...) { return init{ field = expr, ... } }
+```
+
+```zane
+o TypeName.zeros()
+p TypeName.fromParts(arg)
+```
 
 ### 3.4 Field constructors
 

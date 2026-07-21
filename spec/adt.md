@@ -78,7 +78,7 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 | | `struct { a A; b B; }` (product) | `variant { a A; b B; }` (sum) |
 |---|---|---|
 | Meaning | has `a` **and** `b` | has `a` **or** `b` |
-| Construct | must set **all** members with `init{ }` | selects **exactly one** case with a case constructor (§3.2) |
+| Construct | must set **all** members with `init{ }` | names **exactly one** case and supplies its payload (§3.2) |
 | Read `e.a` | total — always an `A` | partial — abortable, an `A` only if `a` is live |
 | Layout | sum of member sizes | tag + max of member sizes |
 
@@ -88,35 +88,37 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 
 ### 3.2 Constructing a variant
 
-A variant value is built by a **case constructor**: `Expr.intLit("5")` selects the `intLit` case, supplies its payload, and produces an `Expr` with that case live. The form is `<Variant>.<case>(payload)` — `Expr` is the type (uppercase) and `.intLit` the case (lowercase), the same `Type.member` selection that reads a case and that names an `enum` member (§2). A case carries **exactly one** payload type (§3), so a case constructor takes **exactly one** argument.
+A variant value is built by **naming a case and supplying its payload**: `Expr.intLit("5")` selects the `intLit` case, gives it its payload, and produces an `Expr` with that case live. The form is `<Variant>.<case>(payload)` — `Expr` is the type (uppercase) and `.intLit` the case (lowercase), the same `Type.member` selection that reads a case and that names an `enum` member (§2). A case carries **exactly one** payload type (§3), so the form takes **exactly one** argument.
 
-Where a struct is built by setting every field with `init{ }`, a variant is built by choosing one case and handing it its payload. That is the construction half of the struct/variant symmetry (§3.1): the shared body grammar, opposite construction.
+This is built-in syntax, **not** a call to a constructor verb. A `struct` is built by a constructor that sets every field with `init{ }` (see [`types.md`](types.md) §3); a variant has cases, not fields, so it is written directly, by selecting one case. That is the construction half of the struct/variant symmetry (§3.1): one body grammar, opposite construction.
 
-A case constructor is an ordinary **expression** of the variant type, legal wherever a value is — an initializer, a `return`, a call argument, or the payload of another case constructor. It yields the whole variant, so a variable built this way holds the variant type, not a per-case type:
+The form is an ordinary **expression** of the variant type, legal wherever a value is — an initializer, a `return`, a call argument, or the payload of another case form. It yields the whole variant, so a variable built this way holds the variant type, not a per-case type:
 
 ```zane
 e Expr = Expr.intLit("5")   // e is an Expr, intLit live
 e Expr.intLit("5")          // shorthand: the instantiation form (syntax.md §1.1), e is still an Expr
 ```
 
-The two lines declare the same thing. The trailing argument list is what marks construction: `Expr.intLit(...)` **calls** the case constructor and yields an `Expr`, distinct from a bare `Expr.intLit` written as a projected case *type* (§3). The `.intLit` chooses which case is live; it does not narrow the variable, because the value it produces is the variant.
+The two lines declare the same thing. The trailing argument list is what marks construction: `Expr.intLit(...)` builds and yields an `Expr`, distinct from a bare `Expr.intLit` written as a projected case *type* (§3). The `.intLit` chooses which case is live; it does not narrow the variable, because the value it produces is the variant.
 
-The payload argument sits at a positional constructor-call **coercion site** (see [`types.md`](types.md) §4.2), so an applicable `implicit` constructor is inserted there exactly as for any other constructor argument.
+The payload argument sits at a positional **coercion site** (see [`types.md`](types.md) §4.2), so an applicable `implicit` constructor is inserted there exactly as at any other call argument.
 
-A payload that is itself a constructed value — a `struct` or another variant — is built by its own constructor and passed in. Construction **nests**; it never dots through:
+A payload that is itself a constructed value — a `struct` or another variant — is built on its own and passed in. Construction **nests**; it never dots through:
 
 ```zane
 e Expr.op(BinOp.fromParts(a, b))              // build the BinOp payload, then wrap it
 e Expr.qualifiedIdent(QualifiedIdent{ packageName, member })
 ```
 
-A case constructor selects **one** case and takes its payload whole; to reach a nested case, write another constructor call for the payload. There is no `Expr.op.fromParts(...)` reaching into a payload's own constructors, and no `Outer.a.b(...)` chaining through one case into another — the mirror, on the construction side, of matching one level and going no deeper (§5.3).
+Naming a case takes its payload whole; to reach a nested case, write another case form for the payload. There is no `Expr.op.fromParts(...)` reaching into a payload's own construction, and no `Outer.a.b(...)` chaining through one case into another — the mirror, on the construction side, of matching one level and going no deeper (§5.3).
 
 An `enum` member is the payloadless degenerate of the same form: `Colors.red` selects a case that carries no payload, so it is written with no argument list (§2). A payload-carrying case is called; a payloadless one is selected.
 
-A recursive `#variant` case boxes through `&` (§4), and its constructor follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a source that may create a new `&` (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.8).
+A recursive `#variant` case boxes through `&` (§4), and its construction follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a source that may create a new `&` (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.9).
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#a-case-is-a-constructor) — "A case is a constructor".
+**Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.zeros(3)` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#naming-a-case-not-calling-a-constructor) — "Naming a case, not calling a constructor".
 
 ---
 
@@ -308,7 +310,7 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 |---|---|
 | `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum mould |
 | `variant` | Sum mould; a value holds exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
-| Variant construction | A case constructor `Variant.case(payload)` selects one case and yields the whole variant; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate |
+| Variant construction | Built-in syntax `Variant.case(payload)` — not a constructor verb — names one case and yields the whole variant; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate; shares its `Type.member(args)` surface with a named constructor ([`types.md`](types.md) §3.4) but not its mechanism |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout; the `#` modifier picks value versus reference |
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |

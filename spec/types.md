@@ -176,7 +176,36 @@ Weapon{
 starter Weapon{fireRate = Float(2)}
 ```
 
-### 3.4 Implicit field access in constructor calls
+### 3.4 Named constructors
+The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
+
+```zane
+package Math
+
+type Vector2 = struct { x Float; y Float; }
+
+Vector2.zeros() => init{ x = Float(0), y = Float(0) }
+Vector2.diagonal(n Float) => init{ x = n, y = n }
+
+o Vector2.zeros()            // o : Vector2
+d Vector2.diagonal(Float(3)) // d : Vector2
+```
+
+A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes it; it does not change what it returns. So a named constructor:
+
+- declares positional parameters or the field-header form (§3.2, §3.3) like any constructor;
+- overloads by parameter types, alongside the anonymous constructor and the other named ones;
+- is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
+
+The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase receiver, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase receiver, so `.zeros` is a field or method of a *value*. The two never collide.
+
+A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
+
+Because a named constructor builds through `init{ }`, it belongs to a type that has fields — a `struct`, value or `#` (§3). A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
+
+> **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
+
+### 3.5 Implicit field access in constructor calls
 Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
 
 ```zane
@@ -187,7 +216,7 @@ vec Vector{x, y}
 
 `Vector{x, y}` is shorthand for `Vector{x = x, y = y}`.
 
-### 3.5 Implicit field access in `init{ }`
+### 3.6 Implicit field access in `init{ }`
 Inside `init{ }`, a bare field name is shorthand for `fieldName = fieldName` when a symbol of that name is in scope:
 
 ```zane
@@ -207,7 +236,7 @@ Vector{x Int, y Int} {
 }
 ```
 
-### 3.6 `init{ }` is a constructor-only expression
+### 3.7 `init{ }` is a constructor-only expression
 `init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
 
 ```zane
@@ -222,10 +251,10 @@ Vector{x Int, y Int} {
 
 Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
 
-### 3.7 Constructors do not use `mut`
+### 3.8 Constructors do not use `mut`
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
-### 3.8 `&` fields require `&` constructor parameters
+### 3.9 `&` fields require `&` constructor parameters
 An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
 
 ```zane
@@ -273,7 +302,7 @@ Car(engine Engine) {
 car Car(Engine())   // legal: plain host field accepts a temporary
 ```
 
-### 3.9 Type and number parameters
+### 3.10 Type and number parameters
 A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
