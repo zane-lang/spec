@@ -142,7 +142,7 @@ type Color = struct { r Int; g Int; b Int; }   // inline body, every member ends
 
 ### 6.2 `,` separates elements of a value collection
 
-A `,` separates the elements of a value collection: array literals, `tuple`, `enum`, call and constructor arguments, `init{ }` fields, generic arguments, and the case list within a `match` group `[ … ]`. It is **never trailing**: a `,` appears only *between* elements, never after the last one.
+A `,` separates the elements of a value collection: array literals, `enum`, call and constructor arguments, `init{ }` fields, generic arguments, and the case list within a `match` group `[ … ]`. It is **never trailing**: a `,` appears only *between* elements, never after the last one.
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])
@@ -162,7 +162,7 @@ Void main() {
 
 ### 6.4 `{ }` versus `[ ]`
 
-`{ }` encloses a named-typed-member body (`struct`, `variant`, and their `#` forms), a `match` block of `;`-terminated arms, and a code or `init{ }` block. `[ ]` encloses a flat list: an array, a `tuple`, an `enum`, a `match` case group, or a function-type parameter list.
+`{ }` encloses a named-typed-member body (`struct`, `variant`, and their `#` forms), a `match` block of `;`-terminated arms, and a code or `init{ }` block. `[ ]` encloses a flat list: an array, an `enum`, a `match` case group, or a function-type parameter list.
 
 Because the parser always knows whether it is inside a type-expression body or a code block, it always knows whether a newline separates statements or is insignificant.
 
@@ -185,6 +185,6 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`variant` body (marked or unmarked with `#`) and every arm of a `match` block; always trailing, inline or multiline; newlines are insignificant there |
-| Value separator | `,` separates elements of a value collection (arrays, `tuple`, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |
+| Value separator | `,` separates elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
 | Brackets | `{ }` holds a member body or code/`init{}` block; `[ ]` holds a flat list |

@@ -21,7 +21,7 @@ Zane keeps data layout and construction separate from behavior.
 ## 2. Value and Reference Types
 
 ### 2.1 The value/reference axis and the `#` modifier
-Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, `#enum`, or `#tuple` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -176,7 +176,36 @@ Weapon{
 starter Weapon{fireRate = Float(2)}
 ```
 
-### 3.4 Implicit field access in constructor calls
+### 3.4 Named constructors
+The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
+
+```zane
+package Math
+
+type Vector2 = struct { x Float; y Float; }
+
+Vector2.zeros() => init{ x = Float(0), y = Float(0) }
+Vector2.diagonal(n Float) => init{ x = n, y = n }
+
+o Vector2.zeros()            // o : Vector2
+d Vector2.diagonal(Float(3)) // d : Vector2
+```
+
+A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes it; it does not change what it returns. So a named constructor:
+
+- declares positional parameters or the field-header form (§3.2, §3.3) like any constructor;
+- overloads by parameter types, alongside the anonymous constructor and the other named ones;
+- is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
+
+The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase receiver, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase receiver, so `.zeros` is a field or method of a *value*. The two never collide.
+
+A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
+
+Because a named constructor builds through `init{ }`, it belongs to a type that has fields — a `struct`, in either its value or `#` reference form (§3). A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
+
+> **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
+
+### 3.5 Implicit field access in constructor calls
 Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
 
 ```zane
@@ -187,7 +216,7 @@ vec Vector{x, y}
 
 `Vector{x, y}` is shorthand for `Vector{x = x, y = y}`.
 
-### 3.5 Implicit field access in `init{ }`
+### 3.6 Implicit field access in `init{ }`
 Inside `init{ }`, a bare field name is shorthand for `fieldName = fieldName` when a symbol of that name is in scope:
 
 ```zane
@@ -207,7 +236,7 @@ Vector{x Int, y Int} {
 }
 ```
 
-### 3.6 `init{ }` is a constructor-only expression
+### 3.7 `init{ }` is a constructor-only expression
 `init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
 
 ```zane
@@ -222,10 +251,10 @@ Vector{x Int, y Int} {
 
 Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
 
-### 3.7 Constructors do not use `mut`
+### 3.8 Constructors do not use `mut`
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
-### 3.8 `&` fields require `&` constructor parameters
+### 3.9 `&` fields require `&` constructor parameters
 An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
 
 ```zane
@@ -273,7 +302,7 @@ Car(engine Engine) {
 car Car(Engine())   // legal: plain host field accepts a temporary
 ```
 
-### 3.9 Type and number parameters
+### 3.10 Type and number parameters
 A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
@@ -465,7 +494,7 @@ alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression
-The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline mould — `struct { ... }`, `variant { ... }`, `enum [ ... ]`, or `tuple [ ... ]` — in either its value form or its `#` reference form.
+The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline mould — `struct { ... }`, `variant { ... }`, or `enum [ ... ]` — in either its value form or its `#` reference form.
 
 ```zane
 type Wrapper = struct {
@@ -474,9 +503,9 @@ type Wrapper = struct {
 }
 ```
 
-A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`/`tuple`). There is no standalone `struct Name { ... }` declaration form — a mould is a type expression that only names a type through a `type` (or `alias`) declaration.
+A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`). There is no standalone `struct Name { ... }` declaration form — a mould is a type expression that only names a type through a `type` (or `alias`) declaration.
 
-These four forms — `struct`, `variant`, `enum`, and `tuple` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). A mould reaches all the way down: even a core type such as `Int` is *declared with* one — `Int`, `Float`, and `Bool` are wrapper `struct`s over machine-storage primitives in the `@primitives$` namespace (see [`syntax.md`](syntax.md) §2.1).
+These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). A mould reaches all the way down: even a core type such as `Int` is *declared with* one — `Int`, `Float`, and `Bool` are wrapper `struct`s over machine-storage primitives in the `@primitives$` namespace (see [`syntax.md`](syntax.md) §2.1).
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
@@ -493,8 +522,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Concept | Rule |
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
-| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum`/`#tuple` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
-| Mould | One of the four type-shaping forms — `struct`, `variant`, `enum`, or `tuple`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
+| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
+| Mould | One of the three type-shaping forms — `struct`, `variant`, or `enum`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |

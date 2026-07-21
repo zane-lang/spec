@@ -340,7 +340,7 @@ The markers are largely independent — a lambda may still declare a `this` rece
 
 ### 8.2 `init{ }` is to constructors what `this` is to methods
 
-The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type.** Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
+The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
 
 So `init{ }` is a capability gated by a naming convention, exactly as `this` is. A plain function cannot use `init{ }` for the same reason it cannot read `_`-prefixed fields: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
 

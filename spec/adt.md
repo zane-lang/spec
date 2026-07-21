@@ -10,7 +10,7 @@ This document specifies Zane's algebraic data types: the `enum` of uniform peer 
 
 Zane separates two ideas that other languages often merge. An `enum` is a closed set of interchangeable, payloadless peers. A `variant` is a sum mould whose members each carry a payload. Keeping them distinct lets each stay simple: enums are uniform and tabulatable, variants are heterogeneous and dispatched.
 
-- **`enum is uniform peers`.** A closed set of lowercase, payloadless members that mean one uniform thing. Per-member data is attached externally by an enum map.
+- **`enum is the peer mould`.** A closed set of lowercase, payloadless peer members that mean one uniform thing; its representations number its members, not their payloads. Per-member data is attached externally by an enum map.
 - **`variant is a sum mould`.** A value of the type it declares holds exactly one of its named members. Its body grammar is byte-for-byte identical to a `struct`; the keyword flips product into sum.
 - **`The # axis applies to the sum mould`.** A plain `variant` is its value form; `#variant` is its reference form (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum`.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
@@ -21,7 +21,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 
 ## 2. Enums
 
-An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is **not** a sum mould. Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
+An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is not a sum mould but the **peer mould** — the third mould shape beside the product `struct` and the sum `variant`, declaring a **peer type**. Because its members carry no payload, a peer type has exactly as many representations as it has members, where a sum has as many as its cases' payloads summed; that payloadless uniformity, not a shared body, is what sets it apart (§2.1). Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
 
 ```zane
 type Operator = enum [ add, sub, mul, div, eq, lessEq, moreEq, less, more ]
@@ -38,6 +38,7 @@ The property that distinguishes an `enum` is **uniformity** — the substitutabi
 Per-member associated data is attached externally through an enum map (§6), which keeps the members themselves payloadless and interchangeable. The consumers of an enum are iteration, ordinal use, total mapping, and exhaustive matching.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-the-last-shape-the-peer-mould) — "Naming the last shape: the peer mould".
 
 ---
 
@@ -48,7 +49,7 @@ A `variant` is a **sum mould**. A value of the type it declares holds **exactly 
 A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4). A recursive sum such as `Expr` — whose members refer back to `Expr` through `&` — must therefore be a `#variant`:
 
 ```zane
-type QualifiedIdent = tuple[String, String];
+type QualifiedIdent = struct { packageName String; member String; }
 type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
 
 type Expr = #variant {
@@ -78,13 +79,47 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 | | `struct { a A; b B; }` (product) | `variant { a A; b B; }` (sum) |
 |---|---|---|
 | Meaning | has `a` **and** `b` | has `a` **or** `b` |
-| Construct | must set **all** members | sets **exactly one** member |
+| Construct | must set **all** members with `init{ }` | names **exactly one** case and supplies its payload (§3.2) |
 | Read `e.a` | total — always an `A` | partial — abortable, an `A` only if `a` is live |
 | Layout | sum of member sizes | tag + max of member sizes |
 
 > **See also:** [`types.md`](types.md) §2.5 for the same relationship from the struct side.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
+
+### 3.2 Constructing a variant
+
+A variant value is built by **naming a case and supplying its payload**: `Expr.intLit("5")` selects the `intLit` case, gives it its payload, and produces an `Expr` with that case live. The form is `<Variant>.<case>(payload)` — `Expr` is the type (uppercase) and `.intLit` the case (lowercase), the same `Type.member` selection that reads a case and that names an `enum` member (§2). A case carries **exactly one** payload type (§3), so the form takes **exactly one** argument.
+
+This is built-in syntax, **not** a call to a constructor verb. A `struct` is built by a constructor that sets every field with `init{ }` (see [`types.md`](types.md) §3); a variant has cases, not fields, so it is written directly, by selecting one case. That is the construction half of the struct/variant symmetry (§3.1): one body grammar, opposite construction.
+
+The form is an ordinary **expression** of the variant type, legal wherever a value is — an initializer, a `return`, a call argument, or the payload of another case form. It yields the whole variant, so a variable built this way holds the variant type, not a per-case type:
+
+```zane
+e Expr = Expr.intLit("5")   // e is an Expr, intLit live
+e Expr.intLit("5")          // shorthand: the instantiation form (syntax.md §1.1), e is still an Expr
+```
+
+The two lines declare the same thing. The trailing argument list is what marks construction: `Expr.intLit(...)` builds and yields an `Expr`, distinct from a bare `Expr.intLit` written as a projected case *type* (§3). The `.intLit` chooses which case is live; it does not narrow the variable, because the value it produces is the variant.
+
+The payload argument sits at a positional **coercion site** (see [`types.md`](types.md) §4.2), so an applicable `implicit` constructor is inserted there exactly as at any other call argument.
+
+A payload that is itself a constructed value — a `struct` or another variant — is built on its own and passed in. Construction **nests**; it never dots through:
+
+```zane
+e Expr.op(BinOp.fromParts(a, b))              // build the BinOp payload, then wrap it
+e Expr.qualifiedIdent(QualifiedIdent{ packageName, member })
+```
+
+Naming a case takes its payload whole; to reach a nested case, write another case form for the payload. There is no `Expr.op.fromParts(...)` reaching into a payload's own construction, and no `Outer.a.b(...)` chaining through one case into another — the mirror, on the construction side, of matching one level and going no deeper (§5.3).
+
+An `enum` member is the payloadless degenerate of the same form: `Colors.red` selects a case that carries no payload, so it is written with no argument list (§2). A payload-carrying case is called; a payloadless one is selected.
+
+A recursive `#variant` case boxes through `&` (§4), and its construction follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a source that may create a new `&` (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.9).
+
+**Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#naming-a-case-not-calling-a-constructor) — "Naming a case, not calling a constructor".
 
 ---
 
@@ -152,7 +187,7 @@ There is **no default or wildcard arm**. A catch-all carries no case information
 
 ### 5.3 Variant matching, not pattern matching
 
-A `match` dispatches on a variant's **tag**, not on the **shape** of its payload. It selects which case is live and binds the payload whole. It does **not** reach into nested variants, destructure a `struct` or `tuple`, test literals, or apply guards — the operations ML-family *pattern matching* bundles together. To act on a nested case, `match` again on the payload. Bracket-grouping selects a **set of tags**; it is never a step toward matching shape.
+A `match` dispatches on a variant's **tag**, not on the **shape** of its payload. It selects which case is live and binds the payload whole. It does **not** reach into nested variants, destructure a `struct`, test literals, or apply guards — the operations ML-family *pattern matching* bundles together. To act on a nested case, `match` again on the payload. Bracket-grouping selects a **set of tags**; it is never a step toward matching shape.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#variants-not-patterns) — "Variants, not patterns".
 
@@ -274,8 +309,9 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 
 | Concept | Rule |
 |---|---|
-| `enum` | Closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; not a sum mould |
+| `enum` | The **peer mould**: a closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; representations number its members, not a sum mould |
 | `variant` | Sum mould; a value holds exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
+| Variant construction | Built-in syntax `Variant.case(payload)` — not a constructor verb — names one case and yields the whole variant; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate; shares its `Type.member(args)` surface with a named constructor ([`types.md`](types.md) §3.4) but not its mechanism |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout; the `#` modifier picks value versus reference |
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |

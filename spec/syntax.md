@@ -24,6 +24,8 @@ name ReturnType(param ParamType, ...) => expr
 
 `VarType{fieldA, fieldB}` is shorthand for `VarType{fieldA = fieldA, fieldB = fieldB}`.
 
+The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.diagonal(Float(3))` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.diagonal` or a per-case type.
+
 The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
 Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
@@ -163,11 +165,11 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
-A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, `#enum [ ... ]`, `tuple [ ... ]`, or `#tuple [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.10).
+A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.10).
 
 ```zane
 type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
-type QualifiedIdent = tuple[String, String];
+type QualifiedIdent = struct { packageName String; member String; }
 
 type Expr = #variant {
     op BinOp;
@@ -216,7 +218,6 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 ```zane
 @concepts$Number
 @concepts$Text
-@concepts$Tuple
 @concepts$Collection
 ```
 
@@ -256,14 +257,14 @@ Void[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.10 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, `#enum [ ... ]`, or `#tuple [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
+A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named
 type Tree = #variant { leaf Int; node &Tree; }   // reference sum type
 ```
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`/`#tuple` — so a stored reference is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored reference is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ---
 
@@ -323,7 +324,19 @@ TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = ex
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
-A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.9 and [`generics.md`](generics.md) §5.
+A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n Number>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time number as an ordinary value parameter of concept type `Type` or `Number` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
+
+A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
+
+```zane
+TypeName.zeros() => init{ field = expr, ... }
+TypeName.fromParts(param ParamType, ...) { return init{ field = expr, ... } }
+```
+
+```zane
+o TypeName.zeros()
+p TypeName.fromParts(arg)
+```
 
 ### 3.4 Field constructors
 
