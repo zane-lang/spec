@@ -274,7 +274,7 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - The standard library is **not** special, and no part of it is coupled to the toolchain tag. `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. `core` is installed like any package; a project that never adds it cannot name the core surface types.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#cutting-core-loose-from-the-toolchain) — "Cutting `core` loose from the toolchain" explains why `core` is an ordinary package rather than a toolchain-coupled one.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#cutting-core-loose-from-the-toolchain) — "Cutting core loose from the toolchain" explains why `core` is an ordinary package rather than a toolchain-coupled one.
 
 ---
 
