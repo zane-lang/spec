@@ -41,7 +41,7 @@ remaps [
 
 Top-level fields:
 
-- **`zane-version`**: the toolchain tag used for the compiler and the `core` package; see [§14 Toolchain Version](#14-toolchain-version).
+- **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 Each `deps` row records:
@@ -268,13 +268,13 @@ At a high level, dependency resolution proceeds in this order:
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects both the compiler and the `core` package release; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler alone; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
 
-- The compiler and `core` are released together under one tag, so a project always builds with a known toolchain. This frees the toolchain to evolve without preserving backward compatibility across versions: each project states the version it builds with.
-- The standard library beyond `core` is **not** special. `std` is a separate package fetched, versioned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
+- The compiler is released under its own tag, so a project always builds with a known compiler. This frees the toolchain to evolve without preserving backward compatibility across versions: each project states the compiler version it builds with.
+- The standard library is **not** special, and no part of it is coupled to the toolchain tag. `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. `core` is installed like any package; a project that never adds it cannot name the core surface types.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-toolchain-rides-one-tag-the-standard-library-does-not) — "The toolchain rides one tag; the standard library does not" explains why `core` is coupled to the compiler while `std` is an ordinary package.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#cutting-core-loose-from-the-toolchain) — "Cutting `core` loose from the toolchain" explains why `core` is an ordinary package rather than a toolchain-coupled one.
 
 ---
 

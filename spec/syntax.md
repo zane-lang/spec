@@ -131,7 +131,9 @@ EnumName.property FieldType [
 ### 2.1 Core surface types
 `Int`, `Float`, `Bool`, `String`, `Void`
 
-These are public language-level types, not storage primitives. `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is the exception: it is a core surface type with no storage payload.
+These are the public types the `core` package defines over the compiler's storage primitives, not storage primitives themselves. `core` is an ordinary package with no special status: a file reaches these types by importing `core` and qualifying them as `core$Int`, exactly as for any other package (see [`packages.md`](packages.md) §3). `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is the exception: it is a core surface type with no storage payload.
+
+For brevity, the examples throughout this specification write the core surface types unqualified—`Int` rather than `core$Int`—and omit the `import core` line; real code reaches them by the ordinary package rules above.
 
 ### 2.2 Named types
 
