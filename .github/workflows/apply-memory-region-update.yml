@@ -1,0 +1,249 @@
+name: Apply memory region update
+
+on:
+  push:
+    branches:
+      - agent/fix-host-overwrite-reuse
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-host-overwrite-reuse
+          fetch-depth: 0
+
+      - name: Update memory specification and story
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(text: str, pattern: str, replacement: str, label: str) -> str:
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise RuntimeError(f"expected one replacement for {label}, got {count}")
+              return updated
+
+          spec_path = Path("spec/memory.md")
+          spec = spec_path.read_text()
+
+          spec = spec.replace(
+              "- **`Arena placement`.** A reference-type instance is bump-allocated in the arena of the scope that creates it, and is copied into a parent arena only if it escapes that scope (see §3.5).",
+              "- **`Regioned arena placement`.** Every scope owns separate fixed-size, dynamic-backing-store, and anchor-cell regions. Statically sized storage is placed inline in the fixed-size region; resizable data uses the dynamic region (see §3).",
+          )
+
+          arena_sections = r'''### 3.1 Scope arenas and segmented offsets
+          The runtime does not reserve one flat region. Each lexical scope owns an **arena** made from three independent allocation regions:
+
+          - The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles of dynamic core types.
+          - The **dynamic region** stores the resizable backing stores behind handles such as `List` and `String`.
+          - The **anchor-cell region** stores the scope-local anchor cells created for tethered hosts (§4.1).
+
+          Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots, dynamic backing stores, and anchor cells never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current. Growing one region never copies or relocates allocations in another.
+
+          ```text
+          one scope arena
+
+          fixed-size region        dynamic region           anchor-cell region
+          ─────────────────        ──────────────           ──────────────────
+          [fixed chunk]            [dynamic chunk]          [anchor chunk]
+          [fixed chunk] → ...      [dynamic chunk] → ...    [anchor chunk] → ...
+          ```
+
+          The chains are lazy and independent. A scope that uses no dynamic backing store maps no dynamic chunk; a scope that never creates a guest maps no anchor-cell chunk. When the scope drains, every chunk belonging to all three regions is unmapped together. The compiler may optimize away or coalesce physically unobservable storage, but it **MUST** preserve region exclusivity, lifetime, and drain behavior.
+
+          All three regions draw chunk ids from the same chunk directory, so every in-arena location uses the same **`u32` segmented offset**. The `u32` splits into two fields:
+
+          ```
+             u32 segmented offset
+            ┌───────────────┬─────────────────────────┐
+            │   chunk id    │   in-chunk word offset   │
+            │  (high bits)  │       (low bits)         │
+            └───────────────┴─────────────────────────┘
+          ```
+
+          Allocations are at least 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. The chunk directory maps a chunk id to the chunk's native base address, so an address is materialized only at use as `directory[chunk id] + word offset × 8`.
+
+          Tethers (§4.2), per-host backpointers (§4.2), anchor cells (§4.1), dynamic handles, and size-stack entries (§3.2) use segmented offsets. The value `0` — chunk `0`, word `0` — is the *untethered* sentinel. It costs no reserved memory because anchor cells are allocated only in the anchor-cell region, which never contains that location. Fixed-size payloads may occupy offset `0`.
+
+          > **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
+
+          ### 3.2 Allocation is a bump; teardown is an unmap
+          The fixed-size and anchor-cell regions are pure bump allocators: allocation advances the region's frontier, with no size classes, free lists, or coalescing. A host is a fixed-size storage slot, so overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2, §3.7); it consumes no new arena space.
+
+          The dynamic region adds exact-size reuse on top of its bump frontier. Dynamic blocks use power-of-two byte sizes beginning at **128 bytes**. Each scope maintains one LIFO **size stack** for every block size that has become reusable. To allocate a dynamic block of size `S`, the runtime first pops `size_stack[S]`; only when that stack is empty does it bump the dynamic frontier, mapping more dynamic chunks as needed. It never satisfies a request from a different size stack and never coalesces neighbouring free blocks.
+
+          Returning a dynamic block pushes its segmented offset onto the stack for that exact byte size. These stacks are shared by all dynamic types in the scope: a 128-byte block previously used by a `List<Int64>` may later hold string bytes or another list's elements. The stacks affect allocation within the scope only; they require no per-object reclamation when the scope drains.
+
+          Reclamation remains bulk. When the scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps every fixed-size, dynamic, and anchor-cell chunk owned by the scope, with no reachability scan or per-object memory-reclamation pass. Anything that escaped was already placed in storage whose lifetime covers its destination host (§3.5). Logical destruction timing is unchanged — a host dies when its host, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); the underlying region memory is released together at drain.
+
+          > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
+
+          '''
+          spec = replace_once(
+              spec,
+              r"### 3\.1 Scope arenas and segmented offsets\n.*?(?=### 3\.3 Value and reference layout follow declaration order)",
+              arena_sections,
+              "spec sections 3.1-3.2",
+          )
+
+          layout_section = r'''### 3.3 Value and reference layout follow declaration order
+          Fields are laid out in declaration order. Value types are stored inline. A statically sized reference-type instance is also stored inline in a fixed-size host slot, so value-type slots and reference-type host slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and hosting semantics, not by requiring a separate indirect allocation.
+
+          A reference-type instance carries one `u32` backpointer field of anchor metadata (a segmented offset, §4.2) that remains `0` until the instance is first tethered. A dynamic core type such as `List` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
+
+          '''
+          spec = replace_once(
+              spec,
+              r"### 3\.3 Value and reference layout follow declaration order\n.*?(?=### 3\.4 Booleans may be packed)",
+              layout_section,
+              "spec section 3.3",
+          )
+
+          placement_and_dynamic = r'''### 3.5 Statically sized storage uses the fixed-size region
+          Placement is an implementation decision, not a language-visible property. The arena model places every materialized, statically sized scope slot — value-type storage, a reference-type host, or a dynamic type's fixed-size handle — inline in that scope's fixed-size region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement, but reference types do not require a separate heap allocation merely because they carry identity.
+
+          When a reference-type instance is rehosted into a longer-lived destination, its statically sized inline bytes are copied into the destination host's fixed-size slot (§3.7). A dynamic backing store is semantically owned by the current host. The compiler **MUST** place that store in a dynamic region whose lifetime covers every destination into which the handle can be rehosted, so rehosting transfers ownership of the same backing store without copying it. Only growth of the dynamic value may relocate the backing store (§3.6).
+
+          Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and tethers resolve identically regardless of physical placement (§4), because a tether follows the host's anchor rather than a fixed address.
+
+          > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+
+          ### 3.6 Handle-typed core reference types have fixed footprint
+          The core dynamically-sized reference types — `List`, `String`, and similar types — are represented as fixed-size **handles**. A handle records the backing store's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+
+          A type that contains a handle-typed field therefore stays statically sized:
+
+          ```zane
+          type Inventory = #struct {
+              items List<Item>;   // fixed-size handle inline; elements in the dynamic region
+              count Int;
+          }
+          ```
+
+          Dynamic block sizes are byte-based rather than element-type-based. A new list starts with a **128-byte block** — equivalent to sixteen 64-bit words — regardless of `T`. Its element capacity is `floor(block_bytes / stride(T))`. If one element does not fit in 128 bytes, the initial block is the smallest power-of-two block that can hold one element. Keeping the byte classes common allows blocks to be reused across lists with different element types and across other dynamic core types.
+
+          A list grows according to the following rules:
+
+          1. When its capacity is exhausted, the requested block size is exactly twice its current block size.
+          2. The allocator first checks the size stack for that doubled size. If a block is available, it is popped and the live elements are relocated into it.
+          3. If that stack is empty and the current backing store is the dynamic frontier allocation with enough contiguous room to double, the frontier is bumped by the additional bytes and the store grows in place.
+          4. Otherwise, the doubled block is allocated by bumping the dynamic frontier, mapping more dynamic chunks as needed, and the live elements are relocated into it.
+          5. After relocation, the handle's backing-store offset and size class are updated and the old block's offset is pushed onto the size stack for its old byte size.
+
+          Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. Guests to the list remain valid because they reach the list's host, whose fixed-size handle now names the current backing store.
+
+          Dynamic chunks and all power-of-two blocks begin at cache-line-aligned addresses. Because the minimum block is 128 bytes and every larger block doubles, both frontier allocations and reused blocks preserve cache-line alignment without mixing backing stores into fixed-size chunks.
+
+          > **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
+
+          '''
+          spec = replace_once(
+              spec,
+              r"### 3\.5 Reference-type instances are placed in their scope's arena\n.*?(?=### 3\.7 Moving a value reuses the destination slot)",
+              placement_and_dynamic,
+              "spec sections 3.5-3.6",
+          )
+
+          spec = spec.replace(
+              "Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md) §1.4), so the destination always outlives the source and its slot already exists. A move into a higher scope copies the inline bytes into the destination scope's arena — a promotion (§3.5). Because handle-typed fields (§3.6) keep the moved footprint small, a move relocates only the inline bytes — a handle's backing store never moves. If the moved value is tethered, the move also updates its one anchor cell (§4.5), never the tethers themselves.",
+              "Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md) §1.4), so the destination always outlives the source and its slot already exists. A move into a higher scope copies the inline bytes into the destination scope's fixed-size region — a promotion (§3.5). Because handle-typed fields (§3.6) keep the moved footprint small, rehosting copies only the handle and transfers ownership of the same backing store; rehosting itself never relocates that store. A dynamic store changes address only through the growth procedure in §3.6. If the moved value is tethered, the move also updates its one anchor cell (§4.5), never the tethers themselves.",
+          )
+
+          anchor_section = r'''### 4.1 The anchor cell
+          Tethers are tracked through per-host **anchor cells** rather than one shared table. An anchor cell is a single **`u32`** holding the current segmented offset (§3.1) of one hosted object; it stores nothing else.
+
+          Anchor storage is **scope-local**, never global. Each scope owns a dedicated anchor-cell region — a separate lazy chunk chain from both its fixed-size and dynamic regions. A scope that never creates a guest allocates no anchor chunk. The first tether to a host bump-allocates its cell in that scope's anchor region (§4.3); minting another cell is one bump and never resizes a monolithic table.
+
+          Keeping cells out of the other two streams preserves dense fixed-size layout and prevents dynamic-buffer history from affecting anchor placement. The region remains compact and heavily reused while live, and all of its chunks disappear with the scope in the same bulk unmap as the other regions.
+
+          > **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
+
+          '''
+          spec = replace_once(
+              spec,
+              r"### 4\.1 The anchor cell\n.*?(?=### 4\.2 Tethers are segmented offsets, not pointers)",
+              anchor_section,
+              "spec section 4.1",
+          )
+
+          spec_path.write_text(spec)
+
+          story_path = Path("stories/memory.md")
+          story = story_path.read_text()
+
+          placement_story = r'''The opened door is placement. Identity does not require a second heap object: a materialized value slot and a statically sized reference-type host can sit directly beside each other in the scope's fixed-size region. The reference type differs because it carries hosting identity and a backpointer, not because its bytes must be indirect. Dynamic size is kept from leaking upward in the same way: `List`, `String`, and similar types are fixed-size handles inline with the ordinary slots, while only their backing stores occupy the scope's separate dynamic region ([§3.3](../spec/memory.md#33-value-and-reference-layout-follow-declaration-order), [§3.6](../spec/memory.md#36-handle-typed-core-reference-types-have-fixed-footprint)). That separation is what lets a type containing a list remain statically sized and what prevents a growing buffer from shifting any neighbouring value or host.
+
+          Placement remains unobservable. The compiler may keep a value in a register or choose the lifetime region that already covers a later rehosting, provided destruction and guest resolution are unchanged. In particular, a dynamic backing store belongs semantically to its current host but is placed in a dynamic region that outlives every host it can be moved into. Rehosting therefore copies only the fixed-size handle and transfers ownership of the same store; only the container's own growth operation relocates its elements. The cost is the same boundary the earlier design already accepted: raw addresses and layout introspection cannot be language-visible facts if the compiler is free to make these choices.
+
+          '''
+          story = replace_once(
+              story,
+              r"The opened door is placement\..*?(?=## The kinds collapse into one axis, and `this` becomes a borrow)",
+              placement_story,
+              "story placement chapter ending",
+          )
+
+          allocator_story = r'''## When the free stacks fragment, and the arena takes the scope
+
+          The allocator first used size-indexed free stacks for everything: round a request, pop the matching stack, and bump a global frontier only when that stack was empty. The operation was O(1), but the global policy let each class hoard memory from every other class. A program could run out of 32-byte slots while 16-byte and 64-byte stacks held abundant space, and borrowing a larger slot merely exchanged external fragmentation for internal waste.
+
+          Scope arenas removed that failure from ordinary storage. Fixed-size values and hosts have stable slots whose lifetimes already match a lexical scope, so their region needs only a frontier; anchor cells have the same append-and-drain shape in their own region. Neither benefits from individual reuse. Overwriting a host reuses its existing slot, and draining the scope unmaps both regions whole.
+
+          Resizable backing stores are the exception the pure bump story had hidden. A list that doubles from 128 to 256 bytes may abandon the old 128-byte block while the scope continues for a long time. Leaving every old buffer stranded until drain makes repeated growth consume memory monotonically, while mixing those buffers among fixed-size slots makes the dense layout depend on container history. The answer was not to restore one global allocator, but to give each scope a third, dynamic region and confine exact-size reuse to it ([`memory.md` §3.1](../spec/memory.md#31-scope-arenas-and-segmented-offsets)). Fixed-size, dynamic, and anchor allocations use distinct lazy chunk chains; no chunk contains more than one region, and a scope that never creates dynamic data pays for no dynamic chunk.
+
+          The dynamic region keeps a LIFO stack for each power-of-two byte size, beginning at 128 bytes. Every request checks its exact size stack first and bumps the dynamic frontier only when that stack is empty. There is still no coalescing and no borrowing from a neighbouring class. The important difference from the rejected allocator is scope: these stacks recycle only the backing stores whose churn occurs inside one lifetime, and every stack and chunk disappears together when that scope drains.
+
+          Byte size, rather than element count, defines the classes. A new list asks for 128 bytes — sixteen 64-bit words — whether it stores bytes, integers, or larger records; its capacity is whatever number of `T` elements fit. If one element is larger, the first block is simply the smallest power of two that can contain it. The common byte classes are what make reuse broad: a block returned by one `List<T>` can serve another element type, a string, or any other compatible dynamic core value.
+
+          Growth doubles the block size. The allocator first looks for a reusable block of the doubled size. If none exists and the current buffer is the frontier allocation with room behind it, the frontier advances and the list grows in place. Otherwise a doubled block is bump-allocated at the frontier, the elements move, the handle changes its offset, and the old block is pushed onto its old-size stack. The free stack is therefore the first choice and the frontier the fallback — including the in-place case, which is just a frontier bump that happens not to change the address.
+
+          This reintroduces size-class fragmentation, but only in the one region whose objects genuinely change size, with powers of two that match the doubling policy and a fixed 128-byte floor that maximizes cross-type reuse. The fixed-size and anchor regions retain the arena's strongest property: no free lists, no holes from reassignment, and one bulk unmap at scope drain. The arena did not abolish free stacks everywhere; it confined them to the place where their reuse is worth their fragmentation.
+
+          '''
+          story = replace_once(
+              story,
+              r"## When the free stacks fragment, and the arena takes the scope\n.*?(?=## The last table problem, and the segmented offset)",
+              allocator_story,
+              "story allocator chapter",
+          )
+
+          story = story.replace(
+              "So the fix was not to leave the arena but to stop mixing two things inside it. Cells get their own **region** — a separate chunk chain in the same scope arena, addressed by the same segmented offsets, bump-allocated and bulk-unmapped exactly like the payload region, just not braided through it ([`memory.md` §4.1](https://github.com/zane-lang/spec/blob/2caab48a9f4bafda32d67c3bb902908aea1813ab/spec/memory.md#41-the-anchor-cell)). Payload scans go back to full density because the payload stream holds only payloads, and a payload's position no longer depends on what was tethered before it, so the alignment the compiler wants is the compiler's again. The cells, gathered into their own region, are still compact and still hot — a tether resolution reads a cell from a dense, cache-resident run, just not from the same line as the payload it will then visit. It is arenas the whole way down: two streams, one drain.",
+              "So the fix was not to leave the arena but to separate the things with different allocation behaviour. The scope now has three regions: fixed-size slots, dynamic backing stores, and anchor cells, each with its own lazy chunk chain and the same segmented-offset directory ([`memory.md` §3.1](../spec/memory.md#31-scope-arenas-and-segmented-offsets), [§4.1](../spec/memory.md#41-the-anchor-cell)). Fixed-size scans stay dense because neither cells nor resizable buffers are braided through them; dynamic growth can recycle abandoned blocks without punching holes among hosts; and cells remain compact and hot in their own run. It is arenas the whole way down: three streams, one drain.",
+          )
+
+          sentinel_story = r'''## The sentinel that costs nothing, and the buffer that wanted a line
+
+          Separating anchor cells made the zero sentinel free. A tether or backpointer value of `0` means “untethered,” but those values name only anchor cells, and anchor cells live in their own region where chunk `0`, word `0` is never a cell. The fixed-size region may therefore begin at offset zero with no reserved gap ([`memory.md` §3.1](../spec/memory.md#31-scope-arenas-and-segmented-offsets)). The sentinel is protected by region identity, not by wasting the first slot.
+
+          Dynamic buffers then asked for a stronger alignment guarantee. They are streamed, copied during growth, and commonly contain elements whose access pattern spans many cache lines. Rather than align an arbitrary buffer after an arbitrary fixed-size payload, the dedicated dynamic region starts from its own chunk boundary and allocates only power-of-two blocks beginning at 128 bytes. Every frontier block is therefore cache-line aligned, and every block later popped from a size stack preserves that alignment ([`memory.md` §3.6](../spec/memory.md#36-handle-typed-core-reference-types-have-fixed-footprint)).
+
+          This is another benefit of refusing to mix regions on one chunk. Small inline values keep ordinary 8-byte alignment without paying cache-line padding, while dynamic backing stores receive cache-line alignment structurally. A scope with no dynamic values maps no dynamic chunk, so the stronger alignment carries no idle page cost. Zero remains a usable fixed-size address, and buffers get the geometry they need without making neighbouring object placement depend on allocation history.
+
+          '''
+          story = replace_once(
+              story,
+              r"## The sentinel that costs nothing, and the buffer that wanted a line\n.*?(?=## Two vocabularies: host and guest above anchor and tether)",
+              sentinel_story,
+              "story sentinel chapter",
+          )
+
+          story_path.write_text(story)
+          PY
+
+      - name: Commit generated update
+        shell: bash
+        run: |
+          rm .github/workflows/apply-memory-region-update.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add spec/memory.md stories/memory.md .github/workflows/apply-memory-region-update.yml
+          git commit -m "Specify arena regions and dynamic backing-store reuse"
+          git push
