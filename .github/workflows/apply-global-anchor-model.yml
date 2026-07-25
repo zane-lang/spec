@@ -1,0 +1,256 @@
+name: Apply global anchor model
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/apply-global-anchor-model.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-host-overwrite-reuse
+          fetch-depth: 0
+
+      - name: Update memory spec and story
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def sub(text, pattern, replacement, label):
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if count != 1:
+                  raise RuntimeError(f"{label}: expected one replacement, got {count}")
+              return updated
+
+          spec_path = Path("spec/memory.md")
+          spec = spec_path.read_text()
+
+          spec = spec.replace(
+              "- **`Regioned arena placement`.** Every scope owns separate fixed-size, dynamic-backing-store, and anchor-cell regions. Statically sized storage is placed inline in the fixed-size region; resizable data uses the dynamic region (see §3).",
+              "- **`Regioned arena placement`.** Every scope owns separate fixed-size and dynamic-backing-store regions. Statically sized storage is inline in the fixed-size region; resizable data uses the dynamic region. Anchors live outside scope arenas in one runtime-global fixed-slot pool (see §3 and §4).",
+          )
+
+          guest_only = """### 2.4 `&` is a guest: non-hosting storage
+`&` creates a **guest**: non-hosting storage that points at a **reference type** only. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving guest needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored guest. Writing `&Node` names a guest to a reference type; a bare `&Int` over a value type is ill-formed.
+
+An explicitly declared `&T` slot is **guest-only**: it stores only a tether and can never directly host a `T`. A slot declared as `T` is **host-capable**. After its value is rehosted, that same full-size slot may remain readable in guest state, but it is still host-capable and may later be overwritten with a new `T`. The two states have the same guest access behavior but different storage capacity.
+
+A guest may be declared as:
+"""
+          spec = sub(
+              spec,
+              r"### 2\.4 `&` is a guest: non-hosting storage\n.*?A guest may be declared as:\n",
+              guest_only,
+              "guest-only versus host-capable storage",
+          )
+
+          arena = """### 3.1 Scope arenas, global anchors, and segmented offsets
+Each lexical scope owns an **arena** made from two independent allocation regions:
+
+- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles of dynamic core types.
+- The **dynamic region** stores the resizable backing stores behind handles such as `List` and `String`.
+
+Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region; fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next chunk id, and makes it current.
+
+Anchors do not belong to any scope arena. The runtime owns one **global anchor pool**, itself a lazy chain of anchor-only pages. Every anchor slot has the same fixed width, and anchor pages never contain fixed-size payloads or dynamic backing stores. The pool maps its first page only when the program creates its first guest and adds further pages only as its frontier fills.
+
+```text
+scope arena                         runtime-global anchor pool
+────────────────────────────       ──────────────────────────
+fixed-size region   dynamic region anchor page → anchor page → ...
+[F1] → [F2]         [D1] → [D2]
+```
+
+An ordinary dynamic allocation never straddles a chunk boundary. A block of at most 1 MiB is wholly contained in one dynamic chunk. A larger power-of-two block is an **oversized span**: a dedicated contiguous OS mapping made from consecutive dynamic chunks, all belonging exclusively to that block. Its handle stores the segmented offset of the first byte and its size class; indexing continues across the contiguous mapping by ordinary byte offset. Returning an oversized span records only its base offset in the exact-size stack, and the complete span remains available for reuse until the scope drains.
+
+Scope chunks and global anchor pages draw ids from the same chunk directory, so payload locations, dynamic handles, tethers, backpointers, anchor cells, and size-stack entries all use one **`u32` segmented offset**:
+
+```
+   u32 segmented offset
+  ┌───────────────┬─────────────────────────┐
+  │   chunk id    │   in-chunk word offset   │
+  │  (high bits)  │       (low bits)         │
+  └───────────────┴─────────────────────────┘
+```
+
+Allocations are at least 8-byte aligned, so the low bits count 8-byte words. A 1 MiB chunk contains 2¹⁷ words; 17 low bits address a slot and 15 high bits select up to 32768 live chunks, for 32 GiB of addressable mapped storage. The chunk directory maps a chunk id to its native base.
+
+The value `0` is the **untethered** sentinel for tethers and backpointers. The global anchor pool never assigns segmented offset `0`; its first usable anchor slot therefore has a nonzero identity. Payload storage may still occupy segmented offset `0`, because `0` is interpreted as a sentinel only where an anchor identity is expected.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
+
+### 3.2 Allocation, reuse, and teardown
+The fixed-size region is a pure bump allocator. A host is a fixed-size storage slot, so overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2, §3.7); it consumes no new arena space.
+
+The dynamic region adds exact-size reuse on top of its bump frontier. Dynamic blocks use power-of-two byte sizes beginning at **128 bytes**. Each scope maintains one LIFO size stack for each block size that has become reusable. Allocation checks `size_stack[S]` first and bumps the dynamic frontier only when that exact stack is empty. It never borrows from another size class and never coalesces neighbouring blocks.
+
+The global anchor pool has one LIFO **free-anchor stack**, because every anchor slot has the same size. Creating an anchor first pops that stack; if it is empty, allocation bumps the global anchor frontier and maps another anchor page when necessary. Returning an anchor pushes its segmented offset onto the same stack.
+
+When a scope drains, its fixed-size and dynamic chunks are unmapped in bulk. Global anchor pages are not tied to scope teardown: an anchor slot is returned individually when its hosting lifetime ends (§4.6). The runtime may unmap a wholly free anchor page, but slot reuse does not depend on page reclamation.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
+
+"""
+          spec = sub(
+              spec,
+              r"### 3\.1 Scope arenas and segmented offsets\n.*?(?=### 3\.3 Value and reference layout follow declaration order)",
+              arena,
+              "arena and global anchor layout",
+          )
+
+          list_growth = """A list grows according to the following rules:
+
+1. When capacity is exhausted, the requested block size is exactly twice the current block size.
+2. The allocator first checks the size stack for that doubled size. If a block or oversized span is available, it is popped and the live elements are relocated into it.
+3. If that stack is empty, the current backing store is the dynamic frontier allocation, the doubled size is at most 1 MiB, and the additional bytes fit before the current chunk boundary, the frontier is bumped and the store grows in place.
+4. Otherwise, a doubled block of at most 1 MiB is bump-allocated wholly inside one dynamic chunk. A larger block is allocated as a dedicated oversized span (§3.1). The live elements are relocated into the new block or span.
+5. After relocation, the handle's backing-store offset and size class are updated and the old block's base offset is pushed onto the stack for its exact old byte size.
+
+No block grows in place across a chunk boundary, and an oversized span is never extended in place; its next growth relocates into a doubled span after checking that exact-size stack first. Relocation follows the element type's ordinary move rules. Guests to the list remain valid because they reach the list's host, whose fixed-size handle names the current backing store.
+
+Dynamic chunks, ordinary blocks, and oversized spans begin at cache-line-aligned addresses. The 128-byte minimum and power-of-two growth preserve that alignment for both frontier allocations and reused blocks.
+"""
+          spec = sub(
+              spec,
+              r"A list grows according to the following rules:\n.*?The 128-byte minimum.*?reused blocks\.\n|A list grows according to the following rules:\n.*?without mixing backing stores into fixed-size chunks\.\n",
+              list_growth,
+              "list growth including oversized spans",
+          )
+
+          anchors = """### 4.1 The global anchor cell
+Tethers are tracked through **anchor cells** in the runtime-global anchor pool (§3.1), not through scope-local tables. An anchor cell is one `u32` containing the hosted value's current segmented offset. The anchor has one stable identity for the complete hosting lineage, even when that value is rehosted across scopes.
+
+All anchor slots have the same fixed size. The pool therefore uses one free-address stack and one bump frontier rather than size classes. Pages are allocated lazily and contain anchors only.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
+
+### 4.2 Tethers are segmented offsets, not pointers
+A tether is a `u32` segmented offset (§3.1) naming one global anchor cell. A reference-type payload carries one `u32` backpointer initialized to `0`; once an anchor exists, the backpointer stores that same anchor identity. Guests and backpointers never store the payload address directly.
+
+An explicitly declared `&T` contains only this tether. A host-capable `T` slot that has been rehosted may use the same tether representation while in guest state, but retains enough storage to host a future `T` (§2.4).
+
+The minimum machinery for one tethered value is 12 bytes of logical data: a 4-byte tether, the 4-byte anchor cell, and the 4-byte payload backpointer. Additional guests add one tether each; rehosting adds no cell and no forwarding metadata.
+
+### 4.3 Anchors are created lazily
+A hosting lineage that never gains a guest consumes no anchor: its payload backpointer remains `0`. The first guest allocation pops the global free-anchor stack if possible, otherwise bumps the global anchor frontier. The runtime writes the payload's current location into the cell and the cell's identity into the payload backpointer. Every later guest copies that identity.
+
+### 4.4 Resolving a tether
+Resolving a tether uses the chunk directory to locate the global anchor cell, reads the payload's current segmented offset from the cell, resolves that offset through the same directory, and accesses the payload. The path is always:
+
+```text
+guest tether → global anchor cell → current payload → field
+```
+
+There are no forwarding cells and no promotion-dependent extra hops.
+
+### 4.5 Moves, overwrites, and rehosting keep one anchor
+A host overwrite, an in-scope move, and a cross-scope rehosting all preserve the same anchor identity.
+
+- **Overwrite:** if the host already has an anchor, the replacement payload inherits that backpointer and the cell is updated to the replacement's location. Existing guests therefore observe the host's new occupant.
+- **Move or rehosting:** the destination payload inherits the source payload's backpointer, the one global cell is updated to the destination location, and the destination host assumes responsibility for eventual anchor teardown. The source host-capable slot becomes a guest to the same cell. No anchor is copied, moved, reset, or recreated.
+- **Untethered values:** a payload whose backpointer is `0` moves with `0` and still allocates no anchor.
+
+Every operation is O(1) in the number of guests. Later moves update the same cell, so guests created before and after promotion remain coherent without repointing or forwarding.
+
+### 4.6 Hosting-lifetime end returns the anchor
+An anchor is returned to the global free-anchor stack when its **hosting lifetime** ends. Destroying only the current occupant during an overwrite does not end that lifetime, because the host continues and existing guests follow the replacement. Rehosting transfers teardown responsibility to the destination host; the old host is now only a guest.
+
+At the actual end of the hosting lineage, lexical scope rules guarantee that every guest capable of naming the anchor has already ceased to exist ([`lifetimes.md`](lifetimes.md) §1). The runtime may therefore recycle the slot immediately. No generation counter, delayed reuse, or ABA protection is required: a stale guest is not a representable program state.
+
+### 4.7 Why tethers never dangle
+A dangling or misdirected tether would require a guest to outlive its host, an anchor to move, or an anchor slot to be reused while an old guest remains. The model forbids all three. Scope checking proves the first impossible; the global pool gives each live hosting lineage one immovable anchor identity; and the same scope rule makes immediate reuse safe after teardown.
+
+### 4.8 Resolution and allocation cost
+Tether resolution pays one dependent anchor-cell load beyond direct host access. Rehosting does not add forwarding hops. The global pool may require synchronization when allocating or returning slots; implementations may use thread-local anchor caches backed by the same global free stack without changing semantics.
+
+---
+
+"""
+          spec = sub(
+              spec,
+              r"### 4\.1 The anchor cell\n.*?(?=## 5\. Language Comparisons)",
+              anchors,
+              "global anchor semantics",
+          )
+
+          spec = spec.replace(
+              "| Allocation strategy | per-scope bump arenas, bulk teardown | runtime-managed | allocator-dependent | allocator-dependent |",
+              "| Allocation strategy | per-scope fixed/dynamic arenas plus a global recyclable anchor pool | runtime-managed | allocator-dependent | allocator-dependent |",
+          )
+          spec_path.write_text(spec)
+
+          story_path = Path("stories/memory.md")
+          story = story_path.read_text()
+
+          allocator_story = """## When the free stacks fragment, and the arena takes the scope
+
+The allocator first used size-indexed free stacks for everything. That made every size class hoard memory from every other class, so the system could exhaust one class while neighbouring stacks held unusable space. Scope arenas removed that failure from ordinary fixed-size storage: values and hosts have stable slots and are served by a pure frontier, then released together when the scope drains.
+
+Resizable backing stores remain the exception. A list abandons old blocks as it doubles, so each scope gives dynamic data its own page chain and exact-size power-of-two stacks. Allocation checks the corresponding stack first and bumps the frontier only when it is empty. Fixed-size and dynamic allocations never share a page, and a scope that uses no dynamic value maps no dynamic page.
+
+A new list begins with 128 bytes regardless of element type, making the size classes reusable across lists, strings, and other dynamic values. Growth doubles the byte size. Ordinary blocks stay within one 1 MiB page; larger allocations use dedicated contiguous oversized spans. Both ordinary blocks and spans return to their exact-size stack after relocation.
+
+Anchors are different again: every cell has exactly the same size. They therefore need neither per-scope ownership nor size classes — one runtime-global free-address stack is sufficient. The final design uses the allocator that fits each lifetime shape: pure bump for fixed slots, exact-size reuse for resizable buffers, and one fixed-slot pool for anchors.
+
+"""
+          story = sub(
+              story,
+              r"## When the free stacks fragment, and the arena takes the scope\n.*?(?=## The last table problem, and the segmented offset)",
+              allocator_story,
+              "story allocator rationale",
+          )
+
+          global_story = """## The last table problem, and the segmented offset
+
+Anchors need stable identities even while their payloads move. A monolithic resizable array would eventually copy every cell; raw native pointers would keep cells stable but double the link width. Segmented `u32` offsets solve both: anchor pages may grow independently, while every tether and backpointer remains four bytes and resolves through the shared chunk directory.
+
+The important correction was ownership. Anchors were briefly made scope-local so they could disappear with an arena, but promotion exposed the flaw: moving a cell changes the offset stored in every existing guest, while creating a second cell gives one payload two paths that later moves cannot both update through a single backpointer.
+
+The cleaner answer is one runtime-global anchor pool. Rehosting changes only the payload offset stored in the existing cell. Guests from the source scope and guests created in the destination scope all retain the same anchor identity, so no repointing, forwarding chain, or re-anchoring is required.
+
+The pool is not one fixed-capacity page. It grows by adding anchor-only pages, and because every slot is identical it maintains one free-address stack. The first guest pops that stack or bumps the frontier; the end of the hosting lifetime pushes the address back.
+
+## Where the cells live, and the scan that pays for them
+
+Keeping anchors outside scope payload pages preserves dense fixed-size scans and prevents guest history from changing object alignment. It also separates anchor lifetime from whichever scope currently hosts the value: the cell follows the hosting lineage rather than residing in the source or destination arena.
+
+This does introduce individual anchor teardown, but the host already provides the exact event needed. Overwriting an occupant keeps the hosting lineage alive and reuses the same anchor. Rehosting transfers teardown responsibility to the destination. Only when the final host ends is the cell returned.
+
+Immediate reuse is safe without generations. Zane's lexical rule already proves that no guest can outlive its host, including guests in spawned work covered by water-tower lifetime extension. By the time teardown runs, no live value can still contain the old anchor identity; the ABA state is therefore unrepresentable rather than detected dynamically.
+
+The trade is global allocation coordination instead of scope-local anchor bumps. A runtime can mitigate that with thread-local caches fed by the same global stack, while the semantic model remains one stable cell per live hosting lineage.
+
+## The sentinel that costs one reserved identity, and the buffer that wanted a line
+
+Tether and backpointer value `0` means “no anchor.” The global anchor pool therefore never allocates segmented offset zero; reserving that identity is sufficient, while payload offset zero remains legal because an anchor cell may point there.
+
+Dynamic buffers keep their separate alignment rule. Their page chain begins on page boundaries and allocates power-of-two blocks from 128 bytes upward, so ordinary blocks, reused blocks, and oversized spans remain cache-line aligned without padding every small fixed-size value.
+
+"""
+          story = sub(
+              story,
+              r"## The last table problem, and the segmented offset\n.*?(?=## Two vocabularies: host and guest above anchor and tether)",
+              global_story,
+              "story global anchor model",
+          )
+          story_path.write_text(story)
+          PY
+
+      - name: Commit to PR branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add spec/memory.md stories/memory.md
+          git commit -m "Use a global recyclable anchor pool"
+          git push origin HEAD:agent/fix-host-overwrite-reuse
