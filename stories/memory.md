@@ -14,7 +14,9 @@ Single hosting wants values to move: into return slots, outer scopes, fields, an
 
 Updating guests directly was rejected because it would require enumerating them and make every move O(number of guests). The anchor reverses the cost: moves are O(1), while guest access pays one dependent cell load.
 
-The cell must remain the same cell for the complete hosting lineage. If promotion moved the cell, every guest would need repointing. If promotion created another independent cell, later moves could update one path and stale the other. A stable global cell avoids both problems: source-scope and destination-scope guests retain one identity throughout all rehosting.
+The cell must remain the same cell for the complete hosting lineage. If promotion moved the cell, every guest would need repointing. If promotion created another independent cell, later moves could update one path and stale the other. A stable global cell avoids both problems when at most one side of a move has live guests.
+
+A move whose source and destination both already have live guests is rejected. Each guest set names a different stable identity, so preserving both would require forwarding or enumerating guests. When only one side has live guests, that side's cell becomes canonical; when neither does but the source slot becomes a readable moved-from guest, the runtime lazily allocates the one cell it now needs.
 
 ## Finding the anchor, and not paying when there are no guests
 
@@ -64,7 +66,7 @@ This preserves the simple segmented-offset handle without imposing a one-page ma
 
 A monolithic growable anchor array would eventually relocate, while native pointers to individually allocated cells would make every tether and backpointer 64 bits. Segmented `u32` offsets avoid both costs. The high bits select a 1 MiB chunk and the low bits select an aligned word inside it. A small chunk directory maps that identity to a native base.
 
-Scope chunks and anchor pages use the same directory. Tethers, backpointers, payload locations, dynamic handles, and allocator free-stack entries therefore share one compact representation.
+Scope chunks and anchor pages use the same directory. Tethers, backpointers, payload locations, dynamic handles, and allocator free-stack entries therefore share one compact representation. Because the low bits count 8-byte words, each anchor uses an 8-byte-aligned physical slot: four bytes for its `u32` payload and four reserved bytes. A 1 MiB anchor page contains 131072 such slots.
 
 The value `0` is reserved as “no anchor” wherever an anchor identity is expected. Payload offset zero remains valid; only the global anchor pool refuses to issue cell identity zero.
 
@@ -74,7 +76,7 @@ Interleaving anchors with payloads makes fixed-size scans less dense and lets gu
 
 The pool is runtime-global because the cell follows the complete hosting lineage, not whichever scope currently contains the payload. Promotion updates the cell's payload offset and keeps its identity unchanged. No forwarding cell, re-anchoring, or guest repointing is needed.
 
-All anchor cells have the same size, so the pool has one free-address stack rather than size classes. Allocation pops that stack first and bumps the global frontier only when it is empty. Pages are mapped lazily.
+All anchor cells have the same physical size, so the pool has one free-address stack rather than size classes. Allocation pops that stack first and bumps the global frontier only when it is empty. Pages are mapped lazily and remain mapped until runtime shutdown, even when wholly free, so offsets retained by the stack never name unmapped or repurposed pages.
 
 The global pool does require individual anchor teardown, but the host already supplies an exact teardown event. Overwriting an occupant keeps the hosting lineage alive and retains the cell. Rehosting transfers teardown responsibility to the destination. Only the end of the final hosting lineage returns the address to the stack.
 
