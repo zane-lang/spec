@@ -272,7 +272,9 @@ Allocations are 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chun
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
 
 ### 3.2 Allocation is a bump; teardown is an unmap
-Within a scope's arena, allocation is a single frontier bump — no size classes, no free list, no coalescing. Hosts are not reclaimed one at a time: a host that dies or is overwritten mid-scope (§2.2) becomes dead space in the arena until the scope drains. Reclamation is bulk. When the scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps the scope's chunks and every byte the scope held is released at once, with no per-object teardown pass threaded through the exit. Logical destruction timing is unchanged — a host dies when its host, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain.
+Within a scope's arena, allocation is a single frontier bump — no size classes, no free list, no coalescing. A host is a fixed-size storage slot: overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2, §3.7). Overwriting therefore consumes no additional arena space.
+
+Reclamation is bulk. When the scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps the scope's chunks and every byte the scope held is released at once, with no reachability scan or per-object memory-reclamation pass threaded through the exit. Anything that escaped the scope was already promoted into its destination scope's arena (§3.5), so no surviving object remains in the drained arena. Logical destruction timing is unchanged — a host dies when its host, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is released together at drain.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
 
