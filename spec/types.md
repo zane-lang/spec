@@ -106,7 +106,7 @@ player Player<Unit> = Player("Manuel", Unit())
 completed Unit = performWork()
 ```
 
-An implementation may erase `Unit` values and fields from runtime storage. Their type-level presence and evaluation order remain observable to the type checker.
+An implementation may erase only the runtime storage of `Unit` values, including fields, array elements, and constructor results. It **MUST** still evaluate every expression that produces a `Unit` value at its original program point and in its original order. Storage erasure never removes side effects or otherwise changes observable evaluation.
 
 > **Story:** [`stories/types.md`](../stories/types.md#unit-exposes-the-package-that-wasnt-one) — "Unit exposes the package that wasn't one".
 
@@ -435,7 +435,7 @@ At one coercion site requiring destination type `T`, given an argument with stat
 4. If multiple applicable implicit constructors exist, the site is an ambiguity error.
 5. If none exist, the site is a normal type error.
 
-The bundled `core` package declares the implicit constructors from compiler concept types to the corresponding fundamental types. Literal coercion therefore follows this same algorithm rather than a separate compiler-only lowering rule.
+For candidate collection, implicit constructors declared in the bundled `core` package are automatically visible and applicable at every coercion site. They require no source import or qualification. In particular, `core` declares the implicit constructors from compiler concept types to the corresponding fundamental types, so literal coercion follows this same algorithm rather than a separate compiler-only lowering rule.
 
 ### 4.3 No chaining
 Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
