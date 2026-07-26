@@ -29,8 +29,12 @@ ReturnType?AbortType
 
 A declaration with no `?AbortType` cannot abort.
 
-### 2.2 `Void` abort type
-If failure carries no meaningful payload, the abort type is `Void`. Both `abort` and `abort Void()` are legal. The bare form is shorthand for aborting with the canonical `Void()` value.
+### 2.2 `Unit` abort type
+If failure carries no meaningful payload, the abort type is `Unit`. The abort path still carries a value explicitly:
+
+```zane
+abort Unit()
+```
 
 ### 2.3 Abortability is orthogonal to `mut`
 Abortability and mutation are independent. A method may be:
@@ -66,17 +70,15 @@ value Int = parse("42") ? err {
 }
 ```
 
-When the abort type is `Void`, the binder may be omitted:
+The binder is required even when the abort type is `Unit`:
 
 ```zane
-done Bool = tryFinish() ? {
+done Bool = tryFinish() ? ignored {
     resolve false
 }
 ```
 
-A handler may still bind the `Void` value when uniform generic code needs a name for it.
-
-There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...` or bare `abort` for `Void`.
+There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...`.
 
 ```zane
 value Int = parse(input) ? err {
@@ -104,16 +106,16 @@ Falling through a handler block is a compile-time error.
 count Int = parse("abc") ?? Int(0)
 ```
 
-### 3.4 `Void` primary returns are values
-A call whose primary return type is `Void` produces the canonical `Void()` value. The result may be assigned or passed like any other value.
+### 3.4 `Unit` primary returns are values
+A call whose primary return type is `Unit` produces the `Unit` value returned by the callee. The result may be assigned or passed like any other value.
 
 ```zane
-completed Void = performWork()
+completed Unit = performWork()
 ```
 
 When such a call is abortable, the handler attaches to the call expression exactly as for any other primary return type.
 
-> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#payloadless-syntax-over-a-real-value) — "Payloadless syntax over a real value".
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#the-empty-door-still-carries-a-value) — "The empty door still carries a value".
 
 ### 3.5 `match` is abort-transparent
 A `match` expression passes the output of its selected arm straight up. If the arms are abortable, the whole `match` is abortable and takes a `?` (or `??`) handler exactly like any other abortable expression. Abortability is not introduced or swallowed by `match`; it simply flows through.
@@ -144,7 +146,7 @@ result Int = match token {
 | `return` | parent function | leave via the primary return path |
 | `abort` | parent function | leave via the abort path |
 
-When the primary return type is `Void`, both `resolve` and `resolve Void()` are legal. The bare form is shorthand for resolving the canonical `Void()` value.
+When the primary return type is `Unit`, the handler writes `resolve Unit()`. `resolve` always carries an explicit value.
 
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#handling-a-fork-resolve-and-why-it-isnt-assignment) — "Handling a fork: `resolve`, and why it isn't assignment".
 
@@ -286,7 +288,7 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 |---|---|---|
 | Signature order | `Error!Value` | `Value?Abort` |
 | Recovery syntax | `catch` with labeled-block patterns | `?` with `resolve`/`return`/`abort` |
-| Payload-free failure | inferred error sets and union mechanics | explicit `Void` abort type |
+| Payload-free failure | inferred error sets and union mechanics | explicit `Unit` abort type |
 | Integration with effects | no corresponding `mut`-based effect layer | abortability and effects are analyzed separately; both must be satisfied at call sites |
 
 ---
@@ -300,5 +302,5 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 | Handler paths | Must end with `resolve`, `return`, or `abort` |
 | `??` | Shorthand for resolve-with-default |
 | `resolve` | Exits only the handler block |
-| `Void` path value | `Void()` is a real primary or abort-path value; bare `resolve` and `abort` are shorthand for passing it |
+| `Unit` path value | `Unit()` is a real primary or abort-path value and is written explicitly with `return`, `resolve`, or `abort` |
 | Abort-free function | Statically guaranteed not to abort |

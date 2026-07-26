@@ -75,8 +75,9 @@ car Car()
 ```
 
 ```zane
-Void loadCar(this Boat, car Car) mut {
+Unit loadCar(this Boat, car Car) mut {
     this.cars!append(car) // legal: car is moved into this.cars at the top level of the body
+    return Unit()
 }
 ```
 
@@ -107,9 +108,10 @@ A reference-type parameter is **not part of the callee's body scope**. It behave
 This is what makes the passing rule safe. Because the parameter is not part of the body scope, the body draining never destroys the value. The body may read it, move it into a local, or pass it to a nested call; when a local that received it exits, the value is not dropped — the compiler moves it back up to the call site, and the chain repeats outward until the scope that first hosted the value drains. A value passed by hosting access therefore always outlives the call, which is what lets the caller's symbol downgrade to a live guest (§1.8) rather than a dangling one.
 
 ```zane
-Void enterMatch(player Player) {
+Unit enterMatch(player Player) {
     island Island = makeIsland()
     island!startMatch(player) // player is lent into the local island
+    return Unit()
 }
 ```
 
@@ -187,9 +189,10 @@ Player enterMatch(player Player) {
     return player
 }
 
-Void main() {
+Unit main() {
     player Player = makePlayer()
     player = enterMatch(player)            // bind to regain hosting privilege; unbound, the host floats (§1.9)
+    return Unit()
 }
 ```
 
@@ -198,7 +201,7 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
 ### 1.9 An ignored hosting result floats to the enclosing scope
-A return value need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1). An ignored value-type result, including `Void()`, is simply discarded.
+A return value need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1). An ignored value-type result, including `Unit()`, is simply discarded.
 
 Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through whatever guest it already holds (§1.8).
 

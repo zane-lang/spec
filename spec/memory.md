@@ -153,13 +153,15 @@ type Car = #struct {
 }
 
 // `&` parameter is a guest; it may be stored into an `&` field
-Void setEngine(this Car, engine &Engine) mut {
+Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine
+    return Unit()
 }
 
 // plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
-Void setSpare(this Car, engine Engine) mut {
+Unit setSpare(this Car, engine Engine) mut {
     this.spare = engine
+    return Unit()
 }
 
 // `&` parameter, read only: a reference-type object passed without consuming it
@@ -171,8 +173,9 @@ Int inspect(this Car, engine &Engine) {
 Binding a plain (swallowed) parameter into `&` storage is illegal, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call, leaving the `&` dangling:
 
 ```zane
-Void setEngineWrong(this Car, engine Engine) mut {
+Unit setEngineWrong(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: a swallowed host is not an `&` source
+    return Unit()
 }
 ```
 

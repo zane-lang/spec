@@ -53,7 +53,7 @@ All source files directly in one package directory form a single compilation uni
 
 The package must be available through the dependency rules in [`dependencies.md`](dependencies.md).
 
-No package is available without such an import. There is no ambient or automatically-imported package: every package a file uses is imported explicitly and its members are reached by the same `packageName$member` qualification. Fundamental language types are not package members; see [`types.md`](types.md) §2.6.
+No source package is available without such an import. There is no ambient or automatically-imported source package: every package a file uses is imported explicitly and its members are reached by the same `packageName$member` qualification. The compiler's bundled `core` implementation is not exposed through this package system; its fundamental type names are predeclared instead (see [`types.md`](types.md) §2.6).
 
 ### 3.2 Current-package members are unqualified
 

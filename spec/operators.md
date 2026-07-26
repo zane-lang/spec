@@ -36,7 +36,7 @@ Primitive operators are implementable and define the operator surface area:
 ### 2.2 Where operators may be defined
 Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` receiver parameter.
 
-A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. Fundamental types have no home package, so they do not by themselves grant a package permission to declare an operator; their compiler-provided operators are part of the language. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
+A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. The bundled `core` implementation is the home package of fundamental types, but source packages cannot add declarations to it; a fundamental operand therefore does not by itself grant a source package permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
 
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 
@@ -163,7 +163,7 @@ An operator token may appear only in operator position; it has no value form. Th
 | Operator vocabulary | Only the fixed built-in operator set may be overloaded; programs cannot declare new tokens or precedence. |
 | Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
-| Operator definitions | A user implementation must live in the home package of at least one user-defined operand type; fundamental-only operators are compiler-provided. |
+| Operator definitions | A source implementation must live in the home package of at least one user-defined operand type; fundamental-only operators live in the bundled `core` implementation. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Boolean logic | `and` and `or` are short-circuiting keywords rather than overloadable operators. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |

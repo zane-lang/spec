@@ -14,7 +14,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse. `struct` is a value mould; `#struct` a reference mould.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
-- **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, and `Void` belong to the language; `type` introduces a new distinct named type and `alias` an interchangeable name.
+- **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, and `Unit` belong to the language; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
 
@@ -85,13 +85,13 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 > **See also:** [`adt.md`](adt.md) for the canonical rules on `variant`, `enum`, pattern matching, and enum maps. [`adt.md`](adt.md) §3 for the full struct-versus-variant symmetry.
 
 ### 2.6 Fundamental language types
-`Int`, `Float`, `Bool`, `String`, and `Void` are **fundamental language types**. Their names are available unqualified in every source file and do not belong to a package. The compiler defines their canonical identities and lowers their operations to the storage primitives in the `@primitives$` namespace.
+`Int`, `Float`, `Bool`, `String`, and `Unit` are **fundamental language types**. Their names are available unqualified in every source file. The compiler distribution supplies their declarations through a bundled `core` implementation package. That package is not part of the source package system: programs do not import it, qualify its members, list it as a dependency, or replace it independently of the compiler version.
 
 Control-flow constructs refer to these semantic types rather than to their storage primitives. Conditions expect `Bool`, counted-loop bounds expect `Int`, and the loop variable has type `Int`; see [`control-flow.md`](control-flow.md) §2–§4. Programs never unwrap a fundamental type to feed a primitive into control flow.
 
-The compiler provides the canonical constructors and literal lowering for fundamental types. At a coercion site, a matching source literal may therefore become the expected fundamental type: `true` becomes `Bool` in a condition and `20` becomes `Int` at a counted-loop bound. Explicit `Bool(true)` and `Int(20)` construction remains legal. This literal lowering does not create general truthiness or numeric narrowing.
+The bundled `core` package defines the constructors and methods of fundamental types over storage primitives in the `@primitives$` namespace. Compiler concept types represent source literals until coercion selects one of those constructors: `true` becomes `Bool` in a condition and `20` becomes `Int` at a counted-loop bound. Explicit `Bool(true)` and `Int(20)` construction remains legal. This does not create general truthiness or numeric narrowing.
 
-`Void` is the canonical unit type. It is a zero-sized value type with exactly one value, constructed as `Void()`. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
+`Unit` is the unit type. Its bundled declaration is an empty value `struct`, so it has exactly one logical value and zero-sized storage. `Unit()` is its ordinary `core` constructor. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
 
 ```zane
 type Player<T Type> = #struct {
@@ -101,13 +101,13 @@ type Player<T Type> = #struct {
 
 Player<T>(name String, extraSettings T Type) => init{name, extraSettings}
 
-player Player<Void> = Player("Manuel", Void())
-completed Void = performWork()
+player Player<Unit> = Player("Manuel", Unit())
+completed Unit = performWork()
 ```
 
-An implementation may erase `Void` values and fields from runtime storage. Their type-level presence and evaluation order remain observable to the type checker.
+An implementation may erase `Unit` values and fields from runtime storage. Their type-level presence and evaluation order remain observable to the type checker.
 
-> **Story:** [`stories/types.md`](../stories/types.md#void-exposes-the-package-that-wasnt-one) — "Void exposes the package that wasn't one".
+> **Story:** [`stories/types.md`](../stories/types.md#unit-exposes-the-package-that-wasnt-one) — "Unit exposes the package that wasn't one".
 
 ---
 
@@ -369,7 +369,10 @@ type Feet = struct {
 // implicit conversion from Feet to Meters
 implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
 
-Void printDistance(d Meters) { ... }
+Unit printDistance(d Meters) {
+    ...
+    return Unit()
+}
 ```
 
 At a **coercion site** — a position whose destination type is fixed by a callable or language construct (see §4.2) — if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
@@ -425,11 +428,12 @@ Operator operands **are** coercion sites, because operators desugar to ordinary 
 At one coercion site requiring destination type `T`, given an argument with static type `U`, the compiler resolves the site locally:
 
 1. If `U` is exactly `T`, accept the argument with no insertion.
-2. If `U` is a compiler concept type and `T` is a fundamental type with matching canonical literal lowering, rewrite the argument as `T(arg)`.
-3. Otherwise, collect all visible applicable `implicit` constructors from `U` to `T`.
-4. If exactly one applicable implicit constructor exists, rewrite the argument as `T(arg)`.
-5. If multiple applicable implicit constructors exist, the site is an ambiguity error.
-6. If none exist, the site is a normal type error.
+2. Otherwise, collect all visible applicable `implicit` constructors from `U` to `T`.
+3. If exactly one applicable implicit constructor exists, rewrite the argument as `T(arg)`.
+4. If multiple applicable implicit constructors exist, the site is an ambiguity error.
+5. If none exist, the site is a normal type error.
+
+The bundled `core` package declares the implicit constructors from compiler concept types to the corresponding fundamental types. Literal coercion therefore follows this same algorithm rather than a separate compiler-only lowering rule.
 
 ### 4.3 No chaining
 Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
@@ -465,7 +469,7 @@ implicit Destination(s Source) {   // ILLEGAL: source type is a reference type
 ```
 
 ### 4.5 Coherence and the orphan rule
-An implicit constructor from type `U` to type `T` **MUST** be declared in the home package of either user-defined type. A third-party package **MUST NOT** declare an implicit constructor between two imported types. Fundamental types have no home package, so they do not by themselves grant a package permission to declare a conversion; their compiler-provided constructors are part of the language.
+An implicit constructor from type `U` to type `T` **MUST** be declared in the home package of either type. A third-party package **MUST NOT** declare an implicit constructor between two imported types. The bundled `core` implementation is the home package of fundamental types, but source packages cannot add declarations to it; a fundamental endpoint therefore does not by itself grant a source package permission to declare a conversion.
 
 This rule prevents conflicts when multiple packages independently define the same implicit conversion and ensures that the owner of at least one type controls the conversion behavior.
 
@@ -490,7 +494,10 @@ implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048
 The receiver expression (`this`) in a method call is never subject to implicit conversion. This remains true even though method calls desugar to ordinary function calls. If the receiver type does not match, the call is a type error.
 
 ```zane
-Void logDistance(this Meters) { ... }
+Unit logDistance(this Meters) {
+    ...
+    return Unit()
+}
 
 feet Feet(Float(10))
 feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
@@ -533,7 +540,7 @@ type Wrapper = struct {
 
 A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`). There is no standalone `struct Name { ... }` declaration form — a mould is a type expression that only names a type through a `type` (or `alias`) declaration.
 
-These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a user-defined type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every user-defined constructible type therefore has a name, and that name is what its constructor is called by (§3.1). The fundamental types are compiler-defined named types rather than source declarations; see §2.6.
+These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). Fundamental types follow the same declaration model inside the bundled `core` implementation; see §2.6.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
@@ -555,8 +562,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
-| Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Void`; compiler-defined, package-free, and available unqualified |
-| `Void` | Zero-sized singleton value type; `Void()` is its sole value and may be stored or used as a generic argument |
+| Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Unit`; declared by the bundled `core` implementation and available unqualified |
+| `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |

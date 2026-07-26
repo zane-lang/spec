@@ -129,9 +129,9 @@ EnumName.property FieldType [
 ## 2. Types
 
 ### 2.1 Fundamental types
-`Int`, `Float`, `Bool`, `String`, `Void`
+`Int`, `Float`, `Bool`, `String`, `Unit`
 
-These type names are part of the language and are available unqualified in every source file. They are not members of a package. See [`types.md`](types.md) §2.6 for their semantics.
+These type names are available unqualified in every source file. Their bundled `core` implementation has no source-level package qualifier or import form. See [`types.md`](types.md) §2.6 for their semantics.
 
 ### 2.2 Named types
 
@@ -252,7 +252,7 @@ ReturnType[&ParamType, ...]
 
 ```zane
 Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
-Void[Int, this Node]  // ILLEGAL: this must be the first parameter
+Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
 
 ### 2.10 The `#` reference modifier
@@ -305,7 +305,7 @@ ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { bod
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-`=> expr` returns `expr`, including when `expr` has type `Void`.
+`=> expr` returns `expr`, including when `expr` has type `Unit`.
 
 ### 3.3 Positional constructors
 
@@ -440,12 +440,14 @@ A lambda literal omits only the function name. `this` is legal only in the first
 Examples:
 
 ```zane
-element!onClick(Void(eventData EventData) {
+element!onClick(Unit(eventData EventData) {
     ...
+    return Unit()
 })
 
-element!onClick(Void(this Element, data EventData) mut {
+element!onClick(Unit(this Element, data EventData) mut {
     ...
+    return Unit()
 })
 ```
 
@@ -461,12 +463,14 @@ name ReturnType(this ReceiverType, param ParamType, ...) mut { body }
 The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
 
 ```zane
-callback Void[this Player] mut = Void(this Player) mut {
+callback Unit[this Player] mut = Unit(this Player) mut {
     this.shooting = false
+    return Unit()
 }
 
-callback Void(this Player) mut {        // shorthand for the line above
+callback Unit(this Player) mut {        // shorthand for the line above
     this.shooting = false
+    return Unit()
 }
 ```
 
@@ -487,10 +491,9 @@ Operator definitions are package-scope verb declarations whose names are operato
 
 ```zane
 return expr
-return
 ```
 
-Bare `return` is legal only in a verb whose primary return type is `Void`. See [`functions.md`](functions.md) §3.5.
+See [`functions.md`](functions.md) §3.5 for return-path requirements.
 
 ---
 
@@ -547,11 +550,11 @@ spawn functionName(args...)
 spawn receiver:methodName(args...)
 spawn receiver!methodName(args...)
 spawn functionName(args...) ? binder { ... }
-spawn receiver:methodName(args...) ? { ... }
+spawn receiver:methodName(args...) ? binder { ... }
 spawn receiver!methodName(args...) ?? fallbackExpr
 name VarType = spawn functionName(args...)
 name VarType = spawn receiver:methodName(args...) ? binder { ... }
-name VarType = spawn receiver!methodName(args...) ? { ... }
+name VarType = spawn receiver!methodName(args...) ? binder { ... }
 name VarType = spawn functionName(args...) ?? fallbackExpr
 ```
 
@@ -665,18 +668,14 @@ ReturnType?AbortType
 
 ```zane
 expr ? binder { ... }
-expr ? { ... }
 ```
 
 Every path inside the handler must end with one of:
 
 ```zane
 resolve expr
-resolve
 return expr
-return
 abort expr
-abort
 ```
 
 ### 6.3 `??` shorthand
