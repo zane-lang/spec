@@ -30,7 +30,7 @@ ReturnType?AbortType
 A declaration with no `?AbortType` cannot abort.
 
 ### 2.2 `Void` abort type
-If failure carries no payload, the abort type is `Void`. In that case `abort` is written without an argument.
+If failure carries no meaningful payload, the abort type is `Void`. Both `abort` and `abort Void()` are legal. The bare form is shorthand for aborting with the canonical `Void()` value.
 
 ### 2.3 Abortability is orthogonal to `mut`
 Abortability and mutation are independent. A method may be:
@@ -66,7 +66,7 @@ value Int = parse("42") ? err {
 }
 ```
 
-When the abort type is `Void`, the binder is omitted:
+When the abort type is `Void`, the binder may be omitted:
 
 ```zane
 done Bool = tryFinish() ? {
@@ -74,7 +74,9 @@ done Bool = tryFinish() ? {
 }
 ```
 
-There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...`.
+A handler may still bind the `Void` value when uniform generic code needs a name for it.
+
+There is no propagation-without-a-handler form. To pass failure outward, the handler itself uses `abort ...` or bare `abort` for `Void`.
 
 ```zane
 value Int = parse(input) ? err {
@@ -102,8 +104,16 @@ Falling through a handler block is a compile-time error.
 count Int = parse("abc") ?? Int(0)
 ```
 
-### 3.4 `Void` primary returns are not assignable
-Calls whose primary return type is `Void` may not be assigned to variables. When such calls are abortable, the handler still attaches to the call expression itself.
+### 3.4 `Void` primary returns are values
+A call whose primary return type is `Void` produces the canonical `Void()` value. The result may be assigned or passed like any other value.
+
+```zane
+completed Void = performWork()
+```
+
+When such a call is abortable, the handler attaches to the call expression exactly as for any other primary return type.
+
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#payloadless-syntax-over-a-real-value) — "Payloadless syntax over a real value".
 
 ### 3.5 `match` is abort-transparent
 A `match` expression passes the output of its selected arm straight up. If the arms are abortable, the whole `match` is abortable and takes a `?` (or `??`) handler exactly like any other abortable expression. Abortability is not introduced or swallowed by `match`; it simply flows through.
@@ -134,7 +144,7 @@ result Int = match token {
 | `return` | parent function | leave via the primary return path |
 | `abort` | parent function | leave via the abort path |
 
-When the primary return type is `Void`, `resolve` takes no value.
+When the primary return type is `Void`, both `resolve` and `resolve Void()` are legal. The bare form is shorthand for resolving the canonical `Void()` value.
 
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#handling-a-fork-resolve-and-why-it-isnt-assignment) — "Handling a fork: `resolve`, and why it isn't assignment".
 
@@ -290,4 +300,5 @@ Zig also keeps failure explicit and avoids stack unwinding, but the surface mode
 | Handler paths | Must end with `resolve`, `return`, or `abort` |
 | `??` | Shorthand for resolve-with-default |
 | `resolve` | Exits only the handler block |
+| `Void` path value | `Void()` is a real primary or abort-path value; bare `resolve` and `abort` are shorthand for passing it |
 | Abort-free function | Statically guaranteed not to abort |

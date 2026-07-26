@@ -10,7 +10,7 @@ This document specifies Zane's control-flow constructs: conditional branching, s
 
 Zane keeps control flow small and explicit. Branching uses `if`/`elif`/`else`, early scope exit uses `guard`, and repetition uses bounded `loop`.
 
-- **`Bool conditions`.** `if`, `elif`, and `guard` conditions are `Bool` expressions.
+- **`Bool conditions`.** `if`, `elif`, and `guard` conditions coerce to `Bool`.
 - **`Guard exits the current scope`.** `guard` leaves the enclosing lexical scope instead of introducing another nested branch.
 - **`Bounded loops`.** `loop` always has a written upper bound; Zane does not define a separate `while`.
 - **`1-based ordinals`.** Counted loops and positional indexing start at `1`, not `0`.
@@ -22,7 +22,7 @@ Zane keeps control flow small and explicit. Branching uses `if`/`elif`/`else`, e
 ### 2.1 `if` chains evaluate top to bottom
 An `if` chain evaluates its conditions from top to bottom. The first branch whose condition is `true` runs. If no prior condition is `true` and an `else` branch is present, the `else` branch runs.
 
-All `if` and `elif` conditions **MUST** have type `Bool`.
+Every `if` and `elif` condition is a coercion site with destination type `Bool`. After any applicable single-step implicit constructor is inserted, the condition **MUST** have type `Bool`. Zane defines no general truthiness rule: another type is accepted only when an applicable `implicit Bool(...)` constructor exists.
 
 ```zane
 if ready {
@@ -33,6 +33,8 @@ if ready {
     fail()
 }
 ```
+
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#control-flow-speaks-in-language-types) — "Control flow speaks in language types".
 
 ### 2.2 `elif` is the continuation form
 Zane uses the single keyword `elif` for chained conditions. `else` is the unconditional fallback branch and appears only at the end of the chain.
@@ -53,6 +55,8 @@ if firstChoice {
 
 ### 3.1 `guard` exits when its condition is true
 `guard condition` immediately exits the current lexical scope when `condition` evaluates to `true`. When the condition is `false`, execution continues with the next statement in the same scope.
+
+The condition is a coercion site with destination type `Bool`, under the same rule as `if` and `elif` (§2.1).
 
 ```zane
 {
@@ -87,7 +91,7 @@ In the example above, `print(value)` runs only when `finished` is `false`.
 ## 4. Counted Loops
 
 ### 4.1 `loop from ... to ...` is inclusive
-`loop name from start to end { ... }` iterates over an inclusive integer range. On each iteration, `name` is bound to the current `Int` value, starting at `start`, increasing by `1`, and ending at `end`.
+`loop name from start to end { ... }` iterates over an inclusive integer range. `start` and `end` are coercion sites with destination type `Int`; after coercion, both **MUST** have type `Int`. On each iteration, `name` is bound with exact type `Int`, starting at `start`, increasing by `1`, and ending at `end`.
 
 ```zane
 loop i from 1 to 3 {
@@ -97,6 +101,7 @@ loop i from 1 to 3 {
 
 The loop above visits `i = 1`, then `2`, then `3`.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#control-flow-speaks-in-language-types) — "Control flow speaks in language types".
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#counting-from-one) — "Counting from one".
 
 ### 4.2 `loop ... to ...` starts at `1`

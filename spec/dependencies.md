@@ -271,10 +271,10 @@ At a high level, dependency resolution proceeds in this order:
 The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler alone; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
 
 - The compiler is released under its own tag, so a project always builds with a known compiler. This frees the toolchain to evolve without preserving backward compatibility across versions: each project states the compiler version it builds with.
-- The standard library is **not** special, and no part of it is coupled to the toolchain tag. `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. `core` is installed like any package; a project that never adds it cannot name the core surface types.
+- The standard library is **not** special, and no part of it is coupled to the toolchain tag. `std` and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. Fundamental language types are part of the language rather than a library dependency; see [`types.md`](types.md) §2.6.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#cutting-core-loose-from-the-toolchain) — "Cutting core loose from the toolchain" explains why `core` is an ordinary package rather than a toolchain-coupled one.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".
 
 ---
 

@@ -292,8 +292,8 @@ When an instance escapes — it is moved into a longer-lived host in a parent sc
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 
-### 3.6 Handle-typed core reference types have fixed footprint
-The core dynamically-sized reference types — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single segmented offset) whose dynamic backing store lives in the arena. The handle occupies a statically known footprint wherever it is stored.
+### 3.6 Handle-typed dynamic reference types have fixed footprint
+Dynamically-sized reference types such as `List` and `String` are represented as a fixed-size **handle**: a small header (or single segmented offset) whose dynamic backing store lives in the arena. The handle occupies a statically known footprint wherever it is stored.
 
 A type that contains a handle-typed field therefore stays statically sized. A type holding a `List` field does not become dynamically sized; it stores the fixed handle inline, and only the backing store behind the handle is a separate arena allocation.
 

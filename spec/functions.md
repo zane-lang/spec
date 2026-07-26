@@ -173,14 +173,35 @@ Functions may access only fields whose names do not begin with `_`. This rule is
 Functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied verbs
-A verb that returns a value may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
+A verb may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
 
 ```zane
 Int double(value Int) => value * 2
 Int scaledId(this Node, factor Int) => this._id * factor
+Void noOperation() => Void()
 ```
 
-`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`. Because the shorthand always returns its expression, it is illegal for declarations whose return type is `Void`.
+`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`.
+
+### 3.5 `Void` completion
+A verb whose primary return type is `Void` may complete in any of three equivalent ways:
+
+```zane
+Void implicitCompletion() {
+}
+
+Void bareReturn() {
+    return
+}
+
+Void explicitReturn() {
+    return Void()
+}
+```
+
+Reaching the end of the body and a bare `return` both return the canonical `Void()` value. This shorthand applies only to the fundamental `Void` type. A user-defined empty value type still requires an explicit returned value because its constructor may execute arbitrary code.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#the-one-value-return-door) — "The one-value return door".
 
 ---
 
@@ -231,10 +252,10 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 ### 6.1 Unqualified method lookup
 For `receiver:methodName(...)` or `receiver!methodName(...)`, the compiler resolves candidates in this order:
 
-1. the receiver type's home package
+1. the receiver type's home package, or its compiler-provided method set when the receiver type is fundamental
 2. the current package
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's home package first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
 ### 6.2 Qualified method calls
 Cross-package extension methods are written explicitly:
@@ -372,6 +393,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate state reachable through `this` |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
+| `Void` completion | Fallthrough and bare `return` return `Void()`; explicit `return Void()` is also legal |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` method parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
@@ -381,5 +403,5 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
-| Unqualified method lookup | Searches home package, then current package |
+| Unqualified method lookup | Searches the receiver's home package or fundamental method set, then the current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |
