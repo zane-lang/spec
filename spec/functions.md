@@ -188,6 +188,7 @@ Unit noOperation() => Unit()
 `=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`.
 
 ### 3.5 Block-bodied verbs return explicitly
+
 Every block-bodied verb must return a value explicitly on every returning path, including a verb whose return type is `Unit`:
 
 ```zane

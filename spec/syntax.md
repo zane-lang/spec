@@ -129,6 +129,7 @@ EnumName.property FieldType [
 ## 2. Types
 
 ### 2.1 Fundamental types
+
 `Int`, `Float`, `Bool`, `String`, `Unit`
 
 These type names are available unqualified in every source file. Their bundled `core` implementation has no source-level package qualifier or import form. See [`types.md`](types.md) §2.6 for their semantics.

@@ -30,6 +30,7 @@ ReturnType?AbortType
 A declaration with no `?AbortType` cannot abort.
 
 ### 2.2 `Unit` abort type
+
 If failure carries no meaningful payload, the abort type is `Unit`. The abort path still carries a value explicitly:
 
 ```zane
@@ -107,6 +108,7 @@ count Int = parse("abc") ?? Int(0)
 ```
 
 ### 3.4 `Unit` primary returns are values
+
 A call whose primary return type is `Unit` produces the `Unit` value returned by the callee. The result may be assigned or passed like any other value.
 
 ```zane

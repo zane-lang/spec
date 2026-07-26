@@ -85,6 +85,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 > **See also:** [`adt.md`](adt.md) for the canonical rules on `variant`, `enum`, pattern matching, and enum maps. [`adt.md`](adt.md) §3 for the full struct-versus-variant symmetry.
 
 ### 2.6 Fundamental language types
+
 `Int`, `Float`, `Bool`, `String`, and `Unit` are **fundamental language types**. Their names are available unqualified in every source file. The compiler distribution supplies their declarations through a bundled `core` implementation package. That package is not part of the source package system: programs do not import it, qualify its members, list it as a dependency, or replace it independently of the compiler version.
 
 Control-flow constructs refer to these semantic types rather than to their storage primitives. Conditions expect `Bool`, counted-loop bounds expect `Int`, and the loop variable has type `Int`; see [`control-flow.md`](control-flow.md) §2–§4. Programs never unwrap a fundamental type to feed a primitive into control flow.
@@ -407,11 +408,12 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a function call
 - Positional arguments of a method call (the receiver is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
+- Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr }`
 - Condition expressions of `if`, `elif`, and `guard`, whose destination type is `Bool`
 - The `start` and `end` expressions of a counted `loop`, whose destination type is `Int`
 
-A field-constructor call entry fills the constructor's declared slot, exactly as a positional argument fills a slot whose type is fixed by the callee's signature, so the two coerce alike. A control-flow expression fills a slot fixed by the language instead: `Bool` for a condition and `Int` for a counted-loop bound.
+Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. A control-flow expression fills a slot fixed by the language instead: `Bool` for a condition and `Int` for a counted-loop bound.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 

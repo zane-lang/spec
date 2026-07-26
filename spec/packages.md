@@ -14,7 +14,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`Declaration check`.** Every source file declares that package name, allowing the compiler to detect a file copied or moved into the wrong directory.
 - **`One compilation unit`.** All source files in a package compile together without source-order dependencies.
 - **`Explicit cross-package access`.** An import makes one package namespace available to one source file; its members remain qualified as `packageName$member`.
-- **`No implicit packages`.** No package is available without an import, and none injects unqualified names. Every package a file uses is imported explicitly and reached by qualification.
+- **`No implicit source packages`.** No source package is available without an import, and none injects unqualified names. The bundled `core` implementation is outside the source package and manifest system; it provides the predeclared fundamental names.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
 
 ---
@@ -116,7 +116,7 @@ State that changes over time must live in a value, such as a `struct` or referen
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |
-| Implicit packages | None; every package requires an explicit import |
+| Implicit source packages | None; every source package requires an explicit import; bundled `core` instead provides predeclared fundamental names outside the source package and manifest system |
 | Imported member access | Always qualified as `packageName$member` |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
