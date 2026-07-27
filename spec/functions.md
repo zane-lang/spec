@@ -59,14 +59,16 @@ A write to `this` lands on the caller's object; how `this` reaches the caller di
 - For a **reference-type** receiver, `this` is an implicit **`&` reference** to the object (never swallowed). A `mut` method mutates through it as through any `&`, and `this` composes with the `&` system — it may be passed where an `&T` is expected.
 
 ```zane
-Void setScale(this Node, scale Float) mut {   // reference receiver
+Unit setScale(this Node, scale Float) mut {   // reference receiver
     this.scale = scale
+    return Unit()
 }
 ```
 
 ```zane
-Void setY(this Vec2, y Float) mut {           // value receiver: in-place through the borrow
+Unit setY(this Vec2, y Float) mut {           // value receiver: in-place through the borrow
     this.y = y
+    return Unit()
 }
 
 pos!setY(Float(3))
@@ -106,8 +108,9 @@ type Car = #struct {
 }
 
 // `&` parameter: may be stored into an `&` field
-Void setEngine(this Car, engine &Engine) mut {
+Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine   // legal
+    return Unit()
 }
 
 // `&` parameter, read only
@@ -116,8 +119,9 @@ Int calculate(this Car, engine &Engine) {
 }
 
 // plain reference-type parameter swallows; a swallowed host is not an `&` source
-Void setEngineWrong(this Car, engine Engine) mut {
+Unit setEngineWrong(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: cannot store a swallowed host into an `&` field
+    return Unit()
 }
 ```
 
@@ -173,14 +177,29 @@ Functions may access only fields whose names do not begin with `_`. This rule is
 Functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied verbs
-A verb that returns a value may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
+A verb may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
 
 ```zane
 Int double(value Int) => value * 2
 Int scaledId(this Node, factor Int) => this._id * factor
+Unit noOperation() => Unit()
 ```
 
-`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`. Because the shorthand always returns its expression, it is illegal for declarations whose return type is `Void`.
+`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`.
+
+### 3.5 Block-bodied verbs return explicitly
+
+Every block-bodied verb must return a value explicitly on every returning path, including a verb whose return type is `Unit`:
+
+```zane
+Unit noOperation() {
+    return Unit()
+}
+```
+
+The return checker does not synthesize a constructor call for `Unit` or any other singleton type.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#every-return-carries-a-value) — "Every return carries a value".
 
 ---
 
@@ -192,8 +211,8 @@ Two declarations in the same package conflict when they have the same ordered pa
 Two overloads **MUST NOT** differ only by whether the same parameter position is `T` versus `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by `&` on a parameter; rename one declaration or choose a single signature."
 
 ```zane
-Void consume(this Car, engine Engine)
-Void consume(this Car, engine &Engine)  // ERROR
+Unit consume(this Car, engine Engine)
+Unit consume(this Car, engine &Engine)  // ERROR
 ```
 
 ### 4.2 Consequences of the overload identity rules
@@ -231,10 +250,10 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 ### 6.1 Unqualified method lookup
 For `receiver:methodName(...)` or `receiver!methodName(...)`, the compiler resolves candidates in this order:
 
-1. the receiver type's home package
+1. the receiver type's home package; for a fundamental type, the bundled `core` implementation package fills this role
 2. the current package
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's home package first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
 ### 6.2 Qualified method calls
 Cross-package extension methods are written explicitly:
@@ -284,12 +303,14 @@ Because a lambda carries its complete type, it is a single value with one exact 
 `mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned to a non-`mut` function type:
 
 ```zane
-onEventCallback Void[this Node, EventData] mut = Void(this Node, data EventData) {
+onEventCallback Unit[this Node, EventData] mut = Unit(this Node, data EventData) {
     ...
+    return Unit()
 } // OK: non-`mut` lambda assigned to a `mut` function type
 
-readonlyCallback Void[this Node, EventData] = Void(this Node, data EventData) mut {
+readonlyCallback Unit[this Node, EventData] = Unit(this Node, data EventData) mut {
     ...
+    return Unit()
 } // ILLEGAL: expected a non-`mut` function value
 ```
 
@@ -372,6 +393,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | `mut` method | Called with `!`; a value-type `this` is a mutable borrow of the caller's slot, a reference-type `this` is an implicit `&` reference; may mutate state reachable through `this` |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
+| Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` method parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
@@ -381,5 +403,5 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
-| Unqualified method lookup | Searches home package, then current package |
+| Unqualified method lookup | Searches the receiver's home package (the bundled `core` implementation for a fundamental type), then the current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |

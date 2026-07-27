@@ -164,13 +164,15 @@ type Car = #struct {
 }
 
 // `&` parameter is a guest; it may be stored into an `&` field
-Void setEngine(this Car, engine &Engine) mut {
+Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine
+    return Unit()
 }
 
 // plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
-Void setSpare(this Car, engine Engine) mut {
+Unit setSpare(this Car, engine Engine) mut {
     this.spare = engine
+    return Unit()
 }
 
 // `&` parameter, read only: a reference-type object passed without consuming it
@@ -182,8 +184,9 @@ Int inspect(this Car, engine &Engine) {
 Binding a plain (swallowed) parameter into `&` storage is illegal, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call, leaving the `&` dangling:
 
 ```zane
-Void setEngineWrong(this Car, engine Engine) mut {
+Unit setEngineWrong(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: a swallowed host is not an `&` source
+    return Unit()
 }
 ```
 
@@ -242,7 +245,7 @@ if runtimeBool() {
 
 Each lexical scope owns an **arena** made from two independent allocation regions:
 
-- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles of dynamic core types.
+- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles of dynamically-sized reference types.
 - The **dynamic region** stores the resizable backing stores behind handles such as `List` and `String`.
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
@@ -294,7 +297,7 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 Fields are laid out in declaration order. Value types are stored inline. A statically sized reference-type instance is also stored inline in a fixed-size host slot, so value-type slots and reference-type host slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and hosting semantics, not by requiring a separate indirect allocation.
 
-A reference-type instance carries one `u32` backpointer field of anchor metadata (a segmented offset, §4.2) that remains `0` until the instance is first tethered. A dynamic core type such as `List` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
+A reference-type instance carries one `u32` backpointer field of anchor metadata (a segmented offset, §4.2) that remains `0` until the instance is first tethered. A dynamically-sized reference type such as `List` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
 
 ### 3.4 Booleans may be packed
 
@@ -310,9 +313,9 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 
-### 3.6 Handle-typed core reference types have fixed footprint
+### 3.6 Handle-typed dynamic reference types have fixed footprint
 
-The core dynamically-sized reference types — `List`, `String`, and similar types — are represented as fixed-size **handles**. A handle records the backing store's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the backing store's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -323,7 +326,7 @@ type Inventory = #struct {
 }
 ```
 
-Dynamic block sizes are byte-based rather than element-type-based. A new list starts with a **128-byte block** — equivalent to sixteen 64-bit words — regardless of `T`. Its element capacity is `floor(block_bytes / stride(T))`. If one element does not fit in 128 bytes, the initial block is the smallest power-of-two block that can hold one element. Keeping the byte classes common allows blocks to be reused across lists with different element types and across other dynamic core types.
+Dynamic block sizes are byte-based rather than element-type-based. A new list starts with a **128-byte block** — equivalent to sixteen 64-bit words — regardless of `T`. Its element capacity is `floor(block_bytes / stride(T))`. If one element does not fit in 128 bytes, the initial block is the smallest power-of-two block that can hold one element. Keeping the byte classes common allows blocks to be reused across lists with different element types and across other dynamically-sized reference types.
 
 A list grows according to the following rules:
 

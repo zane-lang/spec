@@ -42,7 +42,7 @@ The restriction is intentionally structural. Instead of dynamically tracking arb
 
 Value types contain only value types and primitives, transitively. They carry no anchors and can be copied mechanically. Reference-type hosts, by contrast, carry identity and one backpointer, but their statically sized bytes may still sit inline beside values in the scope's fixed-size region.
 
-Dynamic core types such as `List` and `String` keep fixed-size handles inline. Their variable-sized backing stores live separately, so growing a buffer cannot shift neighbouring hosts or values. Placement is unobservable: the compiler may optimize physical storage as long as destruction, hosting, and guest resolution remain unchanged.
+Dynamically-sized reference types such as `List` and `String` keep fixed-size handles inline. Their variable-sized backing stores live separately, so growing a buffer cannot shift neighbouring hosts or values. Placement is unobservable: the compiler may optimize physical storage as long as destruction, hosting, and guest resolution remain unchanged.
 
 ## When the free stacks fragment, and the arena takes the scope
 
@@ -50,7 +50,7 @@ A single size-class allocator for every object was rejected because classes hoar
 
 Resizable backing stores are different. A list that grows abandons old buffers while the scope may remain active. Each scope therefore has a separate dynamic region with exact-size LIFO stacks. Allocation checks the corresponding size stack first and bumps the dynamic frontier only when that stack is empty. There is no borrowing from neighbouring classes and no coalescing.
 
-Byte size, not element type, defines the classes. A new list starts with 128 bytes regardless of `T`; capacity is derived from `stride(T)`. This makes a returned block reusable by lists of other element types, strings, and other dynamic core values.
+Byte size, not element type, defines the classes. A new list starts with 128 bytes regardless of `T`; capacity is derived from `stride(T)`. This makes a returned block reusable by lists of other element types, strings, and other dynamically-sized reference values.
 
 Growth doubles the byte size. The allocator first looks for a reusable doubled block. If none exists and the current ordinary block is the frontier allocation with room before its 1 MiB chunk boundary, it grows in place. Otherwise the elements move into a new doubled block and the old block enters its exact-size stack.
 
