@@ -128,12 +128,11 @@ EnumName.property FieldType [
 
 ## 2. Types
 
-### 2.1 Core surface types
-`Int`, `Float`, `Bool`, `String`, `Void`
+### 2.1 Fundamental types
 
-These are the public types the `core` package defines over the compiler's storage primitives, not storage primitives themselves. `core` is an ordinary package with no special status: a file reaches these types by importing `core` and qualifying them as `core$Int`, exactly as for any other package (see [`packages.md`](packages.md) §3). `Int`, `Float`, and `Bool` are nominal wrapper structs over machine storage primitives in the `@primitives$` namespace. `String` and other runtime-managed core types use the same wrapper pattern over opaque runtime primitives. `Void` is the exception: it is a core surface type with no storage payload.
+`Int`, `Float`, `Bool`, `String`, `Unit`
 
-For brevity, the examples throughout this specification write the core surface types unqualified—`Int` rather than `core$Int`—and omit the `import core` line; real code reaches them by the ordinary package rules above.
+These type names are available unqualified in every source file. Their bundled `core` implementation has no source-level package qualifier or import form. See [`types.md`](types.md) §2.6 for their semantics.
 
 ### 2.2 Named types
 
@@ -213,7 +212,7 @@ Array<T, n>
 @concepts$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by core wrapper types. The `@concepts$` namespace contains compiler concept types used for source literals.
+The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals.
 
 ### 2.8 Compiler concept types for literals
 
@@ -223,7 +222,7 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 @concepts$Collection
 ```
 
-These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding core surface type.
+These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 
@@ -254,7 +253,7 @@ ReturnType[&ParamType, ...]
 
 ```zane
 Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
-Void[Int, this Node]  // ILLEGAL: this must be the first parameter
+Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
 
 ### 2.10 The `#` reference modifier
@@ -307,7 +306,7 @@ ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { bod
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-`=> expr` is legal only when the declared return type is not `Void`.
+`=> expr` returns `expr`, including when `expr` has type `Unit`.
 
 ### 3.3 Positional constructors
 
@@ -437,17 +436,19 @@ ReturnType(this ReceiverType, param ParamType, ...) => expr
 ReturnType(this ReceiverType, param ParamType, ...) mut => expr
 ```
 
-A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. `=> expr` is legal only when the declared return type is not `Void`.
+A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
 
 Examples:
 
 ```zane
-element!onClick(Void(eventData EventData) {
+element!onClick(Unit(eventData EventData) {
     ...
+    return Unit()
 })
 
-element!onClick(Void(this Element, data EventData) mut {
+element!onClick(Unit(this Element, data EventData) mut {
     ...
+    return Unit()
 })
 ```
 
@@ -463,12 +464,14 @@ name ReturnType(this ReceiverType, param ParamType, ...) mut { body }
 The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
 
 ```zane
-callback Void[this Player] mut = Void(this Player) mut {
+callback Unit[this Player] mut = Unit(this Player) mut {
     this.shooting = false
+    return Unit()
 }
 
-callback Void(this Player) mut {        // shorthand for the line above
+callback Unit(this Player) mut {        // shorthand for the line above
     this.shooting = false
+    return Unit()
 }
 ```
 
@@ -484,6 +487,14 @@ Bool <(leftParam LeftType, rightParam RightType) { body }
 ```
 
 Operator definitions are package-scope verb declarations whose names are operator tokens. They never declare `this`, so they are not methods and cannot use `mut`.
+
+### 3.10 Return statements
+
+```zane
+return expr
+```
+
+See [`functions.md`](functions.md) §3.5 for return-path requirements.
 
 ---
 
@@ -540,11 +551,11 @@ spawn functionName(args...)
 spawn receiver:methodName(args...)
 spawn receiver!methodName(args...)
 spawn functionName(args...) ? binder { ... }
-spawn receiver:methodName(args...) ? { ... }
+spawn receiver:methodName(args...) ? binder { ... }
 spawn receiver!methodName(args...) ?? fallbackExpr
 name VarType = spawn functionName(args...)
 name VarType = spawn receiver:methodName(args...) ? binder { ... }
-name VarType = spawn receiver!methodName(args...) ? { ... }
+name VarType = spawn receiver!methodName(args...) ? binder { ... }
 name VarType = spawn functionName(args...) ?? fallbackExpr
 ```
 
@@ -658,17 +669,14 @@ ReturnType?AbortType
 
 ```zane
 expr ? binder { ... }
-expr ? { ... }
 ```
 
 Every path inside the handler must end with one of:
 
 ```zane
 resolve expr
-resolve
 return expr
 abort expr
-abort
 ```
 
 ### 6.3 `??` shorthand

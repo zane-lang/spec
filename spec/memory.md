@@ -153,13 +153,15 @@ type Car = #struct {
 }
 
 // `&` parameter is a guest; it may be stored into an `&` field
-Void setEngine(this Car, engine &Engine) mut {
+Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine
+    return Unit()
 }
 
 // plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
-Void setSpare(this Car, engine Engine) mut {
+Unit setSpare(this Car, engine Engine) mut {
     this.spare = engine
+    return Unit()
 }
 
 // `&` parameter, read only: a reference-type object passed without consuming it
@@ -171,8 +173,9 @@ Int inspect(this Car, engine &Engine) {
 Binding a plain (swallowed) parameter into `&` storage is illegal, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call, leaving the `&` dangling:
 
 ```zane
-Void setEngineWrong(this Car, engine Engine) mut {
+Unit setEngineWrong(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: a swallowed host is not an `&` source
+    return Unit()
 }
 ```
 
@@ -292,8 +295,9 @@ When an instance escapes — it is moved into a longer-lived host in a parent sc
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 
-### 3.6 Handle-typed core reference types have fixed footprint
-The core dynamically-sized reference types — `List`, `String`, and similar types — are represented as a fixed-size **handle**: a small header (or single segmented offset) whose dynamic backing store lives in the arena. The handle occupies a statically known footprint wherever it is stored.
+### 3.6 Handle-typed dynamic reference types have fixed footprint
+
+Dynamically-sized reference types such as `List` and `String` are represented as a fixed-size **handle**: a small header (or single segmented offset) whose dynamic backing store lives in the arena. The handle occupies a statically known footprint wherever it is stored.
 
 A type that contains a handle-typed field therefore stays statically sized. A type holding a `List` field does not become dynamically sized; it stores the fixed handle inline, and only the backing store behind the handle is a separate arena allocation.
 

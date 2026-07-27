@@ -154,9 +154,10 @@ type Colors = enum [ red, green, blue ]
 A newline separates statements in a function body or a control-flow block. Zane has no statement separator, so two statements cannot share a line. This is the one place a newline is structural.
 
 ```zane
-Void main() {
+Unit main() {
     x Int(5)
     print(x)
+    return Unit()
 }
 ```
 

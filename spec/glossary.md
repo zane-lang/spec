@@ -200,8 +200,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable `implicit` constructor automatically: a positional argument of a function or constructor call, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
-- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. Each coercion is still backed by a user-declared `implicit` constructor — the site says where one may be inserted, not that the conversion is built in.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, a named field entry of a field-constructor call, a condition, or a counted-loop bound. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors supplied by the bundled `core` implementation — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould
@@ -244,7 +244,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 4. Packages, Operators, and Versioning
 
 ### 4.1 home-package operator rule
-- **Meaning:** An operator implementation may be declared only in the home package of one of its operand types.
+- **Meaning:** A source operator implementation may be declared only in the home package of one of its user-defined operand types. Fundamental-only operators live in the bundled `core` implementation.
 - **Why this name:** The rule ties operator declarations to the package that "owns" one operand type and prevents unrelated helper imports from changing operator meaning.
 - **Canonical home:** [`operators.md`](operators.md) §2.2
 

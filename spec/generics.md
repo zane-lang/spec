@@ -85,9 +85,9 @@ A type is itself a symbol of exactly this kind. The symbol `T` has a value — a
 That is the whole parameter model. The two parameter forms differ only in which part you supply:
 
 ```zane
-Void func (x Int)        // x : value Int(3), type Int
-Void func2(x T Type)     // x : value Int(3), type T   —  and T : value Int, type Type
-Void func3(  T Type)     //                              T : value Int, type Type
+Unit func (x Int)        // x : value Int(3), type Int
+Unit func2(x T Type)     // x : value Int(3), type T   —  and T : value Int, type Type
+Unit func3(  T Type)     //                              T : value Int, type Type
 ```
 
 - `func3(T Type)` declares the type-symbol `T` directly. The caller supplies its value: `func3(Int)` gives `T` the value `Int`. This is **explicit passing**.
