@@ -175,7 +175,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor cell
-- **Meaning:** A runtime `u32` cell holding the current segmented offset of one hosted object — the stable indirection point through which tethers resolve. It is bump-allocated when the first guest is created, in a dedicated anchor-cell region of the host's scope arena.
+- **Meaning:** A runtime cell whose `u32` payload holds the current segmented offset of one hosted object — the stable indirection point through which tethers resolve. It occupies one 8-byte slot in the runtime-global anchor pool, allocated when the first guest is created and returned to the pool's free-address stack when the hosting lineage ends. Its own segmented offset is the anchor identity that a whole hosting lineage keeps, across overwrite and rehosting.
 - **Why this name:** The cell is the fixed point that lets a moving object remain reachable: rehosting updates the cell while existing tethers keep pointing to it.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
@@ -185,8 +185,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A reference-type instance is bump-allocated in the arena of the scope that creates it, and is copied (promoted) into a parent arena only if it escapes that scope. Only dynamic size or escape changes where an instance lives. Placement is an unobservable implementation choice.
-- **Why this name:** Placement is a choice among **arenas** — the per-scope bump regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. An instance that escapes is **promoted**: its fixed-size bytes — the inline payload, or the handle of a dynamically-sized type — are copied into a parent arena, while a dynamic backing store transfers to the new host without being copied. Placement is an unobservable implementation choice.
+- **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker

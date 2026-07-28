@@ -250,6 +250,8 @@ Each lexical scope owns an **arena** made from two independent allocation region
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
 
+Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's memory is released together when that scope drains, and no guest ever resolves into released memory. A value that escapes is promoted out of the draining scope first (§3.5, §3.7), and its guests reach the promoted value through the canonical anchor (§4.5).
+
 Anchors do not belong to any scope arena. The runtime owns one **global anchor pool**, implemented as a lazy chain of anchor-only 1 MiB pages. Every anchor occupies an **8-byte-aligned, 8-byte physical slot**: the first four bytes hold the `u32` payload offset and the remaining four bytes are reserved padding. An anchor page therefore contains 131072 addressable slots. The pool maps its first page only when the program creates its first guest and adds another page only when its current frontier and free-address stack cannot satisfy an allocation.
 
 ```text
@@ -267,21 +269,22 @@ Scope chunks and global anchor pages draw ids from the same chunk directory, so 
 
 ```
    u32 segmented offset
-  ┌───────────────┬─────────────────────────┐
+  ┌───────────────┬──────────────────────────┐
   │   chunk id    │   in-chunk word offset   │
   │  (high bits)  │       (low bits)         │
-  └───────────────┴─────────────────────────┘
+  └───────────────┴──────────────────────────┘
 ```
 
-Allocations are at least 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. The chunk directory maps a chunk id to the chunk's native base address.
+Allocations are at least 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. The chunk directory maps a chunk id to the chunk's native base address, so an address is materialized only at use, as `directory[chunk id] + word offset × 8`: splitting the `u32` is a shift and a mask, and the directory lookup is one load.
 
-Tethers (§4.2), per-host backpointers (§4.2), anchor cells (§4.1), dynamic handles, and size-stack entries (§3.2) use segmented offsets. The value `0` is the *untethered* sentinel wherever an anchor identity is expected. The global anchor pool never assigns segmented offset `0`; fixed-size payloads may still occupy it.
+Tethers (§4.2), per-host backpointers (§4.2), anchor cells (§4.1), dynamic handles, and size-stack entries (§3.2) use segmented offsets. The value `0` is the *untethered* sentinel wherever an anchor identity is expected. The global anchor pool never issues `0` as an anchor identity: if its first page is assigned chunk id `0`, that page's first slot is left permanently unused. Payloads carry no such restriction and may occupy segmented offset `0`, so a region's first allocation sits at a chunk base.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 3.2 Allocation, reuse, and teardown
 
-The fixed-size region is a pure bump allocator. A host is a fixed-size storage slot, so overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2, §3.7); it consumes no new arena space.
+The fixed-size region is a pure bump allocator: no size classes, no free list, no coalescing. A host is a fixed-size storage slot, so overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2, §3.7); it consumes no new arena space. Nothing in this region is reclaimed individually — a slot whose occupant dies before the scope drains stays dead space until teardown.
 
 The dynamic region adds exact-size reuse on top of its bump frontier. Dynamic blocks use power-of-two byte sizes beginning at **128 bytes**. Each scope maintains one LIFO **size stack** for every block size that has become reusable. To allocate a dynamic block of size `S`, the runtime first pops `size_stack[S]`; only when that stack is empty does it bump the dynamic frontier. It never satisfies a request from another size stack and never coalesces neighbouring blocks.
 
@@ -289,9 +292,10 @@ Returning a dynamic block pushes its base segmented offset onto the stack for th
 
 The global anchor pool has one LIFO **free-address stack**, because every anchor slot has the same size. Creating an anchor pops that stack first; only when it is empty does allocation bump the global anchor frontier, mapping another anchor page as needed. Returning an anchor pushes its segmented offset onto the same stack. Anchor pages remain mapped and retain their chunk-directory entries until runtime shutdown, including when every slot on a page is free; consequently every offset retained by the stack always resolves to its original anchor slot and anchor chunk ids are never repurposed during the run.
 
-When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps its fixed-size and dynamic chunks in bulk. Global anchor pages are not tied to scope teardown: individual slots are returned when their hosting lineages end (§4.6), while the pages themselves remain mapped until runtime shutdown.
+When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps its fixed-size and dynamic chunks in bulk, with no per-object teardown pass threaded through the exit. Logical destruction timing is independent of this: a value dies when its host, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain. Global anchor pages are not tied to scope teardown: individual slots are returned when their hosting lineages end (§4.6), while the pages themselves remain mapped until runtime shutdown.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 3.3 Value and reference layout follow declaration order
 
@@ -340,7 +344,8 @@ A block never grows in place across a chunk boundary, and an oversized span is n
 
 Dynamic chunks, ordinary power-of-two blocks, and oversized spans begin at cache-line-aligned addresses. Because the minimum block is 128 bytes and every larger block doubles, frontier allocations, reused blocks, and dedicated spans preserve cache-line alignment without mixing backing stores into fixed-size chunks.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-one-reserved-identity-and-the-buffer-that-wanted-a-line) — "The sentinel that costs one reserved identity, and the buffer that wanted a line".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 3.7 Moving a value reuses the destination slot
 
@@ -357,11 +362,12 @@ Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md
 
 ### 4.1 The global anchor pool
 
-Tethers are tracked through **anchor cells** in one runtime-global pool rather than through scope-local anchor regions. An anchor cell has a 4-byte logical `u32` payload holding the current segmented offset (§3.1) of a hosted reference-type value, but occupies one 8-byte-aligned physical slot so every cell identity is representable by the shared 8-byte-word offset encoding. The cell's own segmented offset is the stable anchor identity for the complete hosting lineage, even when the value is rehosted across scopes.
+Tethers are tracked through **anchor cells** in one runtime-global pool. An anchor cell has a 4-byte logical `u32` payload holding the current segmented offset (§3.1) of a hosted reference-type value, but occupies one 8-byte-aligned physical slot so every cell identity is representable by the shared 8-byte-word offset encoding. The cell's own segmented offset is the stable anchor identity for the complete hosting lineage, even when the value is rehosted across scopes.
 
 Anchor pages contain only equal-sized 8-byte slots. The pool therefore needs one free-address stack and one bump frontier rather than size classes. Pages are allocated lazily, never move, and remain mapped until runtime shutdown.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.2 Tethers are segmented offsets, not pointers
 
@@ -439,12 +445,15 @@ Every permitted operation is O(1) in the number of guests. Promotion never creat
 This is also how a moved-from symbol stays readable: after a permitted move the host-capable symbol enters guest state and stores the canonical tether, so reads resolve through the anchor to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.6 Hosting-lifetime end returns the anchor
 
 An anchor is returned to the global free-address stack when its **hosting lineage** ends. Overwriting only the current occupant does not end that lineage, because the host remains and existing guests follow the replacement. Rehosting transfers teardown responsibility to the destination host; the source slot is now a guest rather than a second host.
 
 At the actual end of the hosting lineage, lexical scope rules guarantee that every guest capable of naming the anchor has already ceased to exist ([`lifetimes.md`](lifetimes.md) §1, [`concurrency.md`](concurrency.md) §4). The runtime may therefore recycle the slot immediately. No generation counter, delayed reuse, or ABA protection is required: a stale guest is not a representable program state.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.7 Why tethers never dangle or misdirect
 
@@ -509,6 +518,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Backpointer | Each hosted payload stores the stable `u32` identity of its anchor cell for move updates and tether minting; `0` means no cell has been allocated |
 | Anchor lifecycle | Lazily allocated on first guest; preserved across overwrite and rehosting; returned to the global free-address stack when the hosting lineage ends |
 | Anchor reuse safety | Immediate reuse is safe because lexical scope rules make a live stale guest unrepresentable |
+| Move guest liveness | A move is rejected when both sides have live guests; with live guests on exactly one side, that side's anchor becomes the canonical one; with none on either side, a moved-from slot that stays readable anchors lazily (see [`lifetimes.md`](lifetimes.md) §1.10) |
 | Tethered-instance cost | Minimum 16-byte physical footprint: one 4-byte tether, one 8-byte anchor slot, and one 4-byte backpointer |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.

@@ -214,6 +214,30 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
+### 1.10 A move needs live guests on at most one side
+
+A move into an already-initialized host is rejected when **both** the source and the destination have live guests at that point. One hosting lineage keeps one anchor identity ([`memory.md`](memory.md) §4.5), and two live guest sets name two identities that the single canonical cell cannot carry forward. The compiler decides this from lexical guest liveness alone, the same way it decides guest assignment (§1.1).
+
+```zane
+a Node()
+b Node()
+ra &Node = a
+b = a            // legal: only the source has a live guest; its anchor becomes canonical
+ra:inspect()     // ra reaches the value in its new home, b
+```
+
+```zane
+c Node()
+d Node()
+rc &Node = c
+rd &Node = d
+d = c            // ILLEGAL: both sides have live guests
+rc:inspect()
+rd:inspect()
+```
+
+Every permitted move stays O(1) in the number of guests, and the guests on the surviving side keep reaching the value in its new home (§1.6).
+
 ---
 
 ## 2. Lifetime and Destruction
@@ -254,6 +278,7 @@ Because scope rules (§1.1) prevent guests from outliving their hosts, the runti
 | Move-source | A direct host symbol (local or parameter) or a hosting verb result; not an `&`, field, container element, or other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
+| Move guest liveness | A move into an initialized host is rejected when both the source and the destination have live guests |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
