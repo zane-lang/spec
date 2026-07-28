@@ -75,7 +75,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
-- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, or constructor — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
+- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, operator, constructor, or lambda — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
 - **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`Number` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
@@ -185,7 +185,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. An instance that escapes is **promoted**: its fixed-size bytes — the inline payload, or the handle of a dynamically-sized type — are copied into a parent arena, while a dynamic backing store transfers to the new host without being copied. Placement is an unobservable implementation choice.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic backing store is relocated into an equal-size destination-region allocation, and the old source storage ceases to be live. The source host-capable slot then stores the canonical tether as a guest. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
