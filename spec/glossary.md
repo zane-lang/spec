@@ -185,7 +185,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. An instance that escapes is copied (promoted) into a parent arena. Placement is an unobservable implementation choice.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. An instance that escapes is **promoted**: its fixed-size bytes — the inline payload, or the handle of a dynamically-sized type — are copied into a parent arena, while a dynamic backing store transfers to the new host without being copied. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 

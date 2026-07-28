@@ -250,7 +250,7 @@ Each lexical scope owns an **arena** made from two independent allocation region
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
 
-Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: memory a scope allocates outlives every guest that can reach it and is released together when the scope drains.
+Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's memory is released together when that scope drains, and no guest ever resolves into released memory. A value that escapes is promoted out of the draining scope first (§3.5, §3.7), and its guests reach the promoted value through the canonical anchor (§4.5).
 
 Anchors do not belong to any scope arena. The runtime owns one **global anchor pool**, implemented as a lazy chain of anchor-only 1 MiB pages. Every anchor occupies an **8-byte-aligned, 8-byte physical slot**: the first four bytes hold the `u32` payload offset and the remaining four bytes are reserved padding. An anchor page therefore contains 131072 addressable slots. The pool maps its first page only when the program creates its first guest and adds another page only when its current frontier and free-address stack cannot satisfy an allocation.
 
@@ -518,7 +518,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Backpointer | Each hosted payload stores the stable `u32` identity of its anchor cell for move updates and tether minting; `0` means no cell has been allocated |
 | Anchor lifecycle | Lazily allocated on first guest; preserved across overwrite and rehosting; returned to the global free-address stack when the hosting lineage ends |
 | Anchor reuse safety | Immediate reuse is safe because lexical scope rules make a live stale guest unrepresentable |
-| Move guest liveness | A move is rejected when both sides have live guests; otherwise the surviving side's anchor is the canonical one (see [`lifetimes.md`](lifetimes.md) §1.10) |
+| Move guest liveness | A move is rejected when both sides have live guests; with live guests on exactly one side, that side's anchor becomes the canonical one; with none on either side, a moved-from slot that stays readable anchors lazily (see [`lifetimes.md`](lifetimes.md) §1.10) |
 | Tethered-instance cost | Minimum 16-byte physical footprint: one 4-byte tether, one 8-byte anchor slot, and one 4-byte backpointer |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.
