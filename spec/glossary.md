@@ -175,17 +175,17 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor cell
-- **Meaning:** A runtime cell whose `u32` payload holds the current segmented offset of one hosted object — the stable indirection point through which tethers resolve. It occupies one 8-byte slot in the runtime-global anchor pool, allocated when the first guest is created and returned to the pool's free-address stack when the hosting lineage ends. Its own segmented offset is the anchor identity that a whole hosting lineage keeps, across overwrite and rehosting.
-- **Why this name:** The cell is the fixed point that lets a moving object remain reachable: rehosting updates the cell while existing tethers keep pointing to it.
+- **Meaning:** An 8-byte runtime cell in the global anchor pool containing a `u32` target and a kind. A payload anchor targets a hosted object's segmented offset; a forwarding anchor targets another anchor after two hosting identities merge. A guest's `u32` tether names an anchor cell and follows forwarding cells until it reaches the terminal payload anchor.
+- **Why this name:** The cell is a stable point through which an older guest identity can remain attached to a moving value, either directly or through another anchor.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
 ### 3.24 segmented-offset tether
-- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at the host's anchor cell, not a raw pointer. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
+- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at an anchor cell, not a raw pointer. The cell may directly target the hosted payload or forward to another anchor. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
 - **Why this name:** The tether connects a guest's stored representation to the anchor through which it reaches the hosted object.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic backing store is relocated into an equal-size destination-region allocation, and the old source storage ceases to be live. The source host-capable slot then stores the canonical tether as a guest. Placement is an unobservable implementation choice.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic backing store is relocated into an equal-size destination-region allocation, and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
