@@ -316,7 +316,7 @@ A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguo
 
 Scope chunks and global anchor pages draw ids from the same chunk directory, so payload locations, dynamic handles, tethers, backpointers, anchor cells, and size-stack entries all use one **`u32` segmented offset**:
 
-```
+```text
    u32 segmented offset
   ┌───────────────┬──────────────────────────┐
   │   chunk id    │   in-chunk word offset   │
@@ -514,7 +514,7 @@ A dangling or misdirected tether would require a guest to outlive the hosted val
 
 The segmented encoding adds no meaningful arithmetic cost: the shift and mask that split a `u32` fold into machine addressing once the chunk base is loaded. A terminal tether pays one dependent anchor-cell load beyond direct host access; an older identity pays one additional load per uncompressed forwarding hop. Rehosting never enumerates guests, and path compression makes repeated traversal of a chain approach the terminal case. Physical relocation cost remains proportional to the representation moved.
 
-A single global free stack and frontier require synchronization under concurrent allocation and teardown. Implementations may use thread-local anchor caches backed by the same global pool without changing anchor identity, reuse order semantics, or lifetime guarantees.
+A single global free stack and frontier require synchronization under concurrent allocation and teardown. Implementations may use thread-local anchor caches backed by the same global pool. The LIFO discipline of §3.2 describes how the central pool behaves, not a guarantee the language makes: which free slot a given anchor allocation receives is unobservable from the source language, so a cache that hands out slots in another order — or holds a returned slot until it flushes — changes nothing a program can detect. What such a cache **MUST NOT** change is anchor identity uniqueness, the retirement events of §4.6, or the lifetime guarantees that rest on them.
 
 ---
 

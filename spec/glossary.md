@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Being a place is necessary but not sufficient to mint an `&`: only a field access of a place and an `&T` parameter are guest sources, while bare symbols and `[]` expressions are places that are excluded (§3.36).
+- **Meaning:** A place expression denotes an existing, stable storage location. Being a place is necessary but not sufficient to mint an `&`: only an `&T` parameter and a field access of a place whose base chain does not pass through a `'T` borrow are guest sources, while bare symbols, `[]` expressions, and anything reached through a borrow are places that are excluded (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be minted only from a field or an `&T` parameter (§3.36). Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be minted only from an `&T` parameter or a field access not rooted in a borrow (§3.36). Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -240,7 +240,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.36 guest source restriction
-- **Meaning:** A new `&` may be minted only from a field access whose base is a place, or from an `&T` parameter. A **bare symbol** — an identifier standing alone rather than as the base of a field access — is a place expression but never a guest source, so no guest can point at a local's own hosting slot and that slot stays free to be overwritten or moved from. Passing a bare symbol into a call is the borrow mode's job (§3.27).
+- **Meaning:** A new `&` may be minted only from an `&T` parameter, or from a field access whose base is a place and whose base chain does not pass through a `'T` borrow parameter. A **bare symbol** — an identifier standing alone rather than as the base of a field access — is a place expression but never a guest source, so no guest can point at a local's own hosting slot and that slot stays free to be overwritten or moved from. Passing a bare symbol into a call is the borrow mode's job (§3.27). The borrow exclusion runs the same way: a guest minted from a borrowed object's field would escape the call just as surely as the borrow itself.
 - **Why this name:** The rule constrains the *source* of a guest — where one may come from — and nothing about what a guest can survive once minted; a guest to a field still follows its host across overwrites and rehosting.
 - **Canonical home:** [`memory.md`](memory.md) §2.8.1
 

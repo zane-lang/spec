@@ -305,7 +305,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n Number>, ...) { body }
 ```
 
-Each parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest, `'ParamType` borrows.
+A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest, `'ParamType` borrows. A **value-type** parameter has no such choice — it is always a read-only borrow — so `&` and `'` are not written on one.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
@@ -331,7 +331,7 @@ ReturnType name(this 'ReceiverType, param ParamType, ...) { body }
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-The receiver takes a passing mode like any other parameter, and every combination above may be written with `&` or `'` on `ReceiverType`. For a reference receiver, bare `this ReceiverType` means `this 'ReceiverType` — the borrow is the default — and `this &ReceiverType` is written when the method stores or returns the receiver as a guest. See [`functions.md`](functions.md) §2.4.
+A **reference** receiver takes a passing mode like any other reference parameter, and every combination above may be written with `&` or `'` on `ReceiverType`. Bare `this ReceiverType` means `this 'ReceiverType` — the borrow is the default — and `this &ReceiverType` is written when the method stores or returns the receiver as a guest. A **value** receiver has no mode to select: it is a borrow of the caller's slot, mutable when the method is `mut`, and is always written bare. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 

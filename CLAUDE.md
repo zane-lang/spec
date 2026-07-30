@@ -59,13 +59,17 @@ A second guard covers the memory model. A **bare symbol is not a guest source**
 bug. Eyeball every hit of:
 
 ```sh
-grep -RIn -E "&[A-Z][A-Za-z0-9]* *= *[a-z][A-Za-z0-9]*$" spec/
+grep -RIn -E "&[A-Z][A-Za-z0-9]* *= *[a-z][A-Za-z0-9]* *(//.*)?[[:space:]]*$" spec/
 ```
 
 Every surviving hit must be a field access (`= car.engine`) or an `&T`
-parameter — never a bare local. Run these with `-R` on the directory, not a
-`spec/*.md` glob plus a bare directory argument: `grep` prints
-`bench/: Is a directory` and silently skips it otherwise.
+parameter — never a bare local. The trailing `(//.*)?[[:space:]]*$` is what
+makes the guard see the `// ILLEGAL: ...` examples; without it the end anchor
+skipped every commented line, which is most of them.
+
+Run both with `-R` on the directory, not a `spec/*.md` glob plus a bare
+directory argument: `grep` prints `bench/: Is a directory` and silently skips
+it otherwise.
 
 Stories are exempt from both greps: `stories/` records the language as it was
 at each turn and is never rewritten to match the present spec.
