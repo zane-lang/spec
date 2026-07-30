@@ -380,7 +380,7 @@ A move transfers hosting into a destination storage position of the **same type*
 
 Because a move never relocates an object, it copies no payload bytes regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#locations-and-the-indirection-that-stopped-moving) — "Locations, and the indirection that stopped moving".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-that-stopped-relocating) — "The move that stopped relocating".
 
 ---
 
