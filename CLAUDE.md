@@ -62,11 +62,18 @@ bug. Eyeball every hit of:
 grep -RIn -E "&[A-Z][A-Za-z0-9]*[[:space:]]*=[[:space:]]*_?[a-z][A-Za-z0-9]*[[:space:]]*(//.*)?[[:space:]]*$" spec/
 ```
 
-The pattern matches a **bare-symbol** right-hand side only, so every hit is a
-candidate bug by construction — the legal sources (`= car.engine`, an `&T`
-parameter) never match, because `.` is outside the character class. Read each
-hit and keep it only if it is a deliberate `// ILLEGAL:` example or a grammar
-metavariable; anything else is a real one to fix.
+The pattern matches a **bare-symbol** right-hand side. Only one legal source is
+excluded syntactically: a field access (`= car.engine`) never matches, because
+`.` is outside the character class. The other legal source **does** match — an
+`&T` parameter is written bare, so `r &Node = source` inside a callee is a hit
+even though it is correct. Read every hit and keep it if any of these hold:
+
+- the right-hand side is an `&T` parameter of the enclosing verb (check the
+  signature, not the line);
+- it is a deliberate `// ILLEGAL:` example;
+- it is a grammar metavariable, as in `syntax.md`.
+
+Anything else is a real one to fix.
 
 Two details are load-bearing. The trailing `(//.*)?[[:space:]]*$` is what makes
 the guard see the `// ILLEGAL: ...` examples; without it the end anchor skipped
