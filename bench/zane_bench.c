@@ -852,10 +852,10 @@ static void destroy_zane_norefs(TNode *n) {
     zm_free_lazy(n, sizeof(TNode));
 }
 
-static void build_tree_with_refs(TNode *n, size_t obj_size) {
+static void build_tree_with_refs(TNode *n, size_t obj_size, ZRef *store, int *count) {
     if (!n) return;
-    zm_create_ref(n, obj_size);
-    for (int i=0;i<n->nchildren;i++) build_tree_with_refs(n->children[i], obj_size);
+    store[(*count)++] = zm_create_ref(n, obj_size);
+    for (int i=0;i<n->nchildren;i++) build_tree_with_refs(n->children[i], obj_size, store, count);
 }
 
 static void destroy_zane_indirefs(TNode *n) {
@@ -880,23 +880,25 @@ static void test10(void) {
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Zane — no guests", T);
 
+    ZRef *guests = (ZRef*)malloc((size_t)TREE_NODES * sizeof(ZRef));
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
         int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af);
-        build_tree_with_refs(root, znode_size);
+        int nguests=0; build_tree_with_refs(root, znode_size, guests, &nguests);
         double t0=now_ns();
         destroy_zane_indirefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
+        for(int i=0;i<nguests;i++) sink^=(int64_t)guests[i];
     }
     print_result("Zane — individual guests (1 per node)", T);
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
         int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af);
-        zm_create_ref(root, znode_size);
+        ZRef rootGuest = zm_create_ref(root, znode_size);
         double t0=now_ns();
         destroy_zane_norefs(root);
-        T[r]=now_ns()-t0; sink^=(int64_t)rem;
+        T[r]=now_ns()-t0; sink^=(int64_t)rem; sink^=(int64_t)rootGuest;
     }
     print_result("Zane — single parent guest (root only)", T);
 
@@ -907,6 +909,8 @@ static void test10(void) {
     for(int b=1;b<=MAX_BRANCH;b++) pool_warm((size_t)b*sizeof(TNode*),TREE_NODES/MAX_BRANCH);
     for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,po_af);double t0=now_ns();destroy_pool(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Pool cascade destroy", T);
+
+    free(guests);
 }
 
 #define STRESS_CYCLES       200

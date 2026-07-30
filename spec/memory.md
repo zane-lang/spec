@@ -336,9 +336,14 @@ The compiler may pack booleans in structs and arena frames when doing so does no
 
 Placement is an implementation decision, not a language-visible property. The arena model places every materialized value-type slot and every statically sized reference-type host inline in a scope's fixed-size region, and every resizable backing store in a dynamic region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement.
 
-A hosted object is constructed **directly in the storage of the host it comes to rest in**. Which host that is, is statically known: hosting changes only by a move, a move-source is only ever a bare symbol ([`lifetimes.md`](lifetimes.md) §1.2) moved in its own declaration block ([`lifetimes.md`](lifetimes.md) §1.3), and every destination is at the same or a higher lexical scope ([`lifetimes.md`](lifetimes.md) §1.4). The compiler therefore reads the whole chain of moves off the declaration block and materializes the object once, in the final host's slot.
+A hosted object is materialized **once**, in the arena of the outermost scope it could come to rest in. That scope is statically known: hosting changes only by a move, a move-source is only ever a bare symbol ([`lifetimes.md`](lifetimes.md) §1.2) moved in its own declaration block ([`lifetimes.md`](lifetimes.md) §1.3), and every destination is at the same or a higher lexical scope ([`lifetimes.md`](lifetimes.md) §1.4) — so the candidates form a chain with an outermost member, and the compiler allocates there.
 
-A bare symbol that is later moved is thus a **name for the destination's storage from the outset**, not separate storage that is copied out of. In `engine Engine()` followed by `car Car(engine)`, the Engine is constructed directly in the `engine` field inside `car`, and the symbol `engine` names that field. This is why an inline field costs nothing at the move: there was never a second copy of the bytes to reconcile. An object therefore never has to be relocated in order to outlive the scope it was written in.
+The two hosting storage forms differ in how they reach that object, and the difference is what keeps the model consistent:
+
+- A **field** or container element **contains** its occupant inline (§3.3). It is part of its container's storage and is never emptied — only overwritten in place.
+- A **bare symbol** is a **name bound to** an object's storage, not storage that contains it. That is why a bare symbol can be emptied by a move while a field cannot, and why a bare symbol may not be a guest source (§2.8) while a field may.
+
+In `engine Engine()` followed by `car Car(engine)`, the Engine is materialized in the arena once and the `engine` field inside `car` is where it comes to rest; the symbol `engine` names that same object throughout. An object therefore never has to be relocated in order to outlive the scope it was written in.
 
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a guest resolves identically regardless of physical placement (§4), because a hosted object does not move.
 
@@ -375,12 +380,12 @@ Dynamic chunks, ordinary power-of-two blocks, and oversized spans begin at cache
 
 ### 3.7 A move transfers hosting, not storage
 
-A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object itself does not move, and no second copy of it ever existed: the source symbol and the destination slot are two **names for the same storage**, because the object was materialized in the destination's slot when it was constructed (§3.5). A move is therefore a compile-time change in which name is responsible for destruction ([`lifetimes.md`](lifetimes.md) §1.6), not a transfer of bytes between two slots.
+A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object itself does not move: hosting is re-attached to it, and the source symbol stops being answerable for its destruction ([`lifetimes.md`](lifetimes.md) §1.6).
 
-- Moving into a fresh declaration or a return slot makes that position the host.
-- Moving into an already-initialized host first destroys that host's current occupant, then makes the position host the moved value.
+- Moving into a **fresh declaration or a return slot** binds that name to the object. Nothing is destroyed and nothing is copied.
+- Moving into an **already-initialized host** first destroys that host's current occupant, then binds the destination to the moved object. The destroyed occupant's storage is not reused by the move; it becomes dead space until the scope drains (§3.2).
 
-Because a move never relocates an object, it copies no payload bytes regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated. It emits no code at all.
+Neither case relocates the moved object, so no payload bytes are copied regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated. Guests are unaffected in particular because a guest can never be rooted in a bare symbol (§2.8), and a bare symbol is the only storage a move can empty ([`lifetimes.md`](lifetimes.md) §1.2) — so nothing a move touches is ever the root of a guest.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-move-that-stopped-relocating) — "The move that stopped relocating".
 
