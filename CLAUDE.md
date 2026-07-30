@@ -43,12 +43,32 @@ The generics system was unified into a `<>`-header / `()`-call model (canonical
 home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
 forms are now illegal and must never reappear. Grep for them — none should hit:
 
+```sh
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form" spec/
 ```
-grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
-```
+
+`'[A-Z]` used to be on that list — it is **not** any more. A leading `'` is now
+the **borrow** type marker (`'Node`), canonical home `spec/memory.md` §2.9,
+surface form `spec/syntax.md` §2.3. Do not re-add it to the retired-forms grep.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.
+
+A second guard covers the memory model. A **bare symbol is not a guest source**
+(`spec/memory.md` §2.8.1), so a spec example that mints an `&` from one is a
+bug. Eyeball every hit of:
+
+```sh
+grep -RIn -E "&[A-Z][A-Za-z0-9]* *= *[a-z][A-Za-z0-9]*$" spec/
+```
+
+Every surviving hit must be a field access (`= car.engine`) or an `&T`
+parameter — never a bare local. Run these with `-R` on the directory, not a
+`spec/*.md` glob plus a bare directory argument: `grep` prints
+`bench/: Is a directory` and silently skips it otherwise.
+
+Stories are exempt from both greps: `stories/` records the language as it was
+at each turn and is never rewritten to match the present spec.
 
 If the grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc

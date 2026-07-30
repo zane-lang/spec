@@ -115,7 +115,7 @@ Naming a case takes its payload whole; to reach a nested case, write another cas
 
 An `enum` member is the payloadless degenerate of the same form: `Colors.red` selects a case that carries no payload, so it is written with no argument list (§2). A payload-carrying case is called; a payloadless one is selected.
 
-A recursive `#variant` case boxes through `&` (§4), and its construction follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a source that may create a new `&` (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.9).
+A recursive `#variant` case boxes through `&` (§4), and its construction follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a guest source (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.9). A bare symbol is not one, so the child a recursive case points at is reached through a field or through an `&Expr` parameter (§4.1).
 
 **Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
 
@@ -130,6 +130,30 @@ A directly inline self-reference would have infinite size, which the uniform-str
 - A value type — `struct` or `variant` — **cannot** hold an `&` or contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
 - The `#` modifier is what carries recursion: a plain `variant` is the sum mould's value form, laid out inline, while a `#variant` is its reference form — carrying a tag, boxing its recursive cases through `&`, and placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
 - Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that hosting and guests are explicit.
+
+### 4.1 A recursive structure is rooted in a field
+
+Because a recursive member is an `&`, filling it needs a **guest source**, and a bare symbol is not one ([`memory.md`](memory.md) §2.8.1). A recursive structure is therefore rooted in a field rather than in a bare local: the node a case points at is hosted by a field, and the guest is minted from that field access.
+
+```zane
+type Tree = #struct {
+    root Expr;
+}
+
+tree Tree(Expr.intLit("5"))     // the first node is hosted by a field
+outer Expr.flip(tree.root)      // legal: `tree.root` is a field access on a place
+
+leaf Expr.intLit("5")
+bad Expr.flip(leaf)             // ILLEGAL: `leaf` is a bare symbol, not a guest source
+```
+
+A verb that builds recursively takes its child as an `&` parameter, which is itself a guest source, so the chain continues without further ceremony:
+
+```zane
+Expr negate(inner &Expr) => Expr.flip(inner)
+```
+
+This is the same requirement an `&` field of any `#struct` carries; recursion is not a special case. What it means in practice is that the *root* of a recursive structure lives in a field of the type that owns the structure — which is where a root belongs anyway, since that field is what keeps the whole shape alive.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
 

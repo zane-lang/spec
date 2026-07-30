@@ -281,7 +281,7 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a `'T` borrow will not do, because a borrow ends with the call while the field outlives it. The caller must then supply a **guest source** under [`memory.md`](memory.md) §2.8: a field access on a place, or an `&T` parameter. A bare symbol, a temporary, and a `[]` expression are all rejected.
 
 ```zane
 package Vehicle
@@ -306,13 +306,17 @@ Car(engine Engine) {
 Call sites:
 
 ```zane
-engine Engine()
-car Car(engine)   // legal: engine may create a new `&`
+garage Garage()
+car Car(garage.spare)   // legal: a field access is a guest source
 ```
 
 ```zane
-car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
+engine Engine()
+car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
+car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
+
+The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. See [`adt.md`](adt.md) §4.1 for the same requirement seen from a recursive type's side.
 
 A reference type whose fields are all plain hosts does not require `&` parameters:
 

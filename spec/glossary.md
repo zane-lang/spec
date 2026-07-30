@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Some place expressions may create new `&` values, while `[]` expressions remain excluded from that rule.
+- **Meaning:** A place expression denotes an existing, stable storage location. Being a place is necessary but not sufficient to mint an `&`: only a field access of a place and an `&T` parameter are guest sources, while bare symbols and `[]` expressions are places that are excluded (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -195,8 +195,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed as guests or swallowed instead, and a reference-type `this` is an implicit guest.
-- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, a borrow has no anchor or tether and cannot be stored or returned.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` receiver is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is an implicit `'T` borrow.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, a borrow has no anchor or tether and cannot be stored, returned, or moved.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be minted only from a field or an `&T` parameter (§3.36). Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -238,6 +238,16 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The two ways a verb can treat a reference-type host it swallows, told apart by its return. It **relays** the host when it returns a hosting handle; the caller may bind that return to host the object again. It **consumes** the host when it returns no hosting handle. A verb that declares `&T` instead takes a guest and leaves the caller's host unchanged.
 - **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
+
+### 3.36 guest source restriction
+- **Meaning:** A new `&` may be minted only from a field access whose base is a place, or from an `&T` parameter. A **bare symbol** — an identifier standing alone rather than as the base of a field access — is a place expression but never a guest source, so no guest can point at a local's own hosting slot and that slot stays free to be overwritten or moved from. Passing a bare symbol into a call is the borrow mode's job (§3.27).
+- **Why this name:** The rule constrains the *source* of a guest — where one may come from — and nothing about what a guest can survive once minted; a guest to a field still follows its host across overwrites and rehosting.
+- **Canonical home:** [`memory.md`](memory.md) §2.8.1
+
+### 3.37 passing mode
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver takes a mode like any parameter, and defaults to the borrow. Two overloads may not differ only by the mode at one position.
+- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
+- **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ---
 

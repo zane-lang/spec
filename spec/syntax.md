@@ -145,13 +145,26 @@ TypeName
 
 ```zane
 &TypeName
+'TypeName
 ```
 
-`&TypeName` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+`&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
 Array<&Node, n>
 ```
+
+`'TypeName` is a **borrow** type. It is legal in **parameter positions only** — including the `this` position — and never as a storage, field, element, or return type.
+
+```zane
+Float topSpeed(engine 'Engine) => engine.speed
+
+held 'Engine = ...        // ILLEGAL: a borrow is not storage
+'Engine makeEngine()      // ILLEGAL: a borrow is not a return type
+Array<'Node, n>           // ILLEGAL: a borrow is not an element type
+```
+
+`&` and `'` are mutually exclusive on one type: `&'Node` and `'&Node` are not type forms. See [`memory.md`](memory.md) §2.9 for the semantics of the three passing modes.
 
 ### 2.4 Type expressions
 
@@ -242,11 +255,17 @@ ReturnType?AbortType[this ReceiverType, ParamType, ...] mut
 
 The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
 
-Reference-typed parameters and returns use the ordinary type form:
+Reference-typed parameters and returns use the ordinary type form. A parameter slot accepts all three passing modes — `ParamType`, `&ParamType`, and `'ParamType` — while a return slot accepts a bare or `&` type only (§2.3):
 
 ```zane
 ReturnType[&ParamType, ...]
-&ReturnType[this ReceiverType, &ParamType, ...]
+ReturnType['ParamType, ...]
+&ReturnType[this &ReceiverType, &ParamType, ...]
+ReturnType[this 'ReceiverType, 'ParamType, ...] mut
+```
+
+```zane
+'ReturnType[ParamType]   // ILLEGAL: a borrow is not a return type
 ```
 
 `mut` is legal only when the first parameter is `this`.
@@ -276,13 +295,17 @@ type Tree = #variant { leaf Int; node &Tree; }   // reference sum type
 ```zane
 ReturnType name(param ParamType, ...) { body }
 ReturnType name(param &ParamType, ...) { body }
+ReturnType name(param 'ParamType, ...) { body }
 ReturnType?AbortType name(param ParamType, ...) { body }
 ReturnType name(param ParamType, ...) => expr
 ReturnType name(param &ParamType, ...) => expr
+ReturnType name(param 'ParamType, ...) => expr
 ReturnType?AbortType name(param ParamType, ...) => expr
 ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n Number>, ...) { body }
 ```
+
+Each parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest, `'ParamType` borrows.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
@@ -302,9 +325,13 @@ ReturnType name(this ReceiverType, param &ParamType, ...) mut => expr
 ReturnType?AbortType name(this ReceiverType, param ParamType, ...) => expr
 ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut => expr
 ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { body }
+ReturnType name(this &ReceiverType, param ParamType, ...) { body }
+ReturnType name(this 'ReceiverType, param ParamType, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
+
+The receiver takes a passing mode like any other parameter, and every combination above may be written with `&` or `'` on `ReceiverType`. For a reference receiver, bare `this ReceiverType` means `this 'ReceiverType` — the borrow is the default — and `this &ReceiverType` is written when the method stores or returns the receiver as a guest. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 
@@ -425,6 +452,8 @@ A lambda literal is a function declaration with the name removed. It writes its 
 ```zane
 ReturnType() { body }
 ReturnType(param ParamType, ...) { body }
+ReturnType(param &ParamType, ...) { body }
+ReturnType(param 'ParamType, ...) { body }
 ReturnType() => expr
 ReturnType(param ParamType, ...) => expr
 ReturnType?AbortType(param ParamType, ...) { body }
@@ -436,7 +465,7 @@ ReturnType(this ReceiverType, param ParamType, ...) => expr
 ReturnType(this ReceiverType, param ParamType, ...) mut => expr
 ```
 
-A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
+A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. Parameters and the receiver carry the same three passing modes as a named verb (§3.1–§3.2).
 
 Examples:
 
