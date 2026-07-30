@@ -157,7 +157,7 @@ TEST_META = {
         "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
         "setup": "Three Zane variants: no guests, a single guest to the root, and one guest per node. Under the location model a guest is just a u32 copied from the host, so the three differ only in the guests stored, not in per-node cost. All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
         "meta": [
-            ("Tree size", "~4,000 nodes, branch 0–6"),
+            ("Tree size", "~4,000 nodes; non-leaf branch 1–5, leaves 0; full budget asserted"),
             ("No guests", "no per-node free"),
             ("Single parent guest", "one guest naming the root's location"),
             ("Individual guests", "one u32 guest per node; no cell to mint"),
