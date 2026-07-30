@@ -171,7 +171,9 @@ A **field** is a different matter and stays a legal source. A field belongs to a
 
 ### 2.9 Function parameters: swallow, guest, and borrow
 
-A **borrow** is non-hosting, non-escaping access to a caller's storage for the duration of a call. Unlike a guest (§2.4), a borrow has no anchor, cannot be stored in a field, and cannot be returned; it exists only while the call runs. A value type is *always* passed this way: a value-type parameter is a **read-only borrow** of the caller's slot, and a value is **copied** only when it is bound into a fresh slot — an assignment, a new declaration, or a field or return store.
+A **borrow** is non-hosting, non-escaping access to a caller's storage for the duration of a call. A borrow is never itself storage: unlike a guest (§2.4) it has no anchor, and it **MUST NOT** be stored in a field or returned. It exists only while the call runs.
+
+That restriction is on the borrow, not on what is read through one. A value type is *always* passed this way — a value-type parameter is a **read-only borrow** of the caller's slot — and binding through that borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value. The copy is a new value that outlives the call perfectly well; what does not escape is the borrow. A reference type has no such copy, so a `'T` borrow leaves nothing behind at all.
 
 A **reference type** has three passing modes, one per surface form:
 

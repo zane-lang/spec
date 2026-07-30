@@ -59,13 +59,20 @@ A second guard covers the memory model. A **bare symbol is not a guest source**
 bug. Eyeball every hit of:
 
 ```sh
-grep -RIn -E "&[A-Z][A-Za-z0-9]* *= *[a-z][A-Za-z0-9]* *(//.*)?[[:space:]]*$" spec/
+grep -RIn -E "&[A-Z][A-Za-z0-9]*[[:space:]]*=[[:space:]]*_?[a-z][A-Za-z0-9]*[[:space:]]*(//.*)?[[:space:]]*$" spec/
 ```
 
-Every surviving hit must be a field access (`= car.engine`) or an `&T`
-parameter — never a bare local. The trailing `(//.*)?[[:space:]]*$` is what
-makes the guard see the `// ILLEGAL: ...` examples; without it the end anchor
-skipped every commented line, which is most of them.
+The pattern matches a **bare-symbol** right-hand side only, so every hit is a
+candidate bug by construction — the legal sources (`= car.engine`, an `&T`
+parameter) never match, because `.` is outside the character class. Read each
+hit and keep it only if it is a deliberate `// ILLEGAL:` example or a grammar
+metavariable; anything else is a real one to fix.
+
+Two details are load-bearing. The trailing `(//.*)?[[:space:]]*$` is what makes
+the guard see the `// ILLEGAL: ...` examples; without it the end anchor skipped
+every commented line, which is most of them. The `_?` catches a private
+lowercase name (`_engine`) — Zane allows `_` only as a leading character, never
+inside a name (`lexical.md` §4.1–4.2), so nothing more is needed there.
 
 Run both with `-R` on the directory, not a `spec/*.md` glob plus a bare
 directory argument: `grep` prints `bench/: Is a directory` and silently skips
