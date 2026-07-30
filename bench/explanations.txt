@@ -1,17 +1,15 @@
 # Benchmark result explanations.
 #
 # Authored after inspecting a real run of zane_bench (see
-# zane_bench_results.txt), measured on the maintainer's laptop with the process
-# pinned to one core (taskset -c 0) — a physical, steal-free machine, but
-# noisier than the 285K desktop earlier numbers came from. Across the three
-# builds the unchanged-code controls varied ~13% run-to-run (malloc/free min
-# 1.92-2.22 ms), so absolute times and close calls here are noisy; the notes
-# lean on relative ordering and on the large, repeatable effects.
+# zane_bench_results.txt), measured in a shared cloud container rather than on
+# dedicated hardware. That environment is noisy: the max columns in the results
+# file run far above the medians on several tests, and the two thread-pool
+# tests (T8, T12) are dominated by contention for a small, shared core budget.
+# The notes therefore lean on relative ordering and on the large, repeatable
+# effects, not on close calls between adjacent numbers.
 #
 # runbench.py reads this file alongside the results and renders each block as
-# the "Details:" note for its test. Some tests (T13, T14) are a compile-time
-# A/B: the committed run is the default (separate) layout, and the note carries
-# the comparison against the -DZM_INTERLEAVE build.
+# the "Details:" note for its test.
 #
 # Format: one block per test, opened by "[Test N]". Lines starting with '#'
 # are comments; blank lines separate blocks.
@@ -22,76 +20,83 @@
 # which reuses that results file instead of re-running.
 
 [Test 1]
-Zane's bump-arena alloc (~175us median) comes in ~13x faster than malloc
-(~2.21ms) and ~1.5x faster than Pool (~263us). The raw Arena baseline (~16us)
-is an order of magnitude quicker still. Zane carries no per-instance metadata
-now, so the remaining gap is the harness's own per-object bookkeeping rather
-than anything the memory model requires.
+Zane's bump-arena alloc (~125us median) comes in ~29x faster than malloc
+(~3.65ms) and ~4.5x faster than Pool (~562us). The raw Arena baseline (~63us)
+is still about 2x quicker, which is the harness's own per-object bookkeeping
+rather than anything the memory model requires: objects carry no per-instance
+metadata at all now that hosted objects are never relocated.
 
 [Test 2]
-Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us
-— effectively unmeasurable — while malloc (~928us) and Pool (~192us) pay real
+Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.06us
+— effectively unmeasurable — while malloc (~7.40ms) and Pool (~1.17ms) pay real
 per-object cost. This is the bulk-reclaim model at its most extreme: nothing is
 returned per object, so free order cannot matter.
 
 [Test 3]
-With four interleaved sizes Zane (~285us) stays ~12x ahead of malloc (~3.46ms)
-and ~4x ahead of Pool (~1.18ms): the bump arena has no size classes, so mixed
-sizes are just more frontier bumps. The raw Arena baseline (~31us) again leads
-on the harness's own per-object bookkeeping, not on model overhead.
+With four interleaved sizes Zane (~1.10ms) stays ~10.6x ahead of malloc
+(~11.70ms) and ~2.3x ahead of Pool (~2.56ms): the bump arena has no size
+classes, so mixed sizes are just more frontier bumps. The raw Arena baseline
+(~121us) leads by ~9x on the harness's own per-object bookkeeping.
 
 [Test 4]
 No allocation is timed here — this is pure layout cost. Contiguous inline
-storage (~56us) is the clear floor; the chunked layouts stay close on locality
-(UList ~60us, CChunked ~79us). The scattered pointer array costs ~79us walked in
-order and ~117us shuffled — the shuffle is where a pointer-chase actually hurts,
-since the prefetcher can no longer hide the random hops.
+storage (~126us) is the floor; the chunked layouts stay close on locality
+(CChunked ~136us, UList ~148us) while the pointer arrays pay for the chase
+(~225us sequential, ~287us shuffled). This is the test that pays for keeping
+fields inline: a densely packed run of objects beats a run of references by
+roughly 1.8x sequentially and 2.3x once access order is scrambled.
 
 [Test 5]
-Growing an owned buffer, Zane's in-place frontier doublings (~80us median, ~74us
-min) now come in *below* the old free-stack build (~85us min) — the regression
-this test used to show is gone. The backing store is cache-line-aligned, so its
-32-byte entities no longer straddle 64-byte lines during the write-heavy fill.
-Zane also beats C's realloc vector (~230us) and the never-copy chunked forms
-(CChunked ~272us, UList ~861us).
+Growing an owned buffer in place (~148us) beats C's realloc vector (~445us) by
+~3x and the never-copy chunked forms by more (CChunked ~663us, UList ~1.26ms).
+The in-place path wins because the buffer is the dynamic frontier allocation,
+so growth is a frontier bump rather than an allocate-and-copy.
 
 [Test 6]
-A guest is a u32 segmented offset naming the object's location directly, so a
+A guest is a u32 segmented offset naming the object's storage directly, so a
 deref is one chunk-directory lookup and then the field — no indirection cell,
-because a location never moves. Whether the chunk directory is register-cached
-or reloaded is within noise here.
+because a hosted object never moves. That lands it at parity with a raw pointer
+chase: ~154us cached and ~144us reloaded against a ~160us direct-pointer
+baseline. Both paths do two loads (array slot then object, or directory entry
+then object) and the directory stays hot, so the difference is inside this
+environment's noise. Whether the chunk directory is register-cached or reloaded
+is likewise not separable here.
 
 [Test 7]
-At steady-state churn the allocators sit close (Zane ~2.07ms, Pool ~2.05ms,
-malloc ~2.45ms): once entity counts stabilize, per-frame update and simulation
+At steady-state churn the allocators sit close (Zane ~4.36ms, Pool ~4.44ms,
+malloc ~4.85ms): once entity counts stabilize, per-frame update and simulation
 work dominate and the raw allocation gaps from Tests 1-3 mostly wash out.
 
 [Test 8]
-Under maximum churn Zane (~6.33ms) leads malloc (~7.22ms) and sits close to Pool
-(~6.56ms). The work-stealing update variant is far slower (~11.7ms): the
-per-frame particle work is too small to amortize scheduling, so coordination
-overhead dominates — a caution against parallelizing fine-grained frame work.
+Sequential Zane (~14.42ms), Pool (~14.40ms), and malloc (~14.85ms) tie, for the
+same reason as T7 — the per-frame update dominates. The work-stealing variant
+(~79.74ms) is ~5.5x *slower* than sequential, which is an artifact of the
+environment rather than of the model: this container has few schedulable cores,
+so pool coordination costs more than the parallel update saves.
 
 [Test 9]
-Only the refill is timed. Zane just bumps the frontier for the 50k new objects
-(~94us), never touching the freed holes, so fragmentation history is
-irrelevant. malloc (~1.21ms) and Pool (~554us) refill from the slots freed in
-Phase B and carry that history — roughly 13x and 6x slower.
+Refilling a checkerboard-fragmented heap is where bulk reclaim shows its
+widest margin. Zane refills in ~33us because the arena never fragmented — the
+frontier simply advances and the freed evens are irrelevant. malloc (~2.96ms)
+and Pool (~1.24ms) refill from the slots freed in Phase B and carry that
+history: roughly 90x and 38x slower.
 
 [Test 10]
-All three Zane variants land together (~33-48us) because arena teardown does no
+All three Zane variants land together (~49-56us) because arena teardown does no
 per-node free work — the timed cost is just the post-order walk, and the guest
-count does not move it at all, since a guest is a u32 copied from the host. malloc's per-node free with coalescing is ~119us (~3.6x
-slower) and Pool is ~61us.
+count does not move it, since a guest is a u32 copied from the host with no cell
+to mint. malloc's per-node free with coalescing is ~201us (~3.8x slower) and
+Pool is ~96us.
 
 [Test 11]
-The mixed workload compresses the field (Zane ~1.83ms, malloc ~1.98ms, Pool
-~2.07ms): updates, scans, and randomized maintenance dominate the time, so the
+The mixed workload compresses the field (Zane ~3.00ms, malloc ~3.38ms, Pool
+~3.10ms): updates, scans, and randomized maintenance dominate the time, so the
 allocator strategy is only a small slice of the total — the expected outcome for
 a realistic churn pattern.
 
 [Test 12]
-Four read-only shards summed sequentially (~77us) and concurrently (~79us) land
-in a tie on this machine — the shard work is small enough that pool coordination
-cancels the parallelism. Both produce the asserted-identical total, which is the
-correctness point of the test.
+Four read-only shards summed sequentially (~114us) beat the concurrent run
+(~245us) on this machine. As in T8, that inversion is the environment: the shard
+work is small and the container's core budget is contended, so pool
+coordination costs more than the parallelism returns. Both produce the
+asserted-identical total, which is the correctness point of the test.

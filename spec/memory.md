@@ -336,7 +336,9 @@ The compiler may pack booleans in structs and arena frames when doing so does no
 
 Placement is an implementation decision, not a language-visible property. The arena model places every materialized value-type slot and every statically sized reference-type host inline in a scope's fixed-size region, and every resizable backing store in a dynamic region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement.
 
-A hosted object's storage is allocated in the arena of the scope the object comes to rest in. That scope is statically known: a move destination must be in the same or a higher lexical scope than its source ([`lifetimes.md`](lifetimes.md) §1.4), so the candidate destinations for an object all lie on the ancestor chain of its declaration scope, and the compiler allocates in the outermost of them. An object therefore never has to be relocated in order to outlive the scope it was constructed in.
+A hosted object is constructed **directly in the storage of the host it comes to rest in**. Which host that is, is statically known: hosting changes only by a move, a move-source is only ever a bare symbol ([`lifetimes.md`](lifetimes.md) §1.2) moved in its own declaration block ([`lifetimes.md`](lifetimes.md) §1.3), and every destination is at the same or a higher lexical scope ([`lifetimes.md`](lifetimes.md) §1.4). The compiler therefore reads the whole chain of moves off the declaration block and materializes the object once, in the final host's slot.
+
+A bare symbol that is later moved is thus a **name for the destination's storage from the outset**, not separate storage that is copied out of. In `engine Engine()` followed by `car Car(engine)`, the Engine is constructed directly in the `engine` field inside `car`, and the symbol `engine` names that field. This is why an inline field costs nothing at the move: there was never a second copy of the bytes to reconcile. An object therefore never has to be relocated in order to outlive the scope it was written in.
 
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a guest resolves identically regardless of physical placement (§4), because a hosted object does not move.
 
@@ -373,12 +375,12 @@ Dynamic chunks, ordinary power-of-two blocks, and oversized spans begin at cache
 
 ### 3.7 A move transfers hosting, not storage
 
-A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object itself does not move. Because both storage positions were placed in the same arena — the one belonging to the scope the object comes to rest in (§3.5) — the destination and the source designate the same bytes, and the transfer is a compile-time change in which position is responsible for destruction ([`lifetimes.md`](lifetimes.md) §1.6).
+A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object itself does not move, and no second copy of it ever existed: the source symbol and the destination slot are two **names for the same storage**, because the object was materialized in the destination's slot when it was constructed (§3.5). A move is therefore a compile-time change in which name is responsible for destruction ([`lifetimes.md`](lifetimes.md) §1.6), not a transfer of bytes between two slots.
 
 - Moving into a fresh declaration or a return slot makes that position the host.
 - Moving into an already-initialized host first destroys that host's current occupant, then makes the position host the moved value.
 
-Because a move never relocates an object, it copies no payload bytes regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated.
+Because a move never relocates an object, it copies no payload bytes regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated. It emits no code at all.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-move-that-stopped-relocating) — "The move that stopped relocating".
 

@@ -248,9 +248,6 @@ static inline ZRef zm_create_ref(void *obj, size_t obj_size) {
     return zm_seg(obj);
 }
 
-static inline void *zm_deref(ZRef ref) {
-    return zm_resolve(ref);
-}
 
 static void zm_free_lazy(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
 
@@ -552,14 +549,12 @@ static void test6(void) {
         uint8_t **dir = zm.dir;
         for(int i=0;i<N;i++){
             uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            sink^=(int64_t)((Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
+            sink^=(int64_t)((Entity*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3)))->hp;
         }
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            Entity *e=(Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3));
+            Entity *e=(Entity*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
             acc+=e->hp;
         }
         T[r]=now_ns()-t0; sink^=acc;
@@ -569,15 +564,13 @@ static void test6(void) {
     for(int r=0;r<RUNS;r++){
         for(int i=0;i<N;i++){
             uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            sink^=(int64_t)((Entity*)(zm.dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
+            sink^=(int64_t)((Entity*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3)))->hp;
         }
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             __asm__ volatile("" ::: "memory");
             uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            Entity *e=(Entity*)(zm.dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3));
+            Entity *e=(Entity*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
             acc+=e->hp;
         }
         T[r]=now_ns()-t0; sink^=acc;

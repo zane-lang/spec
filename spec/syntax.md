@@ -188,7 +188,7 @@ A type argument fills a type-parameter slot; a number argument fills a number-pa
 A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.10).
 
 ```zane
-type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
+type BinOp = #struct { left Expr; right Expr; operator Operator; }
 type QualifiedIdent = struct { packageName String; member String; }
 
 type Expr = #variant {
@@ -261,12 +261,16 @@ ReturnType?AbortType[this ReceiverType, ParamType, ...] mut
 
 The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
 
-Reference-typed parameters and returns use the ordinary type form:
+Reference-typed parameters and returns carry the same mode markers a declaration uses (§2.3):
 
 ```zane
 ReturnType[&ParamType, ...]
+ReturnType['ParamType, ...]
 &ReturnType[this ReceiverType, &ParamType, ...]
+ReturnType[this &ReceiverType, 'ParamType, ...]
 ```
+
+A parameter slot in a function type accepts any of the three modes — bare (swallow), `&` (guest), or `'` (borrow) — because a function type must be able to describe every declarable signature. A **return** slot accepts bare or `&` only; `'` is not a return type (§2.3).
 
 `mut` is legal only when the first parameter is `this`.
 
@@ -450,6 +454,8 @@ A lambda literal is a function declaration with the name removed. It writes its 
 ```zane
 ReturnType() { body }
 ReturnType(param ParamType, ...) { body }
+ReturnType(param &ParamType, ...) { body }
+ReturnType(param 'ParamType, ...) { body }
 ReturnType() => expr
 ReturnType(param ParamType, ...) => expr
 ReturnType?AbortType(param ParamType, ...) { body }
@@ -461,7 +467,7 @@ ReturnType(this ReceiverType, param ParamType, ...) => expr
 ReturnType(this ReceiverType, param ParamType, ...) mut => expr
 ```
 
-A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`.
+A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. A parameter carries any of the three mode markers (§2.3), exactly as in a named declaration.
 
 Examples:
 

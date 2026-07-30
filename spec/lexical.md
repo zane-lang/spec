@@ -187,7 +187,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
-| Leading `&` / `'` | `&Node` is a guest type (any storage or parameter position); `'Node` is a borrow type (parameter positions only); mutually exclusive |
+| Leading `&` / `'` | `&Node` is a guest type (storage, parameter, and return positions); `'Node` is a borrow type (parameter positions only); mutually exclusive |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`variant` body (marked or unmarked with `#`) and every arm of a `match` block; always trailing, inline or multiline; newlines are insignificant there |
 | Value separator | `,` separates elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |

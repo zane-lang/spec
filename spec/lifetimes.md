@@ -103,7 +103,7 @@ A hosting verb result (§1.2) has no source host; its source scope is the expres
 
 A parameter's value is exempt. Because a parameter belongs to the call-site scope and is not part of the body (§1.5), lending it into a local or a nested call does not sink hosting into that lower scope.
 
-This rule has a second job beyond safety. Because every destination is at the same or a higher scope, the candidate destinations for a given object all lie on the ancestor chain of its declaration scope — a chain totally ordered by nesting, which therefore has an outermost member. That member is the arena the object is allocated in ([`memory.md`](memory.md) §3.5), so the object never needs to be relocated in order to outlive the scope it was written in.
+This rule has a second job beyond safety. Because every destination is at the same or a higher scope, the candidate destinations for a given object all lie on the ancestor chain of its declaration scope — a chain totally ordered by nesting, which therefore has an outermost member. That member bounds where the object may come to rest, which is what lets the compiler materialize it once, in its final host's storage ([`memory.md`](memory.md) §3.5), so it never needs to be relocated in order to outlive the scope it was written in.
 
 ### 1.5 Parameters belong to the call site
 A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosting reference-type value to a swallowing `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
@@ -134,7 +134,7 @@ engine:inspect()         // legal: engine still denotes the same object
 truck Truck(engine)      // ILLEGAL: engine no longer hosts, so it is not a move-source
 ```
 
-The mechanism is that a move relocates nothing ([`memory.md`](memory.md) §3.7). The object stays exactly where it was, so after the move both storage positions designate the same bytes and reads through either one reach the same object. What the source loses is only the right to move again.
+The mechanism is that a move relocates nothing ([`memory.md`](memory.md) §3.7). The object was materialized in the destination's storage when it was constructed ([`memory.md`](memory.md) §3.5), so the source symbol and the destination are two names for the same storage all along; the move only changes which of them is responsible for destruction. Reads through the downgraded symbol therefore reach the same object they always did. What the source loses is only the right to move again.
 
 A downgraded symbol is still not a guest source ([`memory.md`](memory.md) §2.8): the restriction is on bare symbols as a storage form, not on whether one currently hosts.
 
