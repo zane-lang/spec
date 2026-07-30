@@ -28,6 +28,12 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    internal contradictions on this codebase before: re-read the *un-updated*
    spec files and `bench/zane_bench.c` against the new design before opening a
    PR, not just the file you changed.
+3. **A rule correction is not done until `glossary.md` carries it.** The
+   glossary summarizes rules it does not own, so fixing a rule in its canonical
+   home and leaving the entry paraphrasing the superseded version produces a
+   spec that contradicts itself — this has happened twice, both times caught in
+   review rather than by the author. After editing any normative rule, grep
+   `spec/glossary.md` for the concept and update the entry in the same commit.
 
 ## The `bench/` harness
 `bench/` is a reference **C** harness for runtime experiments — **not** Zane
