@@ -1,6 +1,6 @@
 # Zane Memory Model
 
-This document specifies Zane's memory model: hosting, guests, borrows, locations, and arena layout. Lexical lifetime rules, moves, and deterministic destruction are specified in [`lifetimes.md`](lifetimes.md).
+This document specifies Zane's memory model: hosting, guests, borrows, and arena layout. Lexical lifetime rules, moves, and deterministic destruction are specified in [`lifetimes.md`](lifetimes.md).
 
 > **See also:** [`lifetimes.md`](lifetimes.md) for scope rules, moves, and destruction. [`types.md`](types.md) §2 for value and reference types. [`effects.md`](effects.md) §2 for `mut`. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`syntax.md`](syntax.md) §1 and §2 for storage forms.
 
@@ -8,21 +8,21 @@ This document specifies Zane's memory model: hosting, guests, borrows, locations
 
 ## 1. Overview
 
-Zane eliminates dangling guests by giving every reference-type object a fixed **location** and restricting where a guest may be rooted.
+Zane eliminates dangling guests by never relocating a hosted object and by restricting where a guest may be rooted.
 
-- **`Locations never move`.** A reference-type instance occupies one location for its entire life. Nothing relocates it, so a reference to it never needs fixing up.
-- **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten. An overwrite replaces the occupant of the location, not the location.
+- **`Hosted objects never move`.** A reference-type instance occupies one storage slot for its entire life. Nothing relocates it, so a reference to it never needs fixing up.
+- **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten. An overwrite destroys the current occupant and constructs the replacement in the same slot.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to point at, so it is shared by copy or borrow, never by a stored guest.
 - **`Guests are rooted in immovable storage`.** A guest may be created only from a field, a stored guest, or a guest parameter — never from a bare symbol, because a bare symbol is the only storage a move can empty (see §2.8).
 - **`Borrows cover the rest`.** A `'T` — a **borrow** — is non-hosting, non-escaping access for the duration of one call. It may be rooted in anything, including a bare symbol, because it cannot outlive the call (see §2.9).
-- **`Regioned arena placement`.** Every scope owns separate fixed-size and dynamic-backing-store regions. A location is a slot in a fixed-size region; resizable data uses the dynamic region (see §3).
-- **`Segmented-offset references`.** Internally, a guest and a reference-type storage slot both hold a `u32` **segmented offset** — a chunk id plus an in-chunk offset — naming a location directly (see §4).
+- **`Regioned arena placement`.** Every scope owns separate fixed-size and dynamic-backing-store regions. Statically sized storage is placed in the fixed-size region; resizable data uses the dynamic region (see §3).
+- **`Segmented-offset references`.** Internally, a guest holds a `u32` **segmented offset** — a chunk id plus an in-chunk offset — naming the storage it reaches (see §4).
 
-The source language and the runtime use the same small vocabulary. An object lives in a **location**; a **host** is the storage that governs when that object is destroyed; a **guest** (`&T`) may reach the object without controlling its lifetime; a **borrow** (`'T`) may reach it only for the duration of a call. Because a location is fixed, a guest is an ordinary reference and resolving one is a single lookup.
+The source language and the runtime use the same small vocabulary. A **host** is the storage that holds an object and governs when it is destroyed; a **guest** (`&T`) may reach the object without controlling its lifetime; a **borrow** (`'T`) may reach it only for the duration of a call. Because a hosted object never moves, a guest is an ordinary reference and resolving one is a single lookup.
 
-These rules fit together mechanically. Hosting is the only thing that controls destruction, and exactly one storage position hosts an object at a time. Moving transfers hosting between storage positions without relocating the object. Overwriting replaces what a location holds while the location itself persists. A guest may be rooted only in storage that a move cannot empty, and lexical scope checks ensure the location outlives every guest that reaches it.
+These rules fit together mechanically. Hosting is the only thing that controls destruction, and exactly one storage position hosts an object at a time. Moving transfers hosting between storage positions without relocating the object. Overwriting replaces a host's occupant while the storage itself persists. A guest may be rooted only in storage that a move cannot empty and that no container operation can relocate, and lexical scope checks ensure that storage outlives every guest reaching it.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#locations-and-the-indirection-that-stopped-moving) — "Locations, and the indirection that stopped moving".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-that-stopped-relocating) — "The move that stopped relocating".
 
 ---
 
@@ -43,17 +43,17 @@ tank Tank(...)
 tank = Tank(...) // legal
 ```
 
-An overwrite destroys the current occupant and constructs the replacement **in the same location**. The location persists across the overwrite, so existing guests remain valid and later reads through them observe the new occupant.
+An overwrite destroys the current occupant and constructs the replacement **in the same storage**. The slot persists across the overwrite, so existing guests remain valid and later reads through them observe the new occupant.
 
 ```zane
 hosts Array<Node, 2> = [Node(), Node()]
 ```
 
-Rewriting `hosts[1]` replaces the reference-type instance occupying that element's location. Guests to that location observe the new value.
+Rewriting `hosts[1]` replaces the reference-type instance occupying that element's slot. Guests reaching that slot observe the new value.
 
 ### 2.3 Value types are mutable in place and freely overwritable
 
-Value types have no location and no identity. A value is mutated in place through a `mut` method whose receiver is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale.
+Value types have no identity. A value is mutated in place through a `mut` method whose receiver is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale.
 
 ```zane
 pos Vec2(1, 2)
@@ -63,9 +63,9 @@ pos = Vec2(3, 4)   // whole-slot overwrite
 
 ### 2.4 `&` is a guest: non-hosting storage
 
-`&` creates a **guest**: non-hosting storage that points at a **reference type** only. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — because only a reference type occupies a location that a stored reference can name. A value type is shared by copying it or by a borrow (§2.9), never by a stored guest. Writing `&Node` names a guest to a reference type; a bare `&Int` over a value type is ill-formed.
+`&` creates a **guest**: non-hosting storage that points at a **reference type** only. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — because only a reference type has the identity a stored reference names. A value type is shared by copying it or by a borrow (§2.9), never by a stored guest. Writing `&Node` names a guest to a reference type; a bare `&Int` over a value type is ill-formed.
 
-A guest holds a reference to a location and nothing else. It does not extend the object's lifetime, and it cannot become a host.
+A guest holds a reference to the hosted object's storage and nothing else. It does not extend the object's lifetime, and it cannot become a host.
 
 A guest may be declared as:
 
@@ -85,7 +85,7 @@ An `&` symbol or `&` field may be assigned a different target later, as long as 
 
 ### 2.6 Guests are independent
 
-Assigning or passing a guest gives the destination its own guest to the same location. Rebinding one guest's storage site later changes only that storage site; it does not retarget other guests that already point at that location.
+Assigning or passing a guest gives the destination its own guest to the same object. Rebinding one guest's storage site later changes only that storage site; it does not retarget other guests that already point at that object.
 
 ### 2.7 Guests and hosts use the same surface operations
 
@@ -107,7 +107,7 @@ Not every place expression may create a guest. A new `&` binding may be initiali
 - a field access whose base is a place
 - an `&T` parameter
 
-A **bare symbol MUST NOT** be a guest source. A bare symbol — a local binding or a parameter named directly by an identifier expression — is the only storage a move can empty ([`lifetimes.md`](lifetimes.md) §1.2), so a guest rooted there could outlive the object it was created from. A field, by contrast, is never a move-source: it can be overwritten, but an overwrite leaves a live occupant in the same location (§2.2), so a guest rooted in a field always resolves.
+A **bare symbol MUST NOT** be a guest source. A bare symbol — a local binding or a parameter named directly by an identifier expression — is the only storage a move can empty ([`lifetimes.md`](lifetimes.md) §1.2), so a guest rooted there could outlive the object it was created from. A field, by contrast, is never a move-source: it can be overwritten, but an overwrite leaves a live occupant in the same storage (§2.2), so a guest rooted in a field always resolves.
 
 ```zane
 engine Engine()
@@ -121,7 +121,7 @@ r &Engine = car.engine   // legal: a field is never emptied by a move
 
 To reach an object held by a bare symbol without taking hosting, pass it as a borrow (§2.9). To hold a lasting reference to it, give it a host that is not a bare symbol.
 
-A `[]` expression is never a source for creating a new `&`, even when it is a place expression, because a container's own operations may drop the element. Temporaries and other value-only expressions are not place expressions at all: constructor calls and ordinary function results such as `Engine()` and `makeEngine()` have no location for a guest to name.
+A `[]` expression is never a source for creating a new `&`, and **neither is any path rooted in one**: `cars[1]` and `cars[1].engine` are both rejected. A container's own operations drop elements and relocate its backing store as it grows (§3.6), so element storage is the one place a guest could be left naming bytes that have moved. Temporaries and other value-only expressions are not place expressions at all: constructor calls and ordinary function results such as `Engine()` and `makeEngine()` have no stable storage for a guest to name.
 
 ```zane
 engine &Engine = Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
@@ -129,7 +129,8 @@ engine &Engine = Engine()   // ILLEGAL: Engine() is a temporary, not a place exp
 
 ```zane
 weapons List = [Weapon(), Weapon()]
-current &Weapon = weapons[1]   // ILLEGAL: `[]` cannot create a new `&`
+current &Weapon = weapons[1]          // ILLEGAL: `[]` cannot create a new `&`
+barrel &Barrel = weapons[1].barrel   // ILLEGAL: the path is rooted in a `[]`
 ```
 
 Reading an `&` that is *already stored* in a container is not creating one, and remains legal:
@@ -138,10 +139,10 @@ Reading an `&` that is *already stored* in a container is not creating one, and 
 current &Weapon = arsenal.weapons[1]   // legal: reads a stored `&Weapon`
 ```
 
-Non-`&` host bindings may be initialized from any expression, including temporaries. The host materializes the value into a location.
+Non-`&` host bindings may be initialized from any expression, including temporaries. The host materializes the value into its own storage.
 
 ```zane
-engine Engine()         // legal: plain host binding; the temporary is materialized into a location
+engine Engine()         // legal: plain host binding; the temporary is materialized into engine's storage
 ```
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
@@ -160,7 +161,7 @@ A **swallowing** parameter takes its argument by hosting access. The value belon
 
 A **guest** parameter is an `&T`. The caller must supply a guest source under §2.8 — which, because a bare symbol is not one, means a field access or another guest. Inside the callee body the parameter is a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7.
 
-A **borrow** parameter is a `'T`: non-hosting, non-escaping access to the caller's storage for the duration of the call. A borrow has no location of its own, **MUST NOT** be stored in a field or container, and **MUST NOT** be returned. Because it cannot outlive the call, it may be rooted in anything the caller has, including a bare symbol. Borrowing is also the passing mode for **value types**: a value-type parameter is a read-only borrow whether or not the `'` is written, and a value is **copied** only when it is bound into a fresh slot — an assignment, a new declaration, or a field or return store. The one writable borrow is a `mut` receiver (see [`functions.md`](functions.md) §2.4).
+A **borrow** parameter is a `'T`: non-hosting, non-escaping access to the caller's storage for the duration of the call. A borrow has no storage of its own, **MUST NOT** be stored in a field or container, and **MUST NOT** be returned. Because it cannot outlive the call, it may be rooted in anything the caller has, including a bare symbol. Borrowing is also the passing mode for **value types**: a value-type parameter is a read-only borrow whether or not the `'` is written, and a value is **copied** only when it is bound into a fresh slot — an assignment, a new declaration, or a field or return store. The one writable borrow is a `mut` receiver (see [`functions.md`](functions.md) §2.4).
 
 A reference-type **receiver** written `this T` is an implicit borrow: it is never swallowed, and it is what an ordinary method call on a bare symbol supplies. A receiver written `this &T` is a guest receiver, and the call site must then supply a guest source under §2.8.
 
@@ -224,7 +225,7 @@ Value types form a closed world of plain value storage. A value-type field may c
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-Value types are copied and overwritten as ordinary inline values. They do not occupy locations and are not destruction-tracked. If a value could contain a reference-type field, copying it would silently duplicate hosting. If a value could contain an `&`, copying it would silently duplicate a reference to a location without any host accounting for it. Downstream enforcement keeps value copying mechanical, keeps hosting confined to reference types, and — because nothing reachable from a value can be aliased — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
+Value types are copied and overwritten as ordinary inline values. They have no identity and are not destruction-tracked. If a value could contain a reference-type field, copying it would silently duplicate hosting. If a value could contain an `&`, copying it would silently duplicate a reference without any host accounting for it. Downstream enforcement keeps value copying mechanical, keeps hosting confined to reference types, and — because nothing reachable from a value can be aliased — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
 
 ```zane
 type Vec2 = struct {
@@ -263,7 +264,7 @@ if runtimeBool() {
 }
 ```
 
-Because every storage position is initialized at its declaration and a location always holds a live occupant, no reference-type slot and no guest ever holds a null reference (see [`lifetimes.md`](lifetimes.md) §2.4).
+Because every storage position is initialized at its declaration and a host slot always holds a live occupant, no reference-type slot and no guest ever holds a null reference (see [`lifetimes.md`](lifetimes.md) §2.4).
 
 ---
 
@@ -273,7 +274,7 @@ Because every storage position is initialized at its declaration and a location 
 
 Each lexical scope owns an **arena** made from two independent allocation regions:
 
-- The **fixed-size region** stores materialized value-type slots and the locations of reference-type instances, including the fixed-size handles of dynamically-sized reference types.
+- The **fixed-size region** stores materialized value-type slots and statically sized reference-type hosts, including the fixed-size handles of dynamically-sized reference types.
 - The **dynamic region** stores the resizable backing stores behind handles such as `List` and `String`.
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
@@ -291,7 +292,7 @@ An ordinary dynamic allocation never straddles a chunk boundary. A dynamic block
 
 A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguous OS mapping made from `block_size / 1 MiB` consecutive dynamic chunks, all belonging exclusively to that block and assigned consecutive chunk ids. Its handle stores the segmented offset of the span's first byte and its size class. After resolving that base, element addressing uses an ordinary byte offset across the contiguous mapping. Every constituent chunk also has a directory entry. Returning an oversized span pushes only its base offset onto the exact-size stack; the complete span remains mapped for reuse until the scope drains.
 
-All chunks draw ids from one chunk directory, so locations, dynamic handles, guests, reference-type storage slots, and size-stack entries all use one **`u32` segmented offset**:
+All chunks draw ids from one chunk directory, so payload storage, dynamic handles, guests, and size-stack entries all use one **`u32` segmented offset**:
 
 ```
    u32 segmented offset
@@ -307,7 +308,7 @@ Allocations are at least 8-byte aligned, so the low bits count 8-byte words: a 1
 
 ### 3.2 Allocation, reuse, and teardown
 
-The fixed-size region is a pure bump allocator: no size classes, no free list, no coalescing. A location has a fixed-size storage slot, so overwriting its occupant destroys the current one and initializes the replacement directly in the same slot (§2.2); the overwrite consumes no new space in the fixed-size region. Any dynamic backing stores owned by the destroyed occupant are returned to their exact-size stacks before the replacement becomes live. Nothing in the fixed-size region is reclaimed individually — bytes in a slot that cease to be live before the scope drains remain dead space until teardown.
+The fixed-size region is a pure bump allocator: no size classes, no free list, no coalescing. A host has a fixed-size storage slot, so overwriting it destroys the current occupant and initializes the replacement directly in the same slot (§2.2); the overwrite consumes no new space in the fixed-size region. Any dynamic backing stores owned by the destroyed occupant are returned to their exact-size stacks before the replacement becomes live. Nothing in the fixed-size region is reclaimed individually — bytes in a slot that cease to be live before the scope drains remain dead space until teardown.
 
 The dynamic region adds exact-size reuse on top of its bump frontier. Dynamic blocks use power-of-two byte sizes beginning at **128 bytes**. Each scope maintains one LIFO **size stack** for every block size that has become reusable. To allocate a dynamic block of size `S`, the runtime first pops `size_stack[S]`; only when that stack is empty does it bump the dynamic frontier. It never satisfies a request from another size stack and never coalesces neighbouring blocks.
 
@@ -317,15 +318,15 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
 
-### 3.3 Value fields are inline; reference fields are references
+### 3.3 Fields are inline; only a containment cycle forces indirection
 
-Fields are laid out in declaration order. A value-type field is stored **inline** in its container, so a value type's representation is one contiguous run of bytes and an array of value types is densely packed.
+Fields are laid out in declaration order and stored **inline** in their container, whether the field's type is a value type or a reference type. A statically sized reference-type instance sits inline in its host slot, so value-type slots and reference-type host slots may sit directly beside each other, and an array of either is densely packed. Reference types differ from value types by identity and hosting semantics, not by requiring a separate indirect allocation.
 
-A reference-type field is stored as a **`u32` segmented offset** naming the field's occupant location, not as an inline payload. The same holds for a reference-type local symbol and a reference-type container element: each is a four-byte reference to a location, and the object itself occupies that location in a fixed-size region.
+An inline reference-type field is reachable by a guest for the same reason an inline value field is not relocated: the host slot it sits in never moves, so a fixed offset into that slot is a stable address for as long as the host lives (§4.3).
 
-This is what `#` buys and what it costs. Because a reference-type storage slot is a reference, a reference type may recurse without infinite size (see [`adt.md`](adt.md) §4), its location is stable no matter what happens to the storage that names it, and moving a host copies four bytes rather than a representation. In exchange, reaching a reference-type field costs one directory lookup that an inline field would not.
+The one case inline layout cannot express is a **containment cycle** — a reference type that reaches itself through hosting fields — which would have no finite size. The compiler stores such a member indirectly instead, as a `u32` segmented offset to storage of its own. This is a placement decision under §3.5, not a language-visible one: the member is an ordinary hosting field, uniform stride still holds because the indirect member has a fixed size, and no boxing type appears in the source (see [`adt.md`](adt.md) §4).
 
-A guest slot (`&T`) has exactly the same representation as a hosting reference-type slot (`T`). The two differ only in the static hosting discipline that governs them, never in what they store.
+A guest slot (`&T`) always holds a `u32` segmented offset. It never holds an inline payload, because it hosts nothing.
 
 ### 3.4 Booleans may be packed
 
@@ -333,17 +334,17 @@ The compiler may pack booleans in structs and arena frames when doing so does no
 
 ### 3.5 Placement is the compiler's
 
-Placement is an implementation decision, not a language-visible property. The arena model places every materialized value-type slot and every reference-type location inline in a scope's fixed-size region, and every resizable backing store in a dynamic region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement.
+Placement is an implementation decision, not a language-visible property. The arena model places every materialized value-type slot and every statically sized reference-type host inline in a scope's fixed-size region, and every resizable backing store in a dynamic region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement.
 
-A location is allocated in the arena of the scope that the object comes to rest in. That scope is statically known: a move destination must be in the same or a higher lexical scope than its source ([`lifetimes.md`](lifetimes.md) §1.4), so the candidate destinations for an object all lie on the ancestor chain of its declaration scope, and the compiler places the location in the outermost of them. An object therefore never has to be relocated in order to outlive the scope it was constructed in.
+A hosted object's storage is allocated in the arena of the scope the object comes to rest in. That scope is statically known: a move destination must be in the same or a higher lexical scope than its source ([`lifetimes.md`](lifetimes.md) §1.4), so the candidate destinations for an object all lie on the ancestor chain of its declaration scope, and the compiler allocates in the outermost of them. An object therefore never has to be relocated in order to outlive the scope it was constructed in.
 
-Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a guest resolves identically regardless of physical placement (§4), because a location does not move.
+Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a guest resolves identically regardless of physical placement (§4), because a hosted object does not move.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 
 ### 3.6 Handle-typed dynamic reference types have fixed footprint
 
-Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the backing store's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint in the type's location; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the backing store's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -364,7 +365,7 @@ A list grows according to the following rules:
 4. Otherwise, a doubled block of at most 1 MiB is bump-allocated wholly inside one dynamic chunk. A doubled block larger than 1 MiB is allocated as a fresh dedicated oversized span (§3.1). The live elements are relocated into the new block or span.
 5. After relocation, the handle's backing-store offset and size class are updated and the old block's base offset is pushed onto the stack for its exact old byte size.
 
-A block never grows in place across a chunk boundary, and an oversized span is never extended in place: further growth relocates into a doubled oversized span after checking that exact-size stack first. Growth relocates the *elements* of the backing store. Where those elements are reference-type slots, only their four-byte references move; the locations they name are untouched, so guests reaching those objects are unaffected.
+A block never grows in place across a chunk boundary, and an oversized span is never extended in place: further growth relocates into a doubled oversized span after checking that exact-size stack first. Growth relocates the *elements* of the backing store, which is the one relocation the model still performs — and it is exactly why no guest may be created from a `[]` expression or from any path rooted in one (§2.8).
 
 Dynamic chunks, ordinary power-of-two blocks, and oversized spans begin at cache-line-aligned addresses. Because the minimum block is 128 bytes and every larger block doubles, frontier allocations, reused blocks, and dedicated spans preserve cache-line alignment without mixing backing stores into fixed-size chunks.
 
@@ -372,34 +373,28 @@ Dynamic chunks, ordinary power-of-two blocks, and oversized spans begin at cache
 
 ### 3.7 A move transfers hosting, not storage
 
-A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object does not move: the destination slot receives the four-byte reference the source held, and the source slot keeps that same reference while losing hosting ([`lifetimes.md`](lifetimes.md) §1.6).
+A move transfers hosting into a destination storage position of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). The object itself does not move. Because both storage positions were placed in the same arena — the one belonging to the scope the object comes to rest in (§3.5) — the destination and the source designate the same bytes, and the transfer is a compile-time change in which position is responsible for destruction ([`lifetimes.md`](lifetimes.md) §1.6).
 
-- Moving into a fresh declaration or a return slot writes the reference into the new slot.
-- Moving into an already-initialized host first destroys that host's current occupant, then writes the reference into the same slot.
+- Moving into a fresh declaration or a return slot makes that position the host.
+- Moving into an already-initialized host first destroys that host's current occupant, then makes the position host the moved value.
 
-Because a move never relocates an object, it costs four bytes regardless of the size of the representation, no dynamic backing store is copied, and no guest is enumerated, rewritten, or invalidated.
+Because a move never relocates an object, it copies no payload bytes regardless of the size of the representation, no dynamic backing store is relocated, and no guest is enumerated, rewritten, or invalidated.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#locations-and-the-indirection-that-stopped-moving) — "Locations, and the indirection that stopped moving".
 
 ---
 
-## 4. Locations and References
+## 4. References
 
-### 4.1 A location holds one object for its whole life
+### 4.1 A reference is a segmented offset
 
-A **location** is the fixed-size storage slot a reference-type instance occupies. It is allocated when the instance is constructed (§3.5) and released when its arena is unmapped (§3.2). Between those two events the location does not move, is not reused for an unrelated object, and always holds a live occupant.
-
-An overwrite (§2.2) replaces a location's occupant: the current one is destroyed and the replacement is constructed in the same slot. This is the only way a location's contents change, and it leaves the location itself intact.
-
-### 4.2 A reference is a segmented offset
-
-Every reference-type storage slot — a host, a guest, a field, or a container element — holds one **`u32` segmented offset** (§3.1) naming a location. It is not a native pointer and not a table index. At half the width of a 64-bit pointer, twice as many references fit in a cache line, and the 32-bit encoding keeps resolution on cheap 32-bit CPU math.
+A guest holds one **`u32` segmented offset** (§3.1) naming the storage it reaches. It is not a native pointer and not a table index. At half the width of a 64-bit pointer, twice as many references fit in a cache line, and the 32-bit encoding keeps resolution on cheap 32-bit CPU math. A cycle-broken hosting member (§3.3) uses the same encoding.
 
 A borrow (`'T`) is not stored and needs no encoding of its own; an implementation may pass it as a native address, since it cannot escape the call.
 
-The physical footprint attributable to one reference-type instance is its location plus four bytes per reference naming it. There is no per-instance metadata: an instance that is never guested costs nothing beyond the slot it occupies.
+There is no per-instance metadata. An instance costs the storage it occupies, and each guest reaching it costs four bytes wherever that guest is stored.
 
-### 4.3 Resolving a reference
+### 4.2 Resolving a reference
 
 Resolving a reference splits the `u32` into a chunk id and a word offset, reads the chunk's base from the chunk directory, and adds the offset. Field access then applies an ordinary field offset:
 
@@ -418,22 +413,23 @@ chunk directory
 fixed-size chunk
 │
 ▼
-Weapon location
+Weapon storage
 │
 │ ordinary field offset
 ▼
 Weapon.dps
 ```
 
-The cost over a direct inline access is one chunk-directory load, which is hot and shared by every reference in the program. Across repeated accesses through the same reference the compiler may resolve the address once and reuse it, because no intervening operation can move the location.
+The cost over a direct inline access is one chunk-directory load, which is hot and shared by every reference in the program. Across repeated accesses through the same guest the compiler may resolve the address once and reuse it, because no intervening operation can move the object.
 
-### 4.4 Why references never dangle
+### 4.3 Why references never dangle
 
-A dangling reference would require a guest to outlive the location it names. Three rules together forbid it:
+A dangling reference would require a guest to outlive the storage it names, or that storage to move underneath it. Four rules together forbid both:
 
-- A location is released only when its arena is unmapped, which happens only when its scope drains (§3.2).
-- A location is placed in the scope the object comes to rest in (§3.5), so it is never released while a host still names it.
-- A guest may be created only from a field or another guest (§2.8), and only when the target's host is declared in the same or a higher lexical scope ([`lifetimes.md`](lifetimes.md) §1.1). A bare symbol — the only storage a move can empty — cannot be a guest source at all.
+- A hosted object is never relocated. A move transfers hosting without moving bytes (§3.7), and an overwrite constructs the replacement in the same storage (§2.2).
+- Storage is allocated in the scope the object comes to rest in (§3.5) and released only when that scope's arena is unmapped (§3.2), so it is never released while a host still names it.
+- A guest may be created only from a field access or another guest (§2.8) — never from a bare symbol, which a move can empty, and never from a `[]` expression or a path rooted in one, whose element storage a container may relocate.
+- A guest may be created only when the target's host is declared in the same or a higher lexical scope ([`lifetimes.md`](lifetimes.md) §1.1).
 
 A borrow is bounded by a stricter rule still: it cannot be stored or returned (§2.9), so it cannot outlive the call that created it.
 
@@ -452,7 +448,7 @@ A borrow is bounded by a stricter rule still: it cannot be stored or returned (�
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Reference counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Guests remain usable across moves | ✅ moves do not relocate | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Host overwrite keeps existing guests valid | ✅ the location persists | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
+| Host overwrite keeps existing guests valid | ✅ the storage persists | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
 
 ### 5.2 Allocation
 
@@ -469,24 +465,23 @@ A borrow is bounded by a stricter rule still: it cannot be stored or returned (�
 | Concept | Rule |
 |---|---|
 | Hosting storage | Reference-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
-| Location | The fixed-size slot a reference-type instance occupies; allocated at construction, released when its arena is unmapped, never moved |
 | Value type | Mutable in place through a borrowed `mut` receiver; storage may also be overwritten freely |
-| `&` (guest) | Non-hosting storage holding one reference to a location; may be repointed, copied, stored, and returned, but never hosts |
+| `&` (guest) | Non-hosting storage holding one reference to a hosted object; may be repointed, copied, stored, and returned, but never hosts |
 | `'` (borrow) | Non-hosting, non-escaping access for the duration of one call; may be rooted in anything; **MUST NOT** be stored or returned |
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&T`/`'T` parameter |
-| Guest source | Only a field access of a place, or an `&T` parameter; a bare symbol, a temporary, and a `[]` expression are all rejected |
+| Guest source | Only a field access of a place, or an `&T` parameter; a bare symbol, a temporary, a `[]` expression, and any path rooted in a `[]` are all rejected |
 | Reference-type parameter | `T` swallows; `&T` is a guest and needs a guest source; `'T` is a borrow and accepts any place |
 | Reference-type receiver | `this T` is an implicit borrow; `this &T` is a guest receiver and requires a guest source at the call |
 | Value-type parameter | A read-only borrow; caller need not supply a guest source; copied only when bound into a fresh slot |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized; no reference-type slot or guest is ever null |
-| Field layout | A value-type field is inline; a reference-type field, local, or element is a four-byte reference to a location |
-| Move | Transfers hosting by copying a four-byte reference; the object is never relocated and no guest is affected |
-| Overwrite | Destroys the location's occupant and constructs the replacement in the same location; existing guests observe the new occupant |
+| Field layout | Every field is inline, value or reference alike; only a containment cycle forces a member to be stored indirectly, as a placement decision |
+| Move | Transfers hosting at compile time; the object is never relocated, no payload bytes are copied, and no guest is affected |
+| Overwrite | Destroys the host's occupant and constructs the replacement in the same storage; existing guests observe the new occupant |
 | Addressing | One `u32` segmented-offset directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
 | Dynamic allocation | Power-of-two byte classes beginning at 128 bytes; exact-size stack first, frontier second; blocks above 1 MiB use dedicated contiguous oversized spans |
 | Backing-store alignment | Dynamically-sized backing stores (§3.6) are cache-line-aligned; small inline allocations stay 8-byte aligned |
-| Per-instance overhead | None; an instance costs its location plus four bytes per reference naming it |
+| Per-instance overhead | None; an instance costs the storage it occupies plus four bytes per guest reaching it |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.

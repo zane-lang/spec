@@ -1,8 +1,8 @@
 # Zane Lifetimes
 
-This document specifies Zane's lexical lifetime rules: guest and borrow scope checks, moves, and deterministic destruction. It builds on the host, guest, borrow, and location storage forms defined in [`memory.md`](memory.md).
+This document specifies Zane's lexical lifetime rules: guest and borrow scope checks, moves, and deterministic destruction. It builds on the host, guest, and borrow storage forms defined in [`memory.md`](memory.md).
 
-> **See also:** [`memory.md`](memory.md) §2 for hosting and storage, §4 for locations and references. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`effects.md`](effects.md) §2 for `mut`.
+> **See also:** [`memory.md`](memory.md) §2 for hosting and storage, §4 for references. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`effects.md`](effects.md) §2 for `mut`.
 
 ---
 
@@ -22,7 +22,7 @@ r &Node = outer.node
 
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
-This check works together with the source restriction in [`memory.md`](memory.md) §2.8: a guest may be created only from a field or another guest, never from a bare symbol. The source rule ensures the guest names a location that no move can empty; the scope rule ensures that location's arena outlives the guest.
+This check works together with the source restriction in [`memory.md`](memory.md) §2.8: a guest may be created only from a field or another guest, never from a bare symbol. The source rule ensures the guest names storage that no move can empty and no container can relocate; the scope rule ensures that storage outlives the guest.
 
 A **borrow** (`'T`) needs no such check. It cannot be stored or returned ([`memory.md`](memory.md) §2.9), so it never outlives the call that created it.
 
@@ -82,7 +82,7 @@ car Car()
 
 This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
 
-Confining moves this way is also what makes an object's resting scope statically known, which is what lets its location be placed once and never relocated ([`memory.md`](memory.md) §3.5).
+Confining moves this way is also what makes an object's resting scope statically known, which is what lets it be allocated once and never relocated ([`memory.md`](memory.md) §3.5).
 
 The restriction applies only to symbol move-sources. A hosting verb result (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
 
@@ -103,7 +103,7 @@ A hosting verb result (§1.2) has no source host; its source scope is the expres
 
 A parameter's value is exempt. Because a parameter belongs to the call-site scope and is not part of the body (§1.5), lending it into a local or a nested call does not sink hosting into that lower scope.
 
-This rule has a second job beyond safety. Because every destination is at the same or a higher scope, the candidate destinations for a given object all lie on the ancestor chain of its declaration scope — a chain totally ordered by nesting, which therefore has an outermost member. That member is where the object's location is placed ([`memory.md`](memory.md) §3.5), so the object never needs to be relocated in order to outlive the scope it was written in.
+This rule has a second job beyond safety. Because every destination is at the same or a higher scope, the candidate destinations for a given object all lie on the ancestor chain of its declaration scope — a chain totally ordered by nesting, which therefore has an outermost member. That member is the arena the object is allocated in ([`memory.md`](memory.md) §3.5), so the object never needs to be relocated in order to outlive the scope it was written in.
 
 ### 1.5 Parameters belong to the call site
 A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosting reference-type value to a swallowing `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
@@ -125,16 +125,16 @@ For `&` fields specifically, the callee must declare the corresponding parameter
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
 ### 1.6 Moved symbols downgrade and are no longer movable
-After a bare symbol is moved, that symbol is **downgraded**: it loses hosting but keeps denoting the same location. It remains readable and cannot be moved again.
+After a bare symbol is moved, that symbol is **downgraded**: it loses hosting but keeps denoting the same object. It remains readable and cannot be moved again.
 
 ```zane
 engine Engine()
 car Car(engine)          // engine is moved; downgrades
-engine:inspect()         // legal: engine still denotes the same location
+engine:inspect()         // legal: engine still denotes the same object
 truck Truck(engine)      // ILLEGAL: engine no longer hosts, so it is not a move-source
 ```
 
-The mechanism is that a move relocates nothing ([`memory.md`](memory.md) §3.7). The destination receives the same reference the source held, so after the move both storage positions name the same location and reads through either one reach the same object. What the source loses is only the right to move again.
+The mechanism is that a move relocates nothing ([`memory.md`](memory.md) §3.7). The object stays exactly where it was, so after the move both storage positions designate the same bytes and reads through either one reach the same object. What the source loses is only the right to move again.
 
 A downgraded symbol is still not a guest source ([`memory.md`](memory.md) §2.8): the restriction is on bare symbols as a storage form, not on whether one currently hosts.
 
@@ -187,7 +187,7 @@ A reference-type parameter is written in one of three modes ([`memory.md`](memor
 ```zane
 car Car()
 garage!store(car)     // store takes `Car`: car downgrades
-car:inspect()         // legal: car still denotes the same location
+car:inspect()         // legal: car still denotes the same object
 truck Truck(car)      // ILLEGAL: car no longer hosts
 ```
 
@@ -241,7 +241,7 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 ## 2. Lifetime and Destruction
 
 ### 2.1 Destruction is deterministic
-A reference-type instance is destroyed when its host is overwritten, when its hosting container dies, or when its hosting scope drains under the concurrency rules. Destruction runs at that point; the memory its location occupies is reclaimed when the arena is unmapped ([`memory.md`](memory.md) §3.2).
+A reference-type instance is destroyed when its host is overwritten, when its hosting container dies, or when its hosting scope drains under the concurrency rules. Destruction runs at that point; the memory it occupies is reclaimed when the arena is unmapped ([`memory.md`](memory.md) §3.2).
 
 ### 2.2 Scopes drain before destruction
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
@@ -250,7 +250,7 @@ If a scope launches concurrent work, objects hosted by that scope remain alive u
 Guests do not participate in hosting and cannot prolong object lifetime. They only reach a live object whose host is already guaranteed to outlive them. A borrow likewise extends nothing; it merely cannot outlive the call.
 
 ### 2.4 Null guests are not a user-facing state
-Because every storage position is directly initialized ([`memory.md`](memory.md) §2.11), a location always holds a live occupant (`memory.md` §4.1), and the guest source and scope rules prevent a guest from outliving its target, the runtime does not expose a null-guest programming model to the user.
+Because every storage position is directly initialized ([`memory.md`](memory.md) §2.11), a host slot always holds a live occupant, and the guest source and scope rules prevent a guest from outliving its target, the runtime does not expose a null-guest programming model to the user.
 
 ---
 
@@ -271,14 +271,14 @@ Because every storage position is directly initialized ([`memory.md`](memory.md)
 
 | Concept | Rule |
 |---|---|
-| Guest assignment | Only from a field or another guest, and only when the target's host is in the same or a higher lexical scope than the guest |
+| Guest assignment | Only from a field or another guest — never a bare symbol, a `[]`, or a path rooted in one — and only when the target's host is in the same or a higher lexical scope than the guest |
 | Borrow | Needs no scope check; it cannot be stored or returned, so it cannot outlive its call |
 | Guest return | A returned `&T` must be rooted in a guest parameter; `this &T` counts. A borrow may never be returned |
 | Move-source | A bare symbol (local or parameter) or a hosting verb result; not a guest, borrow, field, container element, or other access path |
 | Move declaration-block restriction | A bare symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host; this is what makes the object's resting scope static |
-| Move mechanism | Transfers hosting by copying a four-byte reference; the object is never relocated |
-| Post-move downgrade | After a move, the source symbol loses hosting but keeps denoting the same location; it remains readable and is no longer a move-source |
+| Move mechanism | Transfers hosting at compile time; the object is never relocated and no payload bytes are copied |
+| Post-move downgrade | After a move, the source symbol loses hosting but keeps denoting the same object; it remains readable and is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Passing mode | `T` swallows and downgrades the caller; `&T` is a guest the caller lends while remaining host; `'T` is a borrow that ends with the call |
 | Return value | A return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous host |

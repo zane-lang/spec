@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Some place expressions may create new `&` values, while `[]` expressions remain excluded from that rule.
+- **Meaning:** A place expression denotes an existing, stable storage location. Only some may create new `&` values: a field access of a place and an `&T` parameter may, while a bare symbol, a temporary, a `[]` expression, and any path rooted in a `[]` may not (§3.24).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -174,18 +174,18 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
-### 3.23 location
-- **Meaning:** The fixed-size storage slot a reference-type instance occupies. A location is allocated when the instance is constructed, in the arena of the scope the instance comes to rest in, and released only when that arena is unmapped. Between those events it never moves and always holds a live occupant: an overwrite replaces the occupant, and a move transfers hosting without relocating anything. Every reference-type storage slot — host, guest, field, or element — holds a `u32` segmented offset naming a location.
-- **Why this name:** A location is simply *where the object is*, and the point of the design is that this answer never changes for the life of the object. The plain word carries the whole guarantee.
-- **Canonical home:** [`memory.md`](memory.md) §4.1
+### 3.23 passing mode
+- **Meaning:** Which of three contracts a reference-type parameter states, written in its type. Plain `T` **swallows** — it takes hosting access, and the caller's symbol downgrades. `&T` is a **guest** — the caller must supply a guest source and keeps hosting, while the callee may store or return the guest. `'T` is a **borrow** — non-hosting and non-escaping, rootable in anything, storable and returnable in nothing. The signature is the whole contract; nothing in the callee's body changes it.
+- **Why this name:** The three differ in *how the argument is passed*, not in what it is — one type, three modes of handing it over.
+- **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.24 guest source restriction
-- **Meaning:** The rule that a new `&` may be created only from a field access whose base is a place, or from an `&T` parameter — never from a bare symbol, a temporary, or a `[]` expression. A bare symbol is the only storage a move can empty, so a guest rooted there could outlive the object it names; every other storage position can be overwritten but never emptied, which is what makes a guest rooted in one always resolve.
+- **Meaning:** The rule that a new `&` may be created only from a field access whose base is a place, or from an `&T` parameter — never from a bare symbol, a temporary, a `[]` expression, or a path rooted in one. A bare symbol is the only storage a move can empty, and container elements are the only storage a container may relocate; every other storage position can be overwritten but never emptied or moved, which is what makes a guest rooted in one always resolve.
 - **Why this name:** It restricts the *source* of a guest rather than tracking guests after the fact — the safety comes from where a guest may be born, not from invalidating it later.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type locations, and dynamic handles — is bump-allocated in the fixed-size region, while a resizable backing store goes in the dynamic region. A location is placed in the arena of the scope the object comes to rest in, which is statically known because every move destination is at the same or a higher scope. Placement is an unobservable implementation choice, and no object is ever relocated.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated in the fixed-size region, while a resizable backing store goes in the dynamic region. An object is allocated in the arena of the scope it comes to rest in, which is statically known because every move destination is at the same or a higher scope. Placement is an unobservable implementation choice, and no hosted object is ever relocated.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the resting scope's arena is chosen once, at construction.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
@@ -225,12 +225,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a reference-type object without hosting it or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be created only from the sources the guest source restriction (§3.24) allows. A guest holds one `u32` segmented offset naming a location (§3.23) — the same representation a host holds.
+- **Meaning:** The source-facing `&T`: access to a reference-type object without hosting it or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be created only from the sources the guest source restriction (§3.24) allows. A guest holds one `u32` segmented offset naming the object's storage.
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
 ### 3.34 swallowed parameter
-- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol — it keeps denoting the same location but may no longer be moved — regardless of what the callee does with the value. The two other modes are the guest (`&T`, §3.33) and the borrow (`'T`, §3.27).
+- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol — it keeps denoting the same object but may no longer be moved — regardless of what the callee does with the value. The two other modes are the guest (`&T`, §3.33) and the borrow (`'T`, §3.27).
 - **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and is left holding only a readable name.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
