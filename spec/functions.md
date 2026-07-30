@@ -91,6 +91,7 @@ node!setScale(Float(3))
 Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#mutation-you-can-see-at-the-call-site) — "Mutation you can see at the call site".
+> **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 
 ### 2.6 Method desugaring
 

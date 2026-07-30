@@ -30,6 +30,7 @@ r &Node = node   // ILLEGAL: a bare symbol is not a guest source
 The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 
 ### 1.2 Move-sources are host symbols or hosting verb results
 A move-source must denote a **hosting value the expression is entitled to consume**. Two forms qualify:
@@ -166,6 +167,7 @@ The other two parameter modes are not roots. A `'T` borrow ends with the call, s
 ```
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 
 ### 1.8 Passing a host to a `T` parameter downgrades it to a guest
 A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol downgrades to a guest (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` and `'T` ([`memory.md`](memory.md) §2.9) both mean the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
@@ -214,6 +216,7 @@ Unit main() {
 A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for hosting access, so the caller downgrades all the same. Declaring the parameter `'T` — or `&T`, when the callee needs to keep it — is what keeps the caller as host. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed host downgrades never depends on the callee's body or on the build. Using hosting access only to read a value is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it hosts a value or not.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
+> **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 
 ### 1.9 An ignored hosting result floats to the enclosing scope
 A return value need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1). An ignored value-type result, including `Unit()`, is simply discarded.

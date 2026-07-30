@@ -318,6 +318,8 @@ car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 
 The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. See [`adt.md`](adt.md) §4.1 for the same requirement seen from a recursive type's side.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
+
 A reference type whose fields are all plain hosts does not require `&` parameters:
 
 ```zane

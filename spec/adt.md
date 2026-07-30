@@ -155,6 +155,8 @@ Expr negate(inner &Expr) => Expr.flip(inner)
 
 This is the same requirement an `&` field of any `#struct` carries; recursion is not a special case. What it means in practice is that the *root* of a recursive structure lives in a field of the type that owns the structure — which is where a root belongs anyway, since that field is what keeps the whole shape alive.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
+
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
 
 ---
