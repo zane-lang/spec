@@ -26,10 +26,10 @@ HTML_OUT     = os.path.join(SCRIPT_DIR, "benchmark.html")
 
 # ─────────────────────────────────────────────────────────────
 # Test metadata: short name, title, setup, and per-impl facts.
-# These match the Zane memory model: ownership is default, the tether (&)
+# These match the Zane memory model: hosting is default, the guest (&)
 # is opt-in, allocation is a per-scope bump arena over 1 MiB chunks, and a
-# tether is a u32 segmented offset to a bump-allocated anchor cell; each
-# owner stores a u32 backpointer to its cell.
+# guest is a u32 segmented offset naming the object's location directly;
+# objects never move, so no indirection cell is needed.
 #
 # The "Details:" note for each test is NOT stored here. It is read from
 # explanations.txt — result interpretation authored after looking at a real
@@ -40,13 +40,13 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Allocation is one frontier bump; free is a no-op — the arena reclaims in bulk on reset.",
+        "setup": "Objects are bump-allocated into the fixed-size region and carry no per-instance metadata. Allocation is one frontier bump; free is a no-op — the arena reclaims in bulk on reset.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
-            ("Back-ptr init", "0 — no anchor at creation"),
+            ("Object size", "32B — no per-instance metadata"),
+            ("Location", "one fixed-size slot, assigned at construction"),
             ("Alloc cost", "one frontier bump + zero-write"),
             ("Free cost", "no-op — arena reclaims in bulk on reset"),
-            ("Anchor created", "never — no tethers in this test"),
+            ("Guests", "none in this test"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -56,7 +56,7 @@ TEST_META = {
         "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order — reclamation is bulk on reset, not per object.",
         "meta": [
             ("Object size", "40B runtime"),
-            ("Back-ptr", "0 — untethered"),
+            ("Guests", "none"),
             ("Timed phase", "free loop only"),
             ("Free path", "no-op — bulk reclaim on reset"),
         ],
@@ -69,7 +69,7 @@ TEST_META = {
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),
             ("Free order", "Fisher-Yates shuffle"),
-            ("Note", "raw block allocs — no back-ptr slot"),
+            ("Note", "raw block allocs"),
         ],
     },
     "Test 4": {
@@ -101,24 +101,24 @@ TEST_META = {
     },
     "Test 6": {
         "short": "T6 — ref access",
-        "title": "Ref access via a segmented tether vs direct pointer",
-        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. Cells live in a dedicated anchor-cell region, separate from the payload stream.",
+        "title": "Guest access via a segmented offset vs direct pointer",
+        "setup": "Guest dereference path: a guest is a u32 segmented offset (chunk id + in-chunk word offset) naming the object's location directly (guest → location → field). One chunk-directory lookup resolves it, because a location never moves and needs no indirection cell.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Segmented tether, dir cached", "chunk directory hoisted; cell load → owner"),
-            ("Segmented tether, dir reloaded", "chunk directory re-fetched per access"),
-            ("Tether size", "u32 segmented offset — half a 64-bit pointer"),
-            ("Offset 0", "0 = untethered; no cell is ever placed at offset 0"),
+            ("Segmented offset, dir cached", "chunk directory hoisted; one resolve"),
+            ("Segmented offset, dir reloaded", "chunk directory re-fetched per access"),
+            ("Guest size", "u32 segmented offset — half a 64-bit pointer"),
+            ("Hops", "one chunk-directory lookup, then the field offset"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 7": {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
-        "setup": "Each spawn writes back-ptr = 0. Each kill is a no-op free — the arena reclaims dead entities in bulk on reset.",
+        "setup": "Each spawn is one frontier bump. Each kill is a no-op free — the arena reclaims dead entities in bulk on reset.",
         "meta": [
-            ("Entity size", "32B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Entity size", "32B"),
+            ("Guests", "none"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "30 new entities"),
             ("Kills/frame", "20 oldest + hp-drained deaths"),
@@ -130,8 +130,8 @@ TEST_META = {
         "title": "Particle system: burst-spawn short-lifetime objects every frame",
         "setup": "Maximum churn. Every death is a no-op free — the arena reclaims dead particles in bulk on reset.",
         "meta": [
-            ("Particle size", "24B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Particle size", "24B"),
+            ("Guests", "none"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "60 particles"),
             ("Lifetime", "TTL = random 10–30 frames"),
@@ -144,8 +144,8 @@ TEST_META = {
         "title": "Checkerboard fragmentation then refill — only refill timed",
         "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
-            ("Anchor", "never created"),
+            ("Object size", "32B — no per-instance metadata"),
+            ("Guests", "none"),
             ("Phase A (prep)", "alloc 100k objects"),
             ("Phase B (prep)", "free every even-indexed"),
             ("Phase C (timed)", "alloc 50k new objects"),
@@ -155,12 +155,12 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
-        "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
+        "setup": "Three Zane variants: no guests, a single guest to the root, and one guest per node. Under the location model a guest is just a u32 copied from the host, so the three differ only in the guests stored, not in per-node cost. All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
-            ("No tethers", "backpointer = 0; no per-node free"),
-            ("Single parent tether", "one tether to root; 3,999 nodes untethered"),
-            ("Individual tethers", "every node mints its own anchor cell"),
+            ("No guests", "no per-node free"),
+            ("Single parent guest", "one guest naming the root's location"),
+            ("Individual guests", "one u32 guest per node; no cell to mint"),
             ("malloc", "free(node) per node, coalescing on each"),
             ("Runs", "20 — median reported"),
         ],
@@ -168,11 +168,11 @@ TEST_META = {
     "Test 11": {
         "short": "T11 — stress test",
         "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
-        "setup": "All alloc through zm_alloc_lazy; frees are no-ops under the arena. Back-ptr always 0.",
+        "setup": "All alloc through the fixed-size frontier; frees are no-ops under the arena.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
-            ("Owned buffers", "256–512B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Object size", "32B — no per-instance metadata"),
+            ("Owned buffers", "256–512B"),
+            ("Guests", "none"),
             ("Cycles", "200 cycles"),
             ("Per cycle", "spawn + create buffers + push + update + kill"),
             ("Concurrency", "not added — shared randomized mutation would distort the workload"),
@@ -192,30 +192,6 @@ TEST_META = {
             ("Runs", "20 — median reported"),
         ],
     },
-    "Test 13": {
-        "short": "T13 — partial-tether scan",
-        "title": "Partial-tether repeated payload scan (cell placement A/B)",
-        "setup": "100k objects, ~20% tethered, then repeated payload-only field scans. Under the default separate region the payload stream is dense; built with -DZM_INTERLEAVE the anchor cells sit between payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic tether density.",
-        "meta": [
-            ("Objects", "100,000"),
-            ("Tethered", "~20% (every 5th)"),
-            ("Passes", "8 per timed run"),
-            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
-            ("Runs", "20 — median reported"),
-        ],
-    },
-    "Test 14": {
-        "short": "T14 — scan-heavy mixed",
-        "title": "Scan-heavy mixed workload, 10 scans : 1 deref (cell placement A/B)",
-        "setup": "Aggregates 10 payload scans per 1 tether-deref pass over the tethered subset. Models the real-world weighting the 1:1 micro-tests hide: the separate region should win the aggregate because the pervasive scan dominates, even though its individual deref is dearer than the interleaved layout's.",
-        "meta": [
-            ("Objects", "100,000"),
-            ("Tethered", "~20% (every 5th)"),
-            ("Ratio", "10 payload scans : 1 deref pass"),
-            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
-            ("Runs", "20 — median reported"),
-        ],
-    },
 }
 
 # Colour palette — assigned per impl name pattern
@@ -230,16 +206,14 @@ IMPL_COLORS = {
     "CChunk":  "#c45a8a",
     "Pointer": "#e05a3a",
     "C reall": "#e05a3a",
-    "Anchor":  "#7c6ff7",
     "Full":    "#b8a4ff",
 }
 
 # Second-level colour variants for Zane sub-variants
 ZANE_VARIANTS = {
-    "no tethers":        "#7c6ff7",
+    "no guests":         "#7c6ff7",
     "single parent":     "#5a4faa",
-    "individual tethers":"#b8a4ff",
-    "lazy anchors":      "#7c6ff7",
+    "individual guests": "#b8a4ff",
     "mmap":              "#7c6ff7",
     "in-place":          "#7c6ff7",
     "refill":            "#7c6ff7",
@@ -249,13 +223,11 @@ def get_color(impl_name):
     """Pick a colour based on the implementation name."""
     # Check Zane variants first
     lower = impl_name.lower()
-    if "zane" in lower or "anchor" in lower or "tether" in lower or "ref path" in lower:
+    if "zane" in lower or "guest" in lower or "segmented offset" in lower or "ref path" in lower:
         for key, color in ZANE_VARIANTS.items():
             if key in lower:
                 return color
         # specific patterns
-        if "anchor only" in lower:
-            return "#7c6ff7"
         if "full ref" in lower and "null" in lower:
             return "#9a8ae0"
         if "full ref" in lower:
@@ -294,7 +266,7 @@ def parse_results(text):
             "test_key":  "Test 1",
             "section":   "Test 1 -- Sequential alloc + sequential free  [32 bytes x 100k]",
             "results":   [
-                {"impl": "Zane (lazy anchors)", "median_ns": 647232.0, "min_ns": ..., "max_ns": ..., "median_us": 647.232},
+                {"impl": "Zane (bump arena)", "median_ns": 647232.0, "min_ns": ..., "max_ns": ..., "median_us": 647.232},
                 ...
             ]
         }, ...]

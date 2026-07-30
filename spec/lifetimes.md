@@ -141,6 +141,7 @@ A downgraded symbol is still not a guest source ([`memory.md`](memory.md) §2.8)
 This also applies across calls. Passing a hosting value to a swallowing `T` parameter downgrades the caller's symbol (§1.8); the caller can still read the symbol afterward. Zane has no user-visible use-after-move error class for reads.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#downgrade-not-poison-why-there-is-no-use-after-move-read) — "Downgrade, not poison: why there is no use-after-move-read".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#moving-without-relocating) — "Moving without relocating".
 
 A hosting verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
@@ -174,6 +175,7 @@ A borrow parameter may never be returned, and neither may anything rooted in one
 ```
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#moving-without-relocating) — "Moving without relocating".
 
 ### 1.8 The signature decides what the caller gives up
 A reference-type parameter is written in one of three modes ([`memory.md`](memory.md) §2.9), and the mode is the whole contract. Nothing in the callee's body changes the outcome the signature already states, so there is no interprocedural inference: whether a passed host downgrades never depends on the callee's body or on the build.
