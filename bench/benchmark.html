@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      35.45,
-      88.29,
-      523.16,
-      3284.9
+      33.39,
+      88.27,
+      511.37,
+      3328.11
     ],
     "colors": [
       "#3aab76",
@@ -94,7 +94,7 @@ const TESTS=[
       }
     ],
     "setup": "Objects are bump-allocated into the fixed-size region and carry no per-instance metadata. Allocation is one frontier bump; free is a no-op \u2014 the arena reclaims in bulk on reset.",
-    "details": "Zane's bump-arena alloc (~88us median) comes in ~37x faster than malloc (~3.28ms) and ~6x faster than Pool (~523us). The raw Arena baseline (~35us) is still about 2.5x quicker, which is the harness's own per-object bookkeeping rather than anything the memory model requires: objects carry no per-instance metadata now that hosted objects are never relocated."
+    "details": "Zane's bump-arena alloc (~88us median) comes in ~38x faster than malloc (~3.33ms) and ~6x faster than Pool (~511us). The raw Arena baseline (~33us) is still about 2.6x quicker, which is the harness's own per-object bookkeeping rather than anything the memory model requires: objects carry no per-instance metadata now that hosted objects are never relocated."
   },
   {
     "t": "T2 \u2014 random-order free",
@@ -106,8 +106,8 @@ const TESTS=[
     ],
     "data": [
       0.06,
-      435.91,
-      2707.05
+      569.66,
+      3153.08
     ],
     "colors": [
       "#7c6ff7",
@@ -133,7 +133,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order \u2014 reclamation is bulk on reset, not per object.",
-    "details": "Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.06us \u2014 effectively unmeasurable \u2014 while malloc (~2.71ms) and Pool (~436us) pay real per-object cost. This is the bulk-reclaim model at its most extreme: nothing is returned per object, so free order cannot matter."
+    "details": "Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.06us \u2014 effectively unmeasurable \u2014 while malloc (~3.15ms) and Pool (~570us) pay real per-object cost. This is the bulk-reclaim model at its most extreme: nothing is returned per object, so free order cannot matter."
   },
   {
     "t": "T3 \u2014 mixed sizes",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      72.28,
-      1041.86,
-      2276.65,
-      8267.55
+      83.68,
+      1062.06,
+      3001.39,
+      7948.36
     ],
     "colors": [
       "#3aab76",
@@ -175,7 +175,7 @@ const TESTS=[
       }
     ],
     "setup": "Raw block alloc/free of four sizes in random order.",
-    "details": "With four interleaved sizes Zane (~1.04ms) stays ~8x ahead of malloc (~8.27ms) and ~2.2x ahead of Pool (~2.28ms): the bump arena has no size classes, so mixed sizes are just more frontier bumps. The raw Arena baseline (~72us) leads by an order of magnitude on the harness's own per-object bookkeeping."
+    "details": "With four interleaved sizes Zane (~1.06ms) stays ~7.5x ahead of malloc (~7.95ms) and ~2.8x ahead of Pool (~3.00ms): the bump arena has no size classes, so mixed sizes are just more frontier bumps. The raw Arena baseline (~84us) leads by an order of magnitude on the harness's own per-object bookkeeping."
   },
   {
     "t": "T4 \u2014 iteration",
@@ -188,11 +188,11 @@ const TESTS=[
       "Pointer array, shuffled"
     ],
     "data": [
-      118.08,
-      141.34,
-      143.23,
-      215.53,
-      297.63
+      125.18,
+      157.31,
+      165.57,
+      231.09,
+      283.59
     ],
     "colors": [
       "#3aab76",
@@ -232,7 +232,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated, no alloc/free during the timed loop.",
-    "details": "No allocation is timed here \u2014 this is pure layout cost. Contiguous inline storage (~118us) is the floor; the chunked layouts stay close on locality (UList ~141us, CChunked ~143us) while the pointer arrays pay for the chase (~216us sequential, ~298us shuffled). This is the test that pays for keeping fields inline: a densely packed run of objects beats a run of references by ~1.8x sequentially and ~2.5x once access order is scrambled."
+    "details": "No allocation is timed here \u2014 this is pure layout cost. Contiguous inline storage (~125us) is the floor; the chunked layouts stay closer to it than the pointer arrays do (UList ~157us, CChunked ~166us, against ~231us sequential and ~284us shuffled). This is the test that pays for keeping fields inline: a densely packed run of objects beats a run of references by ~1.8x sequentially and ~2.3x once access order is scrambled."
   },
   {
     "t": "T5 \u2014 buffer growth",
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      169.69,
-      421.1,
-      642.3,
-      1178.65
+      156.27,
+      449.44,
+      770.0,
+      1319.14
     ],
     "colors": [
       "#7c6ff7",
@@ -282,25 +282,25 @@ const TESTS=[
       }
     ],
     "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy \u2014 they allocate new chunks.",
-    "details": "Growing an owned buffer in place (~170us) beats C's realloc vector (~421us) by ~2.5x and the never-copy chunked forms by more (CChunked ~642us, UList ~1.18ms). The in-place path wins because the buffer is the dynamic frontier allocation, so growth is a frontier bump rather than an allocate-and-copy."
+    "details": "Growing an owned buffer in place (~156us) beats C's realloc vector (~449us) by ~2.9x and the never-copy chunked forms by more (CChunked ~770us, UList ~1.32ms). The in-place path wins because the buffer is the dynamic frontier allocation, so growth is a frontier bump rather than an allocate-and-copy."
   },
   {
     "t": "T6 \u2014 ref access",
     "title": "Guest access via a segmented offset vs direct pointer",
     "labels": [
+      "Direct pointer (baseline)",
       "Segmented offset (chunk dir reloaded)",
-      "Segmented offset (chunk dir cached)",
-      "Direct pointer (baseline)"
+      "Segmented offset (chunk dir cached)"
     ],
     "data": [
-      124.87,
-      138.63,
-      151.83
+      172.29,
+      180.0,
+      184.97
     ],
     "colors": [
+      "#4a9edd",
       "#7c6ff7",
-      "#7c6ff7",
-      "#4a9edd"
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -329,24 +329,24 @@ const TESTS=[
       }
     ],
     "setup": "Guest dereference path: a guest is a u32 segmented offset (chunk id + in-chunk word offset) naming the object's location directly (guest \u2192 location \u2192 field). One chunk-directory lookup resolves it, because a location never moves and needs no indirection cell.",
-    "details": "A guest is a u32 segmented offset naming the object's storage directly, so a deref resolves in one chunk-directory lookup and then the field \u2014 no indirection cell, because a hosted object never moves. The two paths do differ in loads: the segmented path reads refs[i], then the chunk-directory entry, then Entity.hp, where the direct path reads direct[i] then Entity.hp. That extra directory load is not visible in the timings here (~139us cached, ~125us reloaded against a ~152us direct baseline) because the directory is small and stays resident, and the spread across all three is inside this environment's noise. Read the numbers as \"no measurable penalty\", not as evidence the segmented path is cheaper."
+    "details": "A guest is a u32 segmented offset naming the object's storage directly, so a deref resolves in one chunk-directory lookup and then the field \u2014 no indirection cell, because a hosted object never moves. The paths do differ in loads: the segmented path reads refs[i], then the chunk-directory entry, then Entity.hp, where the direct path reads direct[i] then Entity.hp. That extra load is below this environment's noise floor, and the honest evidence for that is the ordering itself: this run has the segmented path *slower* (~185us cached, ~180us reloaded against a ~172us direct baseline), while an earlier run on the same binary had it faster. The two are not separable here. Do not read either ordering as a result; read the test as showing no measurable penalty."
   },
   {
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (bump arena)",
       "Pool (per-size free-list)",
+      "Zane (bump arena)",
       "malloc / free"
     ],
     "data": [
-      3039.53,
-      3100.98,
-      3495.42
+      3079.16,
+      3117.54,
+      3573.6
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -376,7 +376,7 @@ const TESTS=[
       }
     ],
     "setup": "Each spawn is one frontier bump. Each kill is a no-op free \u2014 the arena reclaims dead entities in bulk on reset.",
-    "details": "At steady-state churn the allocators sit close (Zane ~3.04ms, Pool ~3.10ms, malloc ~3.50ms): once entity counts stabilize, per-frame update and simulation work dominate and the raw allocation gaps from Tests 1-3 mostly wash out."
+    "details": "At steady-state churn the allocators sit close (Pool ~3.08ms, Zane ~3.12ms, malloc ~3.57ms): once entity counts stabilize, per-frame update and simulation work dominate and the raw allocation gaps from Tests 1-3 mostly wash out."
   },
   {
     "t": "T8 \u2014 particle system",
@@ -388,10 +388,10 @@ const TESTS=[
       "Zane + work-stealing update"
     ],
     "data": [
-      10336.35,
-      10509.72,
-      11633.04,
-      65702.23
+      11178.69,
+      11581.75,
+      12667.67,
+      62385.9
     ],
     "colors": [
       "#7c6ff7",
@@ -430,7 +430,7 @@ const TESTS=[
       }
     ],
     "setup": "Maximum churn. Every death is a no-op free \u2014 the arena reclaims dead particles in bulk on reset.",
-    "details": "Sequential Zane (~10.34ms) and Pool (~10.51ms) tie, with malloc (~11.63ms) a little behind, for the same reason as T7 \u2014 the per-frame update dominates. The work-stealing variant (~65.70ms) is ~6x *slower* than sequential, which is an artifact of the environment rather than of the model: this container has few schedulable cores, so pool coordination costs more than the parallel update saves."
+    "details": "Sequential Zane (~11.18ms) and Pool (~11.58ms) lead malloc (~12.67ms) narrowly, for the same reason as T7 \u2014 the per-frame update dominates. The work-stealing variant (~62.39ms) is ~5.6x *slower* than sequential, which is an artifact of the environment rather than of the model: this container has few schedulable cores, so pool coordination costs more than the parallel update saves."
   },
   {
     "t": "T9 \u2014 fragmentation",
@@ -441,9 +441,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      37.26,
-      1050.44,
-      2389.22
+      29.72,
+      1278.35,
+      3286.45
     ],
     "colors": [
       "#7c6ff7",
@@ -477,29 +477,29 @@ const TESTS=[
       }
     ],
     "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
-    "details": "Refilling a checkerboard-fragmented heap is where bulk reclaim shows its widest margin. Zane refills in ~37us because the arena never fragmented \u2014 the frontier simply advances and the freed evens are irrelevant. malloc (~2.39ms) and Pool (~1.05ms) refill from the slots freed in Phase B and carry that history: roughly 64x and 28x slower."
+    "details": "Refilling a checkerboard-fragmented heap is where bulk reclaim shows its widest margin. Zane refills in ~30us because the arena never fragmented \u2014 the frontier simply advances and the freed evens are irrelevant. malloc (~3.29ms) and Pool (~1.28ms) refill from the slots freed in Phase B and carry that history: roughly 111x and 43x slower."
   },
   {
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 three Zane ref strategies vs malloc and pool",
     "labels": [
-      "Zane \u2014 single parent guest (root only)",
-      "Zane \u2014 no guests",
       "Zane \u2014 individual guests (1 per node)",
+      "Zane \u2014 no guests",
+      "Zane \u2014 single parent guest (root only)",
       "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      49.22,
-      49.38,
-      49.72,
-      88.2,
-      196.27
+      50.45,
+      50.52,
+      54.75,
+      80.87,
+      182.84
     ],
     "colors": [
-      "#5a4faa",
-      "#7c6ff7",
       "#b8a4ff",
+      "#7c6ff7",
+      "#5a4faa",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -530,24 +530,24 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants: no guests, a single guest to the root, and one guest per node. Under the location model a guest is just a u32 copied from the host, so the three differ only in the guests stored, not in per-node cost. All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
-    "details": "The three Zane variants differ in how many guests they hold across teardown \u2014 none, one on the root, or one per node, all created before the clock starts and read back after it stops \u2014 and they land on top of each other: 49.38us, 49.22us, and 49.72us, a spread of half a microsecond. Note what is and is not measured here. The timed region is the post-order walk alone, so this is evidence that teardown cost is *independent* of how many guests are outstanding, not a measurement of what a guest costs to create or store. It is independent because arena teardown does no per-node free work and a guest is a plain u32 copied from the host, with no cell to mint and nothing to unregister \u2014 so there is simply nothing for the walk to do differently. malloc's per-node free with coalescing is ~196us (~4x slower) and Pool is ~88us."
+    "details": "Every run builds the full 4000-node tree \u2014 the builder gives each non-terminal node at least one child until the budget is spent, and each build asserts the budget reached zero, so the medians are not mixing tree sizes. The three Zane variants differ only in how many guests they hold across teardown: none, one on the root, or one per node, all created before the clock starts and read back after it stops. They land at 50.52us, 54.75us, and 50.45us \u2014 note that the middle figure is the *single-guest* case, so the ordering is not monotonic in guest count and the spread is run-to-run variance, not a guest cost. Note what is and is not measured. The timed region is the post-order walk alone, so this is evidence that teardown cost is *independent* of how many guests are outstanding, not a measurement of what a guest costs to create or store. It is independent because arena teardown does no per-node free work and a guest is a plain u32 copied from the host, with no cell to mint and nothing to unregister \u2014 so there is nothing for the walk to do differently. malloc's per-node free with coalescing is ~183us (~3.6x slower) and Pool is ~81us."
   },
   {
     "t": "T11 \u2014 stress test",
     "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
     "labels": [
-      "Zane (bump arena)",
       "Pool (per-size free-list)",
+      "Zane (bump arena)",
       "malloc / free"
     ],
     "data": [
-      2695.83,
-      2700.53,
-      3054.91
+      2758.71,
+      2759.26,
+      3127.5
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "meta": [
@@ -581,7 +581,7 @@ const TESTS=[
       }
     ],
     "setup": "All alloc through the fixed-size frontier; frees are no-ops under the arena.",
-    "details": "The mixed workload compresses the field (Zane ~2.70ms, Pool ~2.70ms, malloc ~3.05ms): updates, scans, and randomized maintenance dominate the time, so the allocator strategy is only a small slice of the total \u2014 the expected outcome for a realistic churn pattern."
+    "details": "The mixed workload compresses the field (Pool ~2.76ms, Zane ~2.76ms, malloc ~3.13ms): updates, scans, and randomized maintenance dominate the time, so the allocator strategy is only a small slice of the total \u2014 the expected outcome for a realistic churn pattern."
   },
   {
     "t": "T12 \u2014 concurrent scan",
@@ -591,8 +591,8 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      111.53,
-      213.99
+      114.04,
+      235.09
     ],
     "colors": [
       "#3aab76",
@@ -625,7 +625,7 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
-    "details": "Four read-only shards summed sequentially (~112us) beat the concurrent run (~214us) on this machine. As in T8, that inversion is the environment: the shard work is small and the container's core budget is contended, so pool coordination costs more than the parallelism returns. Both produce the asserted-identical total, which is the correctness point of the test."
+    "details": "Four read-only shards summed sequentially (~114us) beat the concurrent run (~235us) on this machine. As in T8, that inversion is the environment: the shard work is small and the container's core budget is contended, so pool coordination costs more than the parallelism returns. Both produce the asserted-identical total, which is the correctness point of the test."
   }
 ];
 let chart=null;

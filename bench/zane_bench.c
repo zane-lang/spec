@@ -835,7 +835,7 @@ static TNode *build_tree(int *rem, AllocFn af) {
     if (*rem<=0) return NULL;
     TNode *node=(TNode*)af(sizeof(TNode));
     node->value=(int64_t)(rng()%1000);
-    node->nchildren=(*rem>1)?(int)(rng()%MAX_BRANCH):0;
+    node->nchildren=(*rem>1)?(1+(int)(rng()%(MAX_BRANCH-1))):0;
     if (node->nchildren>*rem-1) node->nchildren=*rem-1;
     (*rem)--;
     if (node->nchildren>0) {
@@ -870,13 +870,13 @@ static void test10(void) {
     double T[RUNS];
     size_t znode_size = sizeof(TNode);
 
-    for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
+    for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);assert(rem==0);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Zane — no guests", T);
 
     ZRef *guests = (ZRef*)malloc((size_t)TREE_NODES * sizeof(ZRef));
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
-        int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af);
+        int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af); assert(rem==0);
         int nguests=0; build_tree_with_refs(root, znode_size, guests, &nguests);
         double t0=now_ns();
         destroy_zane_norefs(root);
@@ -887,7 +887,7 @@ static void test10(void) {
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
-        int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af);
+        int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af); assert(rem==0);
         ZRef rootGuest = zm_create_ref(root, znode_size);
         double t0=now_ns();
         destroy_zane_norefs(root);
@@ -895,12 +895,12 @@ static void test10(void) {
     }
     print_result("Zane — single parent guest (root only)", T);
 
-    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,ma_af);double t0=now_ns();destroy_malloc(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
+    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,ma_af);assert(rem==0);double t0=now_ns();destroy_malloc(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("malloc cascade destroy", T);
 
     pool_flush();pool_warm(sizeof(TNode),TREE_NODES);
     for(int b=1;b<=MAX_BRANCH;b++) pool_warm((size_t)b*sizeof(TNode*),TREE_NODES/MAX_BRANCH);
-    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,po_af);double t0=now_ns();destroy_pool(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
+    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,po_af);assert(rem==0);double t0=now_ns();destroy_pool(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Pool cascade destroy", T);
 
     free(guests);
