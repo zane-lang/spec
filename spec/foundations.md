@@ -89,11 +89,12 @@ Every type is a **value type** unless it is marked with `#`, which makes it a **
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
-Both kinds are mutated in place through a `mut` method, but the receiver reaches the caller differently: a value-type `this` is a *borrow* of the caller's slot (so a value is mutable without gaining identity), while a reference-type `this` is an implicit `&` to the object. Borrowing is the value world's device; the reference world already has `&`.
+Both kinds are mutated in place through a `mut` method, and the receiver reaches the caller the same way in both: `this` is a *borrow* of the caller's storage — non-hosting, non-escaping, and bounded by the call. Borrowing is what lets a value be mutated without gaining identity, and what lets a reference-type method run on any object the caller has without taking hosting from it.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
-- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
-- **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
+- **A value type is transitively value** (no reference-type or `&` field, anywhere downstream), and is stored inline. This closed value world is specified by [`memory.md`](memory.md) §2.10.
+- **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. A guest may be rooted only in storage a move cannot empty. See [`memory.md`](memory.md) §2.4 and §2.8.
+- **`#` means indirect.** A reference-type storage slot holds a reference to the instance's location, not the instance inline. That is what makes recursion finite, a move free of relocation, and a guest stable. See [`memory.md`](memory.md) §3.3.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed receiver, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
@@ -108,5 +109,5 @@ Both kinds are mutated in place through a `mut` method, but the receiver reaches
 | Staged compilation | Types are compile-time values executed in an earlier stage; `<>` and `()` are different stages | [`generics.md`](generics.md) §2, §4–§5 |
 | Casing determines kind | A name's case is its kind — uppercase type, lowercase value/number | [`lexical.md`](lexical.md) §3, §5 |
 | Fixed layout | Every value of a type is the same size; uniform stride is global | [`generics.md`](generics.md) §7, [`memory.md`](memory.md) §3 |
-| Identity is opt-in | A type is a value unless marked `#`; `#` adds identity, `&`-aliasing, and recursion; a value type is transitively value | [`memory.md`](memory.md) §2, [`types.md`](types.md) §2, [`adt.md`](adt.md) §2–§3 |
+| Identity is opt-in | A type is a value unless marked `#`; `#` adds identity, indirection, `&`-aliasing, and recursion; a value type is transitively value and inline | [`memory.md`](memory.md) §2, [`types.md`](types.md) §2, [`adt.md`](adt.md) §2–§3 |
 | Strictness is performance | Forbidding guarantee-dissolving conveniences is what licenses aggressive codegen | [`memory.md`](memory.md), [`effects.md`](effects.md), [`lifetimes.md`](lifetimes.md) |

@@ -97,9 +97,12 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 
 | Sigil | Meaning | Canonical home |
 |---|---|---|
-| `&` | Reference type (`&Node`) | [`memory.md`](memory.md) §2 |
+| `&` | Guest type (`&Node`) | [`memory.md`](memory.md) §2.4 |
+| `'` | Borrow type (`'Node`), parameter positions only | [`memory.md`](memory.md) §2.9 |
 | `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
+
+`&` and `'` both attach directly to an uppercase type name and are mutually exclusive on the same type. Neither disturbs the casing rule in §5: the token immediately before a `<` is still the type name itself.
 
 ---
 
@@ -184,6 +187,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
+| Leading `&` / `'` | `&Node` is a guest type (any storage or parameter position); `'Node` is a borrow type (parameter positions only); mutually exclusive |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Member terminator | `;` terminates every member of a `struct`/`variant` body (marked or unmarked with `#`) and every arm of a `match` block; always trailing, inline or multiline; newlines are insignificant there |
 | Value separator | `,` separates elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |

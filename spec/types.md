@@ -23,7 +23,7 @@ Zane keeps data layout and construction separate from behavior.
 ### 2.1 The value/reference axis and the `#` modifier
 Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
-A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
+A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. A reference-type storage slot holds a reference to the instance's location rather than the instance inline, which is what makes recursion finite and a move free of relocation ([`memory.md`](memory.md) §3.3). Placement is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
 ```zane
 package Graph
@@ -39,7 +39,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, may recurs
 > **Story:** [`stories/types.md`](../stories/types.md#what--actually-changes-and-the-boxing-trap) — "What `#` actually changes, and the boxing trap".
 
 ### 2.2 Value types are transitive and mutable in place
-A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping.
+A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting bookkeeping at all.
 
 A value is **mutable in place**: a `mut` method may write its fields, because the receiver is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
@@ -78,7 +78,7 @@ type Color = struct { r Int; g Int; b Int; }    // value product type: has r and
 type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, because a reference-type slot holds a reference rather than an inline payload ([`memory.md`](memory.md) §3.3). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 
@@ -281,7 +281,7 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a guest source under [`memory.md`](memory.md) §2.8 — a field access or another guest, never a bare symbol, a temporary, or a `[]` expression.
 
 ```zane
 package Vehicle
@@ -301,17 +301,24 @@ Car(engine &Engine) {
 Car(engine Engine) {
     return init{engine = engine}   // ERROR: plain parameter MUST NOT be bound into `&` storage
 }
+
+// ILLEGAL: a borrow ends with the call, so it cannot be stored either
+Car(engine 'Engine) {
+    return init{engine = engine}   // ERROR: borrow MUST NOT be bound into `&` storage
+}
 ```
 
 Call sites:
 
 ```zane
-engine Engine()
-car Car(engine)   // legal: engine may create a new `&`
+garage Garage(Engine())
+car Car(garage.engine)   // legal: a field is a guest source
 ```
 
 ```zane
-car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
+engine Engine()
+car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
+car Car(Engine())   // ILLEGAL: a temporary is not a guest source
 ```
 
 A reference type whose fields are all plain hosts does not require `&` parameters:
@@ -563,15 +570,16 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Mould | One of the three type-shaping forms — `struct`, `variant`, or `enum`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
-| Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
+| Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; stored as a reference to a location; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Unit`; declared by the bundled `core` implementation and available unqualified |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, conditions, and counted-loop bounds — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; orphan rule applies |
-| `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
-| Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
+| `&T` constructor parameter | A guest; caller must supply a guest source (never a bare symbol); callee may store into `&` fields |
+| `'T` constructor parameter | A borrow; caller may supply any place, including a bare symbol; callee **MUST NOT** store it |
+| Plain `T` constructor parameter | Swallows: takes hosting access; caller may supply a temporary; **MUST NOT** be bound into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

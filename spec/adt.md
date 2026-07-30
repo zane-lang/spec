@@ -2,7 +2,7 @@
 
 This document specifies Zane's algebraic data types: the `enum` of uniform peer members, the `variant` sum mould, the body symmetry that ties `variant` to `struct`, matching a variant through the central `match` block, and enum maps.
 
-> **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.10 for why a value type cannot hold `&` or recurse. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
+> **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.10 for why a value type cannot hold `&` or recurse. [`memory.md`](memory.md) §3.3 for why a reference-type member is finite. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
 
 ---
 
@@ -15,7 +15,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 - **`The # axis applies to the sum mould`.** A plain `variant` is its value form; `#variant` is its reference form (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum`.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
 - **`A variant is matched in one central block`.** A `match` block (§5) dispatches a variant on its live tag — variant matching, not pattern matching: no nested destructuring, guards, or shape tests — and must cover every case, with no default arm.
-- **`Recursion requires a reference type`.** A recursive sum must be a `#variant`, never a value `variant`, because a value type is transitively value and cannot hold the `&` a recursive member boxes through.
+- **`Recursion requires a reference type`.** A recursive sum must be a `#variant`, never a value `variant`, because a reference-type slot holds a reference to a location rather than an inline payload, and only that indirection makes a self-reference finite.
 
 ---
 
@@ -46,11 +46,11 @@ Per-member associated data is attached externally through an enum map (§6), whi
 
 A `variant` is a **sum mould**. A value of the type it declares holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
 
-A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4). A recursive sum such as `Expr` — whose members refer back to `Expr` through `&` — must therefore be a `#variant`:
+A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4). A recursive sum such as `Expr` — whose members refer back to `Expr` — must therefore be a `#variant`:
 
 ```zane
 type QualifiedIdent = struct { packageName String; member String; }
-type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
+type BinOp = #struct { left Expr; right Expr; operator Operator; }
 
 type Expr = #variant {
     intLit String;
@@ -60,8 +60,8 @@ type Expr = #variant {
     ident String;
     qualifiedIdent QualifiedIdent;
     op BinOp;
-    flip &Expr;
-    parenthesized &Expr;
+    flip Expr;
+    parenthesized Expr;
     funcCall FuncCall;
     funcLambda FuncLambda;
     methLambda MethLambda;
@@ -115,7 +115,7 @@ Naming a case takes its payload whole; to reach a nested case, write another cas
 
 An `enum` member is the payloadless degenerate of the same form: `Colors.red` selects a case that carries no payload, so it is written with no argument list (§2). A payload-carrying case is called; a payloadless one is selected.
 
-A recursive `#variant` case boxes through `&` (§4), and its construction follows the ordinary reference rules: `Expr.flip(r)` takes an `&Expr`, and its argument must be a source that may create a new `&` (see [`memory.md`](memory.md) §2.8), exactly as an `&` field of a `#struct` requires (see [`types.md`](types.md) §3.9).
+A recursive `#variant` case carries an ordinary hosting payload (§4), so its construction follows the ordinary move rules: `Expr.flip(inner)` takes hosting of `inner`, which downgrades at the call site exactly as any move-source does (see [`lifetimes.md`](lifetimes.md) §1.6).
 
 **Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
 
@@ -125,11 +125,11 @@ A recursive `#variant` case boxes through `&` (§4), and its construction follow
 
 ## 4. Recursion and Storage
 
-A directly inline self-reference would have infinite size, which the uniform-stride rule forbids (see [`generics.md`](generics.md) §7). A recursive member must therefore **box through `&`**: directly, as `flip &Expr`, or inside a named reference type it names, as `op BinOp` where `BinOp` holds `left &Expr; right &Expr;`.
+A directly inline self-reference would have infinite size, which the uniform-stride rule forbids (see [`generics.md`](generics.md) §7). A **reference-type** member is not inline: a `#T` storage slot holds a four-byte reference to the instance's location (see [`memory.md`](memory.md) §3.3), so a self-reference through a reference type is finite. That is the whole mechanism — a recursive member is an ordinary hosting field of a reference type, written `flip Expr`, or a field of a named reference type that closes the cycle, as `op BinOp` where `BinOp` holds `left Expr; right Expr;`.
 
-- A value type — `struct` or `variant` — **cannot** hold an `&` or contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
-- The `#` modifier is what carries recursion: a plain `variant` is the sum mould's value form, laid out inline, while a `#variant` is its reference form — carrying a tag, boxing its recursive cases through `&`, and placed by the ordinary reference-type rules ([`memory.md`](memory.md) §3.5). A recursive sum such as `Expr` is a `#variant`.
-- Indirection is always **explicit `&`**. There is no hidden auto-boxing, matching Zane's stance that hosting and guests are explicit.
+- A value type — `struct` or `variant` — is stored inline and **cannot** contain itself (see [`memory.md`](memory.md) §2.10). A recursive type must therefore be a reference type: a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
+- The `#` modifier is what carries recursion, and it carries **hosting** with it: a recursive member hosts its payload, so an expression tree owns its subtrees and is destroyed with them. An `&` member is legal too, but it means something different — a non-hosting guest into a structure someone else owns.
+- Indirection is never hidden and never a separate construct. It is exactly what `#` already means, so no boxing type and no auto-boxing step exists.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#one-body-product-or-sum) — "One body, product or sum".
 
@@ -291,14 +291,14 @@ enum Expr { IntLit(String), Flip(Box<Expr>) }  // payload-carrying
 **Zane:**
 ```zane
 type Colors = enum [ red, green, blue ]    // uniform peers
-type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: reference type
+type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference type
 ```
 
 | Difference | Rust | Zane |
 |---|---|---|
 | One keyword vs. two | `enum` covers both roles | `enum` for peers, `variant` for sums |
 | Iteration / total tables | available, but mixed with payload cases | first-class on `enum`, whose members stay payloadless |
-| Recursive boxing | `Box<T>` on the recursive field | explicit `&` on the recursive member |
+| Recursive boxing | `Box<T>` on the recursive field | none needed; `#` is already a reference |
 | Match | pattern matching (destructures shape, nests, guards) | variant matching (tag only; no nesting or guards) |
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
@@ -315,7 +315,7 @@ type Expr = #variant { intLit String; flip &Expr; }   // recursive sum: referenc
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout; the `#` modifier picks value versus reference |
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, may recurse); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |
-| Recursion | Recursive members box through explicit `&`; a recursive type is a `#variant` or `#struct`, never a value type |
+| Recursion | A recursive member is an ordinary hosting field of a reference type; a recursive type is a `#variant` or `#struct`, never a value type |
 | Variant storage | `variant` is the sum mould's value form, laid out inline; `#variant` is its reference form, carrying a tag, may recurse, and is placed by the reference-type rules |
 | `match` block | Expression legal in any expression position; `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
 | Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |

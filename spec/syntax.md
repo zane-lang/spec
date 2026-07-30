@@ -141,17 +141,36 @@ packageName$TypeName
 TypeName
 ```
 
-### 2.3 Reference types
+### 2.3 Guest and borrow types
 
 ```zane
 &TypeName
+'TypeName
 ```
 
-`&TypeName` is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+`&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
 Array<&Node, n>
 ```
+
+`'TypeName` is a **borrow** type. It is legal **only** in a function, method, or constructor parameter position — never in a local-variable declaration, a field, a nested storage type, or a return type.
+
+```zane
+Int inspect(this Car, engine 'Engine)   // legal: parameter position
+
+type Bad = #struct {
+    engine 'Engine;    // ILLEGAL: `'` is not a storage form
+}
+
+'Engine borrowed()     // ILLEGAL: `'` is not a return type
+```
+
+The `'` marker binds to a single type name and does not nest: `'` is written once, directly before the type, and never inside a `<>` argument list.
+
+Neither marker affects how `<>` is parsed. The token immediately before a `<` is still the uppercase type name, so the casing rule in [`lexical.md`](lexical.md) §5 disambiguates a type application from a comparison exactly as it does for an unmarked type.
+
+> **See also:** [`memory.md`](memory.md) §2.4 for guests, §2.9 for borrows and the three parameter modes.
 
 ### 2.4 Type expressions
 
@@ -276,13 +295,17 @@ type Tree = #variant { leaf Int; node &Tree; }   // reference sum type
 ```zane
 ReturnType name(param ParamType, ...) { body }
 ReturnType name(param &ParamType, ...) { body }
+ReturnType name(param 'ParamType, ...) { body }
 ReturnType?AbortType name(param ParamType, ...) { body }
 ReturnType name(param ParamType, ...) => expr
 ReturnType name(param &ParamType, ...) => expr
+ReturnType name(param 'ParamType, ...) => expr
 ReturnType?AbortType name(param ParamType, ...) => expr
 ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n Number>, ...) { body }
 ```
+
+A value parameter's type carries at most one mode marker: bare (swallow, for a reference type), `&` (guest), or `'` (borrow). See [`memory.md`](memory.md) §2.9.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
@@ -291,6 +314,8 @@ A function, method, or constructor has no `<>` parameter header. It introduces a
 ```zane
 ReturnType name(this ReceiverType, param ParamType, ...) { body }
 ReturnType name(this ReceiverType, param &ParamType, ...) { body }
+ReturnType name(this ReceiverType, param 'ParamType, ...) { body }
+ReturnType name(this &ReceiverType, param ParamType, ...) { body }
 ReturnType name(this ReceiverType, param ParamType, ...) mut { body }
 ReturnType name(this ReceiverType, param &ParamType, ...) mut { body }
 ReturnType?AbortType name(this ReceiverType, param ParamType, ...) { body }

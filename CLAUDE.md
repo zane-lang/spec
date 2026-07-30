@@ -39,13 +39,28 @@ keep it to code plus the labels passed to `section()`/`print_result()`.
 reader-facing HTML, not code comments.
 
 ## Validate before committing (spec edits)
-The generics system was unified into a `<>`-header / `()`-call model (canonical
-home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
-forms are now illegal and must never reappear. Grep for them — none should hit:
+Two redesigns have retired forms that must never reappear.
+
+**Generics** was unified into a `<>`-header / `()`-call model (canonical home
+`spec/generics.md`, casing rules `spec/lexical.md`):
 
 ```
-grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
+grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form" spec/*.md
 ```
+
+**The memory model** was rebuilt on stable locations (canonical home
+`spec/memory.md`). The anchor/tether indirection layer is gone — there is no
+anchor cell, no tether, no backpointer, no forwarding, and no retirement stack:
+
+```
+grep -nEi "anchor|tether|backpointer|forwarding|retirement stack|untethered" spec/*.md bench/
+```
+
+Note that `'[A-Z]` was on the generics list until `'T` was adopted as the
+**borrow** parameter marker (`spec/memory.md` §2.9). The old type-parameter `'T`
+and the new borrow `'T` are spelled identically, so no grep can tell them apart
+— if you meet a `'T`, read the position: a parameter type is a borrow, anything
+else is a leftover and is wrong.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.

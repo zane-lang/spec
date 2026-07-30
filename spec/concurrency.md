@@ -138,7 +138,7 @@ The effect system classifies resource access as **read** or **write**. Concurren
 The compiler enforces this from effect signatures; the programmer does not add locks.
 
 ### 4.6 Guests passed to spawned work remain independent
-When a guest is passed to a spawned call, the callee receives its own guest to the same host. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the guest already held by spawned work.
+When a guest is passed to a spawned call, the callee receives its own guest to the same location. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the guest already held by spawned work. A borrow (`'T`) cannot be handed to a spawned call at all, since a spawn may outlive the call that created it.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 

@@ -31,7 +31,7 @@ A side effect is any observable interaction beyond returning a value, including:
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. A value-type `this` is a **borrow** of the caller's slot; a reference-type `this` is an implicit `&` reference to the object (see [`functions.md`](functions.md) §2.4).
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. A value-type `this` is a **borrow** of the caller's slot; a reference-type `this T` is likewise an implicit borrow of the object (see [`functions.md`](functions.md) §2.4).
 
 ### 2.4 Parameters are not mutable by default
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
@@ -82,7 +82,7 @@ The compiler uses reachability from `this` to determine which state is writable 
 If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
 
 ### 5.3 Guests do not by themselves raise effect level
-A function does not leave the pure levels merely because it reads through an `&`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is hosting or non-hosting.
+A function does not leave the pure levels merely because it reads through an `&` or a `'`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is hosting, guest, or borrow.
 
 ### 5.4 Unknown callees are conservatively classified
 If the compiler cannot prove the effect behavior of a callee, it must treat the call as requiring the strongest effect level needed to preserve safety.

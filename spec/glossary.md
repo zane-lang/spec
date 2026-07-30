@@ -174,19 +174,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
-### 3.23 anchor cell
-- **Meaning:** An 8-byte runtime cell in the global anchor pool containing a `u32` target and a kind. A payload anchor targets a hosted object's segmented offset; a forwarding anchor targets another anchor after two hosting identities merge. A guest's `u32` tether names an anchor cell and follows forwarding cells until it reaches the terminal payload anchor.
-- **Why this name:** The cell is a stable point through which an older guest identity can remain attached to a moving value, either directly or through another anchor.
+### 3.23 location
+- **Meaning:** The fixed-size storage slot a reference-type instance occupies. A location is allocated when the instance is constructed, in the arena of the scope the instance comes to rest in, and released only when that arena is unmapped. Between those events it never moves and always holds a live occupant: an overwrite replaces the occupant, and a move transfers hosting without relocating anything. Every reference-type storage slot — host, guest, field, or element — holds a `u32` segmented offset naming a location.
+- **Why this name:** A location is simply *where the object is*, and the point of the design is that this answer never changes for the life of the object. The plain word carries the whole guarantee.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
-### 3.24 segmented-offset tether
-- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at an anchor cell, not a raw pointer. The cell may directly target the hosted payload or forward to another anchor. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
-- **Why this name:** The tether connects a guest's stored representation to the anchor through which it reaches the hosted object.
-- **Canonical home:** [`memory.md`](memory.md) §4.2
+### 3.24 guest source restriction
+- **Meaning:** The rule that a new `&` may be created only from a field access whose base is a place, or from an `&T` parameter — never from a bare symbol, a temporary, or a `[]` expression. A bare symbol is the only storage a move can empty, so a guest rooted there could outlive the object it names; every other storage position can be overwritten but never emptied, which is what makes a guest rooted in one always resolve.
+- **Why this name:** It restricts the *source* of a guest rather than tracking guests after the fact — the safety comes from where a guest may be born, not from invalidating it later.
+- **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic backing store is relocated into an equal-size destination-region allocation, and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
-- **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type locations, and dynamic handles — is bump-allocated in the fixed-size region, while a resizable backing store goes in the dynamic region. A location is placed in the arena of the scope the object comes to rest in, which is statically known because every move destination is at the same or a higher scope. Placement is an unobservable implementation choice, and no object is ever relocated.
+- **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the resting scope's arena is chosen once, at construction.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker
@@ -195,8 +195,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed as guests or swallowed instead, and a reference-type `this` is an implicit guest.
-- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, a borrow has no anchor or tether and cannot be stored or returned.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call, written `'T` on a reference-type parameter and implied on a value-type one. A borrow may be rooted in **anything** the caller has, including a bare symbol, because it cannot outlive the call; in exchange it **MUST NOT** be stored in a field or container, or returned. A value parameter is a read-only borrow, a `mut` receiver is a mutable borrow, and a reference-type receiver written `this T` is an implicit borrow.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. The `'` mark is deliberately not `&`: a guest is storage, a borrow is only a permission that expires.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
@@ -225,17 +225,17 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
-- **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
+- **Meaning:** The source-facing `&T`: access to a reference-type object without hosting it or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be created only from the sources the guest source restriction (§3.24) allows. A guest holds one `u32` segmented offset naming a location (§3.23) — the same representation a host holds.
+- **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
 ### 3.34 swallowed parameter
-- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol to a guest (§3.33), regardless of what the callee does with the value.
-- **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and is left holding only a guest.
+- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol — it keeps denoting the same location but may no longer be moved — regardless of what the callee does with the value. The two other modes are the guest (`&T`, §3.33) and the borrow (`'T`, §3.27).
+- **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and is left holding only a readable name.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.35 relay / consume
-- **Meaning:** The two ways a verb can treat a reference-type host it swallows, told apart by its return. It **relays** the host when it returns a hosting handle; the caller may bind that return to host the object again. It **consumes** the host when it returns no hosting handle. A verb that declares `&T` instead takes a guest and leaves the caller's host unchanged.
+- **Meaning:** The two ways a verb can treat a reference-type host it swallows, told apart by its return. It **relays** the host when it returns a hosting handle; the caller may bind that return to host the object again. It **consumes** the host when it returns no hosting handle. A verb that declares `&T` or `'T` instead leaves the caller's host unchanged.
 - **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
