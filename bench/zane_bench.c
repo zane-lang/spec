@@ -858,13 +858,6 @@ static void build_tree_with_refs(TNode *n, size_t obj_size, ZRef *store, int *co
     for (int i=0;i<n->nchildren;i++) build_tree_with_refs(n->children[i], obj_size, store, count);
 }
 
-static void destroy_zane_indirefs(TNode *n) {
-    if(!n) return;
-    for(int i=0;i<n->nchildren;i++) destroy_zane_indirefs(n->children[i]);
-    if(n->children) zm_free(n->children,(size_t)n->nchildren*sizeof(TNode*));
-    zm_free_lazy(n, sizeof(TNode));
-}
-
 static void destroy_malloc(TNode *n){ if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_malloc(n->children[i]); free(n->children); free(n); }
 static void destroy_pool(TNode *n)  { if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_pool(n->children[i]);  if(n->children)pool_free(n->children,(size_t)n->nchildren*sizeof(TNode*)); pool_free(n,sizeof(TNode)); }
 
@@ -886,7 +879,7 @@ static void test10(void) {
         int rem=TREE_NODES; TNode*root=build_tree(&rem,zm_af);
         int nguests=0; build_tree_with_refs(root, znode_size, guests, &nguests);
         double t0=now_ns();
-        destroy_zane_indirefs(root);
+        destroy_zane_norefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
         for(int i=0;i<nguests;i++) sink^=(int64_t)guests[i];
     }
