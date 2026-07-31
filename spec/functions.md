@@ -26,6 +26,8 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 ### 2.1 Methods are verbs whose first parameter is `this`
 A method is any package-scope verb whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
+The **receiver** is the object a method is called on. Two things are named after it and are not interchangeable: `this` is the **receiver parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **receiver expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the receiver" means the object itself.
+
 ```zane
 Int scaledId(this Node, factor Int) {
     return this._id * factor
@@ -56,7 +58,7 @@ A method marked `mut` may write to any state reachable through `this`, whether t
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
 - For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
-- For a **reference-type** receiver, `this` is a **mutable borrow** too. The receiver is never a swallow position — a method does not consume its own receiver — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a reference receiver's implicit `&` went: the call-site receiver is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
+- For a **reference-type** receiver, `this` is a **mutable borrow** too. The receiver parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a bare reference-type `this`'s implicit `&` went: the receiver expression is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
 
 A method that needs to keep the receiver past the call — store it in an `&` field, or return it as `&T` ([`lifetimes.md`](lifetimes.md) §1.7) — declares `this &T` instead. That is a guest receiver, so the call site must supply a guest source.
 
@@ -416,7 +418,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | `&` method parameter | Caller must supply a guest source (never a bare symbol); callee may store it into `&` fields or return it |
 | `'T` method parameter | Caller may supply any place expression, bare symbols included; read and `mut` access for the call only; **MUST NOT** be stored, returned, or moved |
 | Plain `T` method parameter | Swallows; caller may supply a temporary and downgrades to a guest; callee **MUST NOT** bind it into `&` storage |
-| Reference receiver | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver, required to store or return the receiver |
+| Reference-type `this` | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver, required to store or return the receiver |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T` / `'T`) at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |

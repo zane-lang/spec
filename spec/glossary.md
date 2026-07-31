@@ -245,9 +245,14 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8.1
 
 ### 3.37 passing mode
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver parameter (§3.38) selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
+
+### 3.38 receiver / receiver parameter / receiver expression
+- **Meaning:** The **receiver** is the object a method is called on. The **receiver parameter** is `this`, the declaration's first parameter, whose surface form fixes the passing mode (§3.37) — bare for the borrow, `this &T` for the guest, never `'`. The **receiver expression** is what stands left of `:` or `!` at the call site and supplies the object; it must satisfy what that form requires, which is why a bare symbol works for a bare `this` but not for `this &T` (§3.36).
+- **Why this name:** The three are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
+- **Canonical home:** [`functions.md`](functions.md) §2.1
 
 ---
 
