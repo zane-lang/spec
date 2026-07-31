@@ -120,7 +120,20 @@ The href ends in the chapter's heading **anchor** so the link scrolls straight t
 
 This is the discipline that makes the folder a *history* rather than a stale snapshot.
 
-**Append, don't overwrite.** When the design changes, the old reasoning did not become false — it became *the previous chapter*. So when the spec moves, add to the story: open a new chapter (or extend the relevant one) that names the cause and what it forced — *"The shift to X meant the old Y no longer held, so we…"* — and pin its spec references to the new commit (§4.2). The discarded path stays on the page as the record of why the design used to be one way and is now another; that causal trail is often the most illuminating thing in the file, and rewriting it away destroys it.
+**Append, don't overwrite.** When the design changes, the old reasoning did not become false — it became *the previous chapter*. So when the spec moves, add to the story: open a **new chapter at the end of the file** that names the cause and what it forced — *"The shift to X meant the old Y no longer held, so we…"* — and pin its spec references to the new commit (§4.2). The discarded path stays on the page as the record of why the design used to be one way and is now another; that causal trail is often the most illuminating thing in the file, and rewriting it away destroys it.
+
+"Append" is meant literally, and it has two teeth:
+
+- **Do not touch an existing chapter — at all.** Not to correct a claim the design has since retired, and not to bolt a forward pointer onto the end of it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why. Naming the superseded claim explicitly *from the new chapter* — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…" — does the same job for the reader without editing history.
+- **A new chapter goes at the end**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
+
+**Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
+
+```sh
+git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
+```
+
+Any output is a violation: a removed or rewritten line means an existing chapter was edited, and a `-` next to a chapter heading means a chapter was inserted rather than appended. The clean result is additions only.
 
 **Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
 

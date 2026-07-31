@@ -110,6 +110,22 @@ quality bar — dense, opinionated, long-form prose. Writing a story is two
 halves: write the narrative, then integrate it into the spec. Don't skip the
 second half.
 
+### Append-only is literal, and it is checked by diffing
+A story chapter is never edited once written — not to correct a claim the
+design has since retired, and **not** to append a forward pointer to it. A new
+chapter goes at the **end of the file**, never between chapters that already
+exist. Say what stopped being true from the *new* chapter, naming the older
+chapter's claim. Both of these were caught in review on this repo rather than
+by the author, so verify before committing:
+
+```sh
+git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
+```
+
+Additions only is the passing result. Any output means an existing chapter was
+edited, or a chapter was inserted instead of appended. Story guide §5 has the
+reasoning.
+
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 The actual thread — which roads were tried and rejected, in what order the
 realizations came, what pressure forced each turn — lives only in the
