@@ -34,6 +34,8 @@ Int scaledId(this Node, factor Int) {
 }
 ```
 
+> **Story:** [`stories/functions.md`](../stories/functions.md#what-does-a-receiver-receive) — "What does a receiver receive?".
+
 ### 2.2 `this` grants private-field access
 Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the subject type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
 
