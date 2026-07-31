@@ -120,7 +120,7 @@ The href ends in the chapter's heading **anchor** so the link scrolls straight t
 
 This is the discipline that makes the folder a *history* rather than a stale snapshot.
 
-**Append, don't overwrite.** When the design changes, the old reasoning did not become false — it became *the previous chapter*. So when the spec moves, add to the story: open a **new chapter at the end of the file** that names the cause and what it forced — *"The shift to X meant the old Y no longer held, so we…"* — and pin its spec references to the new commit (§4.2). The discarded path stays on the page as the record of why the design used to be one way and is now another; that causal trail is often the most illuminating thing in the file, and rewriting it away destroys it.
+**Append, don't overwrite.** When the design changes, the old reasoning did not become false — it became *the previous chapter*. So when the spec moves, add to the story: open a **new chapter at the end of the file** — after everything already published, see the publication note below — that names the cause and what it forced — *"The shift to X meant the old Y no longer held, so we…"* — and pin its spec references to the new commit (§4.2). The discarded path stays on the page as the record of why the design used to be one way and is now another; that causal trail is often the most illuminating thing in the file, and rewriting it away destroys it.
 
 "Append" is meant literally, and it has two teeth:
 
@@ -136,6 +136,8 @@ git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
 ```
 
 Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+
+Nothing runs this for you. There is no CI job and no hook; the rule is enforced by the author running the diff before committing and by the reviewer running it again on the branch. That is deliberate — the "consolidate dead threads" exception below is a judgement call no check could make, so a green check would have to be overridable anyway — but it does mean a violation reaches `main` if both people skip it. Treat the command as part of the commit, not as an optional audit.
 
 **Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
 

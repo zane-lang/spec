@@ -110,29 +110,33 @@ quality bar — dense, opinionated, long-form prose. Writing a story is two
 halves: write the narrative, then integrate it into the spec. Don't skip the
 second half.
 
-### Append-only is literal, and it is checked by diffing
-A **merged** story chapter is never edited — not to correct a claim the design
-has since retired, and **not** to append a forward pointer to it. A new chapter
-goes after every merged one, never between chapters already on `main`. Say what
-stopped being true from the *new* chapter, naming the older chapter's claim.
-Both of these were caught in review on this repo rather than by the author, so
-verify before committing:
+### Append-only: run the check, and read the rule where it lives
+**Story guide §5 owns this rule** — what may be edited, what the PR-versus-commit
+distinction means, and the rare consolidation exception. Read it there; it is
+the source of truth for contributors and agents alike, and this section adds
+only what a session keeps getting wrong.
+
+Nothing enforces it automatically — no CI, no hook. Run the check yourself
+before every commit that touches `stories/`:
 
 ```sh
 git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
 ```
 
-Additions only is the passing result. Any output means a merged chapter was
-edited, or a chapter was inserted ahead of one. Story guide §5 has the
-reasoning.
+Additions only is the passing result.
 
-**The frozen unit is the PR, not the commit.** Chapters your own branch adds are
-drafts until it merges: rewrite them, reorder them, insert a new chapter among
-them freely — a decision reached late in review often belongs *before* the
-chapters already drafted. The grep above is exactly the right check because it
-diffs against `main`, so it stays quiet through all of that and fires only when
-something merged moves. Don't over-apply the rule to your own unmerged work; a
-previous session did, and had to be corrected by the maintainer.
+Two failure modes, both from real sessions on this repo:
+
+- **Too loose.** Editing a merged chapter to fix a retired claim, or bolting a
+  forward pointer onto one. Say what stopped being true from the *new* chapter
+  instead, naming the older chapter's claim. Caught in review, not by the author.
+- **Too strict.** Refusing to touch chapters *your own branch* added, because
+  they were already written. They are drafts until the PR merges — rewrite,
+  reorder, and insert among them freely; a decision reached late in review often
+  belongs before them. The grep is quiet through all of that by design.
+
+If the grep is clean, you have not violated the rule, whatever your instinct
+says.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 The actual thread — which roads were tried and rejected, in what order the
