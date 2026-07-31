@@ -246,11 +246,11 @@ A function type leads with its return type, then lists parameter types inside `[
 ```zane
 ReturnType[ParamType, ...]
 ReturnType?AbortType[ParamType, ...]
-ReturnType[this ReceiverType, ParamType, ...]
-ReturnType[this ReceiverType, ParamType, ...] mut
-&ReturnType[this ReceiverType, ParamType, ...]
-ReturnType?AbortType[this ReceiverType, ParamType, ...]
-ReturnType?AbortType[this ReceiverType, ParamType, ...] mut
+ReturnType[this SubjectType, ParamType, ...]
+ReturnType[this SubjectType, ParamType, ...] mut
+&ReturnType[this SubjectType, ParamType, ...]
+ReturnType?AbortType[this SubjectType, ParamType, ...]
+ReturnType?AbortType[this SubjectType, ParamType, ...] mut
 ```
 
 The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
@@ -260,8 +260,8 @@ Reference-typed parameters and returns use the ordinary type form. A parameter s
 ```zane
 ReturnType[&ParamType, ...]
 ReturnType['ParamType, ...]
-&ReturnType[this &ReceiverType, &ParamType, ...]
-ReturnType[this ReceiverType, 'ParamType, ...] mut
+&ReturnType[this &SubjectType, &ParamType, ...]
+ReturnType[this SubjectType, 'ParamType, ...] mut
 ```
 
 ```zane
@@ -312,25 +312,25 @@ A function, method, or constructor has no `<>` parameter header. It introduces a
 ### 3.2 Methods
 
 ```zane
-ReturnType name(this ReceiverType, param ParamType, ...) { body }
-ReturnType name(this ReceiverType, param &ParamType, ...) { body }
-ReturnType name(this ReceiverType, param ParamType, ...) mut { body }
-ReturnType name(this ReceiverType, param &ParamType, ...) mut { body }
-ReturnType?AbortType name(this ReceiverType, param ParamType, ...) { body }
-ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut { body }
-ReturnType name(this ReceiverType, param ParamType, ...) => expr
-ReturnType name(this ReceiverType, param &ParamType, ...) => expr
-ReturnType name(this ReceiverType, param ParamType, ...) mut => expr
-ReturnType name(this ReceiverType, param &ParamType, ...) mut => expr
-ReturnType?AbortType name(this ReceiverType, param ParamType, ...) => expr
-ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut => expr
-ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { body }
-ReturnType name(this &ReceiverType, param ParamType, ...) { body }
+ReturnType name(this SubjectType, param ParamType, ...) { body }
+ReturnType name(this SubjectType, param &ParamType, ...) { body }
+ReturnType name(this SubjectType, param ParamType, ...) mut { body }
+ReturnType name(this SubjectType, param &ParamType, ...) mut { body }
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) { body }
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut { body }
+ReturnType name(this SubjectType, param ParamType, ...) => expr
+ReturnType name(this SubjectType, param &ParamType, ...) => expr
+ReturnType name(this SubjectType, param ParamType, ...) mut => expr
+ReturnType name(this SubjectType, param &ParamType, ...) mut => expr
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) => expr
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut => expr
+ReturnType name(this SubjectType<T Type, n Number>, param ParamType, ...) { body }
+ReturnType name(this &SubjectType, param ParamType, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-The receiver takes at most one marker, `&`. A bare `this ReceiverType` is the **borrow** receiver, and `this &ReceiverType` is written when the method stores or returns the receiver as a guest; `'` is **never** written on `this`, for either kind of type. A value receiver is likewise a borrow of the caller's slot, mutable when the method is `mut`, and always written bare. See [`functions.md`](functions.md) §2.4.
+The subject takes at most one marker, `&`. A bare `this SubjectType` is the **borrow** subject, and `this &SubjectType` is written when the method stores or returns the subject as a guest; `'` is **never** written on `this`, for either kind of type. A value subject is likewise a borrow of the caller's slot, mutable when the method is `mut`, and always written bare. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 
@@ -417,7 +417,7 @@ implicit TypeName{field FieldType} { ... } // ILLEGAL: field-constructor form is
 ### 3.6 Subscript definitions
 
 ```zane
-(this ReceiverType)[param ParamType, ...] => placeExpr
+(this SubjectType)[param ParamType, ...] => placeExpr
 ```
 
 Subscript definitions have no explicit return type annotation. The body **MUST** be a place expression. If the body is not a place expression, the declaration is a compile-time error.
@@ -427,10 +427,10 @@ A subscript definition may declare any number of comma-separated parameters insi
 The following forms are not part of the grammar:
 
 ```zane
-ReturnType (this ReceiverType)[index ParamType] => expr
+ReturnType (this SubjectType)[index ParamType] => expr
 ```
 
-`[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the receiver.
+`[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the subject.
 
 ### 3.7 `init{ }`
 
@@ -456,15 +456,15 @@ ReturnType(param 'ParamType, ...) { body }
 ReturnType() => expr
 ReturnType(param ParamType, ...) => expr
 ReturnType?AbortType(param ParamType, ...) { body }
-ReturnType(this ReceiverType) { body }
-ReturnType(this ReceiverType) mut { body }
-ReturnType(this ReceiverType, param ParamType, ...) { body }
-ReturnType(this ReceiverType, param ParamType, ...) mut { body }
-ReturnType(this ReceiverType, param ParamType, ...) => expr
-ReturnType(this ReceiverType, param ParamType, ...) mut => expr
+ReturnType(this SubjectType) { body }
+ReturnType(this SubjectType) mut { body }
+ReturnType(this SubjectType, param ParamType, ...) { body }
+ReturnType(this SubjectType, param ParamType, ...) mut { body }
+ReturnType(this SubjectType, param ParamType, ...) => expr
+ReturnType(this SubjectType, param ParamType, ...) mut => expr
 ```
 
-A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. Parameters and the receiver carry the same three passing modes as a named verb (§3.1–§3.2).
+A lambda literal omits only the function name. `this` is legal only in the first parameter position. `mut` is legal only when the first parameter is `this`. Parameters and the subject carry the same three passing modes as a named verb (§3.1–§3.2).
 
 Examples:
 
@@ -486,7 +486,7 @@ A lambda-variable declaration binds a lambda literal to a symbol. The shorthand 
 name ReturnType(param ParamType, ...) { body }
 name ReturnType(param ParamType, ...) => expr
 name ReturnType?AbortType(param ParamType, ...) { body }
-name ReturnType(this ReceiverType, param ParamType, ...) mut { body }
+name ReturnType(this SubjectType, param ParamType, ...) mut { body }
 ```
 
 The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
@@ -538,10 +538,10 @@ packageName$name(args...)
 ### 4.2 Method calls
 
 ```zane
-receiver:method(args...)
-receiver!method(args...)
-receiver:packageName$method(args...)
-receiver!packageName$method(args...)
+subject:method(args...)
+subject!method(args...)
+subject:packageName$method(args...)
+subject!packageName$method(args...)
 ```
 
 ### 4.3 Callables are call-only
@@ -576,14 +576,14 @@ Vec2(2)|100      // groups as Vec2(2)|100
 
 ```zane
 spawn functionName(args...)
-spawn receiver:methodName(args...)
-spawn receiver!methodName(args...)
+spawn subject:methodName(args...)
+spawn subject!methodName(args...)
 spawn functionName(args...) ? binder { ... }
-spawn receiver:methodName(args...) ? binder { ... }
-spawn receiver!methodName(args...) ?? fallbackExpr
+spawn subject:methodName(args...) ? binder { ... }
+spawn subject!methodName(args...) ?? fallbackExpr
 name VarType = spawn functionName(args...)
-name VarType = spawn receiver:methodName(args...) ? binder { ... }
-name VarType = spawn receiver!methodName(args...) ? binder { ... }
+name VarType = spawn subject:methodName(args...) ? binder { ... }
+name VarType = spawn subject!methodName(args...) ? binder { ... }
 name VarType = spawn functionName(args...) ?? fallbackExpr
 ```
 
@@ -595,7 +595,7 @@ name VarType = spawn functionName(args...) ?? fallbackExpr
 placeExpr[argExpr, ...]
 ```
 
-`[]` is legal only when the receiver type defines a subscript declaration. A subscript expression is a place projection, not a general function call, so it is legal only when its base is a place expression.
+`[]` is legal only when the subject type defines a subscript declaration. A subscript expression is a place projection, not a general function call, so it is legal only when its base is a place expression.
 
 Examples:
 

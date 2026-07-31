@@ -124,8 +124,10 @@ This is the discipline that makes the folder a *history* rather than a stale sna
 
 "Append" is meant literally, and it has two teeth:
 
-- **Do not touch an existing chapter — at all.** Not to correct a claim the design has since retired, and not to bolt a forward pointer onto the end of it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why. Naming the superseded claim explicitly *from the new chapter* — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…" — does the same job for the reader without editing history.
-- **A new chapter goes at the end**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
+- **Do not touch a published chapter — at all.** Not to correct a claim the design has since retired, and not to bolt a forward pointer onto the end of it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why. Naming the superseded claim explicitly *from the new chapter* — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…" — does the same job for the reader without editing history.
+- **A new chapter goes after every published one**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
+
+**The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What must not move is anything that was already merged.
 
 **Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
 
@@ -133,7 +135,7 @@ This is the discipline that makes the folder a *history* rather than a stale sna
 git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
 ```
 
-Any output is a violation: a removed or rewritten line means an existing chapter was edited, and a `-` next to a chapter heading means a chapter was inserted rather than appended. The clean result is additions only.
+Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
 
 **Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
 

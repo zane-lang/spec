@@ -111,20 +111,28 @@ halves: write the narrative, then integrate it into the spec. Don't skip the
 second half.
 
 ### Append-only is literal, and it is checked by diffing
-A story chapter is never edited once written — not to correct a claim the
-design has since retired, and **not** to append a forward pointer to it. A new
-chapter goes at the **end of the file**, never between chapters that already
-exist. Say what stopped being true from the *new* chapter, naming the older
-chapter's claim. Both of these were caught in review on this repo rather than
-by the author, so verify before committing:
+A **merged** story chapter is never edited — not to correct a claim the design
+has since retired, and **not** to append a forward pointer to it. A new chapter
+goes after every merged one, never between chapters already on `main`. Say what
+stopped being true from the *new* chapter, naming the older chapter's claim.
+Both of these were caught in review on this repo rather than by the author, so
+verify before committing:
 
 ```sh
 git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
 ```
 
-Additions only is the passing result. Any output means an existing chapter was
-edited, or a chapter was inserted instead of appended. Story guide §5 has the
+Additions only is the passing result. Any output means a merged chapter was
+edited, or a chapter was inserted ahead of one. Story guide §5 has the
 reasoning.
+
+**The frozen unit is the PR, not the commit.** Chapters your own branch adds are
+drafts until it merges: rewrite them, reorder them, insert a new chapter among
+them freely — a decision reached late in review often belongs *before* the
+chapters already drafted. The grep above is exactly the right check because it
+diffs against `main`, so it stays quiet through all of that and fires only when
+something merged moves. Don't over-apply the rule to your own unmerged work; a
+previous session did, and had to be corrected by the maintainer.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 The actual thread — which roads were tried and rejected, in what order the

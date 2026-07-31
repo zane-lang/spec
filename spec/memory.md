@@ -103,12 +103,12 @@ The following are place expressions:
 
 - a named local, field-backed, or hosting/`&` storage symbol such as `engine`
 - a field access whose base is a place, such as `car.engine` or `this.engine`
-- a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that receiver type
+- a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that subject type
 - an `&T` guest parameter or a `'T` borrow parameter inside the callee body (§2.9)
 
 Only some place expressions may mint a new guest. A new `&` value may be minted from:
 
-- a field access whose base is a place **and whose base chain does not pass through a `'T` borrow parameter**, such as `car.engine` or `this.engine` on a guest receiver
+- a field access whose base is a place **and whose base chain does not pass through a `'T` borrow parameter**, such as `car.engine` or `this.engine` on a guest subject
 - an `&T` parameter
 
 Everything else is rejected. In particular:
@@ -175,7 +175,7 @@ A **borrow** is non-hosting, non-escaping access to a caller's storage for the d
 
 That restriction is on the borrow, not on what is read through one. A value type is *always* passed this way — a value-type parameter is a **read-only borrow** of the caller's slot — and binding through that borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value. The copy is a new value that outlives the call perfectly well; what does not escape is the borrow. A reference type has no such copy, so a `'T` borrow leaves nothing behind at all.
 
-A **reference type** parameter has three passing modes, one per surface form. The receiver parameter `this` is not one of these positions and has its own rule, below:
+A **reference type** parameter has three passing modes, one per surface form. The subject parameter `this` is not one of these positions and has its own rule, below:
 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
@@ -223,9 +223,9 @@ Int inspect(this Car, engine 'Engine) {
 }
 ```
 
-**The receiver parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — chooses between two of the three modes rather than all three: it is a **borrow** written bare, or a **guest** written `this &T` when the method stores the receiver past the call or returns it as `&T` (see [`functions.md`](functions.md) §2.4). `'` is **never** written on `this`.
+**The subject parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — chooses between two of the three modes rather than all three: it is a **borrow** written bare, or a **guest** written `this &T` when the method stores the subject past the call or returns it as `&T` (see [`functions.md`](functions.md) §2.4). `'` is **never** written on `this`.
 
-So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it borrows — because `this` was never a swallow position to begin with. That much predates the borrow mode: a bare reference-type `this` used to be an implicit **guest**, likewise never swallowed. What changed is only *which* non-swallowing mode it is, and it moved to the borrow because the receiver expression at a call site is usually a bare symbol, which §2.8.1 no longer admits as a guest source. Value and reference receivers now agree: `this` carries at most one marker, `&`, and its absence means borrow.
+So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it borrows — because `this` was never a swallow position to begin with. That much predates the borrow mode: a bare reference-type `this` used to be an implicit **guest**, likewise never swallowed. What changed is only *which* non-swallowing mode it is, and it moved to the borrow because the subject expression at a call site is usually a bare symbol, which §2.8.1 no longer admits as a guest source. Value and reference subjects now agree: `this` carries at most one marker, `&`, and its absence means borrow.
 
 Binding a swallowed or borrowed parameter into `&` storage is illegal. A swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call. A borrow does not survive the call at all:
 
@@ -550,7 +550,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Concept | Rule |
 |---|---|
 | Hosting storage | Reference-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
-| Value type | Mutable in place through a borrowed `mut` receiver; storage may also be overwritten freely |
+| Value type | Mutable in place through a borrowed `mut` subject; storage may also be overwritten freely |
 | `&` (guest) | Guest-only non-hosting storage; stores one tether, may be repointed, copied by value, and returned, but can never directly host a `T` |
 | Host-capable guest state | After rehosting, the old hosted bytes cease to be live and a slot declared as `T` stores the terminal tether as a guest while retaining enough storage to host another `T` later |
 | Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&`/`'` parameter |
@@ -561,7 +561,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, which only a guest source can supply; `'T` borrows any place, bare symbols included, and leaves the caller a full host |
 | `'T` position | Parameter positions only; never a storage, field, or return type |
-| Reference-type `this` | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver a method may store or return |
+| Reference-type `this` | Never a swallow position: bare `this T` is the borrow subject — `'` is never written on `this` — and `this &T` is a guest subject a method may store or return |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |

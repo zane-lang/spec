@@ -36,8 +36,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3
 
 ### 2.4 value-typed mutation rule
-- **Meaning:** A spawned call may mutate only a value-typed receiver, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the receiver's type alone; concurrent reads take a coherent snapshot instead of serializing.
-- **Why this name:** Concurrent mutation is gated on the receiver being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
+- **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
+- **Why this name:** Concurrent mutation is gated on the subject being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
 
 ### 2.5 water-tower lifetimes
@@ -91,7 +91,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.6 method-based privacy
 - **Meaning:** `_` fields are private to methods whose first parameter is `this` for that type, rather than to a package boundary.
-- **Why this name:** Privacy is granted by the method/receiver relationship, not by where the function is declared.
+- **Why this name:** Privacy is granted by the method/subject relationship, not by where the function is declared.
 - **Canonical home:** [`types.md`](types.md) §2.3
 
 ### 3.7 direct initialization
@@ -195,7 +195,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` receiver is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is that borrow — `'` is never written on `this`.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` subject is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is that borrow — `'` is never written on `this`.
 - **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, the borrow itself has no anchor or tether and cannot be stored, returned, or used as a move source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -245,13 +245,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8.1
 
 ### 3.37 passing mode
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver parameter (§3.38) selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The subject parameter (§3.38) selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
-### 3.38 receiver / receiver parameter / receiver expression
-- **Meaning:** The **receiver** is the object a method is called on. The **receiver parameter** is `this`, the declaration's first parameter, whose surface form fixes the passing mode (§3.37) — bare for the borrow, `this &T` for the guest, never `'`. The **receiver expression** is what stands left of `:` or `!` at the call site and supplies the object; it must satisfy what that form requires, which is why a bare symbol works for a bare `this` but not for `this &T` (§3.36).
-- **Why this name:** The three are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
+### 3.38 subject / subject parameter / subject expression
+- **Meaning:** The **subject** is the object a method is called on. The **subject parameter** is `this`, the declaration's first parameter, whose surface form fixes the passing mode (§3.37) — bare for the borrow, `this &T` for the guest, never `'`. The **subject expression** is what stands left of `:` or `!` at the call site and supplies the object; it must satisfy what that form requires, which is why a bare symbol works for a bare `this` but not for `this &T` (§3.36).
+- **Why this name:** Grammar, matching `verb` (§3.22): a call reads *subject–verb–object*, and the subject is what the verb acts from. The three senses are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
 - **Canonical home:** [`functions.md`](functions.md) §2.1
 
 ---

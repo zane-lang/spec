@@ -89,13 +89,13 @@ Every type is a **value type** unless it is marked with `#`, which makes it a **
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
-Both kinds are mutated in place through a `mut` method, and the receiver reaches the caller the same way in each: `this` is a *borrow* of the caller's slot, so a value is mutable without gaining identity and a reference object is mutable without minting a guest to it. Borrowing serves both worlds; what the reference world adds on top is `&`, for the cases where a callee must keep the object past the call.
+Both kinds are mutated in place through a `mut` method, and the subject reaches the caller the same way in each: `this` is a *borrow* of the caller's slot, so a value is mutable without gaining identity and a reference object is mutable without minting a guest to it. Borrowing serves both worlds; what the reference world adds on top is `&`, for the cases where a callee must keep the object past the call.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
 - **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
 - **A guest comes from a field, not a symbol.** A new `&` is minted only from a qualifying field access — base a place, not reached through a `'T` borrow — or from an `&T` parameter; a bare symbol is a place but never a guest source, so a local's own hosting slot has nothing pointing at it. Such a symbol may still be swallowed by a plain `T` parameter; the borrow mode is the only non-swallowing way to pass one. See [`memory.md`](memory.md) §2.8.1 and §2.9.
-- **Concurrency reads this axis.** A spawned call may mutate only a value-typed receiver, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
+- **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
 

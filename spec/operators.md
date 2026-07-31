@@ -34,7 +34,7 @@ Primitive operators are implementable and define the operator surface area:
 | `<` | binary | `Bool <(left T, right T)` |
 
 ### 2.2 Where operators may be defined
-Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` receiver parameter.
+Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` subject parameter.
 
 A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. The bundled `core` implementation is the home package of fundamental types, but source packages cannot add declarations to it; a fundamental operand therefore does not by itself grant a source package permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
 

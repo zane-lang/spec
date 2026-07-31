@@ -12,7 +12,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 
 - **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
-- **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the receiver.
+- **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the subject.
 - **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants private-field access (a method); naming the verb after a type grants `init{ }` and an implicit return type (a constructor). See §8.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
@@ -26,7 +26,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 ### 2.1 Methods are verbs whose first parameter is `this`
 A method is any package-scope verb whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
-The **receiver** is the object a method is called on. Two things are named after it and are not interchangeable: `this` is the **receiver parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **receiver expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the receiver" means the object itself.
+The **subject** is the object a method is called on. Two things are named after it and are not interchangeable: `this` is the **subject parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **subject expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the subject" means the object itself.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -35,7 +35,7 @@ Int scaledId(this Node, factor Int) {
 ```
 
 ### 2.2 `this` grants private-field access
-Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the receiver type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the subject type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -57,24 +57,24 @@ A method marked `mut` may write to any state reachable through `this`, whether t
 
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
-- For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
-- For a **reference-type** receiver, `this` is a **mutable borrow** too. The receiver parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a bare reference-type `this`'s implicit `&` went: the receiver expression is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
+- For a **value-type** subject, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
+- For a **reference-type** subject, `this` is a **mutable borrow** too. The subject parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a bare reference-type `this`'s implicit `&` went: the subject expression is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
 
-A method that needs to keep the receiver past the call — store it in an `&` field, or return it as `&T` ([`lifetimes.md`](lifetimes.md) §1.7) — declares `this &T` instead. That is a guest receiver, so the call site must supply a guest source.
+A method that needs to keep the subject past the call — store it in an `&` field, or return it as `&T` ([`lifetimes.md`](lifetimes.md) §1.7) — declares `this &T` instead. That is a guest subject, so the call site must supply a guest source.
 
 ```zane
-Unit setScale(this Node, scale Float) mut {   // reference receiver: the implicit borrow
+Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit borrow
     this.scale = scale
     return Unit()
 }
 ```
 
 ```zane
-&Weapon mainWeapon(this &Player) => this.weapon   // guest receiver: may be returned as `&`
+&Weapon mainWeapon(this &Player) => this.weapon   // guest subject: may be returned as `&`
 ```
 
 ```zane
-Unit setY(this Vec2, y Float) mut {           // value receiver: in-place through the borrow
+Unit setY(this Vec2, y Float) mut {           // value subject: in-place through the borrow
     this.y = y
     return Unit()
 }
@@ -98,14 +98,14 @@ Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` 
 ### 2.6 Method desugaring
 
 ```zane
-receiver:method(arg)        → ResolvedPkg$method(receiver, arg)
-receiver!method(arg)        → ResolvedPkg$method(receiver, arg)
-receiver:Pkg$method(arg)    → Pkg$method(receiver, arg)
-receiver!Pkg$method(arg)    → Pkg$method(receiver, arg)
+subject:method(arg)        → ResolvedPkg$method(subject, arg)
+subject!method(arg)        → ResolvedPkg$method(subject, arg)
+subject:Pkg$method(arg)    → Pkg$method(subject, arg)
+subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 ```
 
 ### 2.7 Parameters are read-only
-Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the receiver. How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
+Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the subject. How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
 ### 2.8 Swallow, guest, and borrow method parameters
 A reference-type method parameter selects one of three passing modes ([`memory.md`](memory.md) §2.9):
@@ -153,7 +153,7 @@ car!setEngine(Engine())        // ILLEGAL: a temporary is not a place expression
 ```
 
 ### 2.9 Subscripts are place projections
-Subscripts are package-scope declarations with the receiver first:
+Subscripts are package-scope declarations with the subject first:
 
 ```zane
 (this CustomList)[index Int] => this._data[index]
@@ -162,7 +162,7 @@ Subscripts are package-scope declarations with the receiver first:
 
 The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation. A subscript may declare any number of comma-separated parameters inside `[]`; it is not limited to one or two.
 
-When a receiver interprets an `Int` subscript as an ordinal position in an ordered sequence, that position is 1-based. The first element is at `1`, and a sequence with `n` elements uses `1` through `n` as its positional range.
+When a subject interprets an `Int` subscript as an ordinal position in an ordered sequence, that position is 1-based. The first element is at `1`, and a sequence with `n` elements uses `1` through `n` as its positional range.
 
 > **See also:** [`memory.md`](memory.md) §2.8 for when a place expression may create a new `&`.
 
@@ -226,7 +226,7 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 ### 4.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `&T`, or `'T`, the receiver included. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `&T`, or `'T`, the subject included. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Unit consume(this Car, engine Engine)
@@ -269,12 +269,12 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 ## 6. Method Name Resolution and Extension Methods
 
 ### 6.1 Unqualified method lookup
-For `receiver:methodName(...)` or `receiver!methodName(...)`, the compiler resolves candidates in this order:
+For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolves candidates in this order:
 
-1. the receiver type's home package; for a fundamental type, the bundled `core` implementation package fills this role
+1. the subject type's home package; for a fundamental type, the bundled `core` implementation package fills this role
 2. the current package
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the receiver type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the subject type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
 ### 6.2 Qualified method calls
 Cross-package extension methods are written explicitly:
@@ -284,7 +284,7 @@ vec:Physics$kineticEnergy()
 ```
 
 ### 6.3 Extension methods may be declared in any package
-Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that receiver type.
+Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that subject type.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 
@@ -310,7 +310,7 @@ The reason is the same one that makes operators safe to overload. An overloaded 
 A lambda literal is a function declaration with the name removed. It writes its own parameter types, return type, abort type, and `mut` (see [`syntax.md`](syntax.md) §3.8). Nothing is inferred from context.
 
 ```zane
-receiver(Float(x Int) {
+callee(Float(x Int) {
     if x < Int(10) {
         return Float(0)
     } else {
@@ -319,7 +319,7 @@ receiver(Float(x Int) {
 })
 ```
 
-Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** receiver without ambiguity: the lambda fixes its own type, so overload resolution on the receiver proceeds with ordinary argument types and no circularity. Its complete written type also allows it to be defined and passed directly in the same expression without depending on surrounding context.
+Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** callee without ambiguity: the lambda fixes its own type, so overload resolution on that callee proceeds with ordinary argument types and no circularity. Its complete written type also allows it to be defined and passed directly in the same expression without depending on surrounding context.
 
 `mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned to a non-`mut` function type:
 
@@ -343,7 +343,7 @@ Float callback(x Int) { ... }   // function declaration
 callback Float(x Int) { ... }   // lambda-variable declaration
 ```
 
-A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This is what makes `receiver(callback)` well-defined where referencing an overloaded callable would not be.
+A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This is what makes `callee(callback)` well-defined where referencing an overloaded callable would not be.
 
 > **See also:** [`syntax.md`](syntax.md) §2.9 for function types and §3.8 for lambda literals and lambda-variable declarations.
 
@@ -353,7 +353,7 @@ Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as
 > **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
 
 ### 7.5 No bound method references
-Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a receiver inside a function value. Code that needs a receiver later must keep that receiver in ordinary storage and pass it explicitly when the function value is invoked.
+Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a subject inside a function value. Code that needs a subject later must keep that subject in ordinary storage and pass it explicitly when the function value is invoked.
 
 ### 7.6 Generics are orthogonal to overloading for function values
 A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape. Passing a lambda to an overloaded callable is therefore an exact shape match at that parameter position, not a contest the lambda must win.
@@ -372,13 +372,13 @@ Every callable in Zane is a verb (§1). What *kind* of verb a declaration is —
 
 | Marker | Verb kind | Capability unlocked |
 |---|---|---|
-| First parameter named `this` | Method | Private-field access on the receiver; `:` / `!` call syntax |
+| First parameter named `this` | Method | Private-field access on the subject; `:` / `!` call syntax |
 | Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** |
 | Symbol name (operator token) | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
 | Plain identifier, none of the above | Function | No special capability |
 
-The markers are largely independent — a lambda may still declare a `this` receiver (§7.2), for example — but the kinds above are distinguished by which markers are present. A constructor body and a method body are otherwise ordinary verb bodies (§2, §3).
+The markers are largely independent — a lambda may still declare a `this` subject (§7.2), for example — but the kinds above are distinguished by which markers are present. A constructor body and a method body are otherwise ordinary verb bodies (§2, §3).
 
 ### 8.2 `init{ }` is to constructors what `this` is to methods
 
@@ -398,7 +398,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 ## 9. Connection to the Effect Model
 
-Read-only methods and functions are effect-free with respect to their receiver unless they touch guests or capabilities. `mut` marks the path for writing state reachable through `this`. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+Read-only methods and functions are effect-free with respect to their subject unless they touch guests or capabilities. `mut` marks the path for writing state reachable through `this`. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -411,14 +411,14 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; `this` is a mutable borrow of the caller's slot for both value and reference receivers; may mutate state reachable through `this` |
+| `mut` method | Called with `!`; `this` is a mutable borrow of the caller's slot for both value and reference subjects; may mutate state reachable through `this` |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller must supply a guest source (never a bare symbol); callee may store it into `&` fields or return it |
 | `'T` method parameter | Caller may supply any place expression, bare symbols included; read and `mut` access for the call only; **MUST NOT** be stored, returned, or moved |
 | Plain `T` method parameter | Swallows; caller may supply a temporary and downgrades to a guest; callee **MUST NOT** bind it into `&` storage |
-| Reference-type `this` | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver, required to store or return the receiver |
+| Reference-type `this` | Never a swallow position: bare `this T` is the borrow subject — `'` is never written on `this` — and `this &T` is a guest subject, required to store or return the subject |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T` / `'T`) at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
@@ -426,5 +426,5 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
-| Unqualified method lookup | Searches the receiver's home package (the bundled `core` implementation for a fundamental type), then the current package |
+| Unqualified method lookup | Searches the subject's home package (the bundled `core` implementation for a fundamental type), then the current package |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |
