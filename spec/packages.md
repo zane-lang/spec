@@ -69,7 +69,7 @@ import math
 result Float = math$sqrt(value)
 ```
 
-The method-call lookup rules in [`functions.md`](functions.md) §6 are a distinct resolution mechanism. A qualified extension-method call writes the package name explicitly as `receiver:packageName$method(...)`.
+The method-call lookup rules in [`functions.md`](functions.md) §6 are a distinct resolution mechanism. A qualified extension-method call writes the package name explicitly as `subject:packageName$method(...)`.
 
 ### 3.4 `$` separates a package namespace from its member
 
@@ -101,7 +101,7 @@ Operators are symbol-named rather than identifier-named and cannot carry a leadi
 
 Package scope may contain immutable constants and verbs. It **MUST NOT** contain mutable variables or any other time-varying package state.
 
-State that changes over time must live in a value, such as a `struct` or reference-typed object, and reach operations through ordinary parameters, receivers, or capability wiring. This keeps mutation visible to the effect model in [`effects.md`](effects.md).
+State that changes over time must live in a value, such as a `struct` or reference-typed object, and reach operations through ordinary parameters, subjects, or capability wiring. This keeps mutation visible to the effect model in [`effects.md`](effects.md).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#state-has-to-be-a-value) — "State has to be a value".
 

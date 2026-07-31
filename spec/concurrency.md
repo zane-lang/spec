@@ -13,7 +13,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 - **`Implicit parallelism`.** The compiler may run provably independent work in parallel when it cannot change program results.
 - **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility.
 - **`Water-tower lifetimes`.** A scope’s hosted objects live until all spawned work in that scope completes.
-- **`Mutation needs a value receiver`.** A spawned call may mutate only a value-typed receiver; a value type's transitive alias-freedom lets the compiler rule out a data race from the receiver's type, and at most one spawn may mutably borrow a given location.
+- **`Mutation needs a value subject`.** A spawned call may mutate only a value-typed subject; a value type's transitive alias-freedom lets the compiler rule out a data race from the subject's type, and at most one spawn may mutably borrow a given location.
 - **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
 
 ---
@@ -115,13 +115,13 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-water-tower-lifetimes-that-survive-the-spawn) — "The water tower: lifetimes that survive the spawn".
 
-### 4.2 Concurrent mutation requires a value-typed receiver
-A spawned call may **mutate** state only through a value-typed receiver. A spawned `mut` call whose receiver is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. The compiler therefore rules out an aliased data race from the receiver's *type* alone, with no whole-program alias analysis.
+### 4.2 Concurrent mutation requires a value-typed subject
+A spawned call may **mutate** state only through a value-typed subject. A spawned `mut` call whose subject is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
 A direct consequence is that reference types are never mutated by spawned work, so every concurrent **read** of the reference-typed object graph is safe by construction.
 
 ### 4.3 Single writer per storage location
-For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` receiver of a spawned `mut` call. Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two receivers denote the same slot — so this disjointness is checked at the spawn site by inspecting the receivers, not by tracing the program. The hosting scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
+For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` subject of a spawned `mut` call. By §4.2 that subject is always value-typed, so the borrows this rule counts are value borrows; a reference-type `'T` borrow ([`memory.md`](memory.md) §2.9) never reaches a spawned `mut` subject. Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two subjects denote the same slot — so this disjointness is checked at the spawn site by inspecting the subjects, not by tracing the program. The hosting scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
 
 ### 4.4 Reads take a coherent snapshot
 A spawned call may read a value that another live spawn is mutating; the read observes a **coherent snapshot** of the value rather than blocking. Reading a shared value into a fresh binding — `snap VarType = shared` — is what takes the snapshot, and the copy is tear-free even when the writer is mid-update. This replaces lock-based serialization for in-memory value state, so a real-time reader never waits on a writer. Serialization still applies to external, capability-backed resources (§4.5).
@@ -152,7 +152,7 @@ The language does not provide cancellation, kill groups, or shutdown ordering. A
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
 ### 5.2 Lambdas do not capture
-Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and the value-receiver check (§4.2) tractable.
+Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and the value-subject check (§4.2) tractable.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
@@ -176,4 +176,4 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | `spawn` | Starts a concurrent function or method call; blocks only when results are read |
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
-| Mutation | A spawned mutating call requires a value-typed receiver; at most one mutable borrow per storage location; concurrent reads take a coherent snapshot |
+| Mutation | A spawned mutating call requires a value-typed subject; at most one mutable borrow per storage location; concurrent reads take a coherent snapshot |

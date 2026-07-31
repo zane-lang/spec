@@ -117,7 +117,7 @@ A **verb** — a function, method, or constructor — has no header. It *introdu
 ```zane
 Vector<T>(x T Type, y T Type) { ... }             // T introduced on a value parameter
 T head(arr Array<T Type, n Number>) { ... }       // T, n introduced inside a nested type
-Int size(this Buffer<T Type, n Number>) { ... }   // T, n introduced on the receiver
+Int size(this Buffer<T Type, n Number>) { ... }   // T, n introduced on the subject
 ```
 
 A verb has no header because it never needs one: its parameters are always inferred (§5) and never applied positionally, so there is no order to fix and nothing for a header to declare.
@@ -153,7 +153,7 @@ Int size(this Buffer<T Type, n Number>) {
 }
 ```
 
-Here `n` in the return position is the number the use site supplied for that parameter. The receiver type `Buffer<T Type, n Number>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
+Here `n` in the return position is the number the use site supplied for that parameter. The subject type `Buffer<T Type, n Number>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
 
@@ -355,7 +355,7 @@ The following are intentionally not specified in this version:
 - dynamic container types such as lists and maps
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
-- phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, receiver, or literal that fixes it
+- phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#deferred-what-the-model-promises-but-does-not-yet-deliver) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.

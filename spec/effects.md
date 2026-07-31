@@ -11,7 +11,7 @@ This document specifies Zane's effect model: `mut`, inferred effect levels, capa
 Zane uses a structural effect model with a single user-facing effect modifier: `mut`.
 
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
-- **`Receiver-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
+- **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
 - **`Compiler-inferred effect levels`.** The compiler classifies code by what state it can read or write.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored.
 
@@ -31,10 +31,10 @@ A side effect is any observable interaction beyond returning a value, including:
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. A value-type `this` is a **borrow** of the caller's slot; a reference-type `this` is an implicit `&` reference to the object (see [`functions.md`](functions.md) §2.4).
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is a **borrow** of the caller's slot for both kinds: a value-type `this` borrows the value, and a reference-type `this` written bare is a borrow of the object, `'` never being written on `this` (see [`functions.md`](functions.md) §2.4).
 
 ### 2.4 Parameters are not mutable by default
-Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the receiver. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
+Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the subject. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-mutation-is-allowed-to-reach) — "Where mutation is allowed to reach".
 
@@ -42,7 +42,7 @@ Parameters other than `this` are read-only. Mutation of another object must be e
 
 ## 3. Inferred Effect Levels
 
-The compiler assigns a function to the strongest effect level required by any operation in its body or any function it calls transitively. Reading capability-backed state raises a function out of the pure levels; writes through a receiver or to external state raise it to Write Impure.
+The compiler assigns a function to the strongest effect level required by any operation in its body or any function it calls transitively. Reading capability-backed state raises a function out of the pure levels; writes through a subject or to external state raise it to Write Impure.
 
 ### 3.1 Level 1 — Total Pure
 Total Pure functions depend only on explicit parameters and immutable package constants. They have no side effects and are guaranteed to terminate for all inputs.
@@ -66,16 +66,16 @@ Write Impure functions mutate `this`, mutate capability-backed state, or otherwi
 A method without `mut` may not assign through `this` or call `mut` methods on state reached through `this`.
 
 ### 4.2 `mut` does not authorize arbitrary writes
-Even a `mut` method may write only through `this`. It does not gain permission to mutate unrelated parameters. This applies whether the receiver is a value type or a reference type: a value receiver is mutated in place through its borrow (see [`functions.md`](functions.md) §2.4), not by returning a replacement.
+Even a `mut` method may write only through `this`. It does not gain permission to mutate unrelated parameters. This applies whether the subject is a value type or a reference type: a value subject is mutated in place through its borrow (see [`functions.md`](functions.md) §2.4), not by returning a replacement.
 
 ### 4.3 `&` use sites follow ordinary call rules
-Reading through a guest is not a side effect by itself. At use sites, guests follow the same field-access and method-call rules as hosts. Mutation of the hosted object's state must still be expressed through a `mut` method call with that object as the receiver.
+Reading through a guest is not a side effect by itself. At use sites, guests follow the same field-access and method-call rules as hosts. Mutation of the hosted object's state must still be expressed through a `mut` method call with that object as the subject.
 
 ---
 
 ## 5. Structural Inference
 
-### 5.1 Receiver reachability drives effects
+### 5.1 Subject reachability drives effects
 The compiler uses reachability from `this` to determine which state is writable in a `mut` method and readable in any method.
 
 ### 5.2 Call-graph propagation
@@ -115,10 +115,10 @@ Passing capabilities through constructors and methods is part of the design. It 
 ## 7. Constructors, Allocation, and Abortability
 
 ### 7.1 Constructors may allocate but are not `mut`
-Constructors create values and therefore participate in allocation, but they do not mutate an existing receiver.
+Constructors create values and therefore participate in allocation, but they do not mutate an existing subject.
 
 ### 7.2 Allocation and destruction do not by themselves raise effect level
-Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also mutates receiver-reachable state or reads/writes through capabilities.
+Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also mutates subject-reachable state or reads/writes through capabilities.
 
 ### 7.3 Abortability is orthogonal
 A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
@@ -136,13 +136,13 @@ Because they do not write mutable state, they can be reordered and parallelized 
 Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
 
 ### 8.3 Concurrent mutation is governed by the spawn rules
-Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's receiver **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the receiver's type alone.
+Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
 
 ---
 
 ## 9. Effect Level Matrix
 
-| Level | Reads capability-backed state | Writes receiver-reachable state | May write external state | Compile-time evaluation |
+| Level | Reads capability-backed state | Writes subject-reachable state | May write external state | Compile-time evaluation |
 |---|---|---|---|---|
 | Total Pure | ❌ | ❌ | ❌ | ✅ |
 | Pure | ❌ | ❌ | ❌ | ❌ |

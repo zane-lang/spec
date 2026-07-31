@@ -41,7 +41,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, may recurs
 ### 2.2 Value types are transitive and mutable in place
 A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping.
 
-A value is **mutable in place**: a `mut` method may write its fields, because the receiver is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
+A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
 ```zane
 package Math
@@ -59,7 +59,7 @@ pos = Vec2(3, 4)     // legal: overwrites the whole value
 ### 2.3 Field visibility is name-based
 Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
 
-The same receiver type written under any other parameter name is a non-receiver parameter and does not gain private-field access.
+The same subject type written under any other parameter name is a non-subject parameter and does not gain private-field access.
 
 All fields whose names do not begin with `_` are public.
 
@@ -223,7 +223,7 @@ A named constructor is an ordinary constructor in every other respect. Naming a 
 - overloads by parameter types, alongside the anonymous constructor and the other named ones;
 - is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
 
-The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase receiver, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase receiver, so `.zeros` is a field or method of a *value*. The two never collide.
+The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase subject, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase subject, so `.zeros` is a field or method of a *value*. The two never collide.
 
 A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
 
@@ -278,10 +278,10 @@ Vector{x Int, y Int} {
 Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
 
 ### 3.8 Constructors do not use `mut`
-Constructors are not methods. They create new values rather than mutating an existing receiver, so `mut` does not apply.
+Constructors are not methods. They create new values rather than mutating an existing subject, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. The caller must then supply a source that may create a new `&` under [`memory.md`](memory.md) §2.8 — not a temporary or `[]` expression.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a `'T` borrow will not do, because a borrow ends with the call while the field outlives it. The caller must then supply a **guest source** under [`memory.md`](memory.md) §2.8: a field access on a place, or an `&T` parameter. A bare symbol, a temporary, and a `[]` expression are all rejected.
 
 ```zane
 package Vehicle
@@ -306,13 +306,19 @@ Car(engine Engine) {
 Call sites:
 
 ```zane
-engine Engine()
-car Car(engine)   // legal: engine may create a new `&`
+garage Garage()
+car Car(garage.spare)   // legal: a field access is a guest source
 ```
 
 ```zane
-car Car(Engine())   // ILLEGAL: temporary cannot initialize an `&` field
+engine Engine()
+car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
+car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
+
+The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. See [`adt.md`](adt.md) §4.1 for the same requirement seen from a recursive type's side.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
 
 A reference type whose fields are all plain hosts does not require `&` parameters:
 
@@ -406,7 +412,7 @@ distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
 A coercion site is a position that passes a value into a contract whose destination type is fixed by a callable or language construct. These are the only positions where the compiler inserts an implicit constructor:
 
 - Positional arguments of a function call
-- Positional arguments of a method call (the receiver is excluded; see §4.6)
+- Positional arguments of a method call (the subject is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr }`
@@ -492,8 +498,8 @@ import Units
 implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048)}
 ```
 
-### 4.6 Method receivers are never implicitly converted
-The receiver expression (`this`) in a method call is never subject to implicit conversion. This remains true even though method calls desugar to ordinary function calls. If the receiver type does not match, the call is a type error.
+### 4.6 Method subjects are never implicitly converted
+The subject expression (`this`) in a method call is never subject to implicit conversion. This remains true even though method calls desugar to ordinary function calls. If the subject type does not match, the call is a type error.
 
 ```zane
 Unit logDistance(this Meters) {
@@ -502,7 +508,7 @@ Unit logDistance(this Meters) {
 }
 
 feet Feet(Float(10))
-feet:logDistance()   // ILLEGAL: receiver type is Feet, not Meters
+feet:logDistance()   // ILLEGAL: subject type is Feet, not Meters
 ```
 
 > **See also:** [`functions.md`](functions.md) §5 for how implicit constructors interact with overload resolution.
@@ -562,11 +568,11 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
 | Mould | One of the three type-shaping forms — `struct`, `variant`, or `enum`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
-| Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` receiver; storage may also be overwritten wholesale |
+| Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Unit`; declared by the bundled `core` implementation and available unqualified |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
-| Field visibility | Names starting with `_` are private to `this`-parameter methods on the receiver type; all other names are public |
+| Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, conditions, and counted-loop bounds — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; orphan rule applies |

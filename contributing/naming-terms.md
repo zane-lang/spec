@@ -2,7 +2,7 @@
 
 This guide describes how the spec chooses the coined terms it reuses — the named
 concepts recorded in [`glossary.md`](../spec/glossary.md), such as `verb`,
-`mould`, `borrow`, `host`, `guest`, `anchor`, and `tether`. It governs the *terms of art* the
+`subject`, `mould`, `borrow`, `host`, `guest`, `anchor`, and `tether`. It governs the *terms of art* the
 documentation leans on, not the surface keywords of the language itself.
 
 Terminology is worth naming deliberately because a good term is used on nearly
@@ -20,6 +20,9 @@ does the teaching before the definition is even read.
 
 - **`verb`** — a function, method, operator, constructor, or lambda. In grammar
   a verb is the word that *acts*; a callable is the construct that *does* work.
+- **`subject`** — the object a method is called on. Grammar again, and the same
+  sentence: the subject is what the verb acts from, so `player!setScale(...)`
+  reads subject–verb–object down the line.
 - **`mould`** — a `struct`/`variant`/`enum` form. A mould gives shapeless
   material a fixed form; these forms give a type its shape, and the type is what
   is cast from them.
@@ -99,7 +102,7 @@ seen rarely and gains its meaning slowly, so an oblique reference like *Ariadne*
 (the thread through the labyrinth) is a strength.
 
 A **term** is the opposite case: read constantly, and needed to teach on contact.
-Terms therefore lean plain and everyday — `verb`, `mould`, `borrow`, `host`,
+Terms therefore lean plain and everyday — `verb`, `subject`, `mould`, `borrow`, `host`,
 `guest`, `anchor`, `tether` — even when the underlying instinct (name by metaphor, keep the link
 oblique) is the same. When in doubt for a term, choose the ordinary word over the exotic one.
 

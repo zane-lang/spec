@@ -36,8 +36,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3
 
 ### 2.4 value-typed mutation rule
-- **Meaning:** A spawned call may mutate only a value-typed receiver, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the receiver's type alone; concurrent reads take a coherent snapshot instead of serializing.
-- **Why this name:** Concurrent mutation is gated on the receiver being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
+- **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
+- **Why this name:** Concurrent mutation is gated on the subject being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
 
 ### 2.5 water-tower lifetimes
@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Some place expressions may create new `&` values, while `[]` expressions remain excluded from that rule.
+- **Meaning:** A place expression denotes an existing, stable storage location. Being a place is necessary but not sufficient to mint an `&`: only an `&T` parameter and a field access of a place whose base chain does not pass through a `'T` borrow are guest sources, while bare symbols, `[]` expressions, and anything reached through a borrow are places that are excluded (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -75,7 +75,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
-- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, or constructor — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
+- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, operator, constructor, or lambda — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
 - **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`Number` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
@@ -91,7 +91,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.6 method-based privacy
 - **Meaning:** `_` fields are private to methods whose first parameter is `this` for that type, rather than to a package boundary.
-- **Why this name:** Privacy is granted by the method/receiver relationship, not by where the function is declared.
+- **Why this name:** Privacy is granted by the method/subject relationship, not by where the function is declared.
 - **Canonical home:** [`types.md`](types.md) §2.3
 
 ### 3.7 direct initialization
@@ -175,18 +175,18 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 anchor cell
-- **Meaning:** A runtime `u32` cell holding the current segmented offset of one hosted object — the stable indirection point through which tethers resolve. It is bump-allocated when the first guest is created, in a dedicated anchor-cell region of the host's scope arena.
-- **Why this name:** The cell is the fixed point that lets a moving object remain reachable: rehosting updates the cell while existing tethers keep pointing to it.
+- **Meaning:** An 8-byte runtime cell in the global anchor pool containing a `u32` target and a kind. A payload anchor targets a hosted object's segmented offset; a forwarding anchor targets another anchor after two hosting identities merge. A guest's `u32` tether names an anchor cell and follows forwarding cells until it reaches the terminal payload anchor.
+- **Why this name:** The cell is a stable point through which an older guest identity can remain attached to a moving value, either directly or through another anchor.
 - **Canonical home:** [`memory.md`](memory.md) §4.1
 
 ### 3.24 segmented-offset tether
-- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at the host's anchor cell, not a raw pointer. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
+- **Meaning:** The internal representation of a guest: a `u32` segmented offset pointing at an anchor cell, not a raw pointer. The cell may directly target the hosted payload or forward to another anchor. The value `0` means no tether. A tether is a runtime mechanism, distinct from the source-facing `&T` guest (§3.33).
 - **Why this name:** The tether connects a guest's stored representation to the anchor through which it reaches the hosted object.
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A reference-type instance is bump-allocated in the arena of the scope that creates it, and is copied (promoted) into a parent arena only if it escapes that scope. Only dynamic size or escape changes where an instance lives. Placement is an unobservable implementation choice.
-- **Why this name:** Placement is a choice among **arenas** — the per-scope bump regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
+- **Meaning:** A scope's arena has two regions: statically sized storage — value slots, reference-type hosts, and dynamic handles — is bump-allocated inline in the fixed-size region of the scope that creates it, while a resizable backing store goes in that scope's dynamic region. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic backing store is relocated into an equal-size destination-region allocation, and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
+- **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
 ### 3.26 capability marker
@@ -195,8 +195,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call — the passing mode for **value types**, which have no `&` of their own. A value parameter is a read-only borrow and a value-type `mut` receiver is a mutable borrow; a value is copied only when bound into a fresh slot. Reference types are passed as guests or swallowed instead, and a reference-type `this` is an implicit guest.
-- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, a borrow has no anchor or tether and cannot be stored or returned.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` subject is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is that borrow — `'` is never written on `this`.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, the borrow itself has no anchor or tether and cannot be stored, returned, or used as a move source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be minted only from an `&T` parameter or a field access whose base is a place and whose base chain does not pass through a `'T` borrow (§3.36). Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -238,6 +238,21 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The two ways a verb can treat a reference-type host it swallows, told apart by its return. It **relays** the host when it returns a hosting handle; the caller may bind that return to host the object again. It **consumes** the host when it returns no hosting handle. A verb that declares `&T` instead takes a guest and leaves the caller's host unchanged.
 - **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
+
+### 3.36 guest source restriction
+- **Meaning:** A new `&` may be minted only from an `&T` parameter, or from a field access whose base is a place and whose base chain does not pass through a `'T` borrow parameter. A **bare symbol** — an identifier standing alone rather than as the base of a field access — is a place expression but never a guest source, so no guest can point at a local's own hosting slot and that slot stays free to be overwritten or moved from. A bare symbol may still be swallowed by a plain `T` parameter; `'T` is the only **non-swallowing** mode that accepts one (§3.27, §3.37). The borrow exclusion runs the same way: a guest minted from a borrowed object's field would escape the call just as surely as the borrow itself.
+- **Why this name:** The rule constrains the *source* of a guest — where one may come from — and nothing about what a guest can survive once minted; a guest to a field still follows its host across overwrites and rehosting.
+- **Canonical home:** [`memory.md`](memory.md) §2.8.1
+
+### 3.37 passing mode
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The subject parameter (§3.38) selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
+- **Canonical home:** [`memory.md`](memory.md) §2.9
+
+### 3.38 subject / subject parameter / subject expression
+- **Meaning:** The **subject** is the object a method is called on. The **subject parameter** is `this`, the declaration's first parameter, whose surface form fixes the passing mode (§3.37) — bare for the borrow, `this &T` for the guest, never `'`. The **subject expression** is what stands left of `:` or `!` at the call site and supplies the object; it must satisfy what that form requires, which is why a bare symbol works for a bare `this` but not for `this &T` (§3.36).
+- **Why this name:** Grammar, matching `verb` (§3.22): a call reads *subject–verb–object*, and the subject is what the verb acts from. The three senses are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
+- **Canonical home:** [`functions.md`](functions.md) §2.1
 
 ---
 

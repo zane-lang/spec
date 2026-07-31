@@ -28,6 +28,12 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    internal contradictions on this codebase before: re-read the *un-updated*
    spec files and `bench/zane_bench.c` against the new design before opening a
    PR, not just the file you changed.
+3. **A rule correction is not done until `glossary.md` carries it.** The
+   glossary summarizes rules it does not own, so fixing a rule in its canonical
+   home and leaving the entry paraphrasing the superseded version produces a
+   spec that contradicts itself — this has happened twice, both times caught in
+   review rather than by the author. After editing any normative rule, grep
+   `spec/glossary.md` for the concept and update the entry in the same commit.
 
 ## The `bench/` harness
 `bench/` is a reference **C** harness for runtime experiments — **not** Zane
@@ -43,12 +49,50 @@ The generics system was unified into a `<>`-header / `()`-call model (canonical
 home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
 forms are now illegal and must never reappear. Grep for them — none should hit:
 
+```sh
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form" spec/
 ```
-grep -nE "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|'[A-Z]|inferred type generic|type-parameter symbol|root form" spec/*.md
-```
+
+`'[A-Z]` used to be on that list — it is **not** any more. A leading `'` is now
+the **borrow** type marker (`'Node`), canonical home `spec/memory.md` §2.9,
+surface form `spec/syntax.md` §2.3. Do not re-add it to the retired-forms grep.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.
+
+A second guard covers the memory model. A **bare symbol is not a guest source**
+(`spec/memory.md` §2.8.1), so a spec example that mints an `&` from one is a
+bug. Eyeball every hit of:
+
+```sh
+grep -RIn -E "&[A-Z][A-Za-z0-9]*[[:space:]]*=[[:space:]]*_?[a-z][A-Za-z0-9]*[[:space:]]*(//.*)?[[:space:]]*$" spec/
+```
+
+The pattern matches a **bare-symbol** right-hand side. Only one legal source is
+excluded syntactically: a field access (`= car.engine`) never matches, because
+`.` is outside the character class. The other legal source **does** match — an
+`&T` parameter is written bare, so `r &Node = source` inside a callee is a hit
+even though it is correct. Read every hit and keep it if any of these hold:
+
+- the right-hand side is an `&T` parameter of the enclosing verb (check the
+  signature, not the line);
+- it is a deliberate `// ILLEGAL:` example;
+- it is a grammar metavariable, as in `syntax.md`.
+
+Anything else is a real one to fix.
+
+Two details are load-bearing. The trailing `(//.*)?[[:space:]]*$` is what makes
+the guard see the `// ILLEGAL: ...` examples; without it the end anchor skipped
+every commented line, which is most of them. The `_?` catches a private
+lowercase name (`_engine`) — Zane allows `_` only as a leading character, never
+inside a name (`lexical.md` §4.1–4.2), so nothing more is needed there.
+
+Run both with `-R` on the directory, not a `spec/*.md` glob plus a bare
+directory argument: `grep` prints `bench/: Is a directory` and silently skips
+it otherwise.
+
+Stories are exempt from both greps: `stories/` records the language as it was
+at each turn and is never rewritten to match the present spec.
 
 If the grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc
@@ -65,6 +109,34 @@ Read both contributing guides first, and read **`stories/generics.md`** as the
 quality bar — dense, opinionated, long-form prose. Writing a story is two
 halves: write the narrative, then integrate it into the spec. Don't skip the
 second half.
+
+### Append-only: run the check, and read the rule where it lives
+**Story guide §5 owns this rule** — what may be edited, what the PR-versus-commit
+distinction means, and the rare consolidation exception. Read it there; it is
+the source of truth for contributors and agents alike, and this section adds
+only what a session keeps getting wrong.
+
+Nothing enforces it automatically — no CI, no hook. Run the check yourself
+before every commit that touches `stories/`:
+
+```sh
+git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
+```
+
+Additions only is the passing result.
+
+Two failure modes, both from real sessions on this repo:
+
+- **Too loose.** Editing a merged chapter to fix a retired claim, or bolting a
+  forward pointer onto one. Say what stopped being true from the *new* chapter
+  instead, naming the older chapter's claim. Caught in review, not by the author.
+- **Too strict.** Refusing to touch chapters *your own branch* added, because
+  they were already written. They are drafts until the PR merges — rewrite,
+  reorder, and insert among them freely; a decision reached late in review often
+  belongs before them. The grep is quiet through all of that by design.
+
+If the grep is clean, you have not violated the rule, whatever your instinct
+says.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 The actual thread — which roads were tried and rejected, in what order the
