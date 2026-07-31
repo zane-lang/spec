@@ -94,6 +94,26 @@ it otherwise.
 Stories are exempt from both greps: `stories/` records the language as it was
 at each turn and is never rewritten to match the present spec.
 
+A third guard covers one term. The subject of a method — the object it is
+called on — is the **subject**, never the *receiver*; `receiver` was Smalltalk
+residue naming a message Zane does not have, and it was renamed throughout
+`spec/` (canonical home `functions.md` §2.1, glossary §3.38). The word survives
+in exactly one place under `spec/`:
+
+```sh
+grep -RIn "receiver" spec/
+```
+
+The single expected hit is the `> **Story:**` pointer in `functions.md` §2.1
+naming the chapter "What does a receiver receive?" — the chapter title keeps the
+old word because that is what the chapter is about. Any other hit is a
+reintroduction; fix it.
+
+`stories/` is exempt and **must not be swept**. Merged chapters say "receiver"
+throughout and stay that way, so the two trees disagree on this word by design.
+A session that "fixes" the stories has violated the append-only rule, not
+tidied up. Use `subject` in new prose on both sides.
+
 If the grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc
 that uses it, then re-grep for the old numbers. If the change conflicts with
