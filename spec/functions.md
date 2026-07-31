@@ -56,12 +56,12 @@ A method marked `mut` may write to any state reachable through `this`, whether t
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
 - For a **value-type** receiver, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
-- For a **reference-type** receiver, `this` is a **mutable borrow** too, and for the same reason: the receiver expression at the call site is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1). A bare `this T` on a reference type *is* that borrow — **`'` is never written on `this`** — so the receiver is never swallowed and the caller stays a full host.
+- For a **reference-type** receiver, `this` is a **mutable borrow** too. The receiver is never a swallow position — a method does not consume its own receiver — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a reference receiver's implicit `&` went: the call-site receiver is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
 
 A method that needs to keep the receiver past the call — store it in an `&` field, or return it as `&T` ([`lifetimes.md`](lifetimes.md) §1.7) — declares `this &T` instead. That is a guest receiver, so the call site must supply a guest source.
 
 ```zane
-Unit setScale(this Node, scale Float) mut {   // reference receiver: implicit `'Node` borrow
+Unit setScale(this Node, scale Float) mut {   // reference receiver: the implicit borrow
     this.scale = scale
     return Unit()
 }
@@ -416,7 +416,7 @@ Read-only methods and functions are effect-free with respect to their receiver u
 | `&` method parameter | Caller must supply a guest source (never a bare symbol); callee may store it into `&` fields or return it |
 | `'T` method parameter | Caller may supply any place expression, bare symbols included; read and `mut` access for the call only; **MUST NOT** be stored, returned, or moved |
 | Plain `T` method parameter | Swallows; caller may supply a temporary and downgrades to a guest; callee **MUST NOT** bind it into `&` storage |
-| Reference receiver | Bare `this T` is the borrow receiver — `'` is never written on `this`; `this &T` is a guest receiver, required to store or return the receiver |
+| Reference receiver | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver, required to store or return the receiver |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T` / `'T`) at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |

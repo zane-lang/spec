@@ -175,7 +175,7 @@ A **borrow** is non-hosting, non-escaping access to a caller's storage for the d
 
 That restriction is on the borrow, not on what is read through one. A value type is *always* passed this way — a value-type parameter is a **read-only borrow** of the caller's slot — and binding through that borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value. The copy is a new value that outlives the call perfectly well; what does not escape is the borrow. A reference type has no such copy, so a `'T` borrow leaves nothing behind at all.
 
-A **reference type** has three passing modes, one per surface form:
+A **reference type** parameter has three passing modes, one per surface form. The receiver is not one of these positions and has its own rule, below:
 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
@@ -223,7 +223,9 @@ Int inspect(this Car, engine 'Engine) {
 }
 ```
 
-A reference-type receiver borrows by default, and **`'` is never written on `this`**: a bare `this T` on a reference type *is* the borrow. It has to be — if the marker were required here, bare `this T` would mean the method swallows its own receiver, which is not something a method wants. A method that needs to keep or hand back the receiver writes `this &T`, the guest receiver (see [`functions.md`](functions.md) §2.4). So `this` carries at most one marker, `&`, and its absence means borrow for value and reference receivers alike.
+**The receiver is never a swallow position.** A method does not consume its own receiver, so `this` chooses between only two of the three modes: it is a **borrow** written bare, or a **guest** written `this &T` when the method stores or returns the receiver (see [`functions.md`](functions.md) §2.4). `'` is **never** written on `this`.
+
+So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it borrows — because the receiver was never a swallow position to begin with. That much predates the borrow mode: a reference receiver used to be an implicit **guest**, likewise never swallowed. What changed is only *which* non-swallowing mode a bare receiver is, and it moved to the borrow because the receiver expression at a call site is usually a bare symbol, which §2.8.1 no longer admits as a guest source. Value and reference receivers now agree: `this` carries at most one marker, `&`, and its absence means borrow.
 
 Binding a swallowed or borrowed parameter into `&` storage is illegal. A swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call. A borrow does not survive the call at all:
 
@@ -559,7 +561,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, which only a guest source can supply; `'T` borrows any place, bare symbols included, and leaves the caller a full host |
 | `'T` position | Parameter positions only; never a storage, field, or return type |
-| Reference-type receiver | Bare `this T` is the borrow receiver — `'` is never written on `this`; `this &T` is a guest receiver a method may store or return |
+| Reference-type receiver | Never a swallow position: bare `this T` is the borrow receiver — `'` is never written on `this` — and `this &T` is a guest receiver a method may store or return |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
