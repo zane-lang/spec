@@ -206,34 +206,34 @@ type Car = #struct {
 }
 
 // `&` parameter is a guest; it may be stored into an `&` field
-Unit setEngine(this 'Car, engine &Engine) mut {
+Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine
     return Unit()
 }
 
 // plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
-Unit setSpare(this 'Car, engine Engine) mut {
+Unit setSpare(this Car, engine Engine) mut {
     this.spare = engine
     return Unit()
 }
 
 // borrow parameter: a reference-type object read without consuming it and without minting a guest
-Int inspect(this 'Car, engine 'Engine) {
+Int inspect(this Car, engine 'Engine) {
     return this._value + engine.speed
 }
 ```
 
-A reference-type receiver follows the same three modes and defaults to the borrow: `this T` is an implicit `'T` borrow, and a method that needs to keep or hand back the receiver as a guest writes `this &T` (see [`functions.md`](functions.md) §2.4).
+A reference-type receiver borrows by default, and **`'` is never written on `this`**: a bare `this T` on a reference type *is* the borrow. It has to be — if the marker were required here, bare `this T` would mean the method swallows its own receiver, which is not something a method wants. A method that needs to keep or hand back the receiver writes `this &T`, the guest receiver (see [`functions.md`](functions.md) §2.4). So `this` carries at most one marker, `&`, and its absence means borrow for value and reference receivers alike.
 
 Binding a swallowed or borrowed parameter into `&` storage is illegal. A swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call. A borrow does not survive the call at all:
 
 ```zane
-Unit setEngineSwallowed(this 'Car, engine Engine) mut {
+Unit setEngineSwallowed(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: a swallowed host is not a guest source
     return Unit()
 }
 
-Unit setEngineBorrowed(this 'Car, engine 'Engine) mut {
+Unit setEngineBorrowed(this Car, engine 'Engine) mut {
     this.engine = engine   // ILLEGAL: a borrow is not a guest source and does not escape the call
     return Unit()
 }
@@ -559,7 +559,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, which only a guest source can supply; `'T` borrows any place, bare symbols included, and leaves the caller a full host |
 | `'T` position | Parameter positions only; never a storage, field, or return type |
-| Reference-type receiver | `this T` is an implicit `'T` borrow; `this &T` is a guest receiver a method may store or return |
+| Reference-type receiver | Bare `this T` is the borrow receiver — `'` is never written on `this`; `this &T` is a guest receiver a method may store or return |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |

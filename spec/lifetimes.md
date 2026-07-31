@@ -158,7 +158,7 @@ A function may return an `&T` only when the returned guest is rooted in one of t
 The other two parameter modes are not roots. A `'T` borrow ends with the call, so a guest rooted in one would outlive the access it was granted. A swallowing `T` parameter is a bare symbol in the call-site scope, and a bare symbol is not a guest source at all.
 
 ```zane
-&Weapon fromBorrow(this 'Player) => this.weapon   // ILLEGAL: a borrow is not a guest root
+&Weapon fromBorrow(this Player) => this.weapon    // ILLEGAL: a borrow is not a guest root
 
 &Node bad() {
     value Node()

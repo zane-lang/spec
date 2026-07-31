@@ -261,7 +261,7 @@ Reference-typed parameters and returns use the ordinary type form. A parameter s
 ReturnType[&ParamType, ...]
 ReturnType['ParamType, ...]
 &ReturnType[this &ReceiverType, &ParamType, ...]
-ReturnType[this 'ReceiverType, 'ParamType, ...] mut
+ReturnType[this ReceiverType, 'ParamType, ...] mut
 ```
 
 ```zane
@@ -326,12 +326,11 @@ ReturnType?AbortType name(this ReceiverType, param ParamType, ...) => expr
 ReturnType?AbortType name(this ReceiverType, param ParamType, ...) mut => expr
 ReturnType name(this ReceiverType<T Type, n Number>, param ParamType, ...) { body }
 ReturnType name(this &ReceiverType, param ParamType, ...) { body }
-ReturnType name(this 'ReceiverType, param ParamType, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-A **reference** receiver takes a passing mode like any other reference parameter, and every combination above may be written with `&` or `'` on `ReceiverType`. Bare `this ReceiverType` means `this 'ReceiverType` — the borrow is the default — and `this &ReceiverType` is written when the method stores or returns the receiver as a guest. A **value** receiver has no mode to select: it is a borrow of the caller's slot, mutable when the method is `mut`, and is always written bare. See [`functions.md`](functions.md) §2.4.
+The receiver takes at most one marker, `&`. A bare `this ReceiverType` is the **borrow** receiver, and `this &ReceiverType` is written when the method stores or returns the receiver as a guest; `'` is **never** written on `this`, for either kind of type. A value receiver is likewise a borrow of the caller's slot, mutable when the method is `mut`, and always written bare. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 

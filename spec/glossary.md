@@ -195,7 +195,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` receiver is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is an implicit `'T` borrow.
+- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` receiver is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is that borrow — `'` is never written on `this`.
 - **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, the borrow itself has no anchor or tether and cannot be stored, returned, or used as a move source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -245,7 +245,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8.1
 
 ### 3.37 passing mode
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver takes a mode like any parameter, and defaults to the borrow. Two overloads may not differ only by the mode at one position.
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The receiver selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
