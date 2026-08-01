@@ -150,7 +150,7 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 
 Boxing carries two costs, both of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. And rehosting a node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store.
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#a-recursive-child-is-owned-not-aliased) — "A recursive child is owned, not aliased".
+> **Story:** [`stories/adt.md`](../stories/adt.md#the-bindings-that-existed-only-to-be-pointed-at) — "The bindings that existed only to be pointed at".
 
 ---
 
