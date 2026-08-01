@@ -281,10 +281,12 @@ A leading `#` marks a **reference type**. It attaches only to a **mould** — `#
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named
-type Tree = #variant { leaf Int; node &Tree; }   // reference sum type
+type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` recurses
 ```
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored reference is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`node` is written as an ordinary hosting member. Only a reference type may recurse, and the compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4).
+
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **guest** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ---
 
