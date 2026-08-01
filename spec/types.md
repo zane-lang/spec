@@ -78,7 +78,7 @@ type Color = struct { r Int; g Int; b Int; }    // value product type: has r and
 type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, boxing recursive members through `&`. The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, its recursive members boxed into the dynamic region (see [`adt.md`](adt.md) §4). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 
@@ -316,7 +316,7 @@ car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
 car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. See [`adt.md`](adt.md) §4.1 for the same requirement seen from a recursive type's side.
+The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. Recursion is not one of these cases: a recursive member is a **hosting** field the compiler boxes, so it needs no `&` and no guest source at all (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
 

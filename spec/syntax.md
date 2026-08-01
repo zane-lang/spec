@@ -182,11 +182,11 @@ A type argument fills a type-parameter slot; a number argument fills a number-pa
 A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.10).
 
 ```zane
-type BinOp = #struct { left &Expr; right &Expr; operator Operator; }
+type Operation = #struct { left Expr; right Expr; op Operator; }
 type QualifiedIdent = struct { packageName String; member String; }
 
 type Expr = #variant {
-    op BinOp;
+    op Operation;
     qualifiedIdent QualifiedIdent;
 }
 ```

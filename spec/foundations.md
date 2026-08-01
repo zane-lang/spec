@@ -67,7 +67,7 @@ It is the foundation under a large part of the runtime model:
 
 - Indexing is `base + i * stride` with a compile-time `stride`; copying, struct embedding, and calling conventions all assume a fixed size. The full argument is in [`generics.md`](generics.md) §7.
 - A type whose size could vary would propagate that variability into everything that contains it, so the invariant has to be global to be worth anything.
-- Consequences elsewhere are derivations of this rule, not separate decisions: an array bakes its length into its type ([`generics.md`](generics.md) §8), and a directly self-referential value type is illegal because it would have infinite size, which is why recursion must box through `&` ([`adt.md`](adt.md) §4, [`memory.md`](memory.md) §2.10).
+- Consequences elsewhere are derivations of this rule, not separate decisions: an array bakes its length into its type ([`generics.md`](generics.md) §8), and a directly self-referential type is illegal because it would have infinite size, which is why a recursive member is boxed rather than laid out inline ([`adt.md`](adt.md) §4, [`memory.md`](memory.md) §2.10).
 
 ---
 
@@ -87,7 +87,7 @@ So the rules should not be read as a usability tax levied next to the performanc
 
 Every type is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — declared and named; each such reference type is a distinct type with identity that can be pointed at.
 
-A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference would need indirection, and indirection is a reference). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
+A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping, and why a value type cannot recurse (a self-reference needs indirection, and every indirection Zane has — the `&` guest and the boxed hosting field — belongs to reference types). A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse.
 
 Both kinds are mutated in place through a `mut` method, and the subject reaches the caller the same way in each: `this` is a *borrow* of the caller's slot, so a value is mutable without gaining identity and a reference object is mutable without minting a guest to it. Borrowing serves both worlds; what the reference world adds on top is `&`, for the cases where a callee must keep the object past the call.
 
