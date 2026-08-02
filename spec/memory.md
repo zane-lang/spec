@@ -262,7 +262,7 @@ Value types form a closed world of plain value storage. A value-type field may c
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-The rule is about **copying**, and both banned field kinds fail it the same way. A value is copied, whole, every time it is assigned, passed, returned, or stored (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one host at a time (§2.1), a stable identity that guests resolve through (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and both dissolve that:
+The rule is about **copying**, and both banned field kinds fail it the same way. A value is copied, whole, every time it is bound into a fresh slot (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one host at a time (§2.1), a stable identity that guests resolve through (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and both dissolve that:
 
 - **Duplicate the object**, minting a second instance with its own identity. Guests tethered to the original would not follow the copy, and "exactly one host" would describe nothing.
 - **Share the object**, so two values reach one host. Hosting would no longer be single, and a value would have become a way to alias.
@@ -324,8 +324,8 @@ if runtimeBool() {
 
 Each lexical scope owns an **arena** made from two independent allocation regions:
 
-- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles of dynamically-sized reference types and of boxed members.
-- The **dynamic region** stores the payloads behind fixed-size handles: the resizable backing stores of types such as `List` and `String`, and the payloads of boxed members (§3.6).
+- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles — of dynamically-sized reference types and of boxed members alike — that are materialized in **scope-level** slots.
+- The **dynamic region** stores the payloads behind those handles: the resizable backing stores of types such as `List` and `String`, and the payloads of boxed members (§3.6). A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed.
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
 
@@ -342,7 +342,7 @@ fixed-size region   dynamic region     [anchor page] → [anchor page] → ...
 
 An ordinary dynamic allocation never straddles a chunk boundary. A dynamic block of at most 1 MiB is wholly contained in one dynamic chunk; if the remaining bytes in the current chunk cannot hold it, allocation continues in a fresh dynamic chunk.
 
-A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguous OS mapping made from `ceil(block_size / 1 MiB)` consecutive dynamic chunks, all belonging exclusively to that block and assigned consecutive chunk ids. Its handle stores the segmented offset of the span's first byte and its size class. After resolving that base, element addressing uses an ordinary byte offset across the contiguous mapping. Every constituent chunk also has a directory entry. Returning an oversized span pushes only its base offset onto the exact-size stack; the complete span remains mapped for reuse until the scope drains.
+A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguous OS mapping made from `ceil(block_size / 1 MiB)` consecutive dynamic chunks, all belonging exclusively to that block and assigned consecutive chunk ids. Its handle stores the segmented offset of the span's first byte and its exact block size, alongside the alignment that block was allocated at (§3.2). After resolving that base, element addressing uses an ordinary byte offset across the contiguous mapping. Every constituent chunk also has a directory entry. Returning an oversized span pushes only its base offset onto the exact-size stack; the complete span remains mapped for reuse until the scope drains.
 
 Scope chunks and global anchor pages draw ids from the same chunk directory, so payload locations, dynamic handles, tethers, backpointers, anchor cells, and size-stack entries all use one **`u32` segmented offset**:
 
@@ -386,10 +386,10 @@ A reference-type instance carries one `u32` backpointer field of anchor metadata
 
 A **boxed member** is laid out the same way. A member whose declared type can lead back to the enclosing type would have no finite inline size, so the compiler stores it as a fixed-size handle inline and places the instance it names in the dynamic region (§3.6). Boxing is what keeps every type on such a containment cycle statically sized, and it is required there. Off a cycle it is permitted rather than required: an implementation may place a member either way, per type (see [`adt.md`](adt.md) §4), and §3.5 makes the choice unobservable.
 
-Boxing is available on **both** sides of the `#` axis, and the enclosing type's kind decides what owning the payload means:
+Boxing is available on **both** sides of the `#` axis. Two separate questions decide what a boxed member means, and they are answered by **different** types:
 
-- In a reference type the boxed member is also a **hosting** member: the payload is a reference-type instance with its own backpointer, the parent hosts it and destroys it, rehosting the parent relocates it (§3.5), and it may be guested from the parent's field access under §2.8.
-- In a value type the boxed member is owned outright by the value. The payload has no identity, no anchor, and no backpointer; it is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2). Nothing can be guested from it, because a value has nothing to guest.
+- **What the payload is** follows the **member's own declared type**, never the enclosing one. A reference-typed payload is an ordinary reference-type instance: it carries its own backpointer, has identity, and may be guested from the enclosing instance's field access under §2.8. A value-typed payload is an ordinary value: no identity, no anchor, no backpointer, and nothing to guest. Because boxing is permitted off a cycle (§3.3, [`adt.md`](adt.md) §4), a reference type may box a value-typed member; that stores a plain value out of line and does **not** give it identity.
+- **What becomes of the payload when the enclosing instance moves, is copied, or dies** follows the **enclosing type's kind**. A reference type *hosts* what it boxes: it destroys the payload when it dies, and rehosting it relocates the payload (§3.5). A value type *owns* what it boxes: the payload is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2).
 
 Either way the member's declared type is unchanged by being boxed, and the box is placement rather than an extra level of type.
 
