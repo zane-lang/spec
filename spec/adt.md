@@ -55,6 +55,8 @@ type Peano = #variant { zero Unit; succ Peano; }   // legal: `succ` is a boxed h
 
 A `Nat` is copied whole, so copying one allocates and copies every node beneath it (see [`memory.md`](memory.md) §2.3), and two `Nat` values never share a node. A `Peano` has identity and is **moved** rather than copied, and its boxed member hosts the child it holds. The choice between them is therefore the ordinary value/reference choice, made on the ordinary grounds, and recursion no longer forces it.
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
+
 The `#` on `Expr` below is forced by something else entirely: `intLit String` — `String` is a reference type, and a value sum may not carry one (see [`memory.md`](memory.md) §2.10). Its recursion would have been fine either way.
 
 ```zane
@@ -167,6 +169,7 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 Boxing carries costs, all of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. Rehosting a reference-type node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store. A recursive **value** type pays that cost more often, because it is copied rather than moved: every assignment, argument pass, and return walks and reallocates the whole structure. Where a tree is large and shared handling is wanted, that is the signal to reach for the reference form.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-bindings-that-existed-only-to-be-pointed-at) — "The bindings that existed only to be pointed at".
+> **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
 
 ---
 

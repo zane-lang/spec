@@ -134,6 +134,8 @@ A value whose members are all inline is one fixed-size contiguous slot, so the s
 
 Two costs follow and are accepted. A snapshot of such a value allocates and is O(structure) where a flat snapshot allocates nothing, and a retry redoes the whole walk, so a fast writer can starve a reader in a way it cannot for a flat value. A value type that is read under `spawn` on a hot path is therefore better kept flat.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#what-a-copy-is-for-and-the-ban-that-survived-it) — "What a copy is for, and the ban that survived it".
+
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#value-typed-mutation-closing-the-aliased-write-gap) — "Value-typed mutation: closing the aliased-write gap".
 
 ### 4.5 Effect conflicts on external resources
