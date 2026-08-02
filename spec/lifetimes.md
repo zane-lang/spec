@@ -37,7 +37,7 @@ A move-source must denote a **hosting value the expression is entitled to consum
 
 - a **direct host symbol**: a local binding or parameter that hosts the object and is named directly by an identifier expression
 - a **hosting verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosting `T`. A hosting verb result has no source host; its source scope is the producing expression, which is always nested within or equal to the destination host's scope, so it satisfies the destination-scope restriction trivially.
-- a **`#variant` case form**: `Variant.case(payload)` where `Variant` is a **reference** sum type (see [`adt.md`](adt.md) §3.2). It is built-in syntax rather than a verb, but it stands in the same position as a hosting verb result — it produces a fresh value nothing hosts yet — and it is a move-source on the same terms. A *value* `variant` case form is not one: a value sum is copied inline and has no hosting to transfer.
+- a **`#variant` case form**: `Variant.case(payload)` where `Variant` is a **reference** sum type (see [`adt.md`](adt.md) §3.2). It is built-in syntax rather than a verb, but it stands in the same position as a hosting verb result — it produces a fresh value nothing hosts yet — and it is a move-source on the same terms. A *value* `variant` case form is not one, and does not need to be: a value sum is copied rather than hosted, so there is no hosting to transfer. That holds even when the value owns boxed members, because the copy that reaches its destination is deep (see [`memory.md`](memory.md) §2.3).
 
 A verb that returns a hosting `T`, and a case form that builds a `#variant`, both produce a fresh value that no symbol, field, or container hosts yet. Moving it transfers hosting of that temporary straight into the destination, so it re-parents nothing. This is what lets a recursive structure be written as one nested expression: each boxed hosting member takes the node built for it in place (see [`adt.md`](adt.md) §4).
 
@@ -239,6 +239,8 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 
 ### 2.1 Destruction is deterministic
 Class instances are destroyed when their host dies, their hosting container dies, or their hosting scope drains under the concurrency rules.
+
+A **value** has death points that are equally static: its slot is overwritten, or the host, container, or scope holding it dies. Whatever storage that value owns out of line — the payload of a boxed member, and every payload beneath it — is returned at that point, recursively (see [`memory.md`](memory.md) §2.3 and §3.2). No tracking is needed to find the moment, because every one of these points is known from the program text.
 
 ### 2.2 Scopes drain before destruction
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).

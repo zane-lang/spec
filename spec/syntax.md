@@ -48,7 +48,7 @@ name VarType(value)
 
 ### 1.3 Reference-type bodies (`#`)
 
-A `#`-marked body declares a **reference type** — identity-bearing, may hold `&` fields, may recurse. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `#struct Name { ... }` declaration form.
+A `#`-marked body declares a **reference type** — identity-bearing, may hold `&` fields, moved rather than copied. It declares fields only and names a type through a type declaration (§1.6). There is no standalone `#struct Name { ... }` declaration form.
 
 ```zane
 type Name = #struct {
@@ -284,7 +284,7 @@ type Cell = #struct { value Int; }               // reference product type, decl
 type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` recurses
 ```
 
-`node` is written as an ordinary hosting member. Only a reference type may recurse, and the compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4).
+`node` is written as an ordinary hosting member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
 `&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **guest** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 

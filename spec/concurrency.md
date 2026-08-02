@@ -116,7 +116,7 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-water-tower-lifetimes-that-survive-the-spawn) — "The water tower: lifetimes that survive the spawn".
 
 ### 4.2 Concurrent mutation requires a value-typed subject
-A spawned call may **mutate** state only through a value-typed subject. A spawned `mut` call whose subject is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
+A spawned call may **mutate** state only through a value-typed subject. A spawned `mut` call whose subject is a reference type (a `#`-marked type) is a compile-time error. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
 A direct consequence is that reference types are never mutated by spawned work, so every concurrent **read** of the reference-typed object graph is safe by construction.
 
@@ -125,6 +125,14 @@ For any one storage location, at most one live spawned call may hold a **mutable
 
 ### 4.4 Reads take a coherent snapshot
 A spawned call may read a value that another live spawn is mutating; the read observes a **coherent snapshot** of the value rather than blocking. Reading a shared value into a fresh binding — `snap VarType = shared` — is what takes the snapshot, and the copy is tear-free even when the writer is mid-update. This replaces lock-based serialization for in-memory value state, so a real-time reader never waits on a writer. Serialization still applies to external, capability-backed resources (§4.5).
+
+A value whose members are all inline is one fixed-size contiguous slot, so the snapshot is a fixed-size read validated and retried against the writer's updates. A value that owns **boxed members** (see [`memory.md`](memory.md) §3.3) is instead *walked*: the reader follows each handle and copies the payload it names, and the writer may free and recycle that block in between. Three rules make that walk safe and bounded.
+
+- **A stale read is garbage, not an invalid access.** A scope cannot drain while a spawn inside it is live (§4.1), and the runtime unmaps a scope's chunks only at drain (see [`memory.md`](memory.md) §3.2). A block freed during the walk is therefore recycled *within a mapping that stays live*, so a stale handle resolves into readable memory holding some other occupant's bytes. This is the same failure class as a torn flat read, and the version check discards it the same way.
+- **The walk MUST be bounded.** Because a recycled block may hold a handle left by its next occupant, a reader may pick up an offset that is not part of the structure it is traversing. The walk **MUST** validate each offset against the scope's live regions and **MUST** stop at a depth bound, so a bogus handle cannot make it recurse without end or loop on a cycle that exists only in recycled bytes. Whatever it collected is then discarded by the version check and the read is retried.
+- **The reader allocates.** A deep snapshot allocates its own blocks from the same per-scope size stacks the writer is pushing to (see [`memory.md`](memory.md) §3.2), so those stacks **MUST** tolerate concurrent use for the duration of such a read.
+
+Two costs follow and are accepted. A snapshot of such a value allocates and is O(structure) where a flat snapshot allocates nothing, and a retry redoes the whole walk, so a fast writer can starve a reader in a way it cannot for a flat value. A value type that is read under `spawn` on a hot path is therefore better kept flat.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#value-typed-mutation-closing-the-aliased-write-gap) — "Value-typed mutation: closing the aliased-write gap".
 
@@ -177,3 +185,4 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
 | Mutation | A spawned mutating call requires a value-typed subject; at most one mutable borrow per storage location; concurrent reads take a coherent snapshot |
+| Snapshot of a boxed value | A value owning boxed members is snapshotted by a walk that must validate offsets and stop at a depth bound; it allocates from the scope's size stacks, and a retry costs O(structure) |

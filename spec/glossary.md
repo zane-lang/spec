@@ -70,7 +70,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.2 value-downstream enforcement
-- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields. The same closure bars a value type from leading back to itself: a self-reference would have to be boxed (§3.39), and a boxed payload is owned storage that a mechanical value copy cannot duplicate or share.
+- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields. The reason is copying: a value is copied whole every time it is assigned, passed, returned, or stored, while a reference type exists in order *not* to be copied — it has one host, a stable identity, and reaches a new place by being moved. Copying a value that held one could only mint a second identity or leave two values sharing a host; an `&` field would put aliasing inside the value world directly. The closure does **not** bar recursion: a value type may lead back to itself through a boxed member (§3.39), because a box is placement rather than a reference-type field and a value copy is deep (§3.40).
 - **Why this name:** The rule is checked recursively through fields downstream from the outer value type, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
@@ -185,7 +185,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized **scope-level** storage — value slots, reference-type hosts, and the fixed-size handles materialized in those slots — is bump-allocated inline in the fixed-size region of the scope that creates it, while the payloads those handles name (resizable backing stores and boxed hosting members, §3.39) go in that scope's dynamic region. A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic block is relocated into an equal-size destination-region allocation — recursively, through any blocks it owns in turn — and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
+- **Meaning:** A scope's arena has two regions: statically sized **scope-level** storage — value slots, reference-type hosts, and the fixed-size handles materialized in those slots — is bump-allocated inline in the fixed-size region of the scope that creates it, while the payloads those handles name (resizable backing stores and boxed members, §3.39) go in that scope's dynamic region. A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic block is relocated into an equal-size destination-region allocation — recursively, through any blocks it owns in turn — and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
@@ -210,7 +210,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §5.3
 
 ### 3.30 value mould / reference mould
-- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value or identity-bearing and accessible through guests.
+- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through guests. It does not decide whether the type may recurse — both forms may, through a boxed member (§3.39).
 - **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
@@ -254,10 +254,15 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** Grammar, matching `verb` (§3.22): a call reads *subject–verb–object*, and the subject is what the verb acts from. The three senses are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
 - **Canonical home:** [`functions.md`](functions.md) §2.1
 
-### 3.39 boxed hosting member
-- **Meaning:** A hosting **member** — a `#struct` field or a `#variant` case payload alike — stored as a fixed-size handle inline, with the reference-type instance it hosts placed in the scope's dynamic region: the same two-part representation a `List` uses for its backing store. Boxing is **required** when the member's declared type can lead back to the enclosing type through hosting members, since no finite inline layout exists for it, and **permitted** otherwise, chosen per type by the implementation. The member still **hosts**: the parent owns the child and destroys it, moving the parent relocates the whole boxed subtree, and no `&` and no guest source (§3.36) is involved. Nothing marks it in the source, and placement is unobservable (§3.25).
-- **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **hosting** is the half that distinguishes it from the alternative it replaced: the indirection carries ownership, where an `&` guest (§3.33) would carry only access.
+### 3.39 boxed member
+- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region: the same two-part representation a `List` uses for its backing store. Boxing is **required** when the member's declared type can lead back to the enclosing type, since no finite inline layout exists for it, and **permitted** otherwise, chosen per type by the implementation. Either kind of type may have one, and the enclosing kind decides what owning the payload means: in a reference type the boxed member also **hosts** — the parent destroys the child and rehosting relocates the whole boxed subtree — while in a value type the value owns the payload outright and copies it deeply (§3.40). No `&` and no guest source (§3.36) is involved either way. Nothing marks it in the source, and placement is unobservable (§3.25).
+- **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **member** rather than *field* because a `variant` case payload is boxed on the same terms as a `struct` field.
 - **Canonical home:** [`adt.md`](adt.md) §4; representation in [`memory.md`](memory.md) §3.3 and §3.6
+
+### 3.40 deep value copy
+- **Meaning:** Copying a value copies the whole value — its inline bytes, plus a fresh allocation and recursive copy of the payload behind every boxed member (§3.39) it owns — so an original and its copy share no storage. For a value with no boxed member, which is the ordinary case, this is exactly the inline byte copy it has always been. Depth is what keeps a value transitively alias-free once it may own out-of-line storage, and therefore what lets a value type recurse (§3.2) and stay legal as a concurrent subject (§2.4). The cost is that copying such a value allocates and is proportional to its structure.
+- **Why this name:** "Deep" is the standard word for a copy that follows indirections instead of duplicating them, and the contrast it names — deep versus shallow — is precisely the choice the rule settles.
+- **Canonical home:** [`memory.md`](memory.md) §2.3
 
 ---
 

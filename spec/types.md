@@ -11,7 +11,7 @@ This document specifies Zane's data types: fundamental, value, and reference typ
 Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
-- **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, and able to hold reference-type and `&` fields and recurse. `struct` is a value mould; `#struct` a reference mould.
+- **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
 - **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, and `Unit` belong to the language; `type` introduces a new distinct named type and `alias` an interchangeable name.
@@ -23,12 +23,12 @@ Zane keeps data layout and construction separate from behavior.
 ### 2.1 The value/reference axis and the `#` modifier
 Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
-A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and may recurse. Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
+A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
 ```zane
 package Graph
 
-type Node = #struct {      // reference type: identity, may hold `&`, may recurse
+type Node = #struct {      // reference type: identity, may hold `&`, moved not copied
     _id Int;
     scale Float;
     label String;
@@ -39,7 +39,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, may recurs
 > **Story:** [`stories/types.md`](../stories/types.md#what--actually-changes-and-the-boxing-trap) — "What `#` actually changes, and the boxing trap".
 
 ### 2.2 Value types are transitive and mutable in place
-A value-type body contains only field declarations, stored inline. A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping.
+A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping. It does not stop a value type from containing *itself*: a recursive member is boxed, and a value copy is deep, so the copy owns its own nodes (see [`memory.md`](memory.md) §2.3).
 
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
@@ -78,7 +78,7 @@ type Color = struct { r Int; g Int; b Int; }    // value product type: has r and
 type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field, an `&` field, or recurse (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields and may recurse, its recursive members boxed into the dynamic region (see [`adt.md`](adt.md) §4). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field or an `&` field (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields. Both may recurse, their recursive members boxed into the dynamic region (see [`adt.md`](adt.md) §4). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type comes into being only through such a declaration and is always named there (§5.3).
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 
@@ -316,7 +316,7 @@ car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
 car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. Recursion is not one of these cases: a recursive member is a **hosting** field the compiler boxes, so it needs no `&` and no guest source at all (see [`adt.md`](adt.md) §4).
+The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. Recursion is not one of these cases: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source at all (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
 
@@ -565,11 +565,11 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Concept | Rule |
 |---|---|
 | Type body | Fields only — no methods or constructors inside the body |
-| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity, `&`-aliasing, and recursion; the unmarked moulds declare value types |
+| Value/reference axis | A type is a value type unless marked `#`; `#` marks only a mould — `#struct`/`#variant`/`#enum` (declared and named), each a distinct reference type with identity and `&`-aliasing, moved rather than copied; the unmarked moulds declare value types, and either kind may recurse |
 | Mould | One of the three type-shaping forms — `struct`, `variant`, or `enum`; each has a value form and a `#` reference form; appears only as a `type`/`alias` right-hand side, so every constructible type is named |
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
-| Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; may recurse; placement is unobservable |
+| Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Unit`; declared by the bundled `core` implementation and available unqualified |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
