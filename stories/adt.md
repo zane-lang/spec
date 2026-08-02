@@ -119,7 +119,7 @@ The last thing to pin was where construction *stops*, and it fell straight out o
 
 ## The bindings that existed only to be pointed at
 
-The fuse was not a size calculation. It was noticing what we had to write in order to use a variant at all.
+Here is the smallest interesting variant there is — a two-case expression tree, and the program that builds `3 + 2` out of it:
 
 ```zane
 type Operation = #struct { left Expr; right Expr; op Operator; }
@@ -128,7 +128,7 @@ type Expr = #variant { op Operation; intLit String; }
 program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.add))
 ```
 
-That is the smallest interesting variant there is, and it was rejected. The recursive members had to be `&Expr`, an `&` has to be minted from a **guest source**, and `Expr.intLit("3")` is a temporary — not a place expression at all ([`memory.md` §2.8](https://github.com/zane-lang/spec/blob/d8e7eff29ed2ab42dfd582ea7f7c983b80395cbd/spec/memory.md#28-place-expressions-and-new--values)). So every child had to be parked in storage first, given a name it had no use for, purely so that something could point at it. At its worst that meant inventing a type for the parking:
+It was rejected, and not for the reason you would expect. The recursive members had to be `&Expr`, an `&` has to be minted from a **guest source**, and `Expr.intLit("3")` is a temporary — not a place expression at all ([`memory.md` §2.8](https://github.com/zane-lang/spec/blob/d8e7eff29ed2ab42dfd582ea7f7c983b80395cbd/spec/memory.md#28-place-expressions-and-new--values)). So every child had to be parked in storage first, given a name it had no use for, purely so that something could point at it. At its worst that meant inventing a type for the parking:
 
 ```zane
 type Leaves = #struct { a Expr; b Expr; }
@@ -139,7 +139,7 @@ program Expr = Expr.op(Operation(leaves.a, leaves.b, Operator.add))
 
 `Leaves` models nothing. It is scaffolding the rule demanded, and `leaves.a` is a name for something that should have been a sub-expression. When a language makes you introduce storage in order to *use* its own sum type, the rule is wrong — not awkward, wrong — because putting things in a variant is most of what a variant is for.
 
-Once we were looking at it that way, the deeper mistake was visible behind it, and it is not about recursion at all: **inlining is the wrong default, because a type's size varies.** A statically sized reference-type instance was stored inline in its host slot, on the reasoning that `#` buys identity and should not force an allocation. That holds only while every type has one settled size to inline. A sum does not — a `#variant` is as wide as its widest case — and a type that can contain itself has no finite size to speak of. Inline-by-default treats "the size of a `T`" as a fact available at the point of embedding, and for exactly the types this chapter is about, it is not. Recursion is where that assumption stopped being survivable, but it was never sound; it was merely unfalsified.
+That is what lit the fuse — not a size calculation, but noticing what we had to write in order to use a variant at all. Once we were looking at it that way, the deeper mistake was visible behind it, and it is not about recursion at all: **inlining is the wrong default, because a type's size varies.** A statically sized reference-type instance was stored inline in its host slot, on the reasoning that `#` buys identity and should not force an allocation. That holds only while every type has one settled size to inline. A sum does not — a `#variant` is as wide as its widest case — and a type that can contain itself has no finite size to speak of. Inline-by-default treats "the size of a `T`" as a fact available at the point of embedding, and for exactly the types this chapter is about, it is not. Recursion is where that assumption stopped being survivable, but it was never sound; it was merely unfalsified.
 
 That reframes what the `&` was doing. It was not expressing aliasing at all — it was being used as **indirection**, conscripted to break a containment the layout rule could not handle. Those are two jobs sharing one spelling, and only one of them is what a guest is for. An AST child is not aliased by its parent; it is *owned* by it, created for it, dying with it. Everything above is what it looks like when an owning relationship is forced through a non-owning handle: the ownership has to be parked somewhere else, and `Leaves` is where it got parked. The [rooted-in-a-field rule](https://github.com/zane-lang/spec/blob/b10eaed/spec/adt.md#41-a-recursive-structure-is-rooted-in-a-field) was the same admission promoted to a principle — we had told ourselves a root belongs in a field of the thing that owns the structure. It does not. That is just where a root is forced when the spine is made of guests.
 

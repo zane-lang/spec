@@ -70,7 +70,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.2 value-downstream enforcement
-- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields.
+- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields. The same closure bars a value type from leading back to itself: a self-reference would have to be boxed (§3.39), and a boxed payload is owned storage that a mechanical value copy cannot duplicate or share.
 - **Why this name:** The rule is checked recursively through fields downstream from the outer value type, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 

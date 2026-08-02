@@ -15,7 +15,7 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 - **`The # axis applies to the sum mould`.** A plain `variant` is its value form; `#variant` is its reference form (see [`types.md`](types.md) §2.1). The `#` mark applies the same way to an `enum`.
 - **`Reading a variant member is partial`.** A case may not be live, so a member read is abortable. The primary consumer is exhaustive dispatch.
 - **`A variant is matched in one central block`.** A `match` block (§5) dispatches a variant on its live tag — variant matching, not pattern matching: no nested destructuring, guards, or shape tests — and must cover every case, with no default arm.
-- **`Recursion requires a reference type`.** A recursive sum must be a `#variant`, never a value `variant`. A recursive member is an ordinary **hosting** member that the compiler **boxes** — a fixed-size handle inline, payload in the dynamic region — and only a reference type may own boxed storage.
+- **`Recursion requires a reference sum`.** Either form carries value-type payloads freely; what a value `variant` cannot do is lead back to itself. A recursive member is an ordinary **hosting** member that the compiler **boxes** — a fixed-size handle inline, payload in the dynamic region — and a box is *owned* storage, which only a host owns (see [`memory.md`](memory.md) §2.10). A recursive sum is therefore a `#variant`.
 
 ---
 
@@ -46,7 +46,16 @@ Per-member associated data is attached externally through an enum map (§6), whi
 
 A `variant` is a **sum mould**. A value of the type it declares holds **exactly one** of the variant's named members at a time. The body uses `{ }` brackets with `;`-terminated members, each a lowercase member name followed by its payload type — the same grammar a `struct` uses.
 
-A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4). A recursive sum such as `Expr` — whose payloads lead back to `Expr` — must therefore be a `#variant`:
+A plain `variant` is a **value** sum: copied on assignment, transitively value, non-recursive. A `#variant` is a **reference** sum: it has identity, may hold reference-type and `&` payloads, and may recurse (§4).
+
+Recursion is the part of that split most easily missed, because it is rarely the binding constraint. It is worth isolating with every payload a value type:
+
+```zane
+type Nat = variant { zero Unit; succ Nat; }        // ILLEGAL: a value sum cannot lead back to itself
+type Peano = #variant { zero Unit; succ Peano; }   // legal: `succ` is a boxed hosting member
+```
+
+Recursion needs a box, a box is owned storage, and only a reference type hosts (see [`memory.md`](memory.md) §2.10). In `Expr` below the `#` is already forced by `intLit String` — `String` is a reference type, and a value sum may not carry one — so `Expr` does not demonstrate the recursion rule on its own. It is a `#variant` on both counts:
 
 ```zane
 type QualifiedIdent = struct { packageName String; member String; }
@@ -145,7 +154,7 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 - **A recursive member hosts its child.** `left` and `right` own the `Expr` nodes they hold, and those nodes are destroyed when the `Operation` is. A recursive structure is a hosting tree, rooted wherever its outermost node is hosted — a local, a field, or a container slot — and it is moved and destroyed whole, like any other hosting subtree (see [`lifetimes.md`](lifetimes.md) §1.2).
 - **Which members are boxed is fixed by the declarations.** A hosting member is boxed exactly when its declared type can lead back to the enclosing type through hosting members — that is, when its edge lies on a cycle in the containment graph. Every such edge is boxed, so nothing depends on declaration order or on choosing where to cut the cycle: above, `Expr.op`, `Operation.left`, and `Operation.right` are all boxed, and every type on the cycle has a finite, statically known size. A member whose type cannot lead back is laid out inline as usual.
 - **Nothing is written for it.** The programmer writes `left Expr`; the compiler boxes it because inline placement is impossible, exactly as it places list elements out of line. There is no `Box<T>` type and no marker, because placement was never a language-visible property (see [`memory.md`](memory.md) §3.5).
-- **A value type cannot recurse.** A `struct` or `variant` is transitively value and holds no handles at all, so it can neither box a member nor contain itself (see [`memory.md`](memory.md) §2.10). A recursive type is a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
+- **A value type cannot recurse.** A `struct` or `variant` is transitively value, and a boxed payload is owned storage: copying such a value could only leave two values naming one payload, or duplicate the payload and make a copy allocating and tree-sized. Neither is a value copy, so a value type gets no box and cannot contain itself (see [`memory.md`](memory.md) §2.10). A recursive type is a `#variant` or a `#struct`, **never** a value type. The body syntax is symmetric across all four kinds; the `#` modifier decides which may recurse.
 - **`&` is for aliasing, not for recursion.** A guest expresses non-hosting access — a parent back-pointer, a symbol table naming nodes, a genuine graph edge — and a cycle of guests is a shape hosting could not express in the first place. An `&` member follows the ordinary guest rules, including the guest-source restriction (see [`memory.md`](memory.md) §2.8); a hosting member, boxed or not, does not.
 
 Boxing carries two costs, both of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. And rehosting a node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store.

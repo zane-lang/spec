@@ -251,7 +251,7 @@ Value types form a closed world of plain value storage. A value-type field may c
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-Value types are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a value could contain a reference-type field, copying it would silently duplicate hosting. If a value could contain an `&`, copying it would silently duplicate non-hosting tracking state without going through the anchor system. Downstream enforcement keeps value copying mechanical, keeps hosting/guest bookkeeping confined to reference types, and — because nothing reachable from a value can be aliased — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
+Value types are copied and overwritten as ordinary inline values. They do not have per-instance anchors or destruction tracking. If a value could contain a reference-type field, copying it would silently duplicate hosting. If a value could contain an `&`, copying it would silently duplicate non-hosting tracking state without going through the anchor system. Recursion is barred by the same reasoning rather than by a rule of its own: a self-reference has no finite inline layout, so it would have to be **boxed** (§3.3), and a boxed payload is *owned* storage. Copying such a value could only duplicate the handle — leaving two values naming one payload, with nothing that hosts it deciding when it dies — or duplicate the payload, which would make copying a value an allocating operation costing time proportional to the structure. Neither is a value copy. Downstream enforcement keeps value copying mechanical, keeps hosting/guest bookkeeping confined to reference types, and — because nothing reachable from a value can be aliased — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
 
 ```zane
 type Vec2 = struct {
@@ -270,6 +270,11 @@ type BadOwner = struct {
 
 type BadRef = struct {
     target &Engine;  // ILLEGAL: `&` field inside a value type
+}
+
+type BadRec = variant {
+    zero Unit;
+    succ BadRec;     // ILLEGAL: a value type cannot lead back to itself
 }
 ```
 
@@ -343,7 +348,7 @@ The dynamic region adds exact-size reuse on top of its bump frontier. Each scope
 
 A block's size comes from what it holds, and the two kinds ask for different things. A **growable backing store** uses power-of-two byte sizes beginning at **128 bytes**, because that is where its doubling starts (§3.6); those sizes are a consequence of growth, not a classification imposed on the region. A **boxed payload** (§3.3) never grows, so it requests exactly the size of the one reference-type instance it holds and is aligned to that type's alignment requirement. There is no size class to round up to and no floor: a twelve-byte node occupies twelve bytes.
 
-Returning a dynamic block pushes its base segmented offset onto the stack for that exact byte size. The stacks are keyed by byte size alone and are shared by all dynamic payloads in the scope, whatever produced them: a 128-byte block previously used by a `List<Int64>` may later hold string bytes, another list's elements, or a boxed node that happens to be 128 bytes wide. Reuse is therefore exact and never approximate — a freed block serves only a request for the same number of bytes. This suits boxed payloads particularly well, because every instance of one reference type is the same size (a `#variant` is laid out at its widest case plus tag), so the block a destroyed node returns is precisely what the next node of that type needs. An oversized span participates in the same exact-size policy.
+Returning a dynamic block pushes its base segmented offset onto the stack for its own size and alignment. The stacks are shared by all dynamic payloads in the scope, whatever produced them: a 128-byte block previously used by a `List<Int64>` may later hold string bytes, another list's elements, or a boxed node that happens to match it on both keys. Reuse is therefore exact and never approximate — a freed block serves only a request for the same number of bytes. This suits boxed payloads particularly well, because every instance of one reference type is the same size (a `#variant` is laid out at its widest case plus tag), so the block a destroyed node returns is precisely what the next node of that type needs. An oversized span participates in the same exact-size policy.
 
 The global anchor pool has one LIFO **free-address stack**, because every anchor slot has the same size. Creating an anchor pops that stack first; only when it is empty does allocation bump the global anchor frontier, mapping another anchor page as needed. Returning an anchor pushes its segmented offset onto the same stack. Anchor pages remain mapped and retain their chunk-directory entries until runtime shutdown, including when every slot on a page is free; consequently every offset retained by the stack always resolves to its original anchor slot and anchor chunk ids are never repurposed during the run.
 
@@ -379,7 +384,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
-Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the payload's segmented offset and the metadata needed by the type, such as length and size class. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the payload's segmented offset and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -398,15 +403,13 @@ A list grows according to the following rules:
 2. The allocator first checks the size stack for that doubled size. If a block or oversized span is available, it is popped and the live elements are relocated into it.
 3. If that stack is empty, the current backing store is the dynamic frontier allocation, the doubled size is at most 1 MiB, and the additional bytes fit before the current chunk boundary, the frontier is bumped by the additional bytes and the store grows in place.
 4. Otherwise, a doubled block of at most 1 MiB is bump-allocated wholly inside one dynamic chunk. A doubled block larger than 1 MiB is allocated as a fresh dedicated oversized span (§3.1). The live elements are relocated into the new block or span.
-5. After relocation, the handle's backing-store offset and size class are updated and the old block's base offset is pushed onto the stack for its exact old byte size.
+5. After relocation, the handle's backing-store offset and block size are updated and the old block's base offset is pushed onto the stack for its exact old byte size.
 
 A block never grows in place across a chunk boundary, and an oversized span is never extended in place: further growth relocates into a doubled oversized span after checking that exact-size stack first. Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. Guests to the list remain valid because they reach the list's host, whose fixed-size handle now names the current backing store.
 
-A **boxed hosting member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's segmented offset; the payload is one reference-type instance, so it is allocated at **exactly that type's size**, aligned to that type's alignment requirement, and is returned to the size stack for that byte size when the member's occupant is destroyed or the member is overwritten (§3.2). Nothing is rounded up: a boxed payload has no size class, because a class exists to absorb growth and a boxed payload never grows. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once at its exact size and is only ever relocated by rehosting (§3.5).
+A **boxed hosting member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's segmented offset; the payload is one reference-type instance, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's occupant is destroyed or the member is overwritten. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is only ever relocated by rehosting (§3.5).
 
-A boxed payload asks for no class at all, and that is the difference between the two kinds of block. Doubling from 128 bytes suits a buffer that will grow, because a class is the room left for the next growth step. A boxed node never takes that step: it is allocated once, at one size, and freed at the same size. Rounding it up to a growth class would leave most of every block unused for the whole of its life, on a structure — an expression tree — made of nothing but such nodes.
-
-Dynamic chunks and oversized spans begin at cache-line-aligned addresses. A **growable backing store** is 128 bytes or larger and cache-line aligned. A **boxed payload** is aligned to its type's alignment requirement, as that type would be aligned anywhere else. The frontier is rounded up to a block's alignment before it is bumped, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
+Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a **growable backing store** — 128 bytes or larger — is cache-line aligned within them. Every other block takes its own type's alignment, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
 > **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
