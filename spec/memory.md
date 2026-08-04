@@ -273,7 +273,7 @@ Value types form a closed world of plain value storage. A value-type field may c
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-The rule is about **copying**, and both banned field kinds fail it the same way. A value is copied, whole, every time it is bound into a fresh slot (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one host at a time (§2.1), a stable identity that guests resolve through (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and both dissolve that:
+The rule is about **copying**, and both banned field kinds fail it the same way. An existing value is copied whole whenever a place expression is bound into a different slot (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one host at a time (§2.1), a stable identity that guests resolve through (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and both dissolve that:
 
 - **Duplicate the object**, minting a second instance with its own identity. Guests tethered to the original would not follow the copy, and "exactly one host" would describe nothing.
 - **Share the object**, so two values reach one host. Hosting would no longer be single, and a value would have become a way to alias.
@@ -386,8 +386,8 @@ The global anchor pool has one LIFO **free-address stack**, because every anchor
 
 When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps its fixed-size and dynamic chunks in bulk, with no per-object teardown pass threaded through the exit. Logical destruction timing is independent of this: a value dies when its host, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain. Global anchor pages are not tied to scope teardown: terminal payload anchors are returned when their hosting lineages end, while forwarding anchors are returned from the former source scope's retirement stack when that scope drains (§4.6). The pages themselves remain mapped until runtime shutdown.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment and the arena takes the scope".
-> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 3.3 Value and reference layout follow declaration order
 
@@ -420,8 +420,8 @@ A **value** reaches a new scope by being copied rather than rehosted, and the sa
 
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and tethers resolve identically regardless of physical placement (§4), because a tether follows the host's anchor rather than a fixed address.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed and placement stays the compiler's".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
@@ -452,9 +452,9 @@ A **boxed member** (§3.3) uses the same two-part representation with a payload 
 
 Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a **growable backing store** — 128 bytes or larger — is cache-line aligned within them. Every other block takes its own type's alignment, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing and the buffer that wanted a line".
-> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams and the anchor that leaves the scope".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 
 ### 3.7 Moving a value reuses the destination slot
 
@@ -475,8 +475,8 @@ Tethers are tracked through **anchor cells** in one runtime-global pool. An anch
 
 Anchor pages contain only equal-sized 8-byte slots. The pool therefore needs one free-address stack and one bump frontier rather than size classes. Pages are allocated lazily, never move, and remain mapped until runtime shutdown.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live and the scan that pays for them".
-> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#where-the-cells-live-and-the-scan-that-pays-for-them) — "Where the cells live, and the scan that pays for them".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.2 Tethers are segmented offsets, not pointers
 
@@ -488,13 +488,13 @@ An explicitly declared `&T` slot contains only this tether. A host-capable `T` s
 
 The minimum physical footprint attributable to one directly tethered hosting lineage is **16 bytes**: one 4-byte tether, one 8-byte physical anchor slot, and one 4-byte payload backpointer. Each additional guest adds another 4-byte tether. Merging two already-anchored hosting identities allocates no new cell: the destination cell remains the payload anchor and the existing source cell becomes a forwarder until its former source scope drains.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem and the segmented offset".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
 
 ### 4.3 Anchors are created lazily
 
 A hosting lineage that never gains a guest consumes no cell: its payload backpointer remains `0`. The first `&` taken on its host pops the global free-address stack if possible; otherwise it bump-allocates a cell at the global anchor frontier. The runtime writes the payload's current segmented offset into the cell and the cell's identity into the payload backpointer. Every later `&` from that host copies the backpointer.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor and not paying when there are no refs".
+> **Story:** [`stories/memory.md`](../stories/memory.md#finding-the-anchor-and-not-paying-when-there-are-no-refs) — "Finding the anchor, and not paying when there are no refs".
 
 ### 4.4 Resolving a tether
 
@@ -553,8 +553,8 @@ The same rules apply recursively to reference-type hosts contained in a relocate
 
 This is also how a moved-from symbol stays readable: after a move the host-capable symbol enters guest state and stores the terminal tether, so reads resolve through the anchor path to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem and the anchor that never moves".
-> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.6 Payload and forwarding anchors retire at different events
 
@@ -564,7 +564,7 @@ A source anchor converted into a forwarder may still be named by guests created 
 
 Forwarding edges always point from a former source identity toward a destination identity in the same or a higher lexical scope. A forwarder therefore never depends on an anchor retired before it; at a shared scope drain all identities from that scope may be returned together. These retirement rules require neither reference counting nor guest enumeration. When either kind of anchor is returned, no live guest can still name it, so immediate reuse needs no generation counter, delayed reuse, or ABA protection.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 
 ### 4.7 Why tethers never dangle or misdirect
 
