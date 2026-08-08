@@ -617,7 +617,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Guest source restriction | A bare symbol is a place but never a guest source (§2.8.1); a guest to a local's own hosting slot cannot be written, so overwriting that slot leaves no guest behind |
 | `&` parameter | Declares that the caller must supply a guest source; the parameter is place-like inside the callee and may be stored or returned |
 | Borrow | Non-hosting, non-escaping access to a caller's storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
-| Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when bound into a fresh slot (assignment, declaration, field or return store) |
+| Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when the parameter — an existing place — is itself bound into a fresh slot (assignment, declaration, field or return store), never merely by being passed |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, which only a guest source can supply; `'T` borrows any place, bare symbols included, and leaves the caller a full host |
 | `'T` position | Parameter positions only; never a storage, field, or return type |
 | Reference-type `this` | Never a swallow position: bare `this T` is the borrow subject — `'` is never written on `this` — and `this &T` is a guest subject a method may store or return |
