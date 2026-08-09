@@ -49,11 +49,11 @@ A `variant` is a **sum mould**. A value of the type it declares holds **exactly 
 A plain `variant` is a **value** sum: copied on assignment and transitively value. A `#variant` is a **reference** sum: it has identity, and may hold reference-type and `&` payloads. **Both may recurse** (§4); what separates them there is not whether the recursive child is allowed but what owning it means:
 
 ```zane
-type Nat = variant { zero Unit; succ Nat; }        // legal: `succ` is a boxed member the value owns
-type Peano = #variant { zero Unit; succ Peano; }   // legal: `succ` is a boxed hosting member
+type Countdown = variant  { done Unit; more Countdown; }   // legal: `more` is a boxed member the value owns
+type Chain     = #variant { done Unit; more Chain; }       // legal: `more` is a boxed hosting member
 ```
 
-A `Nat` is copied whole, so copying one allocates and copies every node beneath it (see [`memory.md`](memory.md) §2.3), and two `Nat` values never share a node. A `Peano` has identity and is **moved** rather than copied, and its boxed member hosts the child it holds. The choice between them is therefore the ordinary value/reference choice, made on the ordinary grounds, and recursion no longer forces it.
+A `Countdown` is copied whole, so copying one allocates and copies every node beneath it (see [`memory.md`](memory.md) §2.3), and two `Countdown` values never share a node. A `Chain` has identity and is **moved** rather than copied, and its boxed member hosts the child it holds. The choice between them is therefore the ordinary value/reference choice, made on the ordinary grounds, and recursion no longer forces it.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
 
@@ -136,11 +136,11 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 
 No guest source is needed anywhere, because no guest is involved: each case takes hosting of the node it is given.
 
-A recursive **value** sum is built the same way on the surface and needs even less: its payload is copied, not moved, so any expression of the payload type will do and the move-source rule never comes up. `Nat.succ(n)` deep-copies `n` into the new node's boxed payload (see [`memory.md`](memory.md) §2.3), leaving `n` untouched and independently usable.
+A recursive **value** sum is built the same way on the surface and needs even less: its payload is copied, not moved, so any expression of the payload type will do and the move-source rule never comes up. `Countdown.more(n)` deep-copies `n` into the new node's boxed payload (see [`memory.md`](memory.md) §2.3), leaving `n` untouched and independently usable.
 
 ```zane
-two Nat = Nat.succ(Nat.succ(Nat.zero(Unit())))
-three Nat = Nat.succ(two)   // legal: `two` is copied, and is still a usable `Nat` afterwards
+two Countdown = Countdown.more(Countdown.more(Countdown.done(Unit())))
+three Countdown = Countdown.more(two)   // legal: `two` is copied, and is still a usable `Countdown` afterwards
 ```
 
 **Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
@@ -151,15 +151,15 @@ three Nat = Nat.succ(two)   // legal: `two` is copied, and is still a usable `Na
 
 ## 4. Recursion and Storage
 
-A recursive type's *values* are finite. Every `Nat` bottoms out at `zero`, every expression tree ends in leaves, and no program builds an infinitely deep one. That is not what makes inline layout impossible, and it is worth being explicit about why, because the two are easy to conflate.
+A recursive type's *values* are finite. Every `Countdown` bottoms out at `done`, every expression tree ends in leaves, and no program builds an infinitely deep one. That is not what makes inline layout impossible, and it is worth being explicit about why, because the two are easy to conflate.
 
 **Layout is fixed per type, and it is fixed before any value exists** (see [`foundations.md`](foundations.md) §5). The question inline placement has to answer is therefore not how deep some particular value goes, but what one stride must be for every value of the type at once. For
 
 ```zane
-type Nat = variant { zero Unit; succ Nat; }
+type Countdown = variant { done Unit; more Countdown; }
 ```
 
-an inline `succ` would require the storage for a `Nat` to contain the storage for a whole `Nat`, which contains another, and so on: `size(Nat) = tag + size(Nat)`, an equation with no finite solution. Nor can a stride be taken from the deepest value, because there is no deepest value — one `Nat` holds three nodes and the next holds three million, and uniform stride requires both to be the same size (see [`generics.md`](generics.md) §7). The leaf terminates a *value*; it does not terminate the type's size equation. Inline recursion would be available only in a language whose values carry runtime-varying sizes and whose containers stride variably, which is precisely what fixed layout gives up in order to make indexing and embedding direct.
+an inline `more` would require the storage for a `Countdown` to contain the storage for a whole `Countdown`, which contains another, and so on: `size(Countdown) = tag + size(Countdown)`, an equation with no finite solution. Nor can a stride be taken from the deepest value, because there is no deepest value — one `Countdown` holds three nodes and the next holds three million, and uniform stride requires both to be the same size (see [`generics.md`](generics.md) §7). The leaf terminates a *value*; it does not terminate the type's size equation. Inline recursion would be available only in a language whose values carry runtime-varying sizes and whose containers stride variably, which is precisely what fixed layout gives up in order to make indexing and embedding direct.
 
 A recursive member is therefore **boxed**: it stays an ordinary member of its declared type, and the compiler represents it as a fixed-size **handle** stored inline whose payload occupies the enclosing scope's dynamic region — the representation a `List`'s backing store already uses (see [`memory.md`](memory.md) §3.6). An `Operation` is then a handle, a handle, and a tag; that footprint is finite, so the recursion terminates.
 
@@ -176,7 +176,7 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 - **Both kinds may recurse.** A recursive value type is legal, because a box is placement rather than a reference-type field. The body syntax is symmetric across all four kinds, and so is recursion: `#` decides identity, aliasing, and copy-versus-move, not whether a type may contain itself. What a copy of a recursive value costs, and why it shares no node with its original, is the deep-copy rule (see [`memory.md`](memory.md) §2.3).
 - **`&` is for aliasing, not for recursion.** A guest expresses non-hosting access — a parent back-pointer, a symbol table naming nodes, a genuine graph edge — and a cycle of guests is a shape hosting could not express in the first place. An `&` member follows the ordinary guest rules, including the guest-source restriction (see [`memory.md`](memory.md) §2.8); an owning member, boxed or not, does not.
 
-Boxing carries costs, all of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. Rehosting a reference-type node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store. A recursive **value** type pays that cost more often, because it is copied rather than moved — but only where a copy actually happens. Binding an existing **place** into another slot walks and reallocates the whole structure. Building a fresh one does not: a non-place result is constructed directly in its eventual destination, recursively, so `Nat.succ(Nat.succ(Nat.zero(Unit())))` builds each node once where it will live rather than copying each completed prefix into the next (see [`memory.md`](memory.md) §2.3). Passing one to a parameter does not either, since a value-type parameter is a read-only borrow (§2.9). The O(structure) case is the one that reads like a copy: `b Nat = a`, or a field, container, or return store whose source is an **existing** value. A store whose source is a fresh non-place result constructs in place instead and costs nothing extra, returns included. Where a tree is large and shared handling is wanted, that is the signal to reach for the reference form.
+Boxing carries costs, all of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. Rehosting a reference-type node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store. A recursive **value** type pays that cost more often, because it is copied rather than moved — but only where a copy actually happens. Binding an existing **place** into another slot walks and reallocates the whole structure. Building a fresh one does not: a non-place result is constructed directly in its eventual destination, recursively, so `Countdown.more(Countdown.more(Countdown.done(Unit())))` builds each node once where it will live rather than copying each completed prefix into the next (see [`memory.md`](memory.md) §2.3). Passing one to a parameter does not either, since a value-type parameter is a read-only borrow (§2.9). The O(structure) case is the one that reads like a copy: `b Countdown = a`, or a field, container, or return store whose source is an **existing** value. A store whose source is a fresh non-place result constructs in place instead and costs nothing extra, returns included. Where a tree is large and shared handling is wanted, that is the signal to reach for the reference form.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-bindings-that-existed-only-to-be-pointed-at) — "The bindings that existed only to be pointed at".
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".

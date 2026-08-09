@@ -75,7 +75,7 @@ A value-type parameter is a read-only borrow rather than a copy (§2.9), so pass
 
 Depth is not an extra feature bolted onto the copy; it is what the ordinary meaning of "copied" requires once a value may own out-of-line storage. A value's central promise is that nothing reachable from it is reachable from anywhere else, and a shallow copy would break exactly that by leaving two values naming one payload.
 
-The cost is real and is accepted: copying such a value allocates and takes time proportional to its structure, where copying a flat value is one fixed-size write. Fresh construction does not pay that copy cost merely because its result is nested: `Nat.succ(Nat.succ(Nat.zero(Unit())))` constructs each node once in its final owning payload rather than repeatedly copying each completed prefix.
+The cost is real and is accepted: copying such a value allocates and takes time proportional to its structure, where copying a flat value is one fixed-size write. Fresh construction does not pay that copy cost merely because its result is nested: `Countdown.more(Countdown.more(Countdown.done(Unit())))` constructs each node once in its final owning payload rather than repeatedly copying each completed prefix.
 
 An overwrite evaluates its right-hand side against the destination's **pre-overwrite** state. If the source is the destination itself or any place reached through it, the replacement value **MUST** be completely copied or otherwise materialized before the old occupant is destroyed and its owned blocks are returned. This makes `x = x`, `x = x.child`, and equivalent overlapping forms safe. An implementation may construct a non-place replacement directly in the destination slot when it proves that doing so preserves this order; the semantic rule does not require an observable temporary.
 
@@ -293,9 +293,9 @@ type Rect = struct {
     size Vec2;
 }
 
-type Nat = variant {
-    zero Unit;
-    succ Nat;        // legal: a boxed member, deep-copied with the value
+type Countdown = variant {
+    done Unit;
+    more Countdown;        // legal: a boxed member, deep-copied with the value
 }
 
 type BadOwner = struct {
