@@ -39,7 +39,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, moved not 
 > **Story:** [`stories/types.md`](../stories/types.md#what--actually-changes-and-the-boxing-trap) — "What `#` actually changes, and the boxing trap".
 
 ### 2.2 Value types are transitive and mutable in place
-A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping. It does not stop a value type from containing *itself*: a recursive member is boxed, and a value copy is deep, so the copy owns its own nodes (see [`memory.md`](memory.md) §2.3).
+A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
 
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 

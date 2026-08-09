@@ -280,7 +280,7 @@ The rule is about **copying**, and both banned field kinds fail it the same way.
 
 An `&` field fails on the second directly: copying it would duplicate a tether without passing through the anchor system, putting aliasing inside the one world that is defined by having none. `List`, `String`, and every other dynamically-sized type are reference types, so the same rule and the same reason cover them.
 
-What this closure does **not** bar is **recursion**. A value type may lead back to itself. The indirection that makes its layout finite is the ordinary **boxed member** (§3.3) — a fixed-size handle inline, payload in the dynamic region — and a deep copy handles that correctly on its own terms: the copy allocates its own payload and copies into it, so the two values share nothing, no identity is invented, and nothing has been aliased. A boxed member is not a reference-type field; it is out-of-line placement of the member's own type, and placement is not language-visible (§3.5).
+What this closure does **not** bar is **recursion**, and the reason is that a **boxed member** (§3.3) is not a reference-type field: it is out-of-line placement of the member's own declared type, and placement is not language-visible (§3.5). Nothing this rule forbids has entered the value. The recursion rule itself lives in [`adt.md`](adt.md) §4, and the copy that keeps such a value alias-free in §2.3.
 
 ```zane
 type Vec2 = struct {
