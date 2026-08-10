@@ -32,13 +32,14 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 
-### 1.2 Move-sources are host symbols or hosting verb results
-A move-source must denote a **hosting value the expression is entitled to consume**. Two forms qualify:
+### 1.2 Move-sources are host symbols, hosting verb results, or `#variant` case forms
+A move-source must denote a **hosting value the expression is entitled to consume**. Three forms qualify:
 
 - a **direct host symbol**: a local binding or parameter that hosts the object and is named directly by an identifier expression
 - a **hosting verb result**: a value returned by a verb (function, method, operator, constructor, or lambda) whose return type is a hosting `T`. A hosting verb result has no source host; its source scope is the producing expression, which is always nested within or equal to the destination host's scope, so it satisfies the destination-scope restriction trivially.
+- a **`#variant` case form**: `Variant.case(payload)` where `Variant` is a **reference** sum type (see [`adt.md`](adt.md) §3.2). It is built-in syntax rather than a verb, but it stands in the same position as a hosting verb result — it produces a fresh value nothing hosts yet — and it is a move-source on the same terms. A *value* `variant` case form is not one, and does not need to be: a value sum is copied rather than hosted, so there is no hosting to transfer. That holds even when the value owns boxed members, because the copy that reaches its destination is deep (see [`memory.md`](memory.md) §2.3).
 
-A verb that returns a hosting `T` produces a fresh value that no symbol, field, or container hosts yet. Moving it transfers hosting of that temporary straight into the destination, so it re-parents nothing.
+A verb that returns a hosting `T`, and a case form that builds a `#variant`, both produce a fresh value that no symbol, field, or container hosts yet. Moving it transfers hosting of that temporary straight into the destination, so it re-parents nothing. This is what lets a recursive structure be written as one nested expression: each boxed hosting member takes the node built for it in place (see [`adt.md`](adt.md) §4).
 
 The following are **not** move-sources:
 - an `&` value, including a verb that returns `&T` (guests are non-hosting and cannot transfer hosting; see [`memory.md`](memory.md) §2.4)
@@ -57,7 +58,7 @@ truck2 Truck(makeCar().engine) // ILLEGAL: field access on temporary is not a mo
 garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
 ```
 
-This rule keeps containers stable hosting subtrees. Once a value is hosted by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. A hosting verb result is exempt from the access-path restriction because it has no host until the move binds it.
+This rule keeps containers stable hosting subtrees. Once a value is hosted by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. A hosting verb result and a `#variant` case form are exempt from the access-path restriction because neither has a host until the move binds it.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-may-be-moved-keeping-ownership-subtrees-whole) — "What may be moved: keeping ownership subtrees whole".
 
@@ -92,7 +93,7 @@ Unit loadCar(this Boat, car Car) mut {
 
 This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
 
-The restriction applies only to symbol move-sources. A hosting verb result (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
+The restriction applies only to symbol move-sources. A hosting verb result or `#variant` case form (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses) — "The declaration-block rule, and the flow analysis it refuses".
 
@@ -239,6 +240,8 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 ### 2.1 Destruction is deterministic
 Class instances are destroyed when their host dies, their hosting container dies, or their hosting scope drains under the concurrency rules.
 
+A **value** has death points that are equally static: its slot is overwritten, or the host, container, or scope holding it dies. Whatever storage that value owns out of line — the payload of a boxed member, and every payload beneath it — is returned at that point, recursively (see [`memory.md`](memory.md) §2.3 and §3.2). No tracking is needed to find the moment, because every one of these points is known from the program text.
+
 ### 2.2 Scopes drain before destruction
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
@@ -269,7 +272,7 @@ Because scope rules (§1.1) prevent guests from outliving their hosts, the runti
 |---|---|
 | `&` return | Returned `&T` must be rooted in an `&T` parameter and be a guest source; `this &T` counts; a `'T` borrow and a swallowing `T` are not roots |
 | Guest assignment | Only from a guest source ([`memory.md`](memory.md) §2.8) whose host is in the same or a higher lexical scope than the guest; a bare symbol is never a guest source |
-| Move-source | A direct host symbol (local or parameter) or a hosting verb result; not an `&`, a `'T` borrow, a field, a container element, or any other access path |
+| Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a `'T` borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
