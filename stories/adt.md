@@ -119,6 +119,8 @@ The last thing to pin was where construction *stops*, and it fell straight out o
 
 ## The bindings that existed only to be pointed at
 
+The sum mould had been settled for a long while before anyone tried to build a **tree** out of one. That is when it broke. Every rule involved had been agreed separately and looked reasonable alone — a value type is closed, a recursive member needs indirection, indirection is `&`, an `&` comes only from a guest source — and together they made the most ordinary thing a variant is for impossible to write without inventing storage that models nothing. This chapter is the unpicking of that, and it ends up moving a rule none of us thought was involved.
+
 Here is the smallest interesting variant there is — a two-case expression tree, and the program that builds `3 + 2` out of it:
 
 ```zane
@@ -155,7 +157,9 @@ What comes back is mostly deletion. `Leaves` goes, and with it the reflex of inv
 
 ## The sum that could not contain itself
 
-One pair of declarations existed in this document purely to demonstrate a restriction:
+Boxing settled how a recursive type is laid out, but it left one restriction standing on one side of the `#` axis: a value sum still could not contain itself. That looked as settled as the rest — until review asked *why*, and the answer did not survive being said out loud.
+
+One pair of declarations existed in this document purely to demonstrate that restriction:
 
 ```zane
 type Countdown = variant  { done Unit; more Countdown; }   // was: ILLEGAL
