@@ -255,7 +255,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §2.1
 
 ### 3.39 boxed member
-- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. **Required** where the member's declared type can lead back to the enclosing type, **permitted** elsewhere. Two questions about it have two different answers: what the payload *is* follows the member's own declared type, while what *becomes of* it on move, copy, or death follows the enclosing type's kind. Nothing marks it in the source, and placement is unobservable (§3.25).
+- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. **Required** where the member's declared type can lead back to the enclosing type along **owning** edges — an `&` guest is not one — and **permitted** elsewhere. Two questions about it have two different answers: what the payload *is* follows the member's own declared type, while what *becomes of* it on move, copy, or death follows the enclosing type's kind. Nothing marks it in the source, and placement is unobservable (§3.25).
 - **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **member** rather than *field* because a `variant` case payload is boxed on the same terms as a `struct` field.
 - **Canonical home:** [`adt.md`](adt.md) §4; representation in [`memory.md`](memory.md) §3.3 and §3.6
 
