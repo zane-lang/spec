@@ -64,19 +64,22 @@ The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 
 There used to be a second guard here, matching `&X = bareSymbol` to catch spec
 examples that mint an `&` from a bare symbol. It is **gone**, and must not be
-restored: a bare symbol is a guest source again (`spec/memory.md` §2.8), so
-every line that guard was written to find is now correct Zane. What still
-governs an `&` assignment is the scope comparison in `spec/lifetimes.md` §1.1,
-and no grep can check that — it needs the declaration scopes of both sides.
+restored: a bare symbol is a guest source again (`spec/memory.md` §2.8), so a
+match no longer indicates a defect. It does not indicate a correct line either —
+what still governs an `&` assignment is the scope comparison in
+`spec/lifetimes.md` §1.1, and a bare-symbol assignment still fails it when the
+target's host is declared deeper than the `&`. No grep can decide that; it needs
+the declaration scopes of both sides. The pattern separated nothing worth
+separating, which is why it is gone rather than reworded.
 
 Run the retired-forms grep with `-R` on the directory, not a `spec/*.md` glob
 plus a bare directory argument: `grep` prints `bench/: Is a directory` and
 silently skips it otherwise.
 
-Stories are exempt from both greps: `stories/` records the language as it was
-at each turn and is never rewritten to match the present spec.
+Stories are exempt from every grep here: `stories/` records the language as it
+was at each turn and is never rewritten to match the present spec.
 
-A third guard covers one term. The subject of a method — the object it is
+A second guard covers one term. The subject of a method — the object it is
 called on — is the **subject**, never the *receiver*; `receiver` was Smalltalk
 residue naming a message Zane does not have, and it was renamed throughout
 `spec/` (canonical home `functions.md` §2.1, glossary §3.38). The word survives

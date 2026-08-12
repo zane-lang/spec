@@ -412,7 +412,7 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; `this` is a mutable borrow of the caller's slot for both value and reference subjects; may mutate state reachable through `this` |
+| `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's slot for a value subject and an implicit guest for a reference subject |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |

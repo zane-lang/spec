@@ -23,7 +23,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 
 The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object updates its terminal anchor or links an older anchor to the destination anchor, so existing tethers — and therefore guests — continue to reach it.
 
-These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted only from a place that names hosted storage — never from a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
+These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare symbol, a field access, or an `&T` parameter — never from a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
 
@@ -209,7 +209,7 @@ A **reference type** parameter has two passing modes, one per surface form. The 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
 | Swallow | `T` | a move-source ([`lifetimes.md`](lifetimes.md) §1.2) | take hosting access; the caller's symbol downgrades to a guest |
-| Guest | `&T` | a guest source (§2.8) — any place but a `[]` expression | read and mutate it, store it in `&` storage, or return it as `&T` |
+| Guest | `&T` | a guest source (§2.8) | read and mutate it, store it in `&` storage, or return it as `&T` |
 
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright.
 - A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly.
