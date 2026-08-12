@@ -31,6 +31,7 @@ The compiler compares declaration scopes. It does not perform borrow inference o
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
 
 ### 1.2 Move-sources are host symbols, hosting verb results, or `#variant` case forms
 A move-source must denote a **hosting value the expression is entitled to consume**. Three forms qualify:
@@ -169,6 +170,7 @@ A **local** is the case this rule excludes, and it is excluded by lifetime rathe
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
 
 ### 1.8 Passing a host to a `T` parameter downgrades it to a guest
 A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol downgrades to a guest (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` ([`memory.md`](memory.md) §2.9) means the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
