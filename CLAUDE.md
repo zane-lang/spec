@@ -50,46 +50,28 @@ home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
 forms are now illegal and must never reappear. Grep for them — none should hit:
 
 ```sh
-grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form" spec/
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]" spec/
 ```
 
-`'[A-Z]` used to be on that list — it is **not** any more. A leading `'` is now
-the **borrow** type marker (`'Node`), canonical home `spec/memory.md` §2.9,
-surface form `spec/syntax.md` §2.3. Do not re-add it to the retired-forms grep.
+`'[A-Z]` is back on that list. A leading `'` was the **borrow** type marker
+(`'Node`) for one release of the design; the borrow mode for reference types has
+since been removed, so `'` is again a character Zane's lexis does not use. A
+reference-type parameter has exactly two modes, `T` and `&T` (`spec/memory.md`
+§2.9), and `&` is the only marker a type may carry (`spec/syntax.md` §2.3).
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.
 
-A second guard covers the memory model. A **bare symbol is not a guest source**
-(`spec/memory.md` §2.8.1), so a spec example that mints an `&` from one is a
-bug. Eyeball every hit of:
+There used to be a second guard here, matching `&X = bareSymbol` to catch spec
+examples that mint an `&` from a bare symbol. It is **gone**, and must not be
+restored: a bare symbol is a guest source again (`spec/memory.md` §2.8), so
+every line that guard was written to find is now correct Zane. What still
+governs an `&` assignment is the scope comparison in `spec/lifetimes.md` §1.1,
+and no grep can check that — it needs the declaration scopes of both sides.
 
-```sh
-grep -RIn -E "&[A-Z][A-Za-z0-9]*[[:space:]]*=[[:space:]]*_?[a-z][A-Za-z0-9]*[[:space:]]*(//.*)?[[:space:]]*$" spec/
-```
-
-The pattern matches a **bare-symbol** right-hand side. Only one legal source is
-excluded syntactically: a field access (`= car.engine`) never matches, because
-`.` is outside the character class. The other legal source **does** match — an
-`&T` parameter is written bare, so `r &Node = source` inside a callee is a hit
-even though it is correct. Read every hit and keep it if any of these hold:
-
-- the right-hand side is an `&T` parameter of the enclosing verb (check the
-  signature, not the line);
-- it is a deliberate `// ILLEGAL:` example;
-- it is a grammar metavariable, as in `syntax.md`.
-
-Anything else is a real one to fix.
-
-Two details are load-bearing. The trailing `(//.*)?[[:space:]]*$` is what makes
-the guard see the `// ILLEGAL: ...` examples; without it the end anchor skipped
-every commented line, which is most of them. The `_?` catches a private
-lowercase name (`_engine`) — Zane allows `_` only as a leading character, never
-inside a name (`lexical.md` §4.1–4.2), so nothing more is needed there.
-
-Run both with `-R` on the directory, not a `spec/*.md` glob plus a bare
-directory argument: `grep` prints `bench/: Is a directory` and silently skips
-it otherwise.
+Run the retired-forms grep with `-R` on the directory, not a `spec/*.md` glob
+plus a bare directory argument: `grep` prints `bench/: Is a directory` and
+silently skips it otherwise.
 
 Stories are exempt from both greps: `stories/` records the language as it was
 at each turn and is never rewritten to match the present spec.

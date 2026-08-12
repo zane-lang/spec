@@ -60,19 +60,19 @@ A method marked `mut` may write to any state reachable through `this`, whether t
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
 
 - For a **value-type** subject, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
-- For a **reference-type** subject, `this` is a **mutable borrow** too. The subject parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is the borrow rather than the swallow it would be on an ordinary parameter, and **`'` is never written on `this`**. This is where a bare reference-type `this`'s implicit `&` went: the subject expression is usually a bare symbol, which is not a guest source ([`memory.md`](memory.md) §2.8.1), so the implicit mode became the borrow. Either way the caller stays a full host.
+- For a **reference-type** subject, `this` is an implicit **guest**. The subject parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is a guest rather than the swallow it would be on an ordinary parameter, and **`&` is never written on `this`**: there is no second mode for the marker to select. The caller stays a full host either way.
 
-A method that needs to keep the subject past the call — store it in an `&` field, or return it as `&T` ([`lifetimes.md`](lifetimes.md) §1.7) — declares `this &T` instead. That is a guest subject, so the call site must supply a guest source.
+A guest subject may be read, mutated, stored in an `&` field, or returned as `&T` ([`lifetimes.md`](lifetimes.md) §1.7), so a method that needs to keep its subject past the call needs no special declaration to do it.
 
 ```zane
-Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit borrow
+Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit guest
     this.scale = scale
     return Unit()
 }
 ```
 
 ```zane
-&Weapon mainWeapon(this &Player) => this.weapon   // guest subject: may be returned as `&`
+&Weapon mainWeapon(this Player) => this.weapon   // the subject may be returned as `&`
 ```
 
 ```zane
@@ -107,16 +107,15 @@ subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 ```
 
 ### 2.7 Parameters are read-only
-Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the subject. How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
+Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the subject. How each parameter is passed — the two reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
-### 2.8 Swallow, guest, and borrow method parameters
-A reference-type method parameter selects one of three passing modes ([`memory.md`](memory.md) §2.9):
+### 2.8 Swallow and guest method parameters
+A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as `&T` is a **guest**: the caller supplies a guest source under [`memory.md`](memory.md) §2.8, and the callee may store it into an `&` field or return it.
-- A parameter declared as `'T` is a **borrow**: the caller may supply any place expression, a bare symbol included, and the callee gets read and `mut` access for the call and nothing more.
+- A parameter declared as `&T` is a **guest**: the caller supplies a guest source under [`memory.md`](memory.md) §2.8, which a bare symbol satisfies, and the callee may read it, mutate it, store it into an `&` field, or return it.
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
 
-Neither a swallowed nor a borrowed parameter may be bound into `&` storage: a swallowed value is hosted at the call site while an `&` field may outlive the call, and a borrow does not survive the call at all. A value-type parameter is always a read-only borrow. To pass a reference object for reading only, use `'T`.
+A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
 
 ```zane
 type Car = #struct {
@@ -130,12 +129,12 @@ Unit setEngine(this Car, engine &Engine) mut {
     return Unit()
 }
 
-// borrow parameter, read only
-Int calculate(this Car, engine 'Engine) {
-    return this._value + engine.speed   // legal: reading through the borrow
+// `&` parameter used only to read
+Int calculate(this Car, engine &Engine) {
+    return this._value + engine.speed   // legal: reading through the guest
 }
 
-// plain reference-type parameter swallows; a swallowed host is not a guest source
+// plain reference-type parameter swallows; the swallowed value is hosted at the call site
 Unit setEngineWrong(this Car, engine Engine) mut {
     this.engine = engine   // ILLEGAL: cannot store a swallowed host into an `&` field
     return Unit()
@@ -148,8 +147,8 @@ Call syntax is uniform regardless of the parameter mode; only what the caller ma
 engine Engine()
 garage Garage()
 
-car:calculate(engine)          // legal: a bare symbol may be borrowed
-car!setEngine(engine)          // ILLEGAL: a bare symbol is not a guest source
+car:calculate(engine)          // legal: a bare symbol is a guest source
+car!setEngine(engine)          // legal: same, and the guest is stored in an `&` field
 car!setEngine(garage.spare)    // legal: a field access is a guest source
 car!setEngine(Engine())        // ILLEGAL: a temporary is not a place expression
 ```
@@ -228,12 +227,11 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 ### 4.1 Overload identity is parameter types only
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `&T`, or `'T`, the subject included. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T` or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Unit consume(this Car, engine Engine)
 Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mode
-Unit consume(this Car, engine 'Engine)  // ERROR: same
 ```
 
 The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart.
@@ -417,12 +415,11 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
-| `&` method parameter | Caller must supply a guest source (never a bare symbol); callee may store it into `&` fields or return it |
-| `'T` method parameter | Caller may supply any place expression, bare symbols included; read and `mut` access for the call only; **MUST NOT** be stored, returned, or moved |
+| `&` method parameter | Caller must supply a guest source, which a bare symbol satisfies; callee may read, mutate, store it into `&` fields, or return it |
 | Plain `T` method parameter | Swallows; caller may supply a temporary and downgrades to a guest; callee **MUST NOT** bind it into `&` storage |
-| Reference-type `this` | Never a swallow position: bare `this T` is the borrow subject — `'` is never written on `this` — and `this &T` is a guest subject, required to store or return the subject |
+| Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T` / `'T`) at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`) at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
