@@ -195,3 +195,72 @@ What is interesting is that the rule which survives is not the old one restored 
 A local is still not a root, and the difference is that it is now excluded for the true reason rather than a proxy for it. `return value` on a body-scope local fails because that scope drains at the return, full stop — not because of anything about where a guest may be minted. When we were routing the rejection through guest sources we were using a source restriction to enforce a lifetime property, and it happened to catch this case; it is better stated as the lifetime property it always was.
 
 The one line of the previous chapter that needs correcting rather than superseding is its account of §1.1. It reported that the scope check had become "the second line of defence", with the guest-source question in front of it catching the common case. That is no longer the shape: nearly every place is a guest source, so §1.1 is the front line again and does essentially all of the work. Its canonical illegal example goes back to being the one about scope, which is what the rule is actually about.
+
+## The check that fired once, and the move that outran it
+
+The previous chapter closed with §1.1 restored to the front line, doing "essentially all of the work." That was true of the case it was looking at — an `&` symbol, whose scope is fixed the moment it is declared — and it quietly assumed the same held for an `&` **field**, which it does not. A field's scope is its container's, and a container moves. So the comparison [§1.1](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#11--assignment-uses-host-scope) makes when the field is written can be falsified afterwards by a statement that never touches the field at all:
+
+```zane
+parked Car(outerHolder.engine)
+{
+    innerHolder Holder(Engine(Int(2)))
+    arriving Car(innerHolder.engine)   // §1.1 satisfied: both in this block
+    parked = arriving                  // a move, not an `&` assignment
+}                                      // innerHolder dies; parked.engine names its storage
+```
+
+Every line passes. §1.1 fired at the construction and was right at the time. The move is checked by [§1.4](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#14-destination-scope-must-contain-or-match-source-scope), which compares the *value's* scopes and says nothing about what the value contains. Between them the two rules cover both directions a value can travel and neither looks at the guest riding inside it.
+
+There is an asymmetry underneath that we had not noticed we were relying on. §1.4 exists to stop hosting from **sinking** into a nested scope. For a guest held inside the moved object the danger runs the other way — **raising** the container above what its guests name — and we had only ever constrained one of the two.
+
+Our first instinct was to pin the value: an object holding an `&` may not be rehosted into a higher scope, full stop. That is decidable from the type alone, using the same transitive walk the value-downstream rule already performs, and it needs no new machinery. It is also wrong in the case that matters most. A parent pointer — `parent &Node` on a node stored in `root.children` — is the commonest reason anyone wants an `&` field at all, and pinning would forbid appending the child to the very tree its guest points at. A rule whose first casualty is the canonical use of the feature is not a conservative rule, it is a broken one.
+
+That failure told us what the missing property was. What makes a parent pointer safe is not its scope but its *structure*: the guest names something in the same hosting tree as the object holding it, so the two move together and cannot come apart. [§1.2](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#12-move-sources-are-host-symbols-hosting-verb-results-or-variant-case-forms) already guarantees that, by refusing to let a subtree be prised out of its tree. So tree membership is stable under every operation the language has, where scope is stable under none of them.
+
+We spent a while trying to make that the whole rule — an `&` may only name something inside its own tree — and it fails from the other side. A short-lived wrapper over something handed in, the sort of thing anyone writes without thinking, has no shared tree with what it points at:
+
+```zane
+Unit report(io std$IO) {
+    terminal Terminal(io)   // io belongs to the call site and outlives the body
+    terminal!print("hi")
+    return Unit()
+}
+```
+
+Perfectly safe, and a blanket tree rule forbids it. The resolution was to stop treating the two as rivals. **Tree membership is not an alternative to the scope comparison; it is the permission to move.** A guest that names something inside the value it rides in satisfies any destination, because it travels. A guest that does not is fine wherever it currently sits, and must be re-examined if the value is raised. Both readings live in §1.11, and neither had to displace the other.
+
+The second realisation is the one that changed the shape of the fix, and it came from asking *when* the check should run. We had been trying to make the wiring-time check strong enough to survive everything that could happen later, which is why every version of it was either unsound or absurdly strict. It does not have to survive anything, because a raise is a statement the compiler can see. Check at the rise and the question of whether an earlier check has gone stale never arises: there is no earlier check to go stale.
+
+That would have been the end of it, except for a program with no rise in it anywhere:
+
+```zane
+Unit setEngine(this Car, engine &Engine) mut { this.engine = engine; return Unit() }
+
+Unit main(car &Car) {
+    engine Engine()         // a local of main
+    car!setEngine(engine)   // car names something above main
+    return Unit()
+}                           // engine dies; car.engine is left naming its storage
+```
+
+Nothing moves. The argument reaches a parameter in the call-site scope, and inside the body `this` and `engine` are both call-site scope, so every scope comparison in sight compares equals. And this is the shape [`memory.md` §2.9](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/memory.md#29-function-parameters-swallow-and-guest) had been holding up as the canonical thing an `&` parameter is *for*. What the callee cannot see is whether the caller's `engine` is hosted above or below the object `this` names — and it never can, because that is a fact about two of the caller's symbols, one frame away.
+
+We tried hardest to fix this by narrowing where a guest may be **minted**. If only a guest could be a guest source — an `&T` parameter, `this`, a guest local rooted in one — then every guest would name something at the call-site scope or above, the highest any frame can rehost anything, and the whole class of problem would be structurally impossible. It is an elegant rule and we followed it a long way before noticing it has no base case. A parameter is fed by the caller's guest source, a guest local by another guest source; the recursion bottoms out only at a package constant, or at `this` — whose subject expression nothing checks, and cannot check, because `terminal!print("hi")` on a local you own has to work. The subject position is not a leak in that rule. It is the only place the language mints a guest at all, and a rule that closes it is a rule that deletes guests.
+
+So the restriction had to land on the **store** rather than the source, and once it did the shape was forced. Both paths of an `&` store must begin with the same root symbol (§1.10). It is a syntactic comparison of two identifiers, it needs no scopes and no induction, and it holds however many frames a guest has travelled through, because it examines the two paths in front of it rather than their history. Everything reachable under one name is one tree, so a guest written through a name cannot outlive what that name reaches.
+
+The cost is real and lands in one place: **a verb can no longer install a guest it was handed.** `setEngine` is gone, and the replacement takes hosting instead:
+
+```zane
+Unit installEngine(this Car, engine Engine) mut {
+    this.spare = engine
+    this.engine = this.spare   // both paths root at `this`
+    return Unit()
+}
+```
+
+That is a worse signature in one respect — the caller gives up its host where before it kept one — and a better one in another, because it says out loud what the old form concealed: an object that means to hold a reference to something for longer than a call had better be the thing that owns it. We debated softening the rule to admit the store when the destination roots at `this`, which would have kept `setEngine` alive, and dropped it on finding that a guest to a caller's local can be passed one hop further and stored from the other side. A rule that holds for one hop and not two is not a rule.
+
+Two smaller things fell out that are worth recording. The ban in `memory.md` §2.9 on binding a swallowed parameter into `&` storage — which that section had flagged as "stated directly rather than derived" — is now an instance of the root rule, and stops being an orphan. And the returned-guest rule [§1.7](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter) turned out to have been right all along about a case it did not cover: a return that *carries* a guest is raised into the call-site scope on exactly the reasoning §1.7 gives for a return that *is* one, so §1.11 states it and §1.7 did not have to change.
+
+What none of this touches is the other way a guest can be left naming nothing. Everything above is about a value **moving** away from what it points at. A host can also simply **die** while the guest is still there — an element removed from a container, a `#variant` slot changing case — and neither of those is a move, so no rule here reaches them. [`memory.md` §2.8.1](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/memory.md#281-a-guest-follows-the-object-an-overwritten-slot-carries-its-guests-forward) enumerates two fates for a hosted object, moved and overwritten, and says they "never compete, because an object cannot both leave and die in the same step." That is true, and the pair is not exhaustive: an overwrite leaves a successor occupant for the guest to carry forward to, and a removal leaves nothing. We are leaving that open deliberately rather than answering it here, because it is a different question with a different shape, and answering two at once is how the first version of this chapter got written three times.
