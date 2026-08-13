@@ -281,7 +281,7 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 Constructors are not methods. They create new values rather than mutating an existing subject, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a `'T` borrow will not do, because a borrow ends with the call while the field outlives it. The caller must then supply a **guest source** under [`memory.md`](memory.md) §2.8: a field access on a place, or an `&T` parameter. A bare symbol, a temporary, and a `[]` expression are all rejected.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a **guest source** under [`memory.md`](memory.md) §2.8: a bare symbol, a field access on a place, or an `&T` parameter. A temporary and a `[]` expression are rejected.
 
 ```zane
 package Vehicle
@@ -312,13 +312,13 @@ car Car(garage.spare)   // legal: a field access is a guest source
 
 ```zane
 engine Engine()
-car Car(engine)     // ILLEGAL: a bare symbol is not a guest source
+car Car(engine)     // legal: a bare symbol is a guest source
 car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-The object an `&` field points at therefore has to be hosted somewhere that outlives the bare local — in another object's field, most often. Recursion is not one of these cases: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source at all (see [`adt.md`](adt.md) §4).
+What still constrains such a field is scope, not source: the object it points at must be hosted in the same or a higher lexical scope than the `&` itself ([`lifetimes.md`](lifetimes.md) §1.1). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 
 A reference type whose fields are all plain hosts does not require `&` parameters:
 

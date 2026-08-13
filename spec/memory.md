@@ -13,8 +13,8 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
-- **`Bare symbols are not guest sources`.** A new guest may be minted only from a field access or from an `&T` parameter — never from a bare symbol (§2.8). A local's own hosting slot is therefore never the thing a guest points at.
-- **`Three passing modes`.** A reference-type parameter is written `T` to **swallow** it, `&T` to take a **guest**, or `'T` to **borrow** it for the call (§2.9).
+- **`A guest follows its object`.** A new guest may be minted from any place expression that names hosted storage — a bare symbol, a field access, or an `&T` parameter (§2.8). When that object is moved, its guests travel with it; when a slot's occupant is destroyed by an overwrite, guests to that slot observe the replacement (§2.8.1, §4.5).
+- **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
 - **`Repointable guests`.** A guest is non-hosting storage that can point at different hosts over time.
 - **`Lexical lifetime enforcement`.** Guest assignment and rehosting are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
 - **`Deterministic destruction`.** Objects are destroyed when their hosting scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
@@ -23,7 +23,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 
 The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object updates its terminal anchor or links an older anchor to the destination anchor, so existing tethers — and therefore guests — continue to reach it.
 
-These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted only from a field or an `&` parameter — never from a temporary, and never from a bare symbol. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
+These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare symbol, a field access, or an `&T` parameter — never from a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
 
@@ -99,9 +99,9 @@ A guest may be declared as:
 - a function or constructor parameter
 - a function return type
 
-An `&` type is legal in storage sites (local symbols, fields, nested storage types), function parameter positions, and function return-type positions. The borrow type `'T` (§2.9) is legal in parameter positions only: a borrow is not storage and never escapes its call.
+An `&` type is legal in storage sites (local symbols, fields, nested storage types), function parameter positions, and function return-type positions.
 
-Declaring an `&` symbol is legal, but the restriction in §2.8 governs what may initialize it: a guest is minted from a field or from an `&T` parameter, not from a bare symbol.
+Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#two-vocabularies-host-and-guest-above-anchor-and-tether) — "Two vocabularies: host and guest above anchor and tether".
 
@@ -126,18 +126,17 @@ The following are place expressions:
 - a named local, field-backed, or hosting/`&` storage symbol such as `engine`
 - a field access whose base is a place, such as `car.engine` or `this.engine`
 - a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that subject type
-- an `&T` guest parameter or a `'T` borrow parameter inside the callee body (§2.9)
+- an `&T` guest parameter inside the callee body (§2.9)
 
-Only some place expressions may mint a new guest. A new `&` value may be minted from:
+Almost every place expression may mint a new guest. A new `&` value may be minted from:
 
-- a field access whose base is a place **and whose base chain does not pass through a `'T` borrow parameter**, such as `car.engine` or `this.engine` on a guest subject
+- a **bare symbol** naming hosted storage — a local, a parameter, or a package constant
+- a field access whose base is a place, such as `car.engine` or `this.engine`
 - an `&T` parameter
 
-Everything else is rejected. In particular:
+Two things are rejected:
 
-- A **bare symbol** is never a guest source, even though it is a place expression (§2.8.1).
 - A `[]` expression is never a guest source, even though it is a place expression.
-- A field access rooted in a `'T` borrow parameter is never a guest source. A borrow does not escape its call (§2.9), and it would escape just as surely inside a guest minted from one of its fields as it would on its own.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
 ```zane
@@ -147,6 +146,7 @@ engine &Engine = Engine()   // ILLEGAL: Engine() is a temporary, not a place exp
 ```zane
 car Car()
 r &Engine = car.engine   // legal: field access on a place
+s &Car = car             // legal: a bare symbol naming a host
 ```
 
 ```zane
@@ -163,62 +163,69 @@ Non-`&` host bindings may be initialized from any expression, including temporar
 engine Engine()         // legal: plain host binding; Engine() temporary is materialized into engine
 ```
 
-### 2.8.1 A bare symbol is not a guest source
+### 2.8.1 A guest follows the object; an overwritten slot carries its guests forward
 
-A **bare symbol** — an identifier naming a local, a parameter, or a package constant, standing alone rather than as the base of a field access — **MUST NOT** be used to mint a new `&`.
+Minting a guest from a place gives a guest to **the object hosted there at that moment**, and the guest tracks that object's identity rather than the storage it was read from (§4). Two things can subsequently happen to that object, and the program text says which:
 
-```zane
-engine Engine()
-r &Engine = engine        // ILLEGAL: a bare symbol is not a guest source
-inspect(engine)           // ILLEGAL if inspect takes `&Engine`
-```
+- The object is **moved** — some other host takes it (see [`lifetimes.md`](lifetimes.md) §1.2). The object is alive at its new home, and every guest to it follows it there through the anchor path (§4.5).
+- The object is **destroyed** by an overwrite of the slot it lived in (§2.2). The slot's hosting identity continues across the replacement, so guests minted from that slot observe the new occupant.
 
-The reason is that a bare symbol's hosting slot is exactly the storage the language lets you overwrite most freely (§2.2, [`lifetimes.md`](lifetimes.md) §1). Without this rule a program can write:
+The two cases never compete, because an object cannot both leave and die in the same step. A guest is therefore always reading something live, and which live thing it reads is decidable from the source.
+
+The case worth spelling out is a bare symbol, because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
 
 ```zane
 main Player()
 second Player()
-guest &Player = main      // ILLEGAL under this rule
-second = main
+guest &Player = main   // legal: a bare symbol is a guest source
+second = main          // the object moves out of main's slot into second's
 ```
 
-`second = main` moves the object out of `main`'s slot, and `main` downgrades to guest state ([`lifetimes.md`](lifetimes.md) §1.6). What `guest` should then denote — the object that left, or the slot it left from — has no answer that is right in both directions, and every candidate answer costs either a rule the programmer has to carry or machinery the runtime has to pay for. Removing the source removes the question: line 3 is a compile-time error, so no guest ever depends on a bare symbol's slot.
+After the move, `guest` denotes the object, which now lives in `second`. So does `main` itself, which downgrades to a guest to that same object ([`lifetimes.md`](lifetimes.md) §1.6). The two names agree; there is nothing to choose between.
 
-Nothing is lost by it. A guest exists so that storage which does not own an object can still reach it — an `&` field, a container element, an `&T` parameter inside a callee. A bare symbol is *already* in scope wherever a guest to it could be declared, so the guest never buys reach that the symbol itself did not already have. What a bare symbol is genuinely needed for is passing an object into a call. It may still be swallowed by a plain `T` parameter, which takes hosting outright; where the call must *not* take hosting, the borrow mode `'T` is what carries it (§2.9), reading and mutating the caller's object for the duration of the call without minting a guest to it.
+They part company only if the emptied slot is put back to work:
 
-A **field** is a different matter and stays a legal source. A field belongs to an object whose own lifetime the host system already tracks, and a guest to `car.engine` follows that field's host through the anchor path (§4.5) when the field is overwritten or the containing object is rehosted. This is what makes the restriction narrow: it constrains where guests come from, not what they can survive.
+```zane
+main = Player()        // main's slot hosts a new, unrelated object
+```
+
+`main` now names the new object and `guest` still names the moved one, which is alive in `second`. That is the first bullet doing its job: the move carried the old object's identity away with it, so re-hosting the slot begins a fresh identity rather than capturing the guests of the old one. Contrast an overwrite, where nothing moves:
+
+```zane
+car Car()
+r &Engine = car.engine
+car.engine = Engine()  // the old engine is destroyed in place; r observes the new one
+```
+
+Here the occupant of `car.engine` died and the slot's identity continued, so `r` carries forward to the replacement. The question a reader has to answer is only ever *did the object leave, or did it die* — and a move and an overwrite are different statements.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-slot-that-could-not-be-pointed-at) — "The slot that could not be pointed at".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 
-### 2.9 Function parameters: swallow, guest, and borrow
+### 2.9 Function parameters: swallow and guest
 
-A **borrow** is non-hosting, non-escaping access to a caller's storage for the duration of a call. A borrow is never itself storage: unlike a guest (§2.4) it has no anchor, and it **MUST NOT** be stored in a field or returned. It exists only while the call runs.
-
-That restriction is on the borrow, not on what is read through one. A value type is *always* passed this way — a value-type parameter is a **read-only borrow** of the caller's slot — and binding through that borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value. The copy is a new value that outlives the call perfectly well; what does not escape is the borrow. A reference type has no such copy, so a `'T` borrow leaves nothing behind at all.
-
-A **reference type** parameter has three passing modes, one per surface form. The subject parameter `this` is not one of these positions and has its own rule, below:
+A **reference type** parameter has two passing modes, one per surface form. The subject parameter `this` is not one of these positions and has its own rule, below:
 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
 | Swallow | `T` | a move-source ([`lifetimes.md`](lifetimes.md) §1.2) | take hosting access; the caller's symbol downgrades to a guest |
-| Guest | `&T` | a guest source (§2.8) | store it in `&` storage or return it as `&T` |
-| Borrow | `'T` | any place expression, **including a bare symbol** | read and mutate it for the duration of the call only |
+| Guest | `&T` | a guest source (§2.8) | read and mutate it, store it in `&` storage, or return it as `&T` |
 
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright.
-- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. Because a bare symbol is not a guest source, an `&T` parameter can only be fed from a field, a container's stored guest, or another `&T` parameter.
-- A parameter declared as `'T` is a **borrow**: the caller may supply any place expression, a bare symbol included, and the callee gets read and `mut` access for the call and nothing more. A `'T` parameter **MUST NOT** be stored in `&` storage, returned as `&T`, or used as a move-source, and neither may a field reached through it (§2.8); `'T` is not a legal storage, field, or return type. Passing a host to a `'T` parameter leaves the caller a full host: nothing downgrades.
+- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be stored into `&` storage or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly.
 
-`'T` is the mode that keeps ordinary calls ordinary. Under §2.8.1 a bare local cannot feed an `&T` parameter, so a verb that merely wants to read or mutate a caller's object declares that object `'T`:
+`&T` is the mode for a call that must not take hosting. A verb that reads or mutates a caller's object without consuming it declares that object `&T`, and the caller passes the symbol as it stands:
 
 ```zane
-Float topSpeed(engine 'Engine) => engine.speed
+Float topSpeed(engine &Engine) => engine.speed
 
 engine Engine()
-s Float = topSpeed(engine)   // legal: a bare symbol may be borrowed
+s Float = topSpeed(engine)   // legal: engine stays a full host
 ```
 
-Passing a value by borrow is the semantic model for both worlds; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
+A **value type** parameter has no such choice, because there is nothing to host and no identity to guest. It is a **borrow**: non-hosting, non-escaping read-only access to the caller's slot for the duration of the call. A borrow is not storage — it has no anchor and cannot be stored in a field or returned — but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. A value-type `mut` subject is a **mutable** borrow on the same terms (see [`functions.md`](functions.md) §2.4). Neither `&` nor any other marker is written on a value-type parameter: the borrow is what such a parameter is.
+
+Passing a value by borrow is the semantic model rather than an optimization; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
 
 ```zane
 type Car = #struct {
@@ -239,33 +246,31 @@ Unit setSpare(this Car, engine Engine) mut {
     return Unit()
 }
 
-// borrow parameter: a reference-type object read without consuming it and without minting a guest
-Int inspect(this Car, engine 'Engine) {
+// `&` parameter used only to read: the caller keeps hosting and nothing is stored
+Int inspect(this Car, engine &Engine) {
     return this._value + engine.speed
 }
 ```
 
-**The subject parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — chooses between two of the three modes rather than all three: it is a **borrow** written bare, or a **guest** written `this &T` when the method stores the subject past the call or returns it as `&T` (see [`functions.md`](functions.md) §2.4). `'` is **never** written on `this`.
+**The subject parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is not one of the two modes above. For a reference-type subject it is an implicit **guest**; `&` is **never** written on `this`, because there is no second mode for it to distinguish. A guest subject may be read, mutated, stored in `&` storage, or returned as `&T` ([`lifetimes.md`](lifetimes.md) §1.7), which is everything a method can want from its subject.
 
-So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it borrows — because `this` was never a swallow position to begin with. That much predates the borrow mode: a bare reference-type `this` used to be an implicit **guest**, likewise never swallowed. What changed is only *which* non-swallowing mode it is, and it moved to the borrow because the subject expression at a call site is usually a bare symbol, which §2.8.1 no longer admits as a guest source. Value and reference subjects now agree: `this` carries at most one marker, `&`, and its absence means borrow.
+So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it guests — because `this` was never a swallow position to begin with. The two kinds diverge here, and visibly: a reference-type `this` is a guest, a value-type `this` is a borrow (mutable under `mut`). They are written identically because in both cases the subject is simply the object the method was called on, and neither kind has a choice to express.
 
-Binding a swallowed or borrowed parameter into `&` storage is illegal. A swallowed value is hosted at the call site while an `&` field lives with the object that holds it — which may outlive the call. A borrow does not survive the call at all:
+Binding a swallowed parameter into `&` storage is illegal. This is not a guest-source restriction — a bare symbol is a guest source (§2.8) — but a scope one: a swallowed value is hosted at the call site, while an `&` field lives with the object that holds it, which may outlive the call. That object's host is not the call site and is not compared by [`lifetimes.md`](lifetimes.md) §1.1, so the restriction is stated directly rather than derived:
 
 ```zane
 Unit setEngineSwallowed(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL: a swallowed host is not a guest source
-    return Unit()
-}
-
-Unit setEngineBorrowed(this Car, engine 'Engine) mut {
-    this.engine = engine   // ILLEGAL: a borrow is not a guest source and does not escape the call
+    this.engine = engine   // ILLEGAL: a swallowed host may not be bound into `&` storage
     return Unit()
 }
 ```
 
+Returning one as `&T` is a different matter and is legal ([`lifetimes.md`](lifetimes.md) §1.7): the returned guest lands in the caller, which is the very scope the swallowed value belongs to, so §1.1 compares the two directly at the call site.
+
 This rule preserves uniform call syntax. The call site writes `consume(e)`, `inspect(e)`, or `setEngine(e)` identically; only the callee's signature says which mode applies and therefore what the caller must supply and what state the caller is left in.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 
@@ -612,15 +617,15 @@ A single global free stack and frontier require synchronization under concurrent
 | Value copy | Copies the whole existing value: inline bytes, plus a fresh allocation and recursive copy of every boxed payload the value owns, so two values never share storage |
 | `&` (guest) | Guest-only non-hosting storage; stores one tether, may be repointed, copied by value, and returned, but can never directly host a `T` |
 | Host-capable guest state | After rehosting, the old hosted bytes cease to be live and a slot declared as `T` stores the terminal tether as a guest while retaining enough storage to host another `T` later |
-| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&`/`'` parameter |
-| New `&` value | May be minted only from a field access of a place or an `&` parameter; bare symbols, `[]` expressions, and temporaries are rejected |
-| Guest source restriction | A bare symbol is a place but never a guest source (§2.8.1); a guest to a local's own hosting slot cannot be written, so overwriting that slot leaves no guest behind |
+| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
+| New `&` value | May be minted from a bare symbol, a field access of a place, or an `&` parameter; `[]` expressions and temporaries are rejected |
+| What a guest follows | The object hosted at the source when the guest was minted: it travels with that object when the object is moved, and carries forward to the replacement when the object is destroyed by an overwrite of its slot (§2.8.1) |
 | `&` parameter | Declares that the caller must supply a guest source; the parameter is place-like inside the callee and may be stored or returned |
-| Borrow | Non-hosting, non-escaping access to a caller's storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
+| Borrow | Non-hosting, non-escaping access to a caller's value storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when the parameter — an existing place — is itself bound into a fresh slot (assignment, declaration, field or return store), never merely by being passed |
-| Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, which only a guest source can supply; `'T` borrows any place, bare symbols included, and leaves the caller a full host |
-| `'T` position | Parameter positions only; never a storage, field, or return type |
-| Reference-type `this` | Never a swallow position: bare `this T` is the borrow subject — `'` is never written on `this` — and `this &T` is a guest subject a method may store or return |
+| Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, and leaves the caller a full host |
+| Swallowed parameter into `&` storage | Illegal — not for want of a guest source but because the swallowed value is hosted at the call site while an `&` field may outlive the call; returning it as `&T` is legal |
+| Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |

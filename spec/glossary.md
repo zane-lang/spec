@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Being a place is necessary but not sufficient to mint an `&`: only an `&T` parameter and a field access of a place whose base chain does not pass through a `'T` borrow are guest sources, while bare symbols, `[]` expressions, and anything reached through a borrow are places that are excluded (§3.36).
+- **Meaning:** A place expression denotes an existing, stable storage location. Almost every place may mint an `&` — a bare symbol, a field access of a place, an `&T` parameter — and only a `[]` expression is a place excluded from doing so (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -195,7 +195,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §8
 
 ### 3.27 borrow
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call. Every value type is passed this way — a value parameter is a read-only borrow, a value-type `mut` subject is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type may also be borrowed, written `'T`, which is the only non-swallowing way to pass a bare symbol (§3.36); a bare reference-type `this` is that borrow — `'` is never written on `this`.
+- **Meaning:** Non-hosting, non-escaping access to a caller's value storage for the duration of a call. It is how every value type is passed, and the only way one is passed: a value parameter is a read-only borrow, a value-type `mut` subject is a mutable borrow, and a value is copied only when bound into a fresh slot. A reference type is never borrowed — it is swallowed or guested (§3.37).
 - **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, the borrow itself has no anchor or tether and cannot be stored, returned, or used as a move source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host, and it may be minted only from an `&T` parameter or a field access whose base is a place and whose base chain does not pass through a `'T` borrow (§3.36). Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field, or returned as `&T`, but it cannot outlive its host. It may be minted from any place but a `[]` expression (§3.36), and it names the object hosted there at that moment, travelling with that object if it is later moved. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -239,18 +239,18 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
-### 3.36 guest source restriction
-- **Meaning:** A new `&` may be minted only from an `&T` parameter, or from a field access whose base is a place and whose base chain does not pass through a `'T` borrow parameter. A **bare symbol** — an identifier standing alone rather than as the base of a field access — is a place expression but never a guest source, so no guest can point at a local's own hosting slot and that slot stays free to be overwritten or moved from. A bare symbol may still be swallowed by a plain `T` parameter; `'T` is the only **non-swallowing** mode that accepts one (§3.27, §3.37). The borrow exclusion runs the same way: a guest minted from a borrowed object's field would escape the call just as surely as the borrow itself.
-- **Why this name:** The rule constrains the *source* of a guest — where one may come from — and nothing about what a guest can survive once minted; a guest to a field still follows its host across overwrites and rehosting.
-- **Canonical home:** [`memory.md`](memory.md) §2.8.1
+### 3.36 guest source
+- **Meaning:** A place expression a new `&` may be minted from: a **bare symbol**, a field access whose base is a place, or an `&T` parameter. Only a `[]` expression is a place excluded, and temporaries are not places at all. The guest names the object hosted at that source when it is minted; if the object is moved the guest follows it, and if the object is destroyed by an overwrite of its slot the guest carries forward to the replacement.
+- **Why this name:** The term names the *source* end — where a guest may come from — separately from what a guest survives once minted, which is the anchor system's business.
+- **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.37 passing mode
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (storable and returnable; requires a guest source), `'T` **borrows** it (read and `mut` for the call only; accepts any place, bare symbols included). The subject parameter (§3.38) selects between the borrow and `&T` only: a bare `this T` is the borrow and `'` is never written on `this`. Two overloads may not differ only by the mode at one position.
-- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in all three, and only the caller's obligations and resulting state differ.
+- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (readable, mutable, storable, and returnable; requires a guest source, which a bare symbol satisfies). The subject parameter (§3.38) has no such choice — it is always a guest — so `&` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in both, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.38 subject / subject parameter / subject expression
-- **Meaning:** The **subject** is the object a method is called on. The **subject parameter** is `this`, the declaration's first parameter, whose surface form fixes the passing mode (§3.37) — bare for the borrow, `this &T` for the guest, never `'`. The **subject expression** is what stands left of `:` or `!` at the call site and supplies the object; it must satisfy what that form requires, which is why a bare symbol works for a bare `this` but not for `this &T` (§3.36).
+- **Meaning:** The **subject** is the object a method is called on. The **subject parameter** is `this`, the declaration's first parameter, always written bare: a reference-type subject is an implicit guest, a value-type subject a borrow (§3.27), and no marker is written on `this` for either. The **subject expression** is what stands left of `:` or `!` at the call site and supplies the object.
 - **Why this name:** Grammar, matching `verb` (§3.22): a call reads *subject–verb–object*, and the subject is what the verb acts from. The three senses are one word in ordinary use because they usually coincide; the spec separates them where a rule holds of the declaration but not the object, or the other way round.
 - **Canonical home:** [`functions.md`](functions.md) §2.1
 
@@ -265,7 +265,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.3
 
 ### 3.41 move-source
-- **Meaning:** An expression denoting a hosting value that the expression is entitled to consume, and therefore the only thing that may be moved into a hosting position. Three forms qualify: a **direct host symbol**; a **hosting verb result**, from a verb whose return type is a hosting `T`; and a **`#variant` case form**, `Variant.case(payload)` on a **reference** sum, which is built-in syntax rather than a verb but produces a fresh value nothing hosts yet. A *value* `variant` case form is not one — a value sum is copied rather than hosted, so there is no hosting to transfer. Neither is an `&` value, a `'T` borrow, a field access, nor a container element access.
+- **Meaning:** An expression denoting a hosting value that the expression is entitled to consume, and therefore the only thing that may be moved into a hosting position. Three forms qualify: a **direct host symbol**; a **hosting verb result**, from a verb whose return type is a hosting `T`; and a **`#variant` case form**, `Variant.case(payload)` on a **reference** sum, which is built-in syntax rather than a verb but produces a fresh value nothing hosts yet. A *value* `variant` case form is not one — a value sum is copied rather than hosted, so there is no hosting to transfer. Neither is an `&` value, a value-type borrow, a field access, nor a container element access.
 - **Why this name:** It names the *source* end of a move, which is where the restriction lives: the rule is about what an expression is entitled to give up, not about where the value lands.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 

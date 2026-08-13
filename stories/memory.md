@@ -229,3 +229,87 @@ The residuals we do accept, and they are stated where they land rather than buri
 The interesting part is the line that did **not** move. Deep copy dissolves the *stated* reason for banning a reference-type field in a value type — "copying would silently duplicate hosting" — and for a while it looked as though `List` inside a `struct` should follow value recursion through the same door. It should not, and the reason is sharper than the one it replaces: **a reference type exists in order not to be copied.** That is not a side effect of hosting; it is the whole point of the mark. A reference type has one host at a time, a stable identity that guests resolve through, and it reaches a new place by being *moved*. A copy of a value holding one could only duplicate the object — minting a second identity, so guests tethered to the original quietly fail to follow — or share it, so two values reach one host and "exactly one host" stops describing anything. Both outcomes destroy the thing the `#` was for. `List` and `String` are reference types, so they are covered by the same sentence, and they stay out ([`memory.md` §2.10](https://github.com/zane-lang/spec/blob/804631ffa94d4f7df08b38f057e2e4bb95add545/spec/memory.md#210-value-downstream-enforcement-transitive-value-only-field-restriction)).
 
 A boxed member never had that problem, which is why it walks through while a `List` field does not. A box holds an instance of the member's **own** type — it is placement, not a change of type, and placement was already unobservable. Nothing about it says "copy me by sharing." So the `#` axis comes out of this meaning something tighter than it did: identity, aliasing, and copy-versus-move. Not "may contain itself." That question turned out to belong to layout, and layout answered it the same way for both kinds.
+
+## The ban that cost more than the question it closed
+
+Two chapters up, we removed a guest source and then immediately built a passing mode to replace what removing it broke. That is a shape worth being suspicious of at the time, and we were not suspicious enough. This chapter is about going back.
+
+The ban's own ledger, written when it landed, said the cost was "one surprising rejection at the root of a tree" — you could no longer write `Expr.flip(leaf)` and had to root your structure in a field. That accounting was honest about the thing it was looking at and blind to everything else, because the rest of the cost had already been spent one chapter later and was not being counted as cost. [The borrow mode](#three-ways-to-hand-over-an-object) exists for exactly one reason: the ban made `topSpeed(engine)` unwritable, and something had to make it writable again. So the true bill was a new sigil, a third passing mode on every signature, a `this` whose meaning depended on which kind of type it named, and an `&`-return rule that had to explain separately why each of the two rejected modes was not a root. None of that appears in the chapter that took the credit for the ban being cheap.
+
+Then the one item that *was* counted disappeared on its own. [Making a recursive member an owned child](#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) took `&` out of recursive spines entirely: a recursive case is boxed through a handle, so a tree is built from owning edges and needs no guest source anywhere. The rule that a recursive structure must be rooted in a field went with it. The single cost the ban's ledger had named was gone, and what remained on the page was the machinery built to pay a bill nobody was charging any more.
+
+That is the pressure that reopened it, and the judgment that settled it was blunt: the `'` semantic was not worth having as a separate thing to learn. Not "the borrow is wrong" — the borrow is exactly right for value types, where it has always been what a parameter *is*. The objection is to a second sigil whose whole job is to route around a restriction we chose. Delete the restriction and the sigil has no work left.
+
+### The ban did not close the hole it was standing next to
+
+There is a harder version of that objection, and it is the one that makes the revert obvious rather than merely defensible. **The ban did not remove the situation the machinery exists for.** Not "removed it at a cost we later judged too high" — did not remove it at all.
+
+The situation is two live anchor identities resolving to one payload. A payload carries a single backpointer, so it can be found from one cell; a second cell naming it cannot be updated on the next relocation. That is what forwarding anchors, the retirement stacks, and the target-kind discriminator are all for. It arises when a move has anchored objects on **both** sides. And here it is, reached without a bare symbol anywhere:
+
+```zane
+package Demo
+
+type Engine = #struct { power Int; }
+type Car    = #struct { engine Engine; }
+type Garage = #struct { car Car; }
+
+Engine(power Int) => init{power}
+Car(engine Engine) => init{engine}
+Garage(car Car) => init{car}
+
+Unit demo() {
+    garage Garage(Car(Engine(Int(1))))          // garage.car hosts parkedCar
+                                                //   parkedCar.engine hosts parkedEngine
+    guestToParked &Engine = garage.car.engine   // mints parkedAnchor, naming parkedEngine
+
+    {
+        arriving Car(Engine(Int(2)))            // arriving hosts a Car
+                                                //   its .engine hosts arrivingEngine
+        guestToArriving &Engine = arriving.engine   // mints arrivingAnchor,
+                                                    //   naming arrivingEngine
+
+        garage.car = arriving                   // ← the move
+    }
+
+    return Unit()
+}
+```
+
+Both guests are minted from **field accesses**. Fields were never banned — the ban's own chapter is emphatic that "a **field** is a different matter and stays a legal source", and treats that as the reason the restriction is narrow. So every line here was legal on the day the ban shipped, and the last one still puts `parkedAnchor` and `arrivingAnchor` on one payload: `guestToParked` follows the *slot* and observes `arrivingEngine` after the overwrite; `guestToArriving` follows the *object* and observes it too. `arrivingAnchor` becomes a forwarding cell targeting `parkedAnchor`, exactly as before.
+
+So the ban was never buying the merge machinery's removal. It bought one *question* — what a guest to a bare symbol's own slot denotes after that slot is moved from — and left the underlying mechanism fully reachable by the ordinary route. We had been carrying it as though it were load-bearing on the runtime, and it was load-bearing on nothing but a documentation problem.
+
+That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets — which is the next section.
+
+### Answering the question instead of deleting it
+
+Reverting means the five-liner comes back, and this time it has to be answered rather than made illegal:
+
+```zane
+main Player()
+second Player()
+guest &Player = main
+second = main
+```
+
+The old chapter said the anchor system gives an answer — the guest follows the object — and that the answer is "defensible but not obviously right", because a reader who wrote `&Player = main` might have meant *watch that variable*. The flaw in that worry is sitting in the same chapter, three paragraphs down, in the argument that was supposed to make the ban cheap: **a guest to a bare symbol never buys any reach.** A bare symbol is already in scope everywhere a guest to it could be declared. If you wanted to watch the variable, you can watch the variable — write `main`. The only reason to mint a guest at all is to carry the reference somewhere the symbol does not go: into a field, into a container, into a callee that keeps it. Every one of those is the *object* reading. The ambiguity we were protecting against was between one intention that needs a guest and one that has a shorter spelling, and we had removed the wrong one.
+
+So [`memory.md` §2.8.1](https://github.com/zane-lang/spec/blob/c36ef08/spec/memory.md#281-a-guest-follows-the-object-an-overwritten-slot-carries-its-guests-forward) now states it as a rule with two branches, which is what the runtime was doing all along. A guest names the object hosted at its source when it was minted. If that object is **moved**, the guest goes with it. If that object is **destroyed** by an overwrite of the slot it lived in, the slot's hosting identity continues and the guest carries forward to the replacement. The two never compete, because an object cannot both leave and die in one step, and the program text says which happened: a move is one statement and an overwrite is another. What a reader has to carry is a single question — *did it leave, or did it die* — and the answer is legible at the line.
+
+The case that looks like a puzzle and is not is re-hosting an emptied slot. After `second = main`, both `guest` and `main` denote the moved object; `main` downgraded to a guest to it, so the two agree and there is nothing to choose. Write `main = Player()` afterwards and they part: `main` names the new object, `guest` still names the old one, which is alive in `second`. That is not an ambiguity, it is two names for two objects — the move carried the old identity away, so the slot begins a fresh one rather than inheriting the guests of the thing that left.
+
+This is where we declined the rest of the package that was on the table. The proposal that accompanied the revert also made a moved-from symbol **spent** — unreadable after the move — on the grounds that a readable moved-from symbol keeps the "watch that variable" reading alive to compete with the object reading. We do not think it does. At the moment of the move the two readings *coincide*, which is the opposite of competing; they only diverge after a subsequent re-host, and by then the divergence is the ordinary fact that two different names denote two different objects. Making the symbol spent to prevent that would cost [downgrade, not poison](../stories/lifetimes.md#downgrade-not-poison-why-there-is-no-use-after-move-read), a rule we like for its own sake and that has nothing to do with guest sources. So the downgrade stays and the revert is narrower than the proposal that prompted it.
+
+### What comes back, and what it costs
+
+With bare symbols pointable again, `'T` has nothing left to do and goes. A reference-type parameter is `T` or `&T` ([`memory.md` §2.9](https://github.com/zane-lang/spec/blob/c36ef08/spec/memory.md#29-function-parameters-swallow-and-guest)) — swallow it, or take a guest — and `topSpeed(engine)` works by declaring `engine &Engine` and passing the local as it stands. The `'` character returns to being unused, which is where it was before we borrowed it from Rust to name something Rust uses it for a different reason.
+
+The subject goes back to being an implicit guest. `this` now takes no marker at all, for either kind of type ([`functions.md` §2.4](https://github.com/zane-lang/spec/blob/c36ef08/spec/functions.md#24-mutating-methods-use-mut)), and `this &T` is gone rather than merely redundant — a guest subject may already be read, mutated, stored, or returned, so a marker selecting it would select the only option. This is the one place where we are giving something up that we said we liked. The borrow-mode chapter called it "the pleasing part": a `mut` subject was a mutable borrow of the caller's slot whether the type was a value or a reference, and the two worlds agreed. They no longer do. A value subject is a borrow, a reference subject is a guest, and they are written identically because in both cases the subject is simply the object you called the method on and neither kind has a choice to express. The unification was real and it is lost; what it was bought with was a sigil on every non-consuming reference parameter in the language, and that is the wrong exchange rate.
+
+One rule got shorter rather than longer, and it is the one we did not expect. Returning an `&` used to require a root in an `&T` parameter specifically, with the other two modes excluded for two different reasons — a borrow expires with the call, a swallowed parameter is a bare symbol and therefore not a source at all. Both exclusions are gone, and the rule underneath them turns out to be simpler than either: **any parameter is a root, because a parameter belongs to the call-site scope** ([`lifetimes.md` §1.7](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter)). A guest rooted in one therefore names something hosted in the very scope the return value lands in, so [the scope comparison](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#11--assignment-uses-host-scope) settles it at the call site with no special case. A local is still not a root, and now for the honest reason — its host is the body scope, which drains at the return — rather than for a reason about where guests may come from.
+
+One cost is real and we are choosing it with our eyes open, and one thing that looks like a cost is not.
+
+The one that is not: **merging stays reachable** — but it was reachable before, through the field route above, so this is not something the revert spends. Forwarding anchors, the retirement stacks, and the target-kind discriminator are permanent, and they were already permanent. What the revert does close off is a *different* set of proposals, the ones that would have deleted the machinery by restricting the source language further — declaring which locals may be pointed at, or inferring it from where a guest is minted. Those are now off the table, and that is a real decision, just not the one it is easy to mistake it for. It goes the way Zane leans: the merge machinery is written once, by the person implementing the compiler, and a source restriction is paid by every program that builds a structure and hands out a reference to it.
+
+The one that is: **a signature no longer promises non-escape**. With three modes, `'T` told a caller that the callee could not keep the reference; `&T` told them it might. With two, `&T` covers both and the caller cannot tell them apart by reading the header. Nothing about this is unsafe — [the scope rule](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#11--assignment-uses-host-scope) is what keeps a guest from outliving its host, and it does not care what the callee intended — but it is a genuine loss of legibility, and it is the one argument for keeping `'T` that survives the ban being lifted. We are not keeping it, because a mode that exists purely to document intent is a heavy way to document intent. If that turns out to be the wrong call, the thing to reach for is a non-escaping *annotation* on an `&T` parameter, not a third way of passing an argument.
