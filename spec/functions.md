@@ -417,7 +417,7 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller must supply a guest source, which a bare symbol satisfies; callee may read, mutate, store it into `&` fields, or return it |
-| Plain `T` method parameter | Swallows; caller may supply a temporary and downgrades to a guest; callee **MUST NOT** bind it into `&` storage |
+| Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which downgrades to a guest, or a temporary, which has no symbol to downgrade; callee **MUST NOT** bind it into `&` storage |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`) at one position are illegal |
