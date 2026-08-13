@@ -240,6 +240,47 @@ Then the one item that *was* counted disappeared on its own. [Making a recursive
 
 That is the pressure that reopened it, and the judgment that settled it was blunt: the `'` semantic was not worth having as a separate thing to learn. Not "the borrow is wrong" — the borrow is exactly right for value types, where it has always been what a parameter *is*. The objection is to a second sigil whose whole job is to route around a restriction we chose. Delete the restriction and the sigil has no work left.
 
+### The ban did not close the hole it was standing next to
+
+There is a harder version of that objection, and it is the one that makes the revert obvious rather than merely defensible. **The ban did not remove the situation the machinery exists for.** Not "removed it at a cost we later judged too high" — did not remove it at all.
+
+The situation is two live anchor identities resolving to one payload. A payload carries a single backpointer, so it can be found from one cell; a second cell naming it cannot be updated on the next relocation. That is what forwarding anchors, the retirement stacks, and the target-kind discriminator are all for. It arises when a move has anchored objects on **both** sides. And here it is, reached without a bare symbol anywhere:
+
+```zane
+package Demo
+
+type Engine = #struct { power Int; }
+type Car    = #struct { engine Engine; }
+type Garage = #struct { car Car; }
+
+Engine(power Int) => init{power}
+Car(engine Engine) => init{engine}
+Garage(car Car) => init{car}
+
+Unit demo() {
+    garage Garage(Car(Engine(Int(1))))          // garage.car hosts parkedCar
+                                                //   parkedCar.engine hosts parkedEngine
+    guestToParked &Engine = garage.car.engine   // mints parkedAnchor, naming parkedEngine
+
+    {
+        arriving Car(Engine(Int(2)))            // arriving hosts a Car
+                                                //   its .engine hosts arrivingEngine
+        guestToArriving &Engine = arriving.engine   // mints arrivingAnchor,
+                                                    //   naming arrivingEngine
+
+        garage.car = arriving                   // ← the move
+    }
+
+    return Unit()
+}
+```
+
+Both guests are minted from **field accesses**. Fields were never banned — the ban's own chapter is emphatic that "a **field** is a different matter and stays a legal source", and treats that as the reason the restriction is narrow. So every line here was legal on the day the ban shipped, and the last one still puts `parkedAnchor` and `arrivingAnchor` on one payload: `guestToParked` follows the *slot* and observes `arrivingEngine` after the overwrite; `guestToArriving` follows the *object* and observes it too. `arrivingAnchor` becomes a forwarding cell targeting `parkedAnchor`, exactly as before.
+
+So the ban was never buying the merge machinery's removal. It bought one *question* — what a guest to a bare symbol's own slot denotes after that slot is moved from — and left the underlying mechanism fully reachable by the ordinary route. We had been carrying it as though it were load-bearing on the runtime, and it was load-bearing on nothing but a documentation problem.
+
+That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets — which is the next section.
+
 ### Answering the question instead of deleting it
 
 Reverting means the five-liner comes back, and this time it has to be answered rather than made illegal:
@@ -267,8 +308,8 @@ The subject goes back to being an implicit guest. `this` now takes no marker at 
 
 One rule got shorter rather than longer, and it is the one we did not expect. Returning an `&` used to require a root in an `&T` parameter specifically, with the other two modes excluded for two different reasons — a borrow expires with the call, a swallowed parameter is a bare symbol and therefore not a source at all. Both exclusions are gone, and the rule underneath them turns out to be simpler than either: **any parameter is a root, because a parameter belongs to the call-site scope** ([`lifetimes.md` §1.7](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#17-returned--values-must-be-rooted-in-a-parameter)). A guest rooted in one therefore names something hosted in the very scope the return value lands in, so [the scope comparison](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#11--assignment-uses-host-scope) settles it at the call site with no special case. A local is still not a root, and now for the honest reason — its host is the body scope, which drains at the return — rather than for a reason about where guests may come from.
 
-Two costs are real and we are choosing them with our eyes open.
+One cost is real and we are choosing it with our eyes open, and one thing that looks like a cost is not.
 
-The first is that **merging stays reachable**. The whole reason the bare-symbol slot was awkward is that it can be moved from while something points at it, and that is exactly the situation that puts two live anchor identities on one payload. Forwarding anchors, the retirement stacks, and the target-kind discriminator are therefore permanent rather than provisional — the alternatives that would have deleted them all worked by restricting the source language, and we have just decided the source language is where we least want to pay. That is a defensible trade in the specific direction Zane leans: the merge machinery is written once, by the person implementing the compiler, and the restriction was paid by every program that builds a structure and hands out a reference to it.
+The one that is not: **merging stays reachable** — but it was reachable before, through the field route above, so this is not something the revert spends. Forwarding anchors, the retirement stacks, and the target-kind discriminator are permanent, and they were already permanent. What the revert does close off is a *different* set of proposals, the ones that would have deleted the machinery by restricting the source language further — declaring which locals may be pointed at, or inferring it from where a guest is minted. Those are now off the table, and that is a real decision, just not the one it is easy to mistake it for. It goes the way Zane leans: the merge machinery is written once, by the person implementing the compiler, and a source restriction is paid by every program that builds a structure and hands out a reference to it.
 
-The second is that **a signature no longer promises non-escape**. With three modes, `'T` told a caller that the callee could not keep the reference; `&T` told them it might. With two, `&T` covers both and the caller cannot tell them apart by reading the header. Nothing about this is unsafe — [the scope rule](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#11--assignment-uses-host-scope) is what keeps a guest from outliving its host, and it does not care what the callee intended — but it is a genuine loss of legibility, and it is the one argument for keeping `'T` that survives the ban being lifted. We are not keeping it, because a mode that exists purely to document intent is a heavy way to document intent. If that turns out to be the wrong call, the thing to reach for is a non-escaping *annotation* on an `&T` parameter, not a third way of passing an argument.
+The one that is: **a signature no longer promises non-escape**. With three modes, `'T` told a caller that the callee could not keep the reference; `&T` told them it might. With two, `&T` covers both and the caller cannot tell them apart by reading the header. Nothing about this is unsafe — [the scope rule](https://github.com/zane-lang/spec/blob/c36ef08/spec/lifetimes.md#11--assignment-uses-host-scope) is what keeps a guest from outliving its host, and it does not care what the callee intended — but it is a genuine loss of legibility, and it is the one argument for keeping `'T` that survives the ban being lifted. We are not keeping it, because a mode that exists purely to document intent is a heavy way to document intent. If that turns out to be the wrong call, the thing to reach for is a non-escaping *annotation* on an `&T` parameter, not a third way of passing an argument.
