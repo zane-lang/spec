@@ -240,7 +240,7 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
-### 1.10 An `&` field is written only from a path sharing its root
+### 1.10 An `&` field or element is written only from a path sharing its root
 An assignment whose destination is an `&` **field or element** is legal only when the destination path and the source path begin with the **same root symbol**.
 
 ```zane
@@ -249,7 +249,7 @@ this.terminal.io = this.io        // legal: both paths root at `this`
 hub.io = this.io                  // ILLEGAL: roots `hub` and `this` differ
 ```
 
-The root may be a host or a guest. Everything reachable under one name belongs to one hosting tree ([`memory.md`](memory.md) §2.1), so a guest stored under that name cannot outlive what it points at, whatever scope the tree is hosted in.
+The root may be a host or a guest. Everything reachable under one name belongs to one hosting tree ([`memory.md`](memory.md) §2.1), so a guest stored under that name and what it points at are moved and destroyed together, whatever scope the tree comes to be hosted in. This settles the question moves and raises would otherwise reopen; it says nothing about a host destroyed while its tree lives on (§2.1).
 
 What the rule refuses is the store whose two sides belong to different trees. There, the comparison §1.1 makes for an `&` symbol has nothing to compare: an `&` field lives with the object that holds it, and that object's host is not named at the store.
 
@@ -265,12 +265,12 @@ Unit install(this Main, io std$IO) mut {
 }
 ```
 
-`init{ }` has no root to share, because the object does not exist until it completes. A constructor may therefore write an `&` field from any of its parameters; §1.11 governs where the finished object may then go.
+`init{ }` has no root to share, because the object does not exist until it completes. A constructor may therefore write an `&` field from one of its `&T` parameters, which is what [`types.md`](types.md) §3.9 already requires of it; §1.11 governs where the finished object may then go.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-check-that-fired-once-and-the-move-that-outran-it) — "The check that fired once, and the move that outran it".
 
 ### 1.11 Raising a value re-checks the guests it carries
-A value **carries a guest** when an `&` is reachable from its type along **owning** edges (see [`adt.md`](adt.md) §4). An `&` member is not an owning edge, so the walk never passes through one.
+A value **carries a guest** when an `&` is reachable from its type by following **owning** edges (see [`adt.md`](adt.md) §4). The walk finds an `&` member and stops at it: a type's own `&` field is the shortest case, reached after no edges at all, and a `&` nested inside a hosting field or container element is reached by following those edges to it. The walk does not continue *through* an `&` into what it names, because that object is hosted elsewhere and moves separately.
 
 Raising such a value is legal only when every guest it carries names a host declared in the same or a higher lexical scope than the destination, or names a host **inside the value being raised**. A value is raised when:
 

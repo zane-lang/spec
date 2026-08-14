@@ -316,7 +316,7 @@ car Car(engine)     // legal: a bare symbol is a guest source
 car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-What still constrains such a field is scope, not source: the object it points at must be hosted in the same or a higher lexical scope than the `&` itself ([`lifetimes.md`](lifetimes.md) §1.1). Because a field's scope is its container's, two further rules carry that comparison past construction: an assignment into an `&` field must share a root with its source ([`lifetimes.md`](lifetimes.md) §1.10), and raising a value that holds an `&` re-checks what that `&` names ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
+What still constrains such a field is scope, not source: the object it points at must be hosted in the same or a higher lexical scope than the `&` itself ([`lifetimes.md`](lifetimes.md) §1.1). Because a field's scope is its container's, two further rules carry that comparison past construction: an assignment into an `&` field or element must share a root with its source ([`lifetimes.md`](lifetimes.md) §1.10), and raising a value that holds an `&` re-checks what that `&` names ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 

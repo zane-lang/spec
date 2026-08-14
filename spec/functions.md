@@ -113,7 +113,7 @@ Explicit parameters other than `this` are read-only: they cannot be assigned or 
 ### 2.8 Swallow and guest method parameters
 A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as `&T` is a **guest**: the caller supplies a guest source under [`memory.md`](memory.md) §2.8, which a bare symbol satisfies, and the callee may read it, mutate it, or return it. Storing it into an `&` field is governed by the root rule ([`lifetimes.md`](lifetimes.md) §1.10) and refused across two roots.
+- A parameter declared as `&T` is a **guest**: the caller supplies a guest source under [`memory.md`](memory.md) §2.8, which a bare symbol satisfies, and the callee may read it, mutate it, or return it. Storing it into an `&` field or element is governed by the root rule ([`lifetimes.md`](lifetimes.md) §1.10) and refused across two roots.
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
 
 A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
