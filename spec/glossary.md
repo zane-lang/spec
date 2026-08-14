@@ -75,7 +75,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 
 ### 3.3 unified type parameters
-- **Meaning:** A type or number parameter is a *type parameter* (`name Type`, an uppercase name such as `T`, ranging over types) or a *number parameter* (`name Number`, a lowercase name such as `n`, ranging over compile-time numbers and resolving to a number value in body positions). A type definition declares its parameters in a `<>` header (their order is applied positionally at use sites); a verb — function, method, operator, constructor, or lambda — has no header and introduces each parameter inline within its value parameters, at the parameter's first marked occurrence. Parameters are referenced by bare name; casing carries the kind.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name Number`, lowercase, ranging over compile-time numbers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
 - **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`Number` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
@@ -185,7 +185,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §4.2
 
 ### 3.25 arena placement
-- **Meaning:** A scope's arena has two regions: statically sized **scope-level** storage — value slots, reference-type hosts, and the fixed-size handles materialized in those slots — is bump-allocated inline in the fixed-size region of the scope that creates it, while the payloads those handles name (resizable backing stores and boxed members, §3.39) go in that scope's dynamic region. A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed. Rehosting copies the complete hosted representation into destination-owned storage: inline bytes move into the destination fixed-size region, each dynamic block is relocated into an equal-size destination-region allocation — recursively, through any blocks it owns in turn — and the old source storage ceases to be live. The source host-capable slot then stores the terminal tether as a guest. Placement is an unobservable implementation choice.
+- **Meaning:** Where a hosted object's storage is materialized: the arena of the scope that creates it, split into a **fixed-size** region for statically sized slots and the handles that sit in them, and a **dynamic** region for the payloads those handles name. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
@@ -215,7 +215,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §2.1
 
 ### 3.31 product mould / sum mould / peer mould
-- **Meaning:** The three mould shapes, named by how a value's representations count. A `struct` is a **product mould** (its representations are the product of its fields'); a `variant` is a **sum mould** (the sum of its cases' payloads'); an `enum` is a **peer mould** — a flat set of payloadless, equal-rank peers, so its representations number exactly its members. `struct` and `variant` share one `{ }` body grammar; an `enum`'s peers are a flat `[ ]` list.
+- **Meaning:** The three mould shapes, named by how a value's representations count. A `struct` is a **product mould** (its representations are the product of its fields'); a `variant` is a **sum mould** (the sum of its cases' payloads'); an `enum` is a **peer mould** — a flat set of payloadless, equal-rank peers, so its representations number exactly its members.
 - **Why this name:** Product and sum are the standard algebraic names for the two `{ }`-bodied shapes; "peer" names the third from the `enum`'s own defining property — uniform, interchangeable, payloadless members — rather than forcing it into the sum family it degenerately belongs to.
 - **Canonical home:** [`types.md`](types.md) §2.5 (product, sum); [`adt.md`](adt.md) §2 (peer)
 
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its host. Every store of a guest, and every later store of a value that carries one (§3.42), compares owners (§3.43): what the guest names must have an owner that outlives the owner of the place holding it ([`lifetimes.md`](lifetimes.md) §1.1). It may be minted from any place but a `[]` expression (§3.36), and it names the object hosted there at that moment, travelling with that object if it is later moved. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its host. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -240,12 +240,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.36 guest source
-- **Meaning:** A place expression a new `&` may be minted from: a **bare symbol**, a field access whose base is a place, or an `&T` parameter. Only a `[]` expression is a place excluded, and temporaries are not places at all. The guest names the object hosted at that source when it is minted; if the object is moved the guest follows it, and if the object is destroyed by an overwrite of its slot the guest carries forward to the replacement.
+- **Meaning:** A place expression a new `&` may be minted from: a **bare symbol**, a field access whose base is a place, or an `&T` parameter. Only a `[]` expression is a place excluded, and temporaries are not places at all. The guest names whatever is hosted at that source when it is minted.
 - **Why this name:** The term names the *source* end — where a guest may come from — separately from what a guest survives once minted, which is the anchor system's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.37 passing mode
-- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (readable, mutable, returnable, and storable, with a stored guest's resting place recorded in the signature and checked at each call; requires a guest source, which a bare symbol satisfies). The subject parameter (§3.38) has no such choice — it is always a guest — so `&` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it, and `&T` takes a **guest** (§3.33). The subject parameter (§3.38) has no such choice: a reference-type subject is an implicit guest and a value-type subject a borrow, and `&` is never written on `this` either way.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in both, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -255,27 +255,27 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`functions.md`](functions.md) §2.1
 
 ### 3.39 boxed member
-- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. **Required** where the member's declared type can lead back to the enclosing type along **owning** edges — an `&` guest is not one — and **permitted** elsewhere. Two questions about it have two different answers: what the payload *is* follows the member's own declared type, while what *becomes of* it on move, copy, or death follows the enclosing type's kind. Nothing marks it in the source, and placement is unobservable (§3.25).
+- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. Required where a member's declared type can lead back to the enclosing type along **owning** edges, and permitted elsewhere. Nothing marks it in the source, and placement is unobservable (§3.25).
 - **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **member** rather than *field* because a `variant` case payload is boxed on the same terms as a `struct` field.
 - **Canonical home:** [`adt.md`](adt.md) §4; representation in [`memory.md`](memory.md) §3.3 and §3.6
 
 ### 3.40 deep value copy
-- **Meaning:** Copying an existing value copies the whole value — its inline bytes, plus a fresh allocation and recursive copy of the payload behind every boxed member (§3.39) it owns — so an original and its copy share no storage. A fresh non-place expression constructs directly in its destination instead of being copied there. Depth is what keeps a value transitively alias-free once it may own out-of-line storage, and so what lets a value type recurse (§3.2) and stay legal as a concurrent subject (§2.4).
+- **Meaning:** Copying an existing value copies the whole value — its inline bytes, plus a fresh allocation and recursive copy of the payload behind every boxed member (§3.39) it owns — so an original and its copy share no storage. Depth is what keeps a value transitively alias-free once it may own out-of-line storage, and so what lets a value type recurse (§3.2) and stay legal as a concurrent subject (§2.4).
 - **Why this name:** "Deep" is the standard word for a copy that follows indirections instead of duplicating them, and the contrast it names — deep versus shallow — is precisely the choice the rule settles.
 - **Canonical home:** [`memory.md`](memory.md) §2.3
 
 ### 3.41 move-source
-- **Meaning:** An expression denoting a hosting value that the expression is entitled to consume, and therefore the only thing that may be moved into a hosting position. Three forms qualify: a **direct host symbol**; a **hosting verb result**, from a verb whose return type is a hosting `T`; and a **`#variant` case form**, `Variant.case(payload)` on a **reference** sum, which is built-in syntax rather than a verb but produces a fresh value nothing hosts yet. A *value* `variant` case form is not one — a value sum is copied rather than hosted, so there is no hosting to transfer. Neither is an `&` value, a value-type borrow, a field access, nor a container element access.
+- **Meaning:** An expression denoting a hosting value that the expression is entitled to consume, and therefore the only thing that may be moved into a hosting position. An access path that projects into a value some other place already hosts is not one.
 - **Why this name:** It names the *source* end of a move, which is where the restriction lives: the rule is about what an expression is entitled to give up, not about where the value lands.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 
 ### 3.42 carried guest
-- **Meaning:** An `&` reachable from a value's type by following **owning** edges — the same graph the boxed-member rule reads (§3.39). The walk finds an `&` member and stops there: the `&` itself is a carried guest, and a type's own `&` field is the shortest case, found after no edges at all. What the walk does not do is continue *through* the `&` into whatever it names, because that object is hosted elsewhere and travels separately. The walk reads the declared type — for a `#variant`, every case, since which case is live is the flow-sensitive fact the declaration-block rule refuses to track — and so decides only whether a value *may* carry a guest; what one names is read from the value's construction. Every store of a value re-compares the owners (§3.43) of the hosts its carried guests name, which is why a check made where the value was first written does not have to survive the value moving. A guest naming a host **inside** the value is satisfied at every destination, because that host travels with it. A value carrying no guest skips this re-check only; its own host is still compared at every store and move, as for any value.
+- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — the same graph the boxed-member rule reads (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is hosted elsewhere and travels separately. A value's carried guests are what the store rule compares alongside the value's own host.
 - **Why this name:** The value *carries* the guest the way luggage carries its contents — the guest travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
 
 ### 3.43 owner
-- **Meaning:** The lifetime a place belongs to, and the only thing the store rule compares. A **symbol** is owned by the block that declares it; a **field or element** reached from its root by **owning** steps is owned by that root symbol's owner, never its own; a **parameter** (`this` included) and a constructor's `init{ }` have no owner in the body at all — each stands for a path in the caller's frame, so a store reaching one is settled at the call site. A path that steps *through* an `&` has left the tree its root names: what lies beyond belongs to a tree the path never mentions, so it has **no** owner, may be read freely, and may never be a store destination — `main.peer.io` on an `&` field `peer` is not an owned place. A block outlives every block nested within it, and a block is one lifetime rather than a sequence: everything it owns dies when it drains, with nothing to observe between. Hosts inside a stored value travel with it and take the destination's owner.
+- **Meaning:** The lifetime a place belongs to, and the only thing the store rule compares. A **symbol** is owned by its declaring block; a **field or element** takes its root symbol's owner rather than having one of its own; a **parameter** (`this` included) and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
 - **Why this name:** It names what a place's lifetime *is owed to* rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's owner tells you everything.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
