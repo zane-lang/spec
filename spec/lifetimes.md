@@ -280,15 +280,24 @@ parked Car(outerHolder.engine)     // Car holds an `&Engine`
 }                                  //   block, and parked is owned above it
 ```
 
+The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. That decides only whether a value *may* carry a guest. What a carried guest **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no host, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
+
 A value with **no source host** — a hosting verb result or a `#variant` case form (§1.2) — is asked the same question, against the host it is bound into. It re-parents nothing, so §1.4 waves it through; what it carries still has to reach the destination:
 
 ```zane
+type Expr = #variant {
+    intLit String;
+    ref &Node;      // an `&` payload, so this case form takes a guest source
+}
+
 result Expr = Expr.intLit("0")
 {
-    innerTree Tree(Expr.intLit("5"))
-    result = Expr.flip(innerTree.root)   // ILLEGAL: the case form carries a guest to
-}                                        //   this block, and result is owned above it
+    innerTree Tree()
+    result = Expr.ref(innerTree.root)   // ILLEGAL: the case form carries a guest to
+}                                       //   this block, and result is owned above it
 ```
+
+`innerTree.root` is a field access, which is a guest source ([`memory.md`](memory.md) §2.8) and so is what an `&` payload asks for. It would **not** do for a hosting payload, which takes a move-source ([`adt.md`](adt.md) §3.2) — the two payload kinds ask for different things, and only the `&` kind produces a carried guest here.
 
 A guest naming inside the value is what a constructor's `init{ }` normally settles:
 
@@ -437,7 +446,7 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a value-type borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
-| Carried guest | A value carries every `&` reachable from its type along owning edges, stopping at each `&` rather than continuing through it; one naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store |
+| Carried guest | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. One naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store. Carrying none skips this comparison only, never the value's own host |
 | Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one downgrades the caller |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
