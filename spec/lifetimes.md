@@ -299,11 +299,23 @@ Everything reachable under one root symbol belongs to one hosting tree ([`memory
 A parameter has no owner in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where the value comes to rest**: when a verb stores a parameter into a place reachable from another parameter or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1.
 
 ```zane
+type Terminal = #struct {
+    io &IO;       // an `&` field
+}
+
+type Main = #struct {
+    terminal Terminal;   // a hosting field
+    peer &Terminal;      // an `&` field
+    io IO;               // a hosting field
+}
+
 Unit setIO(this Terminal, io &IO) mut {
     this.io = io          // recorded: io comes to rest at this.io
     return Unit()
 }
 ```
+
+Both paths below resolve to `main`'s owner, because a field takes its root symbol's owner (§1.1) and both are reached from `main`:
 
 ```zane
 main Main()
@@ -348,6 +360,16 @@ The summary is **transitive**, in the way the effect summaries of [`effects.md`]
 Unit relay(this Terminal, io &IO) mut {
     this!setIO(io)        // recorded: io comes to rest at this.io, via setIO
     return Unit()
+}
+```
+
+A recorded path is made of **owning** steps only — field selections, and "an element of" for a container, the same edges §1.10's walk follows. Every element of a container shares the container's owner, so no index is recorded and none is needed. A path does not continue *through* an `&`, because what an `&` names is hosted elsewhere and the caller's argument path does not reach it. A verb may therefore not store into a destination reached through a guest it holds:
+
+```zane
+Unit wire(this Main, io &IO) mut {
+    this.terminal.io = io   // legal: `terminal` is a hosting field of `this`
+    this.peer.io = io       // ILLEGAL: `peer` is an `&`, so no caller path
+    return Unit()           //   names the object this would write into
 }
 ```
 
@@ -402,7 +424,7 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
 | Carried guest | A value carries every `&` reachable from its type along owning edges, stopping at each `&` rather than continuing through it; one naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store |
-| Resting place | Where a verb stores a parameter — into a place reachable from another parameter or from the result — is part of its signature, derived from the body and published with it; each call substitutes its argument paths and applies the store rule. It records where a parameter lands, never whether passing one downgrades the caller |
+| Resting place | Where a verb stores a parameter — into a place reachable from another parameter or from the result along owning steps only, never through an `&` — is part of its signature, derived from the body, transitive through the calls it makes, and published with it; each call substitutes its argument paths and applies the store rule. It records where a parameter lands, never whether passing one downgrades the caller |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
