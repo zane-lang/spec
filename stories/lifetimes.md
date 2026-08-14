@@ -198,7 +198,9 @@ The one line of the previous chapter that needs correcting rather than supersedi
 
 ## The check that fired once, and the move that outran it
 
-The previous chapter closed with §1.1 restored to the front line, doing "essentially all of the work." That was true of the case it was looking at — an `&` symbol, whose scope is fixed the moment it is declared — and it quietly assumed the same held for an `&` **field**, which it does not. A field's scope is its container's, and a container moves. So the comparison [§1.1](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#11--assignment-uses-host-scope) makes when the field is written can be falsified afterwards by a statement that never touches the field at all:
+With the returned-guest root settled, one case was still open — and it is not one the previous chapters had occasion to look at, because it is not a question about where a guest may be rooted or minted. It is a question about what happens to a guest afterwards.
+
+The comparison [§1.1](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/lifetimes.md#11--assignment-uses-host-scope) makes is exact for an `&` **symbol**, whose scope is fixed the moment it is declared and cannot change afterwards. An `&` **field** is a different shape: its scope is its container's, and a container moves. So the comparison made when the field is written can be falsified later by a statement that never touches the field at all:
 
 ```zane
 parked Car(outerHolder.engine)
