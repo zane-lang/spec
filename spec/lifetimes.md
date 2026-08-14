@@ -275,6 +275,7 @@ A value **carries a guest** when an `&` is reachable from its type by following 
 Raising such a value is legal only when every guest it carries names a host declared in the same or a higher lexical scope than the destination, or names a host **inside the value being raised**. A value is raised when:
 
 - it moves into a host declared in a higher scope than its source host,
+- it is a move-source with **no source host** — a hosting verb result or a `#variant` case form (§1.2) — bound into any host, where the destination is that host. §1.4 is satisfied trivially by such a value because it re-parents nothing; the guests it carries are a separate question, and the comparison is made against where it comes to rest,
 - it is returned, where the destination is the call-site scope (§1.5), or
 - it is passed as an argument, where the destination is the host of every other reference-type argument, and the return (§1.8). With no other reference-type argument and no returned host, the destination is the call-site scope (§1.5), which the argument already sits in — so nothing is raised and nothing is checked.
 
@@ -297,6 +298,16 @@ cars List<Car> = []
     arriving Car(innerHolder.engine)
     cars!append(arriving)          // ILLEGAL: arriving's guest names a host in this
 }                                  //   block, and cars is hosted above it
+```
+
+A value with no source host is checked the same way, against the host it is bound into. It re-parents nothing, so §1.4 waves it through; what it *carries* still has to reach the destination:
+
+```zane
+result Expr = Expr.intLit("0")
+{
+    innerTree Tree(Expr.intLit("5"))
+    result = Expr.flip(innerTree.root)   // ILLEGAL: the case form carries a guest to
+}                                        //   this block, and result is declared above it
 ```
 
 A guest that names a host inside the raised value satisfies the rule at every destination, because it travels with the value. This is what a constructor's `init{ }` settles:
@@ -352,7 +363,7 @@ Because the scope rules prevent guests from outliving their hosts, the runtime d
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
 | `&` field assignment | Destination path and source path must begin with the same root symbol; `init{ }` is exempt, having no root yet |
-| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope, an argument to every other reference-type argument's host and the return, and to the call-site scope when there is neither |
+| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope, an argument to every other reference-type argument's host and the return, and to the call-site scope when there is neither; a move-source with no source host is checked against the host it is bound into |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
