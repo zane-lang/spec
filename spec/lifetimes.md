@@ -249,7 +249,7 @@ this.terminal.io = this.io        // legal: both paths root at `this`
 hub.io = this.io                  // ILLEGAL: roots `hub` and `this` differ
 ```
 
-The root may be a host or a guest. Everything reachable under one name belongs to one hosting tree ([`memory.md`](memory.md) §2.1), so a guest stored under that name and what it points at are moved and destroyed together, whatever scope the tree comes to be hosted in. This settles the question moves and raises would otherwise reopen; it says nothing about a host destroyed while its tree lives on (§2.1).
+The root may be a host or a guest. Everything reachable under one name belongs to one hosting tree ([`memory.md`](memory.md) §2.1), so a guest stored under that name travels with what it points at, whatever scope the tree comes to be hosted in, and goes when the tree does. That is what moves and raises would otherwise have broken, and all this rule claims. A host destroyed while its tree lives on is a separate matter, governed by §2.1 and by [`memory.md`](memory.md) §2.8.1.
 
 What the rule refuses is the store whose two sides belong to different trees. There, the comparison §1.1 makes for an `&` symbol has nothing to compare: an `&` field lives with the object that holds it, and that object's host is not named at the store.
 
@@ -276,7 +276,7 @@ Raising such a value is legal only when every guest it carries names a host decl
 
 - it moves into a host declared in a higher scope than its source host,
 - it is returned, where the destination is the call-site scope (§1.5), or
-- it is passed as an argument, where the destination is the host of every other reference-type argument, and the return (§1.8).
+- it is passed as an argument, where the destination is the host of every other reference-type argument, and the return (§1.8). With no other reference-type argument and no returned host, the destination is the call-site scope (§1.5), which the argument already sits in — so nothing is raised and nothing is checked.
 
 ```zane
 outerHolder Holder(Engine(Int(1)))
@@ -352,7 +352,7 @@ Because the scope rules prevent guests from outliving their hosts, the runtime d
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
 | `&` field assignment | Destination path and source path must begin with the same root symbol; `init{ }` is exempt, having no root yet |
-| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope, an argument to every other reference-type argument's host |
+| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope, an argument to every other reference-type argument's host and the return, and to the call-site scope when there is neither |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
