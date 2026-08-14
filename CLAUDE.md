@@ -31,9 +31,29 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
 3. **A rule correction is not done until `glossary.md` carries it.** The
    glossary summarizes rules it does not own, so fixing a rule in its canonical
    home and leaving the entry paraphrasing the superseded version produces a
-   spec that contradicts itself — this has happened twice, both times caught in
-   review rather than by the author. After editing any normative rule, grep
-   `spec/glossary.md` for the concept and update the entry in the same commit.
+   spec that contradicts itself — this has happened three times, every time
+   caught in review rather than by the author. After editing any normative rule,
+   grep `spec/glossary.md` for the concept and update the entry in the same
+   commit.
+
+   Sweeping the entry is necessary and **not sufficient**. Two of those three
+   were subtler than a missed grep:
+
+   - An entry rewritten in the *same commit* as the rule still shipped a false
+     sentence, because the author checked that the new sentences were right
+     rather than that the old ones still were. When you rewrite an entry, the
+     sentences you did **not** touch are the ones to re-read — their meaning is
+     set by the ones you did. A sentence scoped to a rule that has since been
+     merged into another (`"never re-checked"`, true of one rule among several,
+     false once that rule became the only one) reads unchanged and is now wrong.
+   - Length is the mechanism. An entry that reproduces its rule's *structure* —
+     the enumeration, the exceptions, the cross-cutting conditions — is the only
+     kind that can contradict the canonical home; a two-sentence entry cannot.
+     Glossary §1 already says `Meaning` gives "only a short summary, not the full
+     rule", and the entries that drifted were the longest in the file. Keep new
+     entries near the median (~50 words); if you find yourself restating the
+     rule, cut back to what distinguishes the term and let **Canonical home**
+     carry the rest.
 
 ## The `bench/` harness
 `bench/` is a reference **C** harness for runtime experiments — **not** Zane
