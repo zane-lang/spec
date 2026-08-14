@@ -336,7 +336,7 @@ If a scope launches concurrent work, objects hosted by that scope remain alive u
 Guests do not participate in hosting and cannot prolong object lifetime. They only track a live object whose host is already guaranteed to outlive them.
 
 ### 2.4 Null guests are not a user-facing state
-Because the scope rules prevent guests from outliving their hosts, the runtime does not expose a normal “null guest” programming model to the user. Three rules together carry that guarantee: §1.1 compares scopes when an `&` symbol is assigned, §1.10 confines a stored `&` to the tree it is written through, and §1.11 re-checks the guests a value carries whenever it is raised.
+An `&` is never optional and is never tested for emptiness; the runtime exposes no “null guest” programming model to the user. Three rules keep a stored guest pointing at something live as values move: §1.1 compares scopes when an `&` symbol is assigned, §1.10 confines a stored `&` to the tree it is written through, and §1.11 re-checks the guests a value carries whenever it is raised. What they cover between them is **relocation** — a value travelling away from what its guests name. A host destroyed while its tree lives on is the separate question §2.1 and [`memory.md`](memory.md) §2.8.1 answer.
 
 ---
 
@@ -363,7 +363,7 @@ Because the scope rules prevent guests from outliving their hosts, the runtime d
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
 | `&` field assignment | Destination path and source path must begin with the same root symbol; `init{ }` is exempt, having no root yet |
-| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope, an argument to every other reference-type argument's host and the return, and to the call-site scope when there is neither; a move-source with no source host is checked against the host it is bound into |
+| Raising a guest-carrying value | Every guest reachable along owning edges must name a host at or above the destination, or a host inside the value itself; a return raises to the call-site scope; an argument is checked against every other reference-type argument's host and any returned host, or against the call-site scope when the call has neither; a move-source with no source host is checked against the host it is bound into |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
