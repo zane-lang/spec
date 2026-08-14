@@ -245,7 +245,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.37 passing mode
-- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it, and `&T` takes a **guest** (§3.33). The subject parameter (§3.38) has no such choice — it is always a guest — so `&` is never written on `this`.
+- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it, and `&T` takes a **guest** (§3.33). The subject parameter (§3.38) has no such choice: a reference-type subject is an implicit guest and a value-type subject a borrow, and `&` is never written on `this` either way.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in both, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -270,7 +270,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 
 ### 3.42 carried guest
-- **Meaning:** An `&` reachable from a value's **declared** type by following **owning** edges — the same graph the boxed-member rule reads (§3.39). The walk stops at each `&` rather than continuing through it into what it names, since that object is hosted elsewhere and travels separately. A value's carried guests are what the store rule compares alongside the value's own host.
+- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — the same graph the boxed-member rule reads (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is hosted elsewhere and travels separately. A value's carried guests are what the store rule compares alongside the value's own host.
 - **Why this name:** The value *carries* the guest the way luggage carries its contents — the guest travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
 
