@@ -44,7 +44,7 @@ terminal Terminal(io)   // legal: one block owns terminal and io
 
 That costs nothing while both sit there, and the moment `terminal` is stored anywhere the comparison runs again — now against the new destination, and against the guest `terminal` carries (§1.10). A store through a path that has **no** owner in this frame is the deferred case: `init{ }` fills an object whose destination the constructor cannot see, so the obligation is published in the signature and discharged by each caller (§1.11).
 
-The compiler compares declaration blocks and root symbols. It does not perform borrow inference or lifetime annotation solving.
+The comparison the compiler makes is between two declaration blocks, after resolving each place to the block that owns it. It does not perform borrow inference or lifetime annotation solving.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
@@ -342,7 +342,16 @@ cars List<Car> = []
                             //     block, and cars is owned above it
 ```
 
-The summary is derived from the body, in the way the transitive effect summaries of [`effects.md`](effects.md) §5.2 are, and is published with the signature so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
+The summary is **transitive**, in the way the effect summaries of [`effects.md`](effects.md) §5.2 are: a verb that hands a parameter to another verb inherits the resting places that call records for it. Without that, a guest could be laundered by passing it one frame further than the check looked.
+
+```zane
+Unit relay(this Terminal, io &IO) mut {
+    this!setIO(io)        // recorded: io comes to rest at this.io, via setIO
+    return Unit()
+}
+```
+
+The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
 
 For an `&` field the callee must still declare the corresponding parameter `&T` ([`memory.md`](memory.md) §2.9, [`types.md`](types.md) §3.9). A swallowed value is hosted at the call site, so binding one into `&` storage would leave the field naming storage the caller may move out from under it, and no argument path the caller could supply would fix that.
 
