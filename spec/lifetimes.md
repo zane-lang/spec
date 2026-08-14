@@ -12,8 +12,15 @@ This document specifies Zane's lexical lifetime rules: the owner comparison ever
 Every place has an **owner**, and an owner is a lifetime:
 
 - a **symbol** — a local binding — is owned by the block that declares it
-- a **field or element** is owned by its root symbol's owner
+- a **field or element** reached from its root by **owning** steps is owned by that root symbol's owner, never its own. Every element of a container shares the container's owner, so which element it is does not enter the comparison.
 - a **parameter**, `this` included, and a constructor's `init{ }` have no owner in the body. Each stands for a path in the caller's frame, so a store through one is settled at the call site (§1.11).
+
+A path that steps *through* an `&` leaves the tree its root names. What lies beyond belongs to a different tree whose root the path does not mention, so no owner can be computed for it and it is not a place this rule can govern. Such a path may be **read** freely; it may not be the destination of a store:
+
+```zane
+main.peer.io = someIO   // ILLEGAL: `peer` is an `&`, so `main` does not name
+                        //   the tree this would write into
+```
 
 A **store** is legal only when every host the stored value names — directly, or through an `&` it **carries** (§1.10) — has an owner that outlives the destination's owner. An assignment, a move, a return, and an argument are all stores. There is one comparison in this section, and those are the places it is made.
 
@@ -363,15 +370,22 @@ Unit relay(this Terminal, io &IO) mut {
 }
 ```
 
-A recorded path is made of **owning** steps only — field selections, and "an element of" for a container, the same edges §1.10's walk follows. Every element of a container shares the container's owner, so no index is recorded and none is needed. A path does not continue *through* an `&`, because what an `&` names is hosted elsewhere and the caller's argument path does not reach it. A verb may therefore not store into a destination reached through a guest it holds:
+A recorded path begins at a **root** — a parameter, or the result — and continues with the same **owning** steps §1.1 owns a place by: field selections, and "an element of" for a container. No index is recorded, because every element of a container shares its owner. The root itself may be an `&T` parameter, which is an ordinary root like any other; what a path may not do is step *through* an `&` further along, for the reason §1.1 gives — beyond that point the path has left the tree its root names.
 
 ```zane
+Unit setNested(target &Terminal, io &IO) mut {
+    target.io = io          // recorded: io comes to rest at target.io
+    return Unit()
+}
+
 Unit wire(this Main, io &IO) mut {
-    this.terminal.io = io   // legal: `terminal` is a hosting field of `this`
-    this.peer.io = io       // ILLEGAL: `peer` is an `&`, so no caller path
-    return Unit()           //   names the object this would write into
+    this.terminal.io = io   // recorded: `terminal` is a hosting field of `this`
+    this.peer.io = io       // ILLEGAL: `peer` is an `&` mid-path (§1.1)
+    return Unit()
 }
 ```
+
+A call **substitutes** the path the caller supplied — an argument path, or the path the result is bound into — for the root, keeps the recorded steps that follow it, and applies §1.1 to the place that results. The steps are preserved rather than collapsed, so `setNested` called as `outer!setNested(main.terminal, main.io)` compares `main.terminal.io` against `main.io`, and two implementations that agree on the summary agree on the verdict.
 
 The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
 
@@ -417,14 +431,14 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Concept | Rule |
 |---|---|
 | Store | Legal only when every host the stored value names — its own, and every host reached through a guest it carries — has an owner that outlives the destination's owner; an assignment, a move, a return, and an argument are all stores |
-| Owner | A symbol is owned by its declaring block; a field or element by its root symbol's owner; a parameter and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A block outlives every block nested in it; hosts inside a stored value travel with it and take the destination's owner |
+| Owner | A symbol is owned by its declaring block; a field or element reached by owning steps by its root symbol's owner; a parameter and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A path stepping *through* an `&` has left its root's tree, has no owner, and may be read but never stored into. A block outlives every block nested in it; hosts inside a stored value travel with it and take the destination's owner |
 | `&` return | Returned `&T` must be rooted in a parameter of either mode, `this` included, because a parameter belongs to the call-site scope; a local is not a root |
 | Guest assignment | Only from a guest source ([`memory.md`](memory.md) §2.8); a bare symbol is a guest source, a `[]` expression is not |
 | Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a value-type borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
 | Carried guest | A value carries every `&` reachable from its type along owning edges, stopping at each `&` rather than continuing through it; one naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store |
-| Resting place | Where a verb stores a parameter — into a place reachable from another parameter or from the result along owning steps only, never through an `&` — is part of its signature, derived from the body, transitive through the calls it makes, and published with it; each call substitutes its argument paths and applies the store rule. It records where a parameter lands, never whether passing one downgrades the caller |
+| Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one downgrades the caller |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
