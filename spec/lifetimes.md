@@ -289,7 +289,7 @@ parked Car(outerHolder.engine)     // Car holds an `&Engine`
 }                                  //   and parked is declared above it
 ```
 
-The third form is what makes the rule hold across a call. Neither frame sees the raise on its own — the argument reaches a parameter in the call-site scope, and inside the callee both parameters share that scope — so the comparison is made at the call site, against what the signature admits:
+The argument form is what makes the rule hold across a call. Neither frame sees the raise on its own — the argument reaches a parameter in the call-site scope, and inside the callee both parameters share that scope — so the comparison is made at the call site, against what the signature admits:
 
 ```zane
 cars List<Car> = []
