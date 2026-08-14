@@ -107,7 +107,7 @@ Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 ### 2.5 Guests are repointable
 
-An `&` symbol or `&` field may be assigned a different target later, as long as the new target is a guest source (§2.8) and the scope rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. Assigning an `&` **field or element** carries the further condition in [`lifetimes.md`](lifetimes.md) §1.10: the destination path and the source path must share a root symbol.
+An `&` symbol or `&` field may be assigned a different target later, as long as the new target is a guest source (§2.8) and the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the owner that rule compares is the field's root symbol's, not the field's own.
 
 ### 2.6 Guests are independent
 
@@ -209,10 +209,10 @@ A **reference type** parameter has two passing modes, one per surface form. The 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
 | Swallow | `T` | a move-source ([`lifetimes.md`](lifetimes.md) §1.2) | take hosting access; the caller's symbol downgrades to a guest |
-| Guest | `&T` | a guest source (§2.8) | read it, mutate it, or return it as `&T`; store it only under the root rule ([`lifetimes.md`](lifetimes.md) §1.10) |
+| Guest | `&T` | a guest source (§2.8) | read it, mutate it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
 
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright.
-- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly. Binding it into an `&` **field** is a separate question, settled by the root rule in [`lifetimes.md`](lifetimes.md) §1.10: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so a store whose two paths do not share a root is refused.
+- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly. Binding it into an `&` **field** is decided elsewhere: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so it does not try. It records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
 
 `&T` is the mode for a call that must not take hosting. A verb that reads or mutates a caller's object without consuming it declares that object `&T`, and the caller passes the symbol as it stands:
 
@@ -245,27 +245,39 @@ Int inspect(this Car, engine &Engine) {
     return this._value + engine.speed
 }
 
-// ILLEGAL: `this` and `engine` are different roots
+// `&` parameter stored into an `&` field: the signature records where it lands
 Unit setEngine(this Car, engine &Engine) mut {
     this.engine = engine
     return Unit()
 }
 
-// installing a guest: take the host, move it into a field, then point at the field
+// taking the host instead: the object owns the engine and points at its own field
 Unit installEngine(this Car, engine Engine) mut {
     this.spare = engine
-    this.engine = this.spare   // legal: both paths root at `this`
+    this.engine = this.spare
     return Unit()
 }
 ```
 
-`setEngine` is refused by the root rule ([`lifetimes.md`](lifetimes.md) §1.10). The callee sees two parameters and cannot tell whether the caller's `engine` is hosted above or below the object `this` names, so a store across two roots has nothing to compare. `installEngine` is the shape that works: the object takes hosting of the engine first, and the guest it then stores names storage in its own tree.
+`setEngine` stores a guest it was handed. The callee sees two parameters and cannot tell whether the caller's `engine` is hosted above or below the object `this` names, so it does not decide: its signature records that `engine` comes to rest at `this.engine` ([`lifetimes.md`](lifetimes.md) §1.11), and each call substitutes the argument paths it was given and compares owners ([`lifetimes.md`](lifetimes.md) §1.1).
 
-**The subject parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is not one of the two modes above. For a reference-type subject it is an implicit **guest**; `&` is **never** written on `this`, because there is no second mode for it to distinguish. A guest subject may be read, mutated, returned as `&T` ([`lifetimes.md`](lifetimes.md) §1.7), or used as the root of an `&` store within its own tree ([`lifetimes.md`](lifetimes.md) §1.10), which is everything a method can want from its subject.
+```zane
+car Car(...)
+engine Engine()
+car!setEngine(engine)      // → car.engine = engine; one block owns both: legal
+{
+    spare Engine()
+    car!setEngine(spare)   // ILLEGAL: this block does not outlive car's
+}
+```
+
+`installEngine` is the different shape, not the workaround: it is what to write when the object should **own** the engine rather than name one the caller keeps hosting.
+
+**The subject parameter is never a swallow position.** A method does not consume the object it is called on, so `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is not one of the two modes above. For a reference-type subject it is an implicit **guest**; `&` is **never** written on `this`, because there is no second mode for it to distinguish. A guest subject may be read, mutated, returned as `&T` ([`lifetimes.md`](lifetimes.md) §1.7), or used as the destination of an `&` store ([`lifetimes.md`](lifetimes.md) §1.1), which is everything a method can want from its subject.
 
 So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it guests — because `this` was never a swallow position to begin with. The two kinds diverge here, and visibly: a reference-type `this` is a guest, a value-type `this` is a borrow (mutable under `mut`). They are written identically because in both cases the subject is simply the object the method was called on, and neither kind has a choice to express.
 
-Binding a swallowed parameter into `&` storage is illegal for the same reason, and the parameter mode is what makes it visible at the signature. This is not a guest-source restriction — a bare symbol is a guest source (§2.8) — but a scope one: a swallowed value is hosted at the call site, while an `&` field lives with the object that holds it, which may outlive the call:
+Binding a **swallowed** parameter into `&` storage is illegal, and the parameter mode is what makes that visible at the signature. This is not a guest-source restriction — a bare symbol is a guest source (§2.8) — but a lifetime one, and it is the one case no argument path can rescue. A swallowed value is hosted at the call site, and the caller has already given up its host by passing it ([`lifetimes.md`](lifetimes.md) §1.8), so there is no path the caller could name for the store rule to compare against:
 
 ```zane
 Unit setEngineSwallowed(this Car, engine Engine) mut {

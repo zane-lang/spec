@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.33 guest
-- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, or returned as `&T`, but it cannot outlive its host. It may be stored in an `&` field or element only when the store's destination and source paths share a root symbol ([`lifetimes.md`](lifetimes.md) §1.10), so a stored guest never crosses out of the tree it was written through. It may be minted from any place but a `[]` expression (§3.36), and it names the object hosted there at that moment, travelling with that object if it is later moved. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
+- **Meaning:** The source-facing `&T`: access to a hosted reference-type object without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its host. Every store of a guest, and every later store of a value that carries one (§3.42), compares owners (§3.43): what the guest names must have an owner that outlives the owner of the place holding it ([`lifetimes.md`](lifetimes.md) §1.1). It may be minted from any place but a `[]` expression (§3.36), and it names the object hosted there at that moment, travelling with that object if it is later moved. Internally, a guest is represented by a tether (§3.24) that resolves through an anchor cell (§3.23).
 - **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host. The pair names the source relationship without exposing its runtime mechanism.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -245,7 +245,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.37 passing mode
-- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (readable, mutable, and returnable, and storable only within the tree it is reached through; requires a guest source, which a bare symbol satisfies). The subject parameter (§3.38) has no such choice — it is always a guest — so `&` is never written on `this`. Two overloads may not differ only by the mode at one position.
+- **Meaning:** Which of two ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **swallows** it (hosting access; the caller downgrades to a guest), `&T` takes a **guest** (readable, mutable, returnable, and storable, with a stored guest's resting place recorded in the signature and checked at each call; requires a guest source, which a bare symbol satisfies). The subject parameter (§3.38) has no such choice — it is always a guest — so `&` is never written on `this`. Two overloads may not differ only by the mode at one position.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in both, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -270,9 +270,14 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 
 ### 3.42 carried guest
-- **Meaning:** An `&` reachable from a value's type by following **owning** edges — the same graph the boxed-member rule reads (§3.39). The walk finds an `&` member and stops there: the `&` itself is a carried guest, and a type's own `&` field is the shortest case, found after no edges at all. What the walk does not do is continue *through* the `&` into whatever it names, because that object is hosted elsewhere and travels separately. A value that carries a guest is re-checked every time it is **raised**: moved into a host in a higher scope, returned, or passed where another argument may take it. Each such guest must then name a host at or above the destination, or one inside the raised value itself. A value carrying no guest is never re-checked.
-- **Why this name:** The value *carries* the guest the way luggage carries its contents — the guest travels with it and is not part of what the value is used for, which is exactly why a check made once where the value was first written does not survive the value moving.
-- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.11
+- **Meaning:** An `&` reachable from a value's type by following **owning** edges — the same graph the boxed-member rule reads (§3.39). The walk finds an `&` member and stops there: the `&` itself is a carried guest, and a type's own `&` field is the shortest case, found after no edges at all. What the walk does not do is continue *through* the `&` into whatever it names, because that object is hosted elsewhere and travels separately. Every store of a value re-compares the owners (§3.43) of the hosts its carried guests name, which is why a check made where the value was first written does not have to survive the value moving. A guest naming a host **inside** the value is satisfied at every destination, because that host travels with it. A value carrying no guest is never re-checked.
+- **Why this name:** The value *carries* the guest the way luggage carries its contents — the guest travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
+- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
+
+### 3.43 owner
+- **Meaning:** The lifetime a place belongs to, and the only thing the store rule compares. A **symbol** is owned by the block that declares it; a **field or element** is owned by its root symbol's owner, never its own; a **parameter** (`this` included) and a constructor's `init{ }` have no owner in the body at all — each stands for a path in the caller's frame, so a store reaching one is settled at the call site. A block outlives every block nested within it, and a block is one lifetime rather than a sequence: everything it owns dies when it drains, with nothing to observe between. Hosts inside a stored value travel with it and take the destination's owner.
+- **Why this name:** It names what a place's lifetime *is owed to* rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's owner tells you everything.
+- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
 ---
 
