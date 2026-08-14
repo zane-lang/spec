@@ -401,6 +401,7 @@ The summary is derived from the body and published with the signature, so a call
 For an `&` field the callee must still declare the corresponding parameter `&T` ([`memory.md`](memory.md) §2.9, [`types.md`](types.md) §3.9). A swallowed value is hosted at the call site, so binding one into `&` storage would leave the field naming storage the caller may move out from under it, and no argument path the caller could supply would fix that.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-empty-template-the-design-that-would-have-needed-no-signatures) — "The empty template: the design that would have needed no signatures".
 
 ---
 

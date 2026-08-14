@@ -276,3 +276,29 @@ That summary is the price, and it is a real one. A verb's `&`-storing behaviour 
 The orphan in [`memory.md` §2.9](https://github.com/zane-lang/spec/blob/6b668be1df1708cc23704254cc5aab57e1a365d2/spec/memory.md#29-function-parameters-swallow-and-guest) survives all of this, and now for a reason it can state. Binding a **swallowed** parameter into `&` storage is still illegal, and it is the single case no argument path rescues: the caller gave up its host in the act of passing, so at the call site there is no path left on the source side for the comparison to name. Every other refusal in this area is a comparison that failed. That one is a comparison that cannot be set up.
 
 What none of this touches is the other way a guest can be left naming nothing. Everything above is about a value **moving** away from what it points at. A host can also simply **die** while the guest is still there — an element removed from a container, a `#variant` slot changing case — and neither of those is a store, so no rule here reaches them. [`memory.md` §2.8.1](https://github.com/zane-lang/spec/blob/b486fd5f8c4d2ecdb14b8ef105394dc43aaf3bc6/spec/memory.md#281-a-guest-follows-the-object-an-overwritten-slot-carries-its-guests-forward) enumerates two fates for a hosted object, moved and overwritten, and says they "never compete, because an object cannot both leave and die in the same step." That is true, and the pair is not exhaustive: an overwrite leaves a successor occupant for the guest to carry forward to, and a removal leaves nothing. We are leaving that open deliberately rather than answering it here, because it is a different question with a different shape, and answering two at once is how the first version of this chapter got written three times.
+
+## The empty template: the design that would have needed no signatures
+
+The chapter above ends by paying a bill. It is worth writing down the design that never incurs it, because we did not reject that design for being wrong, and because this corner of the language is significant enough that a future revisit should start from what we already know rather than rediscover it.
+
+Push the owner idea one step harder and `init{ }` stops being a constructor at all. It becomes an **empty template** of the object under construction — a thing you fill in field by field, whose root is `init` itself:
+
+```zane
+Main() {
+    init.io = IO()
+    init.terminal.io = init.io   // legal: both rooted at `init`
+    return init
+}
+```
+
+Now the root comparison holds everywhere with no exception, *including* inside a constructor, because `init` is a root like any other. Which makes `Terminal(io &IO) => init{io}` illegal — `init` and `io` do not share one. An `&` may only ever be created pointing inside the tree that will hold it, structurally, at the moment it is written. No deferral, no call-site substitution, no summary published in a signature. And no `init{ }` carve-out either, because the thing the carve-out existed to excuse cannot happen.
+
+That is a stricter language than the one we have and a strictly cheaper one to check. Every complaint this story makes about the raise enumeration it answers better than the owner rule does: nothing crosses a call boundary, so there is nothing to enumerate *and* nothing to publish. If the whole design had to be defended on the count of "how much does a compiler have to know about a function it cannot see", this version wins outright, because the answer is nothing.
+
+What it costs is **wiring**, in two places, and both are severe enough that we did not take it.
+
+A package can no longer ship a constructor that takes a guest. A `type Logger = #struct { out &Writer }` cannot come with a `Logger(out &Writer)`, because that constructor is precisely the illegal form. Whoever embeds a `Logger` has to reach into its `out` field from their own `init` to wire it — so every borrowing type leaks its internals to its user, and the encapsulation a library exists to provide is gone for the entire class of types that hold a reference. That is not a restriction on what a guest may point at. It is a restriction on who is allowed to write the pointing, and it lands on exactly the boundary a package is supposed to be.
+
+And a standalone `&`-holding local stops being expressible. `terminal Terminal(io)` on two siblings of one block — the most ordinary use of a guest there is, and the program this entire line of work started from — has no shared root to satisfy the rule and no aggregate to be embedded in. Under this design a type with an `&` field is usable only *inside* a larger tree whose constructor wires it. An object holding a reference is no longer a thing in its own right; it is a fragment of a tree, and saying so out loud is the honest description of what the design commits to.
+
+We are recording this rather than merely declining it because the trade is not settled forever. The owner rule buys library wiring and standalone locals with a per-signature summary that is **load-bearing for soundness** — unlike the effect summaries it is modelled on, where a wrong answer costs precision and not safety. The empty template buys a checker with no interprocedural component at all, and pays in expressiveness that is visible in every program rather than in an obligation that is invisible until it breaks. If the summary turns out to be the wrong debt — too costly to compute, too brittle across separate compilation, too surprising once a library author discovers that where they store a parameter is public API — this is the road back. The two costs above are what a successor design would have to buy off, and it should buy them off knowingly rather than meet them again by accident.
