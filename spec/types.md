@@ -316,7 +316,7 @@ car Car(engine)     // legal: a bare symbol is a guest source
 car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-What still constrains such a field is scope, not source: the object it points at must be hosted in the same or a higher lexical scope than the `&` itself ([`lifetimes.md`](lifetimes.md) §1.1). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
+What still constrains such a field is lifetime, not source: the object it points at must have an owner that outlives the owner of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's owner, so that comparison does not stop at construction — every later store of the containing value asks it again, over the guests that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no owner until the caller says where the object goes; it records which parameters land in `&` fields and each call settles it ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 

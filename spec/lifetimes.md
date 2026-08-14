@@ -1,6 +1,6 @@
 # Zane Lifetimes
 
-This document specifies Zane's lexical lifetime rules: `&` assignment scope checks, rehosting, and deterministic destruction. It builds on the host and guest storage forms defined in [`memory.md`](memory.md).
+This document specifies Zane's lexical lifetime rules: the owner comparison every store makes, rehosting, and deterministic destruction. It builds on the host and guest storage forms defined in [`memory.md`](memory.md).
 
 > **See also:** [`memory.md`](memory.md) §2 for hosting and storage, §4 for anchors and tethers. [`concurrency.md`](concurrency.md) §4 for water-tower lifetimes. [`effects.md`](effects.md) §2 for `mut`.
 
@@ -8,30 +8,55 @@ This document specifies Zane's lexical lifetime rules: `&` assignment scope chec
 
 ## 1. Scope Rules and Moves
 
-### 1.1 `&` assignment uses host scope
-An `&` assignment is legal only when the source is a guest source ([`memory.md`](memory.md) §2.8) **and** the target's host is declared in the same or a higher lexical scope than the `&` itself.
+### 1.1 A store may not raise a value above what it names
+Every place has an **owner**, and an owner is a lifetime:
+
+- a **symbol** — a local binding — is owned by the block that declares it
+- a **field or element** reached from its root by **owning** steps is owned by that root symbol's owner, never its own. Every element of a container shares the container's owner, so which element it is does not enter the comparison.
+- a **parameter**, `this` included, and a constructor's `init{ }` have no owner in the body. Each stands for a path in the caller's frame, so a store through one is settled at the call site (§1.11).
+
+A path that steps *through* an `&` leaves the tree its root names. What lies beyond belongs to a different tree whose root the path does not mention, so no owner can be computed for it and it is not a place this rule can govern. Such a path may be **read** freely; it may not be the destination of a store:
 
 ```zane
-outerTree Tree()
-r &Node = outerTree.root
-{
-    innerTree Tree()
-    r = innerTree.root // ILLEGAL: the host's scope is nested relative to the guest
-}
+main.peer.io = someIO   // ILLEGAL: `peer` is an `&`, so `main` does not name
+                        //   the tree this would write into
 ```
 
-The two conditions are independent. Nearly every place expression is a guest source ([`memory.md`](memory.md) §2.8), so in practice this rule is the scope comparison, and it is the comparison that does the work:
+A **store** is legal only when every host the stored value names — directly, or through an `&` it **carries** (§1.10) — has an owner that outlives the destination's owner. An assignment, a move, a return, and an argument are all stores. There is one comparison in this section, and those are the places it is made.
+
+Two clauses complete it. A **block** outlives every block nested within it, and which block owns a symbol is fixed at that symbol's declaration, so nothing later can falsify it. And the hosts **inside** a stored value travel with it, taking the destination's owner — which is why a value may always be stored somewhere its own guests already point into.
+
+A block is one lifetime, not a sequence of them. Everything it owns dies when it drains (§2.1), with no user code interleaved and no order among them to observe, so two things one block owns can never see each other's death. That is why the comparison is between owners rather than between declaration positions.
 
 ```zane
 node Node()
-r &Node = node   // legal: same scope
+r &Node = node                  // legal: one block owns both
+
+outerTree Tree()
+{
+    r2 &Node = outerTree.root   // legal: the outer block outlives this one
+    innerTree Tree()
+    r = innerTree.root          // ILLEGAL: this block does not outlive r's
+}
 ```
 
-The compiler compares declaration scopes. It does not perform borrow inference or lifetime annotation solving.
+The source must also be a guest source ([`memory.md`](memory.md) §2.8). That condition is independent of the comparison, and nearly every place expression satisfies it, so in practice this rule is the owner comparison.
+
+A field is **not** confined to its own tree. It inherits its root symbol's owner, so an object and what its `&` field names may be siblings in one block:
+
+```zane
+io IO()
+terminal Terminal(io)   // legal: one block owns terminal and io
+```
+
+That costs nothing while both sit there, and the moment `terminal` is stored anywhere the comparison runs again — now against the new destination, and against the guest `terminal` carries (§1.10). A store through a path that has **no** owner in this frame is the deferred case: `init{ }` fills an object whose destination the constructor cannot see, so the obligation is published in the signature and discharged by each caller (§1.11).
+
+The comparison the compiler makes is between two declaration blocks, after resolving each place to the block that owns it. It does not perform borrow inference or lifetime annotation solving.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
 
 ### 1.2 Move-sources are host symbols, hosting verb results, or `#variant` case forms
 A move-source must denote a **hosting value the expression is entitled to consume**. Three forms qualify:
@@ -99,7 +124,7 @@ The restriction applies only to symbol move-sources. A hosting verb result or `#
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses) — "The declaration-block rule, and the flow analysis it refuses".
 
 ### 1.4 Destination scope must contain or match source scope
-A value may move into a new host only when the destination host is declared in the same or a higher lexical scope than the source host.
+A move is a store, so §1.1 governs it. Read against the moved value's own host, the comparison says: a value may move into a new host only when the destination host is declared in the same or a higher lexical scope than the source host.
 
 ```zane
 node Node()
@@ -109,12 +134,16 @@ node Node()
 }
 ```
 
-A hosting verb result (§1.2) has no source host; its source scope is the expression that produces it. That scope is always nested within or equal to the destination host's scope, so this restriction is trivially satisfied and never blocks moving a verb result into any host.
+A hosting verb result (§1.2) has no source host; its source scope is the expression that produces it. That scope is always nested within or equal to the destination host's scope, so this reading is trivially satisfied and never blocks moving a verb result into any host. What such a value **carries** is a separate question, and §1.1 asks it against the host the value is bound into.
 
 A parameter's value is exempt. Because a parameter belongs to the call-site scope and is not part of the body (§1.5), lending it into a local or a nested call does not sink hosting into that lower scope: the value returns to the call site when the local exits, unless the callee moves it into another parameter's hosting storage or into the return (§1.8).
 
+This reading concerns the moved value's own host. When the value **carries guests**, §1.1 compares their owners too, and §1.10 says which guests those are.
+
 ### 1.5 Parameters belong to the call site
 A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosting reference-type value to a plain `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
+
+Its **owner** (§1.1) is therefore no block of the body. A parameter stands for the argument path the caller wrote, which is why a store that reaches a parameter is settled by the call site rather than by the body (§1.11).
 
 This is stated for the swallowing mode because that is the only mode where hosting crosses the call boundary at all. An `&T` guest parameter never takes hosting ([`memory.md`](memory.md) §2.9), so nothing about the argument's lifetime changes when one is used; the call-site scope keeps hosting throughout.
 
@@ -151,15 +180,15 @@ This also applies across calls. Passing a hosting value to a plain `T` parameter
 A hosting verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
 ### 1.7 Returned `&` values must be rooted in a parameter
-A function may return an `&T` only when the returned guest is rooted in one of the function's **parameters** — the parameter used bare, or a field access whose base chain reaches it. `this` counts as a parameter for this rule.
+A return is a store into the call-site scope, so §1.1 governs it, and this is what the comparison comes to for a returned guest: a function may return an `&T` only when the returned guest is rooted in one of the function's **parameters** — the parameter used bare, or a field access whose base chain reaches it. `this` counts as a parameter for this rule.
 
 ```zane
 &Weapon getWeapon(this Player) => this.weapon
 ```
 
-Both parameter modes are roots, and for the same reason: a parameter belongs to the **call-site scope** (§1.5), never to the body. A guest rooted in one therefore names something hosted in the scope the return value lands in, so §1.1 compares the two directly at the call site and rejects the cases that would dangle. A swallowing `T` parameter qualifies on exactly these terms — the value it took outlives the call (§1.5) — even though passing to it downgrades the caller (§1.8).
+Both parameter modes are roots, and for the same reason: a parameter belongs to the **call-site scope** (§1.5), never to the body, so it has no owner the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two owners are finally both in view. A swallowing `T` parameter qualifies on exactly these terms — the value it took outlives the call (§1.5) — even though passing to it downgrades the caller (§1.8).
 
-A **local** is the case this rule excludes, and it is excluded by lifetime rather than by what may mint a guest:
+A **local** is the case this rule excludes, and it is excluded by lifetime rather than by what may mint a guest. A body block does not outlive the call-site scope, so §1.1 rejects the store outright:
 
 ```zane
 &Node bad() {
@@ -167,6 +196,8 @@ A **local** is the case this rule excludes, and it is excluded by lifetime rathe
     return value   // ILLEGAL: value is hosted by the body scope, which drains at the return
 }
 ```
+
+This rule governs a return that **is** an `&T`. A return that *carries* one — a hosting value with an `&` reachable inside it — is the same store, and §1.1 compares the carried guest's owner on the same reasoning.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
@@ -186,7 +217,7 @@ The value outlives the call (§1.5), so the downgraded guest always resolves to 
 
 A verb treats a reference-type host argument in one of three ways, each fixed by its signature:
 
-- it takes a **guest** — declares the parameter `&T`; the caller stays a full host, and the callee may read it, mutate it, or keep it past the call by storing or returning it.
+- it takes a **guest** — declares the parameter `&T`; the caller stays a full host, and the callee may read it, mutate it, return it, or store it. Where a stored guest comes to rest is part of the signature (§1.11), and the caller's argument paths settle whether that store is legal (§1.1).
 - it **relays** the host — declares a swallowing `T` and returns a hosting handle; the caller downgrades to a guest but may bind the return to host the object again (§1.9).
 - it **consumes** the host — declares a swallowing `T` and returns no host; the caller downgrades to a guest, and the value stays wherever the verb placed it.
 
@@ -215,7 +246,7 @@ Unit main() {
 }
 ```
 
-A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for hosting access, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller as host. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed host downgrades never depends on the callee's body or on the build. Using hosting access only to read a value is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it hosts a value or not.
+A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for hosting access, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller as host. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed host downgrades never depends on the callee's body or on the build. The resting-place summary of §1.11 does not reopen this. It records **where** a parameter's value comes to rest, which the caller needs in order to compare owners; it never changes **whether** passing one downgrades the caller, which the declared mode fixes on its own. Using hosting access only to read a value is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it hosts a value or not.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
@@ -234,6 +265,144 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
+### 1.10 A value carries the guests reachable along owning edges
+A value **carries a guest** when an `&` is reachable from its type by following **owning** edges (see [`adt.md`](adt.md) §4). The walk finds an `&` member and stops at it: a type's own `&` field is the shortest case, reached after no edges at all, and an `&` nested inside a hosting field or container element is reached by following those edges to it. The walk does not continue *through* an `&` into what it names, because that object is hosted elsewhere and moves separately.
+
+The hosts a value's carried guests name are what §1.1 compares alongside the value's own host. A guest naming a host **inside** the value is satisfied at every destination, because that host travels with it. A guest naming anything else keeps the owner it has, and every store of the value asks again whether that owner outlives the new destination:
+
+```zane
+outerHolder Holder(Engine(Int(1)))
+parked Car(outerHolder.engine)     // Car holds an `&Engine`
+{
+    innerHolder Holder(Engine(Int(2)))
+    arriving Car(innerHolder.engine)
+    parked = arriving              // ILLEGAL: the guest names a host owned by this
+}                                  //   block, and parked is owned above it
+```
+
+The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. That decides only whether a value *may* carry a guest. What a carried guest **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no host, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
+
+A value with **no source host** — a hosting verb result or a `#variant` case form (§1.2) — is asked the same question, against the host it is bound into. It re-parents nothing, so §1.4 waves it through; what it carries still has to reach the destination:
+
+```zane
+type Expr = #variant {
+    intLit String;
+    ref &Node;      // an `&` payload, so this case form takes a guest source
+}
+
+result Expr = Expr.intLit("0")
+{
+    innerTree Tree()
+    result = Expr.ref(innerTree.root)   // ILLEGAL: the case form carries a guest to
+}                                       //   this block, and result is owned above it
+```
+
+`innerTree.root` is a field access, which is a guest source ([`memory.md`](memory.md) §2.8) and so is what an `&` payload asks for. It would **not** do for a hosting payload, which takes a move-source ([`adt.md`](adt.md) §3.2) — the two payload kinds ask for different things, and only the `&` kind produces a carried guest here.
+
+A guest naming inside the value is what a constructor's `init{ }` normally settles:
+
+```zane
+Main(io std$IO) => init{io, terminal = Terminal(io)}
+```
+
+`io` moves into the Main's own field, and the guest inside `terminal` follows it there ([`memory.md`](memory.md) §2.8.1). A `Main` may therefore be stored anywhere, while a `Car` holding a guest to storage it does not own may only go where that storage outlives it.
+
+Everything reachable under one root symbol belongs to one hosting tree ([`memory.md`](memory.md) §2.1), which is why a guest that names inside its own value needs no further comparison: it travels with what it points at and goes when the tree goes. What none of this reaches is a host destroyed while its tree lives on — a separate matter, governed by §2.1 and by [`memory.md`](memory.md) §2.8.1.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-check-that-fired-once-and-the-move-that-outran-it) — "The check that fired once, and the move that outran it".
+
+### 1.11 A signature records where its parameters come to rest
+A parameter has no owner in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where the value comes to rest**: when a verb stores a parameter into a place reachable from another parameter or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1.
+
+```zane
+type Terminal = #struct {
+    io &IO;       // an `&` field
+}
+
+type Main = #struct {
+    terminal Terminal;   // a hosting field
+    peer &Terminal;      // an `&` field
+    io IO;               // a hosting field
+}
+
+Unit setIO(this Terminal, io &IO) mut {
+    this.io = io          // recorded: io comes to rest at this.io
+    return Unit()
+}
+```
+
+Both paths below resolve to `main`'s owner, because a field takes its root symbol's owner (§1.1) and both are reached from `main`:
+
+```zane
+main Main()
+main.terminal!setIO(main.io)       // → main.terminal.io = main.io
+                                    //   one block owns both: legal
+{
+    ioInner IO()
+    main.terminal!setIO(ioInner)   // → main.terminal.io = ioInner
+}                                   //   ILLEGAL: this block does not outlive main's
+```
+
+A constructor is the same case. Its `init{ }` fills an object whose destination the body cannot see, so what the body can state is which parameters land in it:
+
+```zane
+Terminal(io &IO) => init{io}       // recorded: io comes to rest at the result's io
+```
+
+```zane
+main Main()
+{
+    ioInner IO()
+    t Terminal(ioInner)   // → t.io = ioInner; one block owns both: legal
+    main.terminal = t     // ILLEGAL: t carries a guest owned by this block,
+}                         //   and main is owned above it
+```
+
+A swallowed `T` parameter is recorded the same way, and that is what settles an argument carrying a guest. Neither frame sees the problem alone — the argument reaches a parameter in the call-site scope, and inside the callee both parameters share it:
+
+```zane
+cars List<Car> = []
+{
+    innerHolder Holder(Engine(Int(2)))
+    arriving Car(innerHolder.engine)
+    cars!append(arriving)   // append records: car comes to rest in this's elements
+}                           //   → ILLEGAL: arriving carries a guest owned by this
+                            //     block, and cars is owned above it
+```
+
+The summary is **transitive**, in the way the effect summaries of [`effects.md`](effects.md) §5.2 are: a verb that hands a parameter to another verb inherits the resting places that call records for it. Without that, a guest could be laundered by passing it one frame further than the check looked.
+
+```zane
+Unit relay(this Terminal, io &IO) mut {
+    this!setIO(io)        // recorded: io comes to rest at this.io, via setIO
+    return Unit()
+}
+```
+
+A recorded path begins at a **root** — a parameter, or the result — and continues with the same **owning** steps §1.1 owns a place by: field selections, and "an element of" for a container. No index is recorded, because every element of a container shares its owner. The root itself may be an `&T` parameter, which is an ordinary root like any other; what a path may not do is step *through* an `&` further along, for the reason §1.1 gives — beyond that point the path has left the tree its root names.
+
+```zane
+Unit setNested(target &Terminal, io &IO) mut {
+    target.io = io          // recorded: io comes to rest at target.io
+    return Unit()
+}
+
+Unit wire(this Main, io &IO) mut {
+    this.terminal.io = io   // recorded: `terminal` is a hosting field of `this`
+    this.peer.io = io       // ILLEGAL: `peer` is an `&` mid-path (§1.1)
+    return Unit()
+}
+```
+
+A call **substitutes** the path the caller supplied — an argument path, or the path the result is bound into — for the root, keeps the recorded steps that follow it, and applies §1.1 to the place that results. The steps are preserved rather than collapsed, so `setNested` called as `outer!setNested(main.terminal, main.io)` compares `main.terminal.io` against `main.io`, and two implementations that agree on the summary agree on the verdict.
+
+The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
+
+For an `&` field the callee must still declare the corresponding parameter `&T` ([`memory.md`](memory.md) §2.9, [`types.md`](types.md) §3.9). A swallowed value is hosted at the call site, so binding one into `&` storage would leave the field naming storage the caller may move out from under it, and no argument path the caller could supply would fix that.
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-empty-template-the-design-that-would-have-needed-no-signatures) — "The empty template: the design that would have needed no signatures".
+
 ---
 
 ## 2. Lifetime and Destruction
@@ -250,7 +419,7 @@ If a scope launches concurrent work, objects hosted by that scope remain alive u
 Guests do not participate in hosting and cannot prolong object lifetime. They only track a live object whose host is already guaranteed to outlive them.
 
 ### 2.4 Null guests are not a user-facing state
-Because scope rules (§1.1) prevent guests from outliving their hosts, the runtime does not expose a normal “null guest” programming model to the user.
+An `&` is never optional and is never tested for emptiness; the runtime exposes no “null guest” programming model to the user. One rule keeps a stored guest pointing at something live as values move: §1.1 compares owners at every store, over the value's own host and over the guests it carries (§1.10), deferring to the call site wherever a parameter stands in for a path it cannot see (§1.11). What that covers is **relocation** — a value travelling away from what its guests name. A host destroyed while its tree lives on is the separate question §2.1 and [`memory.md`](memory.md) §2.8.1 answer.
 
 ---
 
@@ -271,11 +440,15 @@ Because scope rules (§1.1) prevent guests from outliving their hosts, the runti
 
 | Concept | Rule |
 |---|---|
+| Store | Legal only when every host the stored value names — its own, and every host reached through a guest it carries — has an owner that outlives the destination's owner; an assignment, a move, a return, and an argument are all stores |
+| Owner | A symbol is owned by its declaring block; a field or element reached by owning steps by its root symbol's owner; a parameter and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A path stepping *through* an `&` has left its root's tree, has no owner, and may be read but never stored into. A block outlives every block nested in it; hosts inside a stored value travel with it and take the destination's owner |
 | `&` return | Returned `&T` must be rooted in a parameter of either mode, `this` included, because a parameter belongs to the call-site scope; a local is not a root |
-| Guest assignment | Only from a guest source ([`memory.md`](memory.md) §2.8) whose host is in the same or a higher lexical scope than the guest; a bare symbol is a guest source, a `[]` expression is not |
+| Guest assignment | Only from a guest source ([`memory.md`](memory.md) §2.8); a bare symbol is a guest source, a `[]` expression is not |
 | Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a value-type borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
-| Move destination scope | Destination host must be in the same or a higher lexical scope than the source host |
+| Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
+| Carried guest | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. One naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store. Carrying none skips this comparison only, never the value's own host |
+| Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one downgrades the caller |
 | Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
