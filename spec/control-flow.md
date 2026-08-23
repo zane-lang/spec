@@ -33,6 +33,8 @@ ran Bool = if(ready) {
 A block takes no parameters and has no name. It is not a lambda: a lambda is a self-typed function *value* with a complete written type ([`functions.md`](functions.md) §7.2), while a block is a source construct that never becomes a value.
 
 > **See also:** [`syntax.md`](syntax.md) §4.9 for where a block may be written.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-block-is-not-a-lambda) — "A block is not a lambda".
+
 
 ### 2.2 A block captures, and does not escape
 A block reads and writes the bindings of the scope it is written in, exactly as any other braced block does. Nothing is passed to it.
@@ -42,6 +44,8 @@ A block **MUST NOT** escape the call it is written at. It may not be stored, ret
 This non-escape is what makes capture safe here while it stays forbidden for lambdas ([`functions.md`](functions.md) §7.4, [`concurrency.md`](concurrency.md) §5.2). A lambda may be stored and run later, possibly in parallel, so captured state could be reached from somewhere the compiler cannot see. A block runs during the call that receives it, in the frame that wrote it.
 
 A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`concurrency.md`](concurrency.md) §3.1).
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#where-the-capture-would-have-bitten) — "Where the capture would have bitten".
+
 
 ### 2.3 A block is a scope for bindings, not for control transfer
 A block owns the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
@@ -65,6 +69,8 @@ Transparency is what keeps an exit usable at any depth. A construct that opened 
 Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
 
 There is no intrinsic that exits a scope, and none is needed. One would have to name a scope further up and unwind to it, which Zane does not do ([`error-handling.md`](error-handling.md) §4).
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-could-not-become-a-call) — "The exit that could not become a call".
+
 
 ### 2.4 A block may yield a value
 A `Block<T>` yields a `T`. Each of its yielding paths ends with `resolve`, which substitutes the value into the call that receives the block — the same keyword and the same meaning it carries in an abort handler ([`error-handling.md`](error-handling.md) §3.3).
@@ -110,6 +116,8 @@ ran:else() {
 ```
 
 Because a chain is a sequence of ordinary calls rather than one construct, its parts are joined by the value they pass along and nothing else. The compiler checks each call; it does not check that a chain is well-formed.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-last-thing-still-tied-to-a-package) — "The last thing still tied to a package".
+
 
 ### 3.3 A condition is evaluated unless it is written as a block
 The condition of an `elif` is an ordinary argument and is evaluated before the call, like any other (§2.4 of [`operators.md`](operators.md) states the same for the `Bool` operators). A condition that must not run when an earlier branch already matched is written as a block, selecting the `Block<Bool>` overload:
@@ -156,6 +164,8 @@ attempt!to(maxTries) {
 The condition is a coercion site with destination type `@primitives$Bool` ([`types.md`](types.md) §4.2). The destination is the storage primitive rather than a fundamental type, so the one construct the language keeps names no package's type. `core` bridges the two by declaring the implicit constructor from its `Bool` to that primitive, exactly as it declares the one from `@concepts$Number` to `Int` ([`types.md`](types.md) §2.6).
 
 Zane defines no general truthiness rule: a type enters a `guard` only when it declares a single applicable implicit constructor to `@primitives$Bool`. Any type may declare one, so a `guard` is not confined to `core`'s `Bool`; the no-chaining rule ([`types.md`](types.md) §4.3) keeps that reach one step deep.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-could-not-become-a-call) — "The exit that could not become a call".
+
 
 ```zane
 {
@@ -205,11 +215,15 @@ The language provides exactly two control-flow operations:
 Both take **storage primitives** rather than the fundamental types. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
 An intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`, the same conversion a `guard` condition uses (§4.1). A type that declares its own conversion is accepted on the same terms.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
+
 
 ### 5.2 Repetition is bounded by the shape of `repeat`
 `repeat` takes a count. No sequence of calls to it can repeat an unbounded number of times, so every control-flow construct built on it carries a bound, whoever declares it. The guarantee is a property of the intrinsic rather than of who may call it.
 
 An indefinite repetition is expressed by giving a ceiling and stopping inside the body (§3.5), or by a scheduling facility that names the recurrence as such.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
+
 
 ### 5.3 Any package may declare control flow
 A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and calls the intrinsics, exactly as `core` does for §3.

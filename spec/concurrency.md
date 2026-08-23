@@ -171,6 +171,8 @@ Lambdas **MUST NOT** capture outer variables. All dependencies must be passed ex
 
 A **block argument** captures and is exempt, because it cannot be stored and cannot be spawned (§3.1). It runs during the call that receives it, in the frame that wrote it, so the reach of what it captures is the reach of ordinary lexical code. See [`control-flow.md`](control-flow.md) §2.2.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#where-the-capture-would-have-bitten) — "Where the capture would have bitten".
+
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
 ### 5.3 No `async`/`await` syntax
