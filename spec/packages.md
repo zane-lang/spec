@@ -86,6 +86,8 @@ The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2
 
 An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
+
 ### 3.4 Each imported entity has exactly one spelling
 
 An import states one spelling and that spelling is the only one available in the file. `import math as m` makes `m$sqrt` legal and `math$sqrt` illegal; `import math$sqrt as root` makes `root` legal and `sqrt` illegal.
@@ -98,6 +100,8 @@ result Float = math$sqrt(value)   // ILLEGAL: the file spells this package `m`
 ```
 
 Two imports that would give one entity two spellings in the same file are a compile-time error, so `import math` and `import math$sqrt` cannot both appear.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
 ### 3.5 An imported name carries every declaration that shares it
 

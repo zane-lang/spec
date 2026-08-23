@@ -278,6 +278,7 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
 
 ---
 

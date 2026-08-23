@@ -96,6 +96,8 @@ Because `core` is an ordinary dependency, two of its versions may be linked side
 
 A file that writes `Int` therefore imports `core` first, most often with the whole-package form `import core$` ([`packages.md`](packages.md) §3.3). Examples throughout this specification are written as though that import were already present, so `core`'s members appear unqualified in them.
 
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
+
 `Unit` is the unit type. Its `core` declaration is an empty value `struct`, so it has exactly one logical value and zero-sized storage. `Unit()` is its ordinary `core` constructor. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
 
 ```zane
