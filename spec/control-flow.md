@@ -14,7 +14,7 @@ Zane has no `if` statement and no `loop` statement. It has a way to hand a run o
 - **`Branching and repetition are calls`.** `if`, `elif`, `else`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
 - **`Two intrinsics`.** `@controlflow$branch` and `@controlflow$repeat` are the only primitives, and they are stated over storage primitives so they depend on no package.
 - **`Repetition is bounded by construction`.** `repeat` takes a count, so no control flow built on it can repeat without a written bound.
-- **`guard` is grammar.** An exit cannot be a call, because a call is an expression inside the scope it would have to leave.
+- **`guard` is grammar.** An exit cannot be a call, because a call is an expression inside the scope it would have to leave — which is also why no intrinsic exits a scope.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
 
 ---
@@ -61,6 +61,10 @@ Int firstNegative(values IntList) {
 The `guard` above leaves `firstNegative`'s body scope, so it ends the repetition rather than one pass of it. A `return` inside a block returns from the enclosing verb.
 
 Transparency is what keeps an exit usable at any depth. A construct that opened a control-transfer boundary would trap every exit written inside it, which is the situation `guard` exists to avoid (§4).
+
+Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
+
+There is no intrinsic that exits a scope, and none is needed. One would have to name a scope further up and unwind to it, which Zane does not do ([`error-handling.md`](error-handling.md) §4).
 
 ### 2.4 A block may yield a value
 A `Block<T>` yields a `T`. Each of its yielding paths ends with `resolve`, which substitutes the value into the call that receives the block — the same keyword and the same meaning it carries in an abort handler ([`error-handling.md`](error-handling.md) §3.3).
@@ -178,7 +182,7 @@ The condition is a coercion site with destination type `Bool` ([`types.md`](type
 The block attached to a `guard` is part of the `guard` grammar, not a block argument (§2).
 
 ### 4.3 `guard` is grammar because an exit cannot be a call
-`guard` is the one control-flow construct the language keeps. A call is an expression evaluated *inside* a scope, so it can never be the thing that leaves that scope; only a construct that opens no scope of its own and is not a call can exit the scope it sits in.
+`guard` is the one control-flow construct the language keeps as grammar rather than a `core` declaration. A call is an expression evaluated *inside* a scope, so it can never be the thing that leaves that scope; only a construct that opens no scope of its own and is not a call can exit the scope it sits in. For the same reason there is no exit intrinsic (§2.3).
 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-that-opens-no-scope-of-its-own) — "An exit that opens no scope of its own".
 
@@ -248,6 +252,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Capture | A block reads and writes its enclosing scope's bindings |
 | Escape | A block may not be stored, returned, bound, placed in storage, or spawned; it may be handed to another verb |
 | Scope | A block owns its own declarations but is transparent to `return`, `abort`, and `guard`, which act on the scope containing the call |
+| Lowering | A verb taking a block parameter is expanded at its call site, transitively, so a block never crosses a call boundary and an exit inside one is a jump within one frame |
 | Yielding | A `Block<T>` ends its yielding paths with `resolve`; `return` still leaves the enclosing verb |
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
