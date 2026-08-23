@@ -49,9 +49,9 @@ A block owns the symbols declared inside it, and they are destroyed when it ends
 It is **transparent** to control transfer. `return`, `abort`, and `guard` written inside a block act on the scope containing the *call*, not on the block:
 
 ```zane
-Int firstNegative(values Array<Int, n>) {
-    i Int = Int(0)
-    i!to(n) {
+Int firstNegative(values IntList) {
+    i Int = Int(1)
+    i!to(values:size()) {
         guard values[i] < Int(0)
     }
     return i
@@ -196,7 +196,7 @@ The language provides exactly two control-flow operations:
 
 `branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times.
 
-Both take **storage primitives** rather than the fundamental types. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler. `core` reaches its own primitive through the fundamental type's private field, which is what a home package is for; source outside `core` writes the fundamental types and never unwraps them ([`types.md`](types.md) §2.6).
+Both take **storage primitives** rather than the fundamental types. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler. `core` reaches the primitive through the fundamental type's private field, which is what a home package is for; source outside `core` writes the fundamental types and never unwraps them ([`types.md`](types.md) §2.6).
 
 ### 5.2 Repetition is bounded by the shape of `repeat`
 `repeat` takes a count. No sequence of calls to it can repeat an unbounded number of times, so every control-flow construct built on it carries a bound, whoever declares it. The guarantee is a property of the intrinsic rather than of who may call it.
@@ -204,11 +204,11 @@ Both take **storage primitives** rather than the fundamental types. That is what
 An indefinite repetition is expressed by giving a ceiling and stopping inside the body (§3.5), or by a scheduling facility that names the recurrence as such.
 
 ### 5.3 Any package may declare control flow
-The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7). A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and calls the intrinsics, exactly as `core` does for §3.
+A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and passes the block along, exactly as `core` does for §3.
 
 ```zane
 Unit twice(body @concepts$Block) {
-    @controlflow$repeat(Int(2)._v, body)
+    repeat(Int(2), body)
     return Unit()
 }
 
@@ -217,7 +217,7 @@ twice() {
 }
 ```
 
-Nothing distinguishes `core`'s declarations from any other package's except that the fundamental types are `core`'s to declare methods on ([`functions.md`](functions.md) §6.1).
+The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), so nothing forbids calling an intrinsic directly. What a source package cannot do is produce the storage primitive an intrinsic takes, since only `core` unwraps a fundamental type (§5.1). In practice a source package therefore builds on `core`'s `branch` and `repeat`, which take `Bool` and `Int` and forward to the intrinsics — and that is the whole of `core`'s privilege here. Nothing else distinguishes its declarations from any other package's, beyond the fundamental types being `core`'s to declare methods on ([`functions.md`](functions.md) §6.1).
 
 ---
 
@@ -252,7 +252,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
-| Intrinsics | `@controlflow$branch` and `@controlflow$repeat`, stated over `@primitives$Bool` and `@primitives$Int`, callable from any package |
+| Intrinsics | `@controlflow$branch` and `@controlflow$repeat`, stated over `@primitives$Bool` and `@primitives$Int`; reachable from any package, but only `core` can produce the primitives they take, so source packages build on `core`'s `Bool`/`Int` wrappers |
 | Bounded repetition | `repeat` takes a count, so no construct built on it can repeat unboundedly |
 | `guard` | The only control-flow grammar; exits the enclosing scope, opens no scope of its own, and may run a pre-exit block |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |
