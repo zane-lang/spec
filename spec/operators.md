@@ -77,11 +77,7 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 
 The derived operators of §2.3 follow without separate implementations. `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or; `a - b` is `a + ~b`, which is `b` implies `a`. `Bool` implements no `/`, so `a / b` on two `Bool` operands is an ordinary no-match error.
 
-De Morgan's law relates the two binary primitives through `~`, and it is what confines the logical reading to `Bool`. On `Int` and `Float` the same two tokens are arithmetic, and `~` there is an additive inverse rather than a complement (§2.5), so the law does not hold and conjunction and disjunction have no meaning to give those types:
-
-```zane
-a + b == ~(~a * ~b)
-```
+Conjunction and disjunction are interderivable through `~`; see §4.4.
 
 Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. A type that wants a deferred right operand declares an overload taking one; the evaluation behaviour is then visible at the call site rather than implied by the token.
 
@@ -179,10 +175,15 @@ Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
-### 4.4 Boolean laws hold through `~`
-`Bool` satisfies De Morgan's law in both directions, so conjunction and disjunction are interderivable through the complement (§2.4). The involution requirement of §4.1 applies to `~Bool` as to every other `~`.
+### 4.4 Conjunction and disjunction are interderivable
+For a type whose `~` is a complement, either binary operator derives the other:
 
-The law is what confines `*` and `+` as logical operators to `Bool` and to user-defined types that are complemented under their own `~`. A type whose `~` is an inverse rather than a complement — `Int` and `Float` under §2.5 — cannot satisfy it, and declaring conjunction for such a type would leave the derived disjunction wrong.
+```zane
+a + b == ~(~a * ~b)
+~(a * b) == ~a + ~b
+```
+
+`~Int` and `~Float` are additive inverses rather than complements (§2.5), so these identities do not hold there and the logical reading of `*` and `+` is available only to `Bool` and to user-defined types complemented under their own `~`.
 
 ---
 
