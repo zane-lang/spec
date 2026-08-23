@@ -82,15 +82,15 @@ Conjunction and disjunction are interderivable through `~`; see §4.4.
 Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. A type that wants a deferred right operand declares an overload taking one; the evaluation behaviour is then visible at the call site rather than implied by the token.
 
 ```zane
-if ready * check() { ... }
-if ok + fallback() { ... }
+if(ready * check()) { ... }
+if(ok + fallback()) { ... }
 ```
 
 Comparisons are the loosest unprefixed level (§3), so a conjunction of comparisons is written with the loose forms of §3.1 or with brackets:
 
 ```zane
-if age > Int(18) '* hasId { ... }
-if (age > Int(18)) * hasId { ... }
+if(age > Int(18) '* hasId) { ... }
+if((age > Int(18)) * hasId) { ... }
 ```
 
 ### 2.5 Reserved meanings for `!` and `~`

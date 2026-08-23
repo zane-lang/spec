@@ -88,9 +88,9 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 `Int`, `Float`, `Bool`, `String`, and `Unit` are **fundamental language types**. Their names are available unqualified in every source file. The compiler distribution supplies their declarations through a bundled `core` implementation package. That package is not part of the source package system: programs do not import it, qualify its members, list it as a dependency, or replace it independently of the compiler version.
 
-Control-flow constructs refer to these semantic types rather than to their storage primitives. Conditions expect `Bool`, counted-loop bounds expect `Int`, and the loop variable has type `Int`; see [`control-flow.md`](control-flow.md) §2–§4. Programs never unwrap a fundamental type to feed a primitive into control flow.
+Branching and repetition are `core` declarations written in these semantic types: a condition parameter is `Bool` and a repetition bound is `Int` (see [`control-flow.md`](control-flow.md) §3). The control-flow intrinsics beneath them take storage primitives instead (§5.1 there), and `core` reaches those through the fundamental type's private field as its home package. Source outside `core` never unwraps a fundamental type.
 
-The bundled `core` package defines the constructors and methods of fundamental types over storage primitives in the `@primitives$` namespace. Compiler concept types represent source literals until coercion selects one of those constructors: `true` becomes `Bool` in a condition and `20` becomes `Int` at a counted-loop bound. Explicit `Bool(true)` and `Int(20)` construction remains legal. This does not create general truthiness or numeric narrowing.
+The bundled `core` package defines the constructors and methods of fundamental types over storage primitives in the `@primitives$` namespace. Compiler concept types represent source literals until coercion selects one of those constructors: `true` becomes `Bool` where a condition is expected and `20` becomes `Int` where a repetition bound is. Explicit `Bool(true)` and `Int(20)` construction remains legal. This does not create general truthiness or numeric narrowing.
 
 `Unit` is the unit type. Its bundled declaration is an empty value `struct`, so it has exactly one logical value and zero-sized storage. `Unit()` is its ordinary `core` constructor. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
 
@@ -416,10 +416,9 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr }`
-- Condition expressions of `if`, `elif`, and `guard`, whose destination type is `Bool`
-- The `start` and `end` expressions of a counted `loop`, whose destination type is `Int`
+- The condition expression of a `guard`, whose destination type is `Bool`
 
-Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. A control-flow expression fills a slot fixed by the language instead: `Bool` for a condition and `Int` for a counted-loop bound.
+Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. A `guard` condition fills a slot fixed by the language instead. Branching and repetition need no entry of their own: they are ordinary calls ([`control-flow.md`](control-flow.md) §3), so their conditions and bounds are already covered by the argument entries above.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
@@ -575,7 +574,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, conditions, and counted-loop bounds — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, and a `guard` condition — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |

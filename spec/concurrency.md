@@ -56,13 +56,15 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 ## 3. `spawn` and Explicit Concurrency
 
 ### 3.1 `spawn` targets function and method calls only
-`spawn` starts a concurrent **function or method call**. Both forms expose a verb signature for effect and conflict analysis. It is illegal on blocks or control flow.
+`spawn` starts a concurrent **function or method call**. Both forms expose a verb signature for effect and conflict analysis.
+
+A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned. A block captures the frame that wrote it ([`control-flow.md`](control-flow.md) §2.2), and capture is safe there only because the block runs inside that call. Spawning one would put captured state in a parallel task, which is exactly what §5.2 forbids for values. Since branching and repetition are such verbs ([`control-flow.md`](control-flow.md) §3), this is also what makes `spawn` on a conditional or a repetition illegal.
 
 ```zane
 spawn runServer(8080)             // ok: function call
 spawn server:listen(8080)         // ok: read-only method call
 spawn server!refreshConnections() // ok: mutating method call
-spawn if cond { f() }             // ILLEGAL
+spawn if(cond) { f() }            // ILLEGAL: `if` takes a block argument
 ```
 
 ### 3.2 Spawned values block on read
@@ -165,7 +167,9 @@ The language does not provide cancellation, kill groups, or shutdown ordering. A
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
 ### 5.2 Lambdas do not capture
-Lambdas (and blocks used as values) **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and the value-subject check (§4.2) tractable.
+Lambdas **MUST NOT** capture outer variables. All dependencies must be passed explicitly. This keeps effect tracking and the value-subject check (§4.2) tractable: a function value may be stored and run later, so captured state could be reached from a frame the compiler is no longer looking at.
+
+A **block argument** captures and is exempt, because it cannot be stored and cannot be spawned (§3.1). It runs during the call that receives it, in the frame that wrote it, so the reach of what it captures is the reach of ordinary lexical code. See [`control-flow.md`](control-flow.md) §2.2.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
@@ -186,7 +190,7 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | Concept | Rule |
 |---|---|
 | Implicit parallelism | Compiler may parallelize only when results are unchanged |
-| `spawn` | Starts a concurrent function or method call; blocks only when results are read |
+| `spawn` | Starts a concurrent function or method call; blocks only when results are read; illegal on a verb taking a block argument |
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
 | Mutation | A spawned mutating call requires a value-typed subject, and a verb that mutates a non-`this` parameter is unspawnable; at most one mutable borrow per storage location, so a spawn in a loop body must take its subject from storage declared in that body; concurrent reads take a coherent snapshot |

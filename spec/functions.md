@@ -319,9 +319,10 @@ A lambda literal is a function declaration with the name removed. It writes its 
 
 ```zane
 callee(Float(x Int) {
-    if x < Int(10) {
+    small Bool = if(x < Int(10)) {
         return Float(0)
-    } else {
+    }
+    small:else() {
         return Float(1) / Float(x)
     }
 })
@@ -357,6 +358,8 @@ A lambda-variable is an ordinary symbol with a single function type. Because a s
 
 ### 7.4 Lambdas do not capture
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency.md`](concurrency.md) §5.2 ("Lambdas do not capture").
+
+A **block argument** is not a lambda and does capture. It is a source construct rather than a value: it has no written type, cannot be stored, and cannot outlive the call it is written at, so nothing can run it from a frame the compiler is not looking at. See [`control-flow.md`](control-flow.md) §2.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
 
@@ -431,6 +434,7 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
+| Block argument | Not a verb and not a value: a braced run of statements passed to a call, which captures and cannot escape ([`control-flow.md`](control-flow.md) §2) |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
 | Unqualified method lookup | Searches the subject's home package (the bundled `core` implementation for a fundamental type), then the current package |

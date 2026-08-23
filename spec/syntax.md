@@ -226,9 +226,12 @@ Array<T, n>
 ```zane
 @primitives$name
 @concepts$name
+@controlflow$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals.
+The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch and repeat.
+
+Every `@` namespace is reachable from every package without an import.
 
 ### 2.8 Compiler concept types for literals
 
@@ -241,6 +244,15 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
+
+`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.9). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the same rule as the other concept types and may never be stored.
+
+```zane
+@concepts$Block
+@concepts$Block<Bool>
+```
+
+> **See also:** [`control-flow.md`](control-flow.md) §2 for what a block argument does.
 
 ### 2.9 Function types
 
@@ -650,34 +662,67 @@ newState State = match state, event {
 
 > **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
 
+### 4.9 Block arguments
+
+A call may carry one **block argument**, written as a braced run of statements after the argument list. The `{` **MUST** open on the same line as the call, which is what distinguishes it from a statement block on the following line (§6.3 of [`lexical.md`](lexical.md)).
+
+```zane
+repeatTwice() {
+    print("hi")
+}
+
+ran Bool = if(ready) {
+    start()
+}
+```
+
+A block argument fills the callee's last parameter, whose declared type is `@concepts$Block` or `@concepts$Block<T>`. It may also be written in ordinary argument position, which is how a call supplies more than one:
+
+```zane
+ran!elif({ expensive() }) {
+    handle()
+}
+```
+
+A block takes no parameters and is never named. A block that yields a value ends its yielding paths with `resolve` (§6.2 uses the same keyword at a handler):
+
+```zane
+value Int = compute() {
+    resolve Int(3)
+}
+```
+
+```zane
+f({ x }, { y })       // ILLEGAL: at most one block may trail; earlier ones go in the argument list
+g()
+{
+    print("plain block")   // a statement block, not an argument: `{` opens a new line
+}
+```
+
 ---
 
 ## 5. Control Flow
 
-### 5.1 `if` / `elif` / `else`
+Branching and repetition are calls, not grammar. Their surface forms are ordinary calls with block arguments (§4.9) and are declared by the bundled `core` implementation; see [`control-flow.md`](control-flow.md) §3. The language itself contributes `guard` and the intrinsics of §5.2.
 
-```zane
-if conditionExpr { ... }
-if conditionExpr { ... } elif conditionExpr { ... }
-if conditionExpr { ... } else { ... }
-if conditionExpr { ... } elif conditionExpr { ... } else { ... }
-```
-
-An `if` chain may contain zero or more `elif` branches followed by an optional `else` branch.
-
-### 5.2 `guard`
+### 5.1 `guard`
 
 ```zane
 guard conditionExpr
 guard conditionExpr { ... }
 ```
 
-### 5.3 `loop`
+`guard` is the one control-flow construct with its own grammar. It opens no scope, so its exit is not trapped by one.
+
+### 5.2 Control-flow intrinsics
 
 ```zane
-loop name from startExpr to endExpr { ... }
-loop name to endExpr { ... }
+@controlflow$branch(condition @primitives$Bool, body @concepts$Block)
+@controlflow$repeat(count @primitives$Int, body @concepts$Block)
 ```
+
+Both take storage primitives rather than fundamental types, so neither depends on any package. Any package may call them.
 
 ---
 
@@ -729,7 +774,9 @@ a ''* b               // ILLEGAL: there is no second loose tier
 > **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
 
 ### 7.2 Control-flow keywords
-`if`, `elif`, `else`, `guard`, `loop`, `from`, `to`
+`guard`
+
+`if`, `elif`, `else`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3).
 
 ### 7.3 Comments
 
