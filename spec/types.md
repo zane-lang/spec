@@ -90,7 +90,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 Branching and repetition are `core` declarations written in these semantic types: a condition parameter is `Bool` and a repetition bound is `Int` (see [`control-flow.md`](control-flow.md) §3). The control-flow intrinsics beneath them take storage primitives instead (§5.1 there), and `core` reaches those through the fundamental type's private field as its home package. Source outside `core` never unwraps a fundamental type.
 
-The bundled `core` package defines the constructors and methods of fundamental types over storage primitives in the `@primitives$` namespace. Compiler concept types represent source literals until coercion selects one of those constructors: `true` becomes `Bool` where a condition is expected and `20` becomes `Int` where a repetition bound is. Explicit `Bool(true)` and `Int(20)` construction remains legal. This does not create general truthiness or numeric narrowing.
+The bundled `core` package defines the constructors and methods of fundamental types over storage primitives in the `@primitives$` namespace, including the implicit constructor from `Bool` to `@primitives$Bool` that a `guard` condition coerces through ([`control-flow.md`](control-flow.md) §4.1). Compiler concept types represent source literals until coercion selects one of those constructors: `true` becomes `Bool` where a condition is expected and `20` becomes `Int` where a repetition bound is. Explicit `Bool(true)` and `Int(20)` construction remains legal. This does not create general truthiness or numeric narrowing.
 
 `Unit` is the unit type. Its bundled declaration is an empty value `struct`, so it has exactly one logical value and zero-sized storage. `Unit()` is its ordinary `core` constructor. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
 
@@ -411,12 +411,12 @@ distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
 ### 4.2 Coercion sites
 A coercion site is a position that passes a value into a contract whose destination type is fixed by a callable or language construct. These are the only positions where the compiler inserts an implicit constructor:
 
-- Positional arguments of a function call
+- Positional arguments of a function call, including a call to a compiler intrinsic
 - Positional arguments of a method call (the subject is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr }`
-- The condition expression of a `guard`, whose destination type is `Bool`
+- The condition expression of a `guard`, whose destination type is `@primitives$Bool`
 
 Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. A `guard` condition fills a slot fixed by the language instead. Branching and repetition need no entry of their own: they are ordinary calls ([`control-flow.md`](control-flow.md) §3), so their conditions and bounds are already covered by the argument entries above.
 
@@ -448,7 +448,9 @@ Implicit conversions are never chained. If no single-step implicit constructor e
 ### 4.4 Source and destination type constraints
 The **source type** (parameter type) of an implicit constructor **MUST** be a value type or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a reference type or an `&`.
 
-The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type or a reference type.
+The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type, a reference type, or a storage primitive in the `@primitives$` namespace.
+
+A primitive destination is what lets a language construct state its contract without naming any package's type. A `guard` condition coerces to `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
 
 ```zane
 type Celsius = struct { value Float; }
@@ -574,7 +576,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, and a `guard` condition — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, and a `guard` condition — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
