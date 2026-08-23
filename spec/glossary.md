@@ -302,3 +302,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** An import states how its members are written in that file — qualified, aliased, or bare — and that is the only spelling available there.
 - **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import chooses how it is written.
 - **Canonical home:** [`packages.md`](packages.md) §3.3 and §3.4
+
+### 4.5 loose form
+- **Meaning:** A binary operator written with a leading `'`, calling the same implementation at a mirrored precedence level below every unprefixed operator. One tier only, binary only.
+- **Why this name:** The prefix loosens how tightly the operator binds and changes nothing else about it.
+- **Canonical home:** [`operators.md`](operators.md) §3.1

@@ -100,6 +100,7 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 | `&` | Guest type (`&Node`) | [`memory.md`](memory.md) §2 |
 | `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
+| `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
 
 ---
 

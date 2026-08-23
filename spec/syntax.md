@@ -716,13 +716,22 @@ expr ?? fallbackExpr
 ### 7.1 Operators
 `~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
 
-### 7.2 Boolean keywords
-`and`, `or`
+Every binary operator above also has a **loose form**, written with a leading `'`:
 
-### 7.3 Control-flow keywords
+`'*`, `'/`, `'+`, `'-`, `'<`, `'>`, `'<=`, `'>=`, `'==`, `'~=`
+
+```zane
+a == b '* c == d      // legal
+a ''* b               // ILLEGAL: there is no second loose tier
+'~a                   // ILLEGAL: unary operators have no loose form
+```
+
+> **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
+
+### 7.2 Control-flow keywords
 `if`, `elif`, `else`, `guard`, `loop`, `from`, `to`
 
-### 7.4 Comments
+### 7.3 Comments
 
 ```zane
 // single-line comment

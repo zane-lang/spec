@@ -13,7 +13,8 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
-- **`Short-circuit logic`.** Boolean `and`/`or` are keywords, not operators, to preserve control flow semantics.
+- **`Boolean algebra`.** `Bool` uses the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement.
+- **`Loose forms`.** A `'` prefix moves a binary operator into a mirror of the precedence table below the unprefixed one, so a chain of comparisons can be combined without brackets.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
 
@@ -65,17 +66,36 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
-### 2.4 Boolean keywords
-`and` and `or` are **keywords**, not operators. They are short-circuiting and therefore not implementable as regular functions.
+### 2.4 Boolean operators
+`Bool` implements the primitive operator set of §2.1 as a Boolean algebra and declares nothing beyond it:
+
+| Expression | Meaning |
+|---|---|
+| `a * b` | conjunction |
+| `a + b` | disjunction |
+| `~a` | complement |
+
+The derived operators of §2.3 follow without separate implementations. `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or; `a - b` is `a + ~b`, which is `b` implies `a`. `Bool` implements no `/`, so `a / b` on two `Bool` operands is an ordinary no-match error.
+
+De Morgan's law relates the two binary primitives through `~`, and it is what confines the logical reading to `Bool`. On `Int` and `Float` the same two tokens are arithmetic, and `~` there is an additive inverse rather than a complement (§2.5), so the law does not hold and conjunction and disjunction have no meaning to give those types:
 
 ```zane
-if ready and check() { ... }
-if ok or fallback() { ... }
+a + b == ~(~a * ~b)
 ```
 
-`or` is defined as a law: `a or b = ~(~a and ~b)`.
+Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. A type that wants a deferred right operand declares an overload taking one; the evaluation behaviour is then visible at the call site rather than implied by the token.
 
-> **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
+```zane
+if ready * check() { ... }
+if ok + fallback() { ... }
+```
+
+Comparisons are the loosest unprefixed level (§3), so a conjunction of comparisons is written with the loose forms of §3.1 or with brackets:
+
+```zane
+if age > Int(18) '* hasId { ... }
+if (age > Int(18)) * hasId { ... }
+```
 
 ### 2.5 Reserved meanings for `!` and `~`
 `!` is reserved for mutating method calls and is not boolean NOT in Zane. `~` is the unary complement/flip operator instead:
@@ -107,11 +127,40 @@ number Int = (3 + 2) * 2
 | 3 | `*` `/` | left |
 | 4 | `+` `-` | left |
 | 5 | `<` `>` `<=` `>=` `==` `~=` | left |
+| 6 | `'*` `'/` | left |
+| 7 | `'+` `'-` | left |
+| 8 | `'<` `'>` `'<=` `'>=` `'==` `'~=` | left |
 
 Comparison operators group left. For example, `a < b < c` groups as `(a < b) < c`. The expression is valid only when overload resolution finds an implementation for each grouped operation.
 
-### 3.1 Precedence is fixed syntax
-Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering.
+### 3.1 A `'` prefix selects the loose form of a binary operator
+
+Levels 6 through 8 are a **mirror** of levels 3 through 5: the same binary operators, in the same relative order, written with a leading `'`. A loose operator calls the same implementation as its unprefixed form and differs only in where it groups.
+
+```zane
+ready Bool = age > Int(18) '* hasId       // (age > 18) * hasId
+band Bool = a == b '* c == d '+ e == f    // ((a == b) * (c == d)) + (e == f)
+```
+
+The mirror is one tier deep. A second prefix is not a further shift:
+
+```zane
+a ''* b    // ILLEGAL: there is no second loose tier
+```
+
+Only binary operators have a loose form. Unary `~` binds tightest and has nothing to separate itself from, and `|` pipe syntax is not part of the operator set of §2, so neither has one:
+
+```zane
+'~a        // ILLEGAL: unary operators have no loose form
+a '| f()   // ILLEGAL: pipe syntax has no loose form
+```
+
+The loose forms are surface grammar like every other level. They add no token to the operator vocabulary (§5.1) and no way for a program to place an operator at a level of its choosing: which level a loose operator occupies is fixed by the mirror, exactly as the unprefixed level is fixed by the table.
+
+> **See also:** [`lexical.md`](lexical.md) §4.3 for `'` as a reserved sigil.
+
+### 3.2 Precedence is fixed syntax
+Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering, and the loose forms of §3.1 occupy fixed levels of their own beneath every unprefixed one.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
 
@@ -130,15 +179,17 @@ Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
-### 4.4 Boolean logic is not regular operator overloading
-`and` and `or` cannot be expressed as ordinary overloaded operators because they must short-circuit. A regular operator/function receives already-evaluated arguments, which would destroy the control-flow property that defines boolean conjunction and disjunction.
+### 4.4 Boolean laws hold through `~`
+`Bool` satisfies De Morgan's law in both directions, so conjunction and disjunction are interderivable through the complement (§2.4). The involution requirement of §4.1 applies to `~Bool` as to every other `~`.
+
+The law is what confines `*` and `+` as logical operators to `Bool` and to user-defined types that are complemented under their own `~`. A type whose `~` is an inverse rather than a complement — `Int` and `Float` under §2.5 — cannot satisfy it, and declaring conjunction for such a type would leave the derived disjunction wrong.
 
 ---
 
 ## 5. Restrictions
 
 ### 5.1 No user-defined operator tokens
-Programs **MUST NOT** define new operator symbols or precedence levels. Overloading is limited to the built-in operator set.
+Programs **MUST NOT** define new operator symbols or precedence levels. Overloading is limited to the built-in operator set. The loose forms of §3.1 are part of that fixed set rather than an exception to it: `'` selects an existing operator at a fixed level, and no program can introduce a token or place one at a level of its own choosing.
 
 ### 5.2 Reserved symbols
 The following are not operators in Zane:
@@ -165,5 +216,6 @@ An operator token may appear only in operator position; it has no value form. Th
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
 | Operator definitions | A source implementation must live in the home package of at least one user-defined operand type; fundamental-only operators live in the bundled `core` implementation. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
-| Boolean logic | `and` and `or` are short-circuiting keywords rather than overloadable operators. |
+| Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement; `~=` is exclusive or and `-` is implication by derivation. Both operands are evaluated. |
+| Loose forms | A `'` prefix selects a binary operator at a mirrored level below every unprefixed one; one tier only, binary only, same implementation. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |

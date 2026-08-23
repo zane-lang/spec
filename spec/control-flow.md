@@ -2,7 +2,7 @@
 
 This document specifies Zane's control-flow constructs: conditional branching, scope-exit guards, counted loops, and the language's 1-based ordinal convention.
 
-> **See also:** [`syntax.md`](syntax.md) §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for `and` and `or`.
+> **See also:** [`syntax.md`](syntax.md) §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for the `Bool` operators and §3.1 for their loose forms.
 
 ---
 
@@ -27,7 +27,7 @@ Every `if` and `elif` condition is a coercion site with destination type `Bool`.
 ```zane
 if ready {
     start()
-} elif retryAllowed and cached {
+} elif retryAllowed * cached {
     useCache()
 } else {
     fail()
