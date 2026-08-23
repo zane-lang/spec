@@ -146,7 +146,7 @@ EnumName.property FieldType [
 
 `Int`, `Float`, `Bool`, `String`, `Unit`
 
-These type names are available unqualified in every source file. Their bundled `core` implementation has no source-level package qualifier or import form. See [`types.md`](types.md) §2.6 for their semantics.
+These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3), and are written unqualified in a file that imports `core` with the whole-package form. See [`types.md`](types.md) §2.6 for their semantics.
 
 ### 2.2 Named types
 
@@ -704,7 +704,7 @@ g()
 
 ## 5. Control Flow
 
-Branching and repetition are calls, not grammar. Their surface forms are ordinary calls with block arguments (§4.9) and are declared by the bundled `core` implementation; see [`control-flow.md`](control-flow.md) §3. The language itself contributes `guard` and the intrinsics of §5.2.
+Branching and repetition are calls, not grammar. Their surface forms are ordinary calls with block arguments (§4.9) and are declared by the `core` package; see [`control-flow.md`](control-flow.md) §3. The language itself contributes `guard` and the intrinsics of §5.2.
 
 ### 5.1 `guard`
 

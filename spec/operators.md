@@ -37,7 +37,7 @@ Primitive operators are implementable and define the operator surface area:
 ### 2.2 Where operators may be defined
 Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` subject parameter.
 
-A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. The bundled `core` implementation is the home package of fundamental types, but source packages cannot add declarations to it; a fundamental operand therefore does not by itself grant a source package permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
+A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. `core` is the home package of the fundamental types, and a package may no more add declarations to it than to any other package it does not own; a fundamental operand therefore does not by itself grant permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
 
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 
@@ -215,7 +215,7 @@ An operator token may appear only in operator position; it has no value form. Th
 | Operator vocabulary | Only the fixed built-in operator set may be overloaded; programs cannot declare new tokens or precedence. |
 | Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
-| Operator definitions | A source implementation must live in the home package of at least one user-defined operand type; fundamental-only operators live in the bundled `core` implementation. |
+| Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement; `~=` is exclusive or and `-` is implication by derivation. Both operands are evaluated. |
 | Loose forms | A `'` prefix selects a binary operator at a mirrored level below every unprefixed one; one tier only, binary only, same implementation. |

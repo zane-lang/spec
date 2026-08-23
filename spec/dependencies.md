@@ -31,6 +31,7 @@ version-pattern v*.+.++
 
 deps [
     key  version
+    core v1.4.0
     math v6.2.9
 ]
 
@@ -59,6 +60,7 @@ The optional top-level **`remaps`** block is a bare list of the canonical packag
 resolutions [
     key  url                                commit
     zane https://github.com/zane-lang/zane  9f1c0aa
+    core https://github.com/zane-lang/core  4b7e91c
     math https://github.com/zane-lang/math  a3f8c2d
 ]
 ```
@@ -268,10 +270,11 @@ At a high level, dependency resolution proceeds in this order:
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler and its bundled `core` implementation; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
 
-- The compiler and `core` implementation are released under one toolchain tag, so a project always builds with matching definitions of the fundamental language types. This frees the toolchain to evolve without preserving backward compatibility across versions: each project states the toolchain version it builds with.
-- The standard library is **not** special, and no ordinary library is coupled to the toolchain tag. `std` and every other source library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. The bundled `core` implementation is compiler infrastructure rather than a manifest dependency; see [`types.md`](types.md) §2.6.
+- The tag covers the compiler alone. What the compiler supplies is the grammar, the `@` namespaces, and the control-flow intrinsics — none of which name a declaration in any package ([`control-flow.md`](control-flow.md) §5.1) — so pinning it fixes the language without fixing any library.
+- **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
+- This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".

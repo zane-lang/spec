@@ -1,6 +1,6 @@
 # Zane Control Flow
 
-This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls that take a **block argument**, declared by the bundled `core` implementation over two compiler intrinsics. What the language itself contributes is the block, the intrinsics, `guard`, and the 1-based ordinal convention.
+This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls that take a **block argument**, declared by the `core` package over two compiler intrinsics. What the language itself contributes is the block, the intrinsics, `guard`, and the 1-based ordinal convention.
 
 > **See also:** [`syntax.md`](syntax.md) §4.9 and §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for the `Bool` operators. [`types.md`](types.md) §2.6 for the fundamental types these calls are written in terms of.
 

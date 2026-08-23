@@ -15,7 +15,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`One compilation unit`.** All source files in a package compile together without source-order dependencies.
 - **`The import form is the spelling`.** An import makes members of one package available to one source file, written the way the import writes them — qualified, aliased, or bare.
 - **`One spelling per entity`.** Whatever an import states is the only way that entity may be written in the file.
-- **`No implicit source packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. No other source package is available without an import. The bundled `core` implementation is outside the source package and manifest system; it provides the predeclared fundamental names.
+- **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
 
 ---
@@ -54,7 +54,7 @@ An `import` declaration makes members of another package available in the source
 
 The package must be available through the dependency rules in [`dependencies.md`](dependencies.md).
 
-No other source package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported source package. The compiler's bundled `core` implementation is not exposed through this package system; its fundamental type names are predeclared instead (see [`types.md`](types.md) §2.6).
+No other package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported package. `core` is not an exception: a file that writes `Int` imports it like any other dependency (see [`types.md`](types.md) §2.6), most often with the whole-package form `import core$` (§3.3).
 
 ### 3.2 Current-package members are unqualified
 
@@ -179,7 +179,7 @@ State that changes over time must live in a value, such as a `struct` or referen
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |
-| Implicit source packages | None; the current package comes from the file's declaration, every other source package requires an explicit import, and bundled `core` provides predeclared fundamental names outside the source package and manifest system |
+| Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
 | Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors |
