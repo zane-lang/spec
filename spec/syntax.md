@@ -71,7 +71,21 @@ type Name = struct {
 
 ```zane
 import packageName
+import packageName as alias
+import packageName$member
+import packageName$member as alias
+import packageName$[memberA, memberB]
+import packageName$
 ```
+
+The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
+
+```zane
+import math$[sqrt, pow] as m   // ILLEGAL: a list has no single name to rename
+import math$ as m              // ILLEGAL: nothing is qualified to rename
+```
+
+> **See also:** [`packages.md`](packages.md) §3 for what each form makes available.
 
 ### 1.6 Type and alias declarations
 

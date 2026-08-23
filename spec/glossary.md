@@ -289,7 +289,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`operators.md`](operators.md) §2.2
 
 ### 4.2 placeholder-prefix rewriting
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag before caching and linking.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
 - **Why this name:** The committed `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
@@ -297,3 +297,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A package's canonical identity is its full source URL, while local aliases are only import conveniences.
 - **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
+
+### 4.4 import spelling rule
+- **Meaning:** An import states how its members are written in that file — qualified, aliased, or bare — and that is the only spelling available there.
+- **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import chooses how it is written.
+- **Canonical home:** [`packages.md`](packages.md) §3.3 and §3.4
