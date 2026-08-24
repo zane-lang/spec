@@ -41,7 +41,7 @@ The first letter of an identifier selects its lexical class.
 | Lowercase | Value, binding, or parameter | `x`, `count`, `n`, `transform` |
 | Lowercase | Package name | `math`, `json`, `httpClient` |
 
-Package names share lowercase-initial casing with value names but are syntactically distinct: they appear only after the `package` keyword, after `import`, after an import's `as`, or as the left operand of `$`. The surrounding syntax, not casing, disambiguates them from ordinary value names.
+Package names share lowercase-initial casing with value names but are syntactically distinct: they appear only after the `package` keyword, after `import`, after the `as` of a **whole-package** import alias, or as the left operand of `$`. The surrounding syntax, not casing, disambiguates them from ordinary value names.
 
 ### 3.1 Types must be uppercase
 

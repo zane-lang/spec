@@ -13,7 +13,7 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
-- **`Boolean algebra`.** `Bool` uses the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement.
+- **`Boolean algebra`.** `Bool` draws from the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement, and it declares no `/`.
 - **`Loose forms`.** A `'` prefix moves a binary operator into a mirror of the precedence table below the unprefixed one, so a chain of comparisons can be combined without brackets.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
@@ -67,7 +67,7 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
 ### 2.4 Boolean operators
-`Bool` implements the primitive operator set of §2.1 as a Boolean algebra and declares nothing beyond it:
+`Bool` implements three of the primitive operators of §2.1 as a Boolean algebra, and declares nothing beyond them:
 
 | Expression | Meaning |
 |---|---|
@@ -75,7 +75,7 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 | `a + b` | disjunction |
 | `~a` | complement |
 
-The derived operators of §2.3 follow without separate implementations. `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or; `a - b` is `a + ~b`, which is `b` implies `a`. `Bool` implements no `/`, so `a / b` on two `Bool` operands is an ordinary no-match error.
+The derived operators of §2.3 follow without separate implementations. `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or; `a - b` is `a + ~b`, which is `b` implies `a`. `/` is not among the three, because a Boolean algebra has no division, so `a / b` on two `Bool` operands is an ordinary no-match error.
 
 Conjunction and disjunction are interderivable through `~`; see §4.4.
 

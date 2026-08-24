@@ -664,7 +664,7 @@ newState State = match state, event {
 
 ### 4.9 Block arguments
 
-A call may carry one **block argument**, written as a braced run of statements after the argument list. The `{` **MUST** open on the same line as the call, which is what distinguishes it from a statement block on the following line (§6.3 of [`lexical.md`](lexical.md)).
+A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. At most one of them may **trail** the argument list; the rest are written in ordinary argument position. A trailing block's `{` **MUST** open on the same line as the call, which is what distinguishes it from a statement block on the following line (§6.3 of [`lexical.md`](lexical.md)).
 
 ```zane
 repeatTwice() {
@@ -676,7 +676,7 @@ ran Bool = if(ready) {
 }
 ```
 
-A block argument fills the callee's last parameter, whose declared type is `@concepts$Block` or `@concepts$Block<T>`. It may also be written in ordinary argument position, which is how a call supplies more than one:
+A trailing block fills the callee's last parameter, whose declared type is `@concepts$Block` or `@concepts$Block<T>`. A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
 
 ```zane
 ran!elif({ expensive() }) {
@@ -693,7 +693,9 @@ value Int = compute() {
 ```
 
 ```zane
-f({ x }, { y })       // ILLEGAL: at most one block may trail; earlier ones go in the argument list
+f({ x }, { y })       // legal: two block arguments, neither trailing
+f({ x }) { y }        // legal: the same call with the last one trailing
+f { x } { y }         // ILLEGAL: only one block may trail
 g()
 {
     print("plain block")   // a statement block, not an argument: `{` opens a new line

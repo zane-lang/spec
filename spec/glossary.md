@@ -317,3 +317,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** `@controlflow$branch` and `@controlflow$repeat`, the two compiler operations every branching and repeating construct is built from. Both are stated over storage primitives and callable from any package.
 - **Why this name:** They are the intrinsic operations of control flow, owned by the compiler rather than by any package.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §5.1
+
+### 4.8 ordinary `core`
+- **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.
+- **Why this name:** The label records the whole rule — what is notable about `core` is precisely that nothing about it is special.
+- **Canonical home:** [`types.md`](types.md) §2.6 and [`dependencies.md`](dependencies.md) §14
+
+### 4.9 spawn target
+- **Meaning:** Only a function or method call may be spawned, and never one whose verb declares a block parameter, since a block captures the frame that wrote it.
+- **Why this name:** The term names the position the restriction applies to — what a `spawn` may point at.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §3.1

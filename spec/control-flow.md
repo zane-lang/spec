@@ -210,7 +210,7 @@ The language provides exactly two control-flow operations:
 @controlflow$repeat(count @primitives$Int, body @concepts$Block)
 ```
 
-`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times.
+`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times.
 
 Both take **storage primitives** rather than the fundamental types. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
@@ -219,7 +219,7 @@ An intrinsic is called like a function, so its arguments are coercion sites ([`t
 
 
 ### 5.2 Repetition is bounded by the shape of `repeat`
-`repeat` takes a count. No sequence of calls to it can repeat an unbounded number of times, so every control-flow construct built on it carries a bound, whoever declares it. The guarantee is a property of the intrinsic rather than of who may call it.
+`repeat` takes a count, so a single invocation always terminates and every control-flow construct built on it carries a written bound, whoever declares it. The guarantee is a property of the intrinsic rather than of who may call it. It bounds one invocation, not a whole program: recursion can still re-enter `repeat` without limit, and it remains the language's only unbounded path.
 
 An indefinite repetition is expressed by giving a ceiling and stopping inside the body (§3.5), or by a scheduling facility that names the recurrence as such.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
@@ -239,7 +239,7 @@ twice() {
 }
 ```
 
-The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §5.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks; what `core` alone has is the right to declare methods on the fundamental types, because it is their home package ([`functions.md`](functions.md) §6.1).
+The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §5.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks. Being the fundamental types' home package gives `core` first place in unqualified method lookup, not exclusive rights: any package may declare methods on them, reached by a qualifier where lookup does not find them ([`functions.md`](functions.md) §6.1 and §6.3).
 
 ---
 
@@ -276,6 +276,6 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
 | Intrinsics | `@controlflow$branch` and `@controlflow$repeat`, stated over `@primitives$Bool` and `@primitives$Int`; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
-| Bounded repetition | `repeat` takes a count, so no construct built on it can repeat unboundedly |
+| Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
 | `guard` | The only control-flow grammar; exits the enclosing scope, opens no scope of its own, and may run a pre-exit block. Its condition coerces to `@primitives$Bool`, so it names no package's type |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |
