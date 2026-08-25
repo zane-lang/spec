@@ -20,15 +20,32 @@
 # zane_bench_results.txt. After editing them, rebuild the HTML with
 #   python3 runbench.py --from-file
 # which reuses that results file instead of re-running.
+#
+# STALE: the committed results predate the harness update that brought the
+# model back in line with spec/memory.md — the fixed-size/dynamic region split
+# (§3.1), exact-size reuse in the dynamic region and the anchor free-address
+# stack (§3.2, §4.3), the 128-byte-start backing-store growth rules (§3.6),
+# and 8-byte anchor cells with forwarding and retirement (§4.1, §4.5, §4.6).
+# Every number below comes from the previous binary. The blocks that open with
+# "PENDING RE-MEASURE" describe a mechanism the harness no longer has; the rest
+# are unchanged code and should only move by run-to-run noise. Re-run the suite
+# (both the default and the -DZM_INTERLEAVE build) and rewrite these notes
+# against the new results before trusting any of it.
 
 [Test 1]
+PENDING RE-MEASURE: freeing now reads each object's backpointer to see whether
+an anchor has to be returned (§4.6), so "free" is no longer free of cost even
+when nothing is tethered.
 Zane's bump-arena alloc (~175us median) comes in ~13x faster than malloc
 (~2.21ms) and ~1.5x faster than Pool (~263us). The raw Arena baseline (~16us)
 is an order of magnitude quicker still because Zane also zero-writes a 4-byte
-backpointer into every object; with no tethers taken, that per-object write is
+backpointer into every object; with no guests taken, that per-object write is
 the only thing separating Zane from a pure bump allocator.
 
 [Test 2]
+PENDING RE-MEASURE: the free loop now touches every object to read its
+backpointer (§4.6), so this is a random-order memory walk rather than a no-op.
+The claim below that it is "effectively unmeasurable" no longer holds.
 Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us
 — effectively unmeasurable — while malloc (~928us) and Pool (~192us) pay real
 per-object cost. This is the bulk-reclaim model at its most extreme: nothing is
@@ -48,7 +65,12 @@ order and ~117us shuffled — the shuffle is where a pointer-chase actually hurt
 since the prefetcher can no longer hide the random hops.
 
 [Test 5]
-Growing an owned buffer, Zane's in-place frontier doublings (~80us median, ~74us
+PENDING RE-MEASURE: the backing store now follows §3.6 — a 128-byte first
+block, the exact-size stack checked ahead of the frontier, in-place growth only
+inside the current 1 MiB chunk, and relocation into dedicated oversized spans
+past 1 MiB. The unbounded in-place doubling the note below describes is gone,
+and the two span relocations are real copies.
+Growing a backing store, Zane's in-place frontier doublings (~80us median, ~74us
 min) now come in *below* the old free-stack build (~85us min) — the regression
 this test used to show is gone. The backing store is cache-line-aligned, so its
 32-byte entities no longer straddle 64-byte lines during the write-heavy fill.
@@ -56,6 +78,10 @@ Zane also beats C's realloc vector (~230us) and the never-copy chunked forms
 (CChunked ~272us, UList ~861us).
 
 [Test 6]
+PENDING RE-MEASURE: the cell now carries a kind word alongside its target, and
+the test measures older tethers at 1 and 4 forwarding hops as well as the same
+4-hop path after compression (§4.4, §4.5). Only the terminal rows are
+comparable to the numbers below.
 The segmented tether adds one dependent load — the anchor cell — over a raw
 pointer: ~82us min baseline vs ~100us min tether, about 1.22x. With cells in
 their own region the payload-only baseline stays dense, and the deref pays for
@@ -64,29 +90,40 @@ scan-vs-deref tradeoff at scale). Whether the chunk directory is register-cached
 or reloaded is within noise here.
 
 [Test 7]
+PENDING RE-MEASURE: kills now read the backpointer per entity (§4.6).
 At steady-state churn the allocators sit close (Zane ~2.07ms, Pool ~2.05ms,
 malloc ~2.45ms): once entity counts stabilize, per-frame update and simulation
 work dominate and the raw allocation gaps from Tests 1-3 mostly wash out.
 
 [Test 8]
+PENDING RE-MEASURE: deaths now read the backpointer per particle (§4.6).
 Under maximum churn Zane (~6.33ms) leads malloc (~7.22ms) and sits close to Pool
 (~6.56ms). The work-stealing update variant is far slower (~11.7ms): the
 per-frame particle work is too small to amortize scheduling, so coordination
 overhead dominates — a caution against parallelizing fine-grained frame work.
 
 [Test 9]
+PENDING RE-MEASURE: the untimed free phase now reads backpointers; the timed
+refill is unchanged, since fixed-size-region slots are still never handed back.
 Only the refill is timed. Zane just bumps the frontier for the 50k new objects
 (~94us), never touching the freed holes, so fragmentation history is
 irrelevant. malloc (~1.21ms) and Pool (~554us) refill from the slots freed in
 Phase B and carry that history — roughly 13x and 6x slower.
 
 [Test 10]
+PENDING RE-MEASURE: this is the test the change bites hardest. Anchors are now
+returned to the global free-address stack as each hosting identity ends (§4.6),
+so the three variants no longer do identical work — the guest-per-node variant
+returns ~4,000 cells that the no-guest variant does not.
 All three Zane variants land together (~33-48us) because arena teardown does no
-per-node free work — the timed cost is just the post-order walk, and the tether
+per-node free work — the timed cost is just the post-order walk, and the guest
 count barely moves it. malloc's per-node free with coalescing is ~119us (~3.6x
 slower) and Pool is ~61us.
 
 [Test 11]
+PENDING RE-MEASURE: list backing stores now go through the dynamic region's
+exact-size stacks (§3.2) while entity hosts still only bump the fixed-size
+region, so this test finally exercises both regions rather than one frontier.
 The mixed workload compresses the field (Zane ~1.83ms, malloc ~1.98ms, Pool
 ~2.07ms): updates, scans, and randomized maintenance dominate the time, so the
 allocator strategy is only a small slice of the total — the expected outcome for
@@ -108,6 +145,8 @@ variance a single scan can resolve. Test 14 is where the weighting makes it
 visible.
 
 [Test 14]
+PENDING RE-MEASURE: the deref pass now goes through the shared resolution path
+including the cell's kind check (§4.4).
 Ten payload scans per one tether-deref pass: ~4.07ms median (~3.48ms min) versus
 the -DZM_INTERLEAVE build's ~3.78ms min — the separate layout is ~8% faster.
 Multiplying the payload scan ten-to-one lifts its density advantage above the

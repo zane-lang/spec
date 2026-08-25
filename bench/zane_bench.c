@@ -41,7 +41,7 @@ static void print_result(const char *impl, double T[RUNS]) {
         if (T[i] < mn) mn = T[i];
         if (T[i] > mx) mx = T[i];
     }
-    printf("    %-34s  median %12.2f ns  min %12.2f ns  max %12.2f ns  (%9.3f us)\n",
+    printf("    %-46s  median %12.2f ns  min %12.2f ns  max %12.2f ns  (%9.3f us)\n",
            impl, med, mn, mx, med / 1000.0);
 }
 
@@ -183,67 +183,50 @@ static void bench_pool_shutdown(void) {
 #define ZM_ALIGN     8
 #define ZM_MAXSZ     512
 #define ZM_NC        (ZM_MAXSZ / ZM_ALIGN)
+#define ZM_LINE      64
 #define ZM_CHUNK     (1UL << 20)
 #define ZM_WORDBITS  17
 #define ZM_OFFMASK   ((1u << ZM_WORDBITS) - 1)
 #define ZM_NCHUNKS   (REGION_SIZE / ZM_CHUNK)
-#define ZM_CELL_BASE (448UL * 1024 * 1024)
+
+#define ZM_FIXED_CHUNK0   0UL
+#define ZM_DYN_CHUNK0     256UL
+#define ZM_ANCHOR_CHUNK0  448UL
+#define ZM_FIXED_BASE     (ZM_FIXED_CHUNK0  * ZM_CHUNK)
+#define ZM_DYN_BASE       (ZM_DYN_CHUNK0    * ZM_CHUNK)
+#define ZM_ANCHOR_BASE    (ZM_ANCHOR_CHUNK0 * ZM_CHUNK)
 
 #ifdef ZM_INTERLEAVE
-#define ZM_TOP0 ((size_t)ZM_ALIGN)
+#define ZM_FIXED_TOP0 (ZM_FIXED_BASE + ZM_ALIGN)
 #else
-#define ZM_TOP0 ((size_t)0)
+#define ZM_FIXED_TOP0 (ZM_FIXED_BASE)
 #endif
+
+#define ZM_PAYLOAD 0u
+#define ZM_FORWARD 1u
+#define ZM_FREED   2u
 
 typedef uint32_t ZRef;
 
-static struct {
-    uint8_t *base;
-    size_t   top;
-    size_t   ctop;
-    uint8_t *dir[ZM_NCHUNKS];
-} zm;
+typedef struct { uint32_t target; uint32_t kind; } ZAnchor;
+_Static_assert(sizeof(ZAnchor) == 8, "anchor cell must be one 8-byte slot");
 
-static void zm_init(void) {
-    zm.base = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    assert(zm.base != MAP_FAILED);
-    for (size_t i = 0; i < 256UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
-    for (size_t i = ZM_CELL_BASE; i < ZM_CELL_BASE + 16UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
-    for (uint32_t c = 0; c < ZM_NCHUNKS; c++) zm.dir[c] = zm.base + (size_t)c * ZM_CHUNK;
-    zm.top = ZM_TOP0;
-    zm.ctop = ZM_CELL_BASE;
-}
-static void zm_reset(void) { zm.top = ZM_TOP0; zm.ctop = ZM_CELL_BASE; }
+#define ZM_NSTACKS 256
+
+typedef struct { uint32_t size, align, head; } ZSizeStack;
+
+static struct {
+    uint8_t   *base;
+    size_t     ftop, dtop, atop;
+    uint32_t   afree;
+    uint32_t  *retire;
+    size_t     nretire, capretire;
+    ZSizeStack stacks[ZM_NSTACKS];
+    uint8_t   *dir[ZM_NCHUNKS];
+} zm;
 
 static inline size_t zm_round(size_t s) { return (s + ZM_ALIGN-1) & ~(size_t)(ZM_ALIGN-1); }
 static inline int    zm_cls(size_t s)   { return (int)(s / ZM_ALIGN) - 1; }
-
-static void *zm_alloc(size_t s) {
-    s = zm_round(s);
-    size_t off = zm.top; zm.top += s;
-    assert(zm.top <= ZM_CELL_BASE);
-    return zm.base + off;
-}
-static void *zm_alloc_cell(void) {
-#ifdef ZM_INTERLEAVE
-    return zm_alloc(sizeof(uint32_t));
-#else
-    size_t off = zm.ctop; zm.ctop += ZM_ALIGN;
-    assert(zm.ctop <= REGION_SIZE);
-    return zm.base + off;
-#endif
-}
-
-#define ZM_LINE 64
-static void *zm_alloc_aligned(size_t s, size_t align) {
-    zm.top = (zm.top + (align - 1)) & ~(size_t)(align - 1);
-    return zm_alloc(s);
-}
-static void *zm_alloc_buf(size_t s) {
-    return zm_alloc_aligned(s, ZM_LINE);
-}
-static void zm_free(void *p, size_t s) { (void)p; (void)s; }
 
 static inline uint32_t zm_seg(void *p) {
     assert((uint8_t*)p >= zm.base && (uint8_t*)p < zm.base + REGION_SIZE);
@@ -255,6 +238,119 @@ static inline void *zm_resolve(uint32_t seg) {
     uint32_t chunk_id = seg >> ZM_WORDBITS;
     assert(chunk_id < ZM_NCHUNKS);
     return zm.dir[chunk_id] + ((size_t)(seg & ZM_OFFMASK) << 3);
+}
+
+static void zm_free_cell(ZRef ref);
+
+static void zm_reset(void) {
+    for (size_t i = 0; i < zm.nretire; i++) zm_free_cell(zm.retire[i]);
+    zm.ftop = ZM_FIXED_TOP0;
+    zm.dtop = ZM_DYN_BASE;
+    zm.atop = ZM_ANCHOR_BASE;
+    zm.afree = 0;
+    zm.nretire = 0;
+    memset(zm.stacks, 0, sizeof zm.stacks);
+}
+
+static void zm_init(void) {
+    zm.base = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    assert(zm.base != MAP_FAILED);
+    for (size_t i = ZM_FIXED_BASE;  i < ZM_FIXED_BASE  + 256UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
+    for (size_t i = ZM_DYN_BASE;    i < ZM_DYN_BASE    +  32UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
+    for (size_t i = ZM_ANCHOR_BASE; i < ZM_ANCHOR_BASE +  16UL * 1024 * 1024; i += 4096) zm.base[i] = 0;
+    for (uint32_t c = 0; c < ZM_NCHUNKS; c++) zm.dir[c] = zm.base + (size_t)c * ZM_CHUNK;
+    zm.capretire = 1UL << 21;
+    zm.retire = (uint32_t*)malloc(zm.capretire * sizeof(uint32_t));
+    assert(zm.retire);
+    zm_reset();
+}
+
+static void *zm_alloc(size_t s) {
+    s = zm_round(s);
+    assert(s <= ZM_CHUNK);
+    size_t off = zm.ftop;
+    if ((off & (ZM_CHUNK - 1)) + s > ZM_CHUNK)
+        off = (off + ZM_CHUNK - 1) & ~(size_t)(ZM_CHUNK - 1);
+    zm.ftop = off + s;
+    assert(zm.ftop <= ZM_DYN_BASE);
+    return zm.base + off;
+}
+static void zm_free(void *p, size_t s) { (void)p; (void)s; }
+
+static ZSizeStack *zm_stack_for(uint32_t size, uint32_t align) {
+    uint32_t h = (size * 2654435761u ^ align * 40503u) & (ZM_NSTACKS - 1);
+    for (uint32_t i = 0; i < ZM_NSTACKS; i++) {
+        ZSizeStack *s = &zm.stacks[(h + i) & (ZM_NSTACKS - 1)];
+        if (s->size == size && s->align == align) return s;
+        if (s->size == 0) { s->size = size; s->align = align; s->head = 0; return s; }
+    }
+    assert(0 && "size-stack table full");
+    return NULL;
+}
+static void *zm_dyn_pop(size_t bytes, size_t align) {
+    ZSizeStack *s = zm_stack_for((uint32_t)bytes, (uint32_t)align);
+    if (!s->head) return NULL;
+    void *p = zm_resolve(s->head);
+    s->head = *(uint32_t*)p;
+    return p;
+}
+static void zm_dyn_push(void *p, size_t bytes, size_t align) {
+    ZSizeStack *s = zm_stack_for((uint32_t)bytes, (uint32_t)align);
+    uint32_t seg = zm_seg(p);
+    assert(seg != 0);
+    *(uint32_t*)p = s->head;
+    s->head = seg;
+}
+static void *zm_dyn_bump(size_t bytes, size_t align) {
+    size_t off = (zm.dtop + align - 1) & ~(size_t)(align - 1);
+    if (bytes > ZM_CHUNK || (off & (ZM_CHUNK - 1)) + bytes > ZM_CHUNK)
+        off = (off + ZM_CHUNK - 1) & ~(size_t)(ZM_CHUNK - 1);
+    zm.dtop = off + bytes;
+    assert(zm.dtop <= ZM_ANCHOR_BASE);
+    return zm.base + off;
+}
+static void *zm_alloc_dyn(size_t bytes, size_t align) {
+    void *p = zm_dyn_pop(bytes, align);
+    return p ? p : zm_dyn_bump(bytes, align);
+}
+static void zm_free_dyn(void *p, size_t bytes, size_t align) { zm_dyn_push(p, bytes, align); }
+static int zm_dyn_grow_in_place(void *p, size_t ob, size_t nb) {
+    size_t off = (size_t)((uint8_t*)p - zm.base);
+    if (off + ob != zm.dtop)                       return 0;
+    if (nb > ZM_CHUNK)                             return 0;
+    if ((off & (ZM_CHUNK - 1)) + nb > ZM_CHUNK)    return 0;
+    zm.dtop = off + nb;
+    return 1;
+}
+
+static void *zm_anchor_bump(void) {
+#ifdef ZM_INTERLEAVE
+    return zm_alloc(sizeof(ZAnchor));
+#else
+    size_t off = zm.atop;
+    zm.atop += sizeof(ZAnchor);
+    assert(zm.atop <= REGION_SIZE);
+    return zm.base + off;
+#endif
+}
+static void *zm_alloc_cell(void) {
+    if (zm.afree) {
+        ZAnchor *c = (ZAnchor*)zm_resolve(zm.afree);
+        zm.afree = c->target;
+        return c;
+    }
+    return zm_anchor_bump();
+}
+static void zm_free_cell(ZRef ref) {
+    ZAnchor *c = (ZAnchor*)zm_resolve(ref);
+    c->kind   = ZM_FREED;
+    c->target = zm.afree;
+    zm.afree  = ref;
+}
+static void zm_retire_cell(ZRef ref) {
+    assert(zm.nretire < zm.capretire);
+    zm.retire[zm.nretire++] = ref;
 }
 
 static inline ZRef *zm_backptr(void *obj, size_t obj_size) {
@@ -270,26 +366,52 @@ static void *zm_alloc_lazy(size_t obj_size) {
 static ZRef zm_create_ref(void *obj, size_t obj_size) {
     ZRef *bp = zm_backptr(obj, obj_size);
     if (*bp) return *bp;
-    uint32_t *cell = (uint32_t*)zm_alloc_cell();
-    *cell = zm_seg(obj);
+    ZAnchor *cell = (ZAnchor*)zm_alloc_cell();
+    cell->target = zm_seg(obj);
+    cell->kind   = ZM_PAYLOAD;
     ZRef ref = zm_seg(cell);
+    assert(ref != 0);
     *bp = ref;
     return ref;
 }
 
 static inline void *zm_deref(ZRef ref) {
     assert(ref != 0);
-    uint32_t *cell = (uint32_t*)zm_resolve(ref);
-    return zm_resolve(*cell);
+    ZAnchor *c = (ZAnchor*)zm_resolve(ref);
+    while (c->kind == ZM_FORWARD) c = (ZAnchor*)zm_resolve(c->target);
+    return zm_resolve(c->target);
 }
-
+static inline ZRef zm_terminal(ZRef ref) {
+    ZAnchor *c = (ZAnchor*)zm_resolve(ref);
+    while (c->kind == ZM_FORWARD) { ref = c->target; c = (ZAnchor*)zm_resolve(ref); }
+    return ref;
+}
+static void zm_compress(ZRef ref) {
+    ZRef t = zm_terminal(ref);
+    while (ref != t) {
+        ZAnchor *c = (ZAnchor*)zm_resolve(ref);
+        ZRef nx = c->target;
+        c->target = t;
+        ref = nx;
+    }
+}
 static inline void zm_anchor_update(ZRef ref, void *new_obj) {
     assert(ref != 0);
-    uint32_t *cell = (uint32_t*)zm_resolve(ref);
-    *cell = zm_seg(new_obj);
+    ((ZAnchor*)zm_resolve(zm_terminal(ref)))->target = zm_seg(new_obj);
+}
+static void zm_merge_ref(ZRef src, ZRef dst) {
+    ZRef st = zm_terminal(src), dt = zm_terminal(dst);
+    if (st == dt) return;
+    ZAnchor *c = (ZAnchor*)zm_resolve(st);
+    c->kind   = ZM_FORWARD;
+    c->target = dt;
+    zm_retire_cell(st);
 }
 
-static void zm_free_lazy(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
+static void zm_free_lazy(void *obj, size_t obj_size) {
+    ZRef *bp = zm_backptr(obj, obj_size);
+    if (*bp) { zm_free_cell(*bp); *bp = 0; }
+}
 
 static struct { uint8_t *base; size_t top; } ar;
 
@@ -424,7 +546,7 @@ static void test1(void) {
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
     for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_alloc_lazy(40); for(int i=0;i<N;i++) zm_free_lazy(ptrs[i],40); T[r]=now_ns()-t0; }
-    print_result("Zane (bump arena, lazy anchors)", T);
+    print_result("Zane (fixed-size region, lazy anchors)", T);
 
     for (int r=0;r<RUNS;r++) { double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=malloc(32); for(int i=0;i<N;i++) free(ptrs[i]); T[r]=now_ns()-t0; }
     print_result("malloc / free", T);
@@ -445,7 +567,7 @@ static void test2(void) {
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xfeed0000ULL+(uint64_t)r;for(int i=0;i<N;i++)ptrs[i]=zm_alloc_lazy(40);shuf_ptrs(ptrs,N);double t0=now_ns();for(int i=0;i<N;i++)zm_free_lazy(ptrs[i],40);T[r]=now_ns()-t0;}
-    print_result("Zane (bump arena, lazy anchors)", T);
+    print_result("Zane (fixed-size region, lazy anchors)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xfeed0000ULL+(uint64_t)r;for(int i=0;i<N;i++)ptrs[i]=malloc(32);shuf_ptrs(ptrs,N);double t0=now_ns();for(int i=0;i<N;i++)free(ptrs[i]);T[r]=now_ns()-t0;}
     print_result("malloc / free", T);
@@ -468,7 +590,7 @@ static void test3(void) {
     for(int i=0;i<N;i++) szseq[i]=MIXED_SIZES[i%NMS];
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=zm_alloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)zm_free(pairs[i].p,pairs[i].s);T[r]=now_ns()-t0;}
-    print_result("Zane (bump arena)", T);
+    print_result("Zane (fixed-size region)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=malloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)free(pairs[i].p);T[r]=now_ns()-t0;}
     print_result("malloc / free", T);
@@ -483,7 +605,7 @@ static void test3(void) {
 }
 
 static void test4(void) {
-    section("Test 4 -- Iteration: inline (owned) vs pointer-chase  [32B Entity x 100k]");
+    section("Test 4 -- Iteration: inline (hosted) vs pointer-chase  [32B Entity x 100k]");
     double T[RUNS];
 
     Entity *inl=(Entity*)malloc(N*sizeof(Entity));
@@ -507,7 +629,7 @@ static void test4(void) {
     {int64_t w=0;for(int i=0;i<cc.len;i++)w+=cchunked_get(&cc,i)->hp;sink^=w;}
 
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=inl[i].hp;T[r]=now_ns()-t0;sink^=acc;}
-    print_result("Inline array  (Array[100000] of Entity)", T);
+    print_result("Inline array  (Array<Entity, 100000>)", T);
 
     for(int r=0;r<RUNS;r++){int64_t acc=0;double t0=now_ns();for(int i=0;i<N;i++)acc+=sp[i]->hp;T[r]=now_ns()-t0;sink^=acc;}
     print_result("Pointer array, sequential", T);
@@ -526,17 +648,41 @@ static void test4(void) {
     free(inl);for(int i=0;i<N;i++)free(sp[i]);free(sp);free(sh);
 }
 
-typedef struct { Entity *base; size_t len, cap; } ZList;
+#define ZL_INIT_BLOCK 128
+
+typedef struct { Entity *base; size_t block, len, cap; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
 
-static void zlist_push(ZList *l, Entity e) {
-    if (l->len==l->cap) {
-        size_t ob=l->cap*sizeof(Entity);
-        if ((uint8_t*)l->base+ob==zm.base+zm.top) { zm.top+=ob; }
-        else { Entity *nb=(Entity*)zm_alloc_buf(ob*2); memcpy(nb,l->base,ob); zm_free(l->base,ob); l->base=nb; }
-        l->cap*=2;
+static size_t zlist_first_block(size_t stride) {
+    size_t b = ZL_INIT_BLOCK;
+    while (b < stride) b <<= 1;
+    return b;
+}
+static void zlist_init(ZList *l) {
+    l->block = zlist_first_block(sizeof(Entity));
+    l->base  = (Entity*)zm_alloc_dyn(l->block, ZM_LINE);
+    l->len   = 0;
+    l->cap   = l->block / sizeof(Entity);
+}
+static void zlist_grow(ZList *l) {
+    size_t ob = l->block, nb = ob * 2;
+    Entity *nbase = (Entity*)zm_dyn_pop(nb, ZM_LINE);
+    if (nbase) {
+        memcpy(nbase, l->base, ob);
+    } else if (zm_dyn_grow_in_place(l->base, ob, nb)) {
+        nbase = l->base;
+    } else {
+        nbase = (Entity*)zm_dyn_bump(nb, ZM_LINE);
+        memcpy(nbase, l->base, ob);
     }
-    l->base[l->len++]=e;
+    if (nbase != l->base) zm_dyn_push(l->base, ob, ZM_LINE);
+    l->base  = nbase;
+    l->block = nb;
+    l->cap   = nb / sizeof(Entity);
+}
+static void zlist_push(ZList *l, Entity e) {
+    if (l->len == l->cap) zlist_grow(l);
+    l->base[l->len++] = e;
 }
 static void cvec_push(CVec *v, Entity e) {
     if(v->len==v->cap){v->cap=v->cap?v->cap*2:8;v->base=(Entity*)realloc(v->base,v->cap*sizeof(Entity));}
@@ -544,12 +690,12 @@ static void cvec_push(CVec *v, Entity e) {
 }
 
 static void test5(void) {
-    section("Test 5 -- Owned buffer append growth  [push 100k x 32B Entity items]");
+    section("Test 5 -- Backing-store append growth  [push 100k x 32B Entity items]");
     double T[RUNS];
     Entity tmpl={42,1.5,2.5,99,0};
 
-    for(int r=0;r<RUNS;r++){zm_reset();ZList l={(Entity*)zm_alloc_buf(8*sizeof(Entity)),0,8};double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
-    print_result("Zane in-place buffer", T);
+    for(int r=0;r<RUNS;r++){zm_reset();ZList l;zlist_init(&l);double t0=now_ns();for(int i=0;i<N;i++)zlist_push(&l,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)l.len;}
+    print_result("Zane backing store (128B start, doubling)", T);
 
     for(int r=0;r<RUNS;r++){CVec v={NULL,0,0};double t0=now_ns();for(int i=0;i<N;i++)cvec_push(&v,tmpl);T[r]=now_ns()-t0;sink^=(int64_t)v.len;free(v.base);}
     print_result("C realloc vector", T);
@@ -561,20 +707,75 @@ static void test5(void) {
     print_result("CChunked (chunk=64, ptr-array)", T);
 }
 
+static int hop_count(ZRef r) {
+    int h = 0;
+    ZAnchor *c = (ZAnchor*)zm_resolve(r);
+    while (c->kind == ZM_FORWARD) { h++; c = (ZAnchor*)zm_resolve(c->target); }
+    return h;
+}
+
+static ZRef chain_of(int hops, ZRef terminal) {
+    size_t osz = sizeof(Entity) + sizeof(ZRef);
+    ZRef head = 0, prev = 0;
+    for (int h = 0; h < hops; h++) {
+        ZRef r = zm_create_ref(zm_alloc_lazy(osz), osz);
+        if (!head) head = r; else zm_merge_ref(prev, r);
+        prev = r;
+    }
+    zm_merge_ref(prev, terminal);
+    return head;
+}
+
+static inline Entity *tether_read(uint8_t **dir, ZRef ref) {
+    ZAnchor *c = (ZAnchor*)(dir[ref >> ZM_WORDBITS] + ((size_t)(ref & ZM_OFFMASK) << 3));
+    while (c->kind == ZM_FORWARD)
+        c = (ZAnchor*)(dir[c->target >> ZM_WORDBITS] + ((size_t)(c->target & ZM_OFFMASK) << 3));
+    return (Entity*)(dir[c->target >> ZM_WORDBITS] + ((size_t)(c->target & ZM_OFFMASK) << 3));
+}
+
+static void tether_pass(double T[RUNS], ZRef *refs, const char *label) {
+    for (int r = 0; r < RUNS; r++) {
+        uint8_t **dir = zm.dir;
+        for (int i = 0; i < N; i++) sink ^= (int64_t)tether_read(dir, refs[i])->hp;
+        int64_t acc = 0; double t0 = now_ns();
+        for (int i = 0; i < N; i++) acc += tether_read(dir, refs[i])->hp;
+        T[r] = now_ns() - t0; sink ^= acc;
+    }
+    print_result(label, T);
+}
+
 static void test6(void) {
-    section("Test 6 -- Ref access via segmented tether vs direct pointer  [100k accesses]");
+    section("Test 6 -- Guest access via segmented tether vs direct pointer  [100k accesses]");
     double T[RUNS];
 
     zm_reset();
     Entity **objs   = (Entity**)malloc(N * sizeof(Entity*));
     Entity **direct = (Entity**)malloc(N * sizeof(Entity*));
     ZRef    *refs   = (ZRef*)malloc(N * sizeof(ZRef));
+    ZRef    *fwd1   = (ZRef*)malloc(N * sizeof(ZRef));
+    ZRef    *fwd4   = (ZRef*)malloc(N * sizeof(ZRef));
+    ZRef    *comp   = (ZRef*)malloc(N * sizeof(ZRef));
 
     for(int i=0;i<N;i++){
         objs[i] = (Entity*)zm_alloc_lazy(sizeof(Entity)+sizeof(ZRef));
         objs[i]->hp = i%100+1;
         refs[i] = zm_create_ref(objs[i], sizeof(Entity)+sizeof(ZRef));
         direct[i] = objs[i];
+    }
+    for(int i=0;i<N;i++) fwd1[i] = chain_of(1, refs[i]);
+    for(int i=0;i<N;i++) fwd4[i] = chain_of(4, refs[i]);
+    for(int i=0;i<N;i++) comp[i] = chain_of(4, refs[i]);
+    for(int i=0;i<N;i++) zm_compress(comp[i]);
+
+    for(int i=0;i<N;i++){
+        assert(hop_count(refs[i]) == 0);
+        assert(hop_count(fwd1[i]) == 1);
+        assert(hop_count(fwd4[i]) == 4);
+        assert(hop_count(comp[i]) == 1);
+        assert(tether_read(zm.dir, refs[i]) == objs[i]);
+        assert(tether_read(zm.dir, fwd1[i]) == objs[i]);
+        assert(tether_read(zm.dir, fwd4[i]) == objs[i]);
+        assert(tether_read(zm.dir, comp[i]) == objs[i]);
     }
 
     for(int r=0;r<RUNS;r++){
@@ -585,44 +786,25 @@ static void test6(void) {
     }
     print_result("Direct pointer (baseline)", T);
 
-    for(int r=0;r<RUNS;r++){
-        uint8_t **dir = zm.dir;
-        for(int i=0;i<N;i++){
-            uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            sink^=(int64_t)((Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
-        }
-        int64_t acc=0; double t0=now_ns();
-        for(int i=0;i<N;i++){
-            uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            Entity *e=(Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3));
-            acc+=e->hp;
-        }
-        T[r]=now_ns()-t0; sink^=acc;
-    }
-    print_result("Segmented tether (chunk dir cached)", T);
+    tether_pass(T, refs, "Terminal tether (chunk dir cached)");
 
     for(int r=0;r<RUNS;r++){
-        for(int i=0;i<N;i++){
-            uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            sink^=(int64_t)((Entity*)(zm.dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
-        }
+        for(int i=0;i<N;i++) sink^=(int64_t)tether_read(zm.dir, refs[i])->hp;
         int64_t acc=0; double t0=now_ns();
         for(int i=0;i<N;i++){
             __asm__ volatile("" ::: "memory");
-            uint32_t cs=refs[i];
-            uint32_t os=*(uint32_t*)(zm.dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-            Entity *e=(Entity*)(zm.dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3));
-            acc+=e->hp;
+            acc+=tether_read(zm.dir, refs[i])->hp;
         }
         T[r]=now_ns()-t0; sink^=acc;
     }
-    print_result("Segmented tether (chunk dir reloaded)", T);
+    print_result("Terminal tether (chunk dir reloaded)", T);
+
+    tether_pass(T, fwd1, "Older tether (1 forwarding hop)");
+    tether_pass(T, fwd4, "Older tether (4 forwarding hops)");
+    tether_pass(T, comp, "Older tether (4 hops, path-compressed)");
 
     for(int i=0;i<N;i++) zm_free_lazy(objs[i], sizeof(Entity)+sizeof(ZRef));
-    free(objs);free(direct);free(refs);
+    free(objs);free(direct);free(refs);free(fwd1);free(fwd4);free(comp);
 }
 
 #define GAME_FRAMES      500
@@ -684,6 +866,8 @@ static void game_loop_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
 
 static void *zm_alloc_e(size_t s){return zm_alloc_lazy(s+sizeof(ZRef));}
 static void  zm_free_e (void*p,size_t s){zm_free_lazy(p,s+sizeof(ZRef));}
+static void *zm_alloc_b(size_t s){return zm_alloc_dyn(s,ZM_LINE);}
+static void  zm_free_b (void*p,size_t s){zm_free_dyn(p,s,ZM_LINE);}
 static void *ma_alloc_e(size_t s){return malloc(s);}
 static void  ma_free_e (void*p,size_t s){(void)s;free(p);}
 static void *po_alloc_e(size_t s){return pool_alloc(s);}
@@ -692,7 +876,7 @@ static void  po_free_e (void*p,size_t s){pool_free(p,s);}
 static void test7(void) {
     section("Test 7 -- Game loop  [500 frames: 30 spawns + 20+ kills + update per frame]");
     double T[RUNS];
-    zm_reset(); game_loop_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (bump arena)", T);
+    zm_reset(); game_loop_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (fixed-size region)", T);
              game_loop_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
              game_loop_run(T, po_alloc_e, po_free_e, 1); print_result("Pool (per-size free-list)", T);
 }
@@ -817,7 +1001,7 @@ static void  po_free_p (void*p,size_t s){pool_free(p,s);}
 static void test8(void) {
     section("Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]");
     double T[RUNS];
-    zm_reset(); particle_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (bump arena)", T);
+    zm_reset(); particle_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (fixed-size region)", T);
               particle_run_parallel(T, zm_alloc_e, zm_free_e, 0); print_result("Zane + work-stealing update", T);
               particle_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
               particle_run(T, po_alloc_p, po_free_p, 1); print_result("Pool (per-size free-list)", T);
@@ -836,7 +1020,7 @@ static void test9(void) {
         for(int i=0;i<N/2;i++) ptrs[i]=zm_alloc_lazy(40);
         T[r]=now_ns()-t0; sink^=(int64_t)(uintptr_t)ptrs[0];
     }
-    print_result("Zane -- refill (bump arena)", T);
+    print_result("Zane -- refill (fixed-size region)", T);
 
     {
         void **refill=(void**)malloc((N/2)*sizeof(void*));
@@ -917,12 +1101,12 @@ static void *ma_af(size_t s){return malloc(s);}
 static void *po_af(size_t s){return pool_alloc(s);}
 
 static void test10(void) {
-    section("Test 10 -- Ownership tree teardown  [~4000 nodes, cascade post-order destroy]");
+    section("Test 10 -- Hosting tree teardown  [~4000 nodes, cascade post-order destroy]");
     double T[RUNS];
     size_t znode_size = sizeof(TNode)+sizeof(ZRef);
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af);double t0=now_ns();destroy_zane_norefs(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
-    print_result("Zane — no tethers", T);
+    print_result("Zane — no guests", T);
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
@@ -932,7 +1116,7 @@ static void test10(void) {
         destroy_zane_indirefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
     }
-    print_result("Zane — individual tethers (1 per node)", T);
+    print_result("Zane — a guest per node", T);
 
     for(int r=0;r<RUNS;r++){
         zm_reset(); rng_state=0xbadf00dULL+(uint64_t)r;
@@ -942,7 +1126,7 @@ static void test10(void) {
         destroy_zane_norefs(root);
         T[r]=now_ns()-t0; sink^=(int64_t)rem;
     }
-    print_result("Zane — single parent tether (root only)", T);
+    print_result("Zane — one guest (root only)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,ma_af);double t0=now_ns();destroy_malloc(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("malloc cascade destroy", T);
@@ -962,23 +1146,23 @@ static void test10(void) {
 #define STRESS_LIST_FREE    3
 #define STRESS_PUSH_OPS     30
 #define STRESS_LIST_MAXLEN  16
-#define STRESS_LIST_INITCAP 8
+#define STRESS_LIST_INITCAP (ZL_INIT_BLOCK / (int)sizeof(Entity))
 
 typedef struct { Entity *data; int len, cap; } SList;
 
-static void slist_push(SList *l, Entity e, AllocFn af, FreeFn ff) {
+static void slist_push(SList *l, Entity e, AllocFn baf, FreeFn bff) {
     if (l->len == l->cap) {
         int nc = l->cap * 2;
-        Entity *nb = (Entity*)af((size_t)nc * sizeof(Entity));
+        Entity *nb = (Entity*)baf((size_t)nc * sizeof(Entity));
         memcpy(nb, l->data, (size_t)l->len * sizeof(Entity));
-        ff(l->data, (size_t)l->cap * sizeof(Entity));
+        bff(l->data, (size_t)l->cap * sizeof(Entity));
         l->data = nb;
         l->cap = nc;
     }
     l->data[l->len++] = e;
 }
 
-static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
+static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, AllocFn baf, FreeFn bff, int prewarm) {
     if (prewarm) {
         pool_flush();
         pool_warm(sizeof(Entity),                          STRESS_MAX_OBJ);
@@ -1019,7 +1203,7 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
                 for (int i = 0; i < STRESS_MAX_LISTS; i++) {
                     int idx = (start + i) % STRESS_MAX_LISTS;
                     if (!lists[idx].cap) {
-                        lists[idx].data = (Entity*)af(STRESS_LIST_INITCAP * sizeof(Entity));
+                        lists[idx].data = (Entity*)baf(STRESS_LIST_INITCAP * sizeof(Entity));
                         lists[idx].len = 0;
                         lists[idx].cap = STRESS_LIST_INITCAP;
                         list_count++; break;
@@ -1033,7 +1217,7 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
                     if (!lists[li].cap || lists[li].len >= STRESS_LIST_MAXLEN) continue;
                     int oi = (int)(rng() % STRESS_MAX_OBJ);
                     if (!objs[oi]) continue;
-                    slist_push(&lists[li], *objs[oi], af, ff);
+                    slist_push(&lists[li], *objs[oi], baf, bff);
                 }
             }
 
@@ -1069,7 +1253,7 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
             for (int tries = 0; tries < STRESS_MAX_LISTS && lkilled < STRESS_LIST_FREE; tries++) {
                 int idx = (int)(rng() % STRESS_MAX_LISTS);
                 if (lists[idx].cap) {
-                    ff(lists[idx].data, (size_t)lists[idx].cap * sizeof(Entity));
+                    bff(lists[idx].data, (size_t)lists[idx].cap * sizeof(Entity));
                     lists[idx].data = NULL; lists[idx].len = lists[idx].cap = 0;
                     list_count--; lkilled++;
                 }
@@ -1077,7 +1261,7 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
         }
 
         for (int i = 0; i < STRESS_MAX_OBJ;  i++) if (objs[i])      { ff(objs[i], sizeof(Entity)); }
-        for (int i = 0; i < STRESS_MAX_LISTS; i++) if (lists[i].cap) { ff(lists[i].data, (size_t)lists[i].cap * sizeof(Entity)); }
+        for (int i = 0; i < STRESS_MAX_LISTS; i++) if (lists[i].cap) { bff(lists[i].data, (size_t)lists[i].cap * sizeof(Entity)); }
 
         T[r] = now_ns() - t0;
     }
@@ -1088,9 +1272,9 @@ static void stress_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
 static void test11(void) {
     section("Test 11 -- Fragmentation stress  [200 cycles: spawn+buffer-create+push+update+kill]");
     double T[RUNS];
-    zm_reset(); stress_run(T, zm_alloc_e, zm_free_e, 0); print_result("Zane (bump arena)", T);
-               stress_run(T, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
-               stress_run(T, po_alloc_e, po_free_e, 1); print_result("Pool (per-size free-list)", T);
+    zm_reset(); stress_run(T, zm_alloc_e, zm_free_e, zm_alloc_b, zm_free_b, 0); print_result("Zane (fixed-size region + dynamic size stacks)", T);
+               stress_run(T, ma_alloc_e, ma_free_e, ma_alloc_e, ma_free_e, 0); print_result("malloc / free", T);
+               stress_run(T, po_alloc_e, po_free_e, po_alloc_e, po_free_e, 1); print_result("Pool (per-size free-list)", T);
 }
 
 typedef struct {
@@ -1108,27 +1292,27 @@ static void sum_entity_shard(void *arg) {
 }
 
 static void test12(void) {
-    section("Test 12 -- Concurrent shard scan  [4 x Array[25000] of Entity read-only shard sums]");
+    section("Test 12 -- Concurrent shard scan  [4 x Array<Entity, 25000> read-only shard sums]");
     double T[RUNS];
     assert((N % BENCH_POOL_WORKERS) == 0);
 
-    Entity *owned = (Entity*)malloc(N * sizeof(Entity));
+    Entity *hosted = (Entity*)malloc(N * sizeof(Entity));
     for (int i = 0; i < N; i++) {
-        owned[i].id = i;
-        owned[i].x = i * 1.1;
-        owned[i].y = i * 2.2;
-        owned[i].hp = i % 100 + 1;
+        hosted[i].id = i;
+        hosted[i].x = i * 1.1;
+        hosted[i].y = i * 2.2;
+        hosted[i].hp = i % 100 + 1;
     }
 
     const int shard_len = N / BENCH_POOL_WORKERS;
     const int64_t expected = (int64_t)(N / 100) * 5050;
 
-    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
+    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += hosted[i].hp; assert(warm == expected); sink ^= warm; }
     {
         BenchJob run[BENCH_POOL_WORKERS];
         SumJob jobs[BENCH_POOL_WORKERS];
         for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
-            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            jobs[i] = (SumJob){ .base = hosted, .start = i * shard_len, .len = shard_len, .sum = 0 };
             run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
         bench_pool_run(run, BENCH_POOL_WORKERS);
@@ -1145,20 +1329,20 @@ static void test12(void) {
         double t0 = now_ns();
         for (int shard = 0; shard < BENCH_POOL_WORKERS; shard++) {
             int start = shard * shard_len;
-            for (int i = 0; i < shard_len; i++) acc += owned[start + i].hp;
+            for (int i = 0; i < shard_len; i++) acc += hosted[start + i].hp;
         }
         T[r] = now_ns() - t0;
         assert(acc == expected);
         sink ^= acc;
     }
-    print_result("Owned Array shards, sequential", T);
+    print_result("Hosted Array shards, sequential", T);
 
     for (int r = 0; r < RUNS; r++) {
         BenchJob run[BENCH_POOL_WORKERS];
         SumJob jobs[BENCH_POOL_WORKERS];
         double t0 = now_ns();
         for (int i = 0; i < BENCH_POOL_WORKERS; i++) {
-            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            jobs[i] = (SumJob){ .base = hosted, .start = i * shard_len, .len = shard_len, .sum = 0 };
             run[i] = (BenchJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
         bench_pool_run(run, BENCH_POOL_WORKERS);
@@ -1170,13 +1354,13 @@ static void test12(void) {
         assert(acc == expected);
         sink ^= acc;
     }
-    print_result("Owned Array shards, concurrent (4 workers)", T);
+    print_result("Hosted Array shards, concurrent (4 workers)", T);
 
-    free(owned);
+    free(hosted);
 }
 
 static void test13(void) {
-    section("Test 13 -- Partial-tether repeated scan  [100k obj, 20% tethered, payload-only]");
+    section("Test 13 -- Partially tethered repeated scan  [100k obj, 20% tethered, payload-only]");
     double T[RUNS];
     zm_reset();
     size_t osz = sizeof(Entity) + sizeof(ZRef);
@@ -1220,11 +1404,7 @@ static void test14(void) {
             for (int p = 0; p < 10; p++)
                 for (int i = 0; i < N; i++) acc += objs[i]->hp;
             uint8_t **dir = zm.dir;
-            for (int k = 0; k < nt; k++) {
-                uint32_t cs = refs[k];
-                uint32_t os = *(uint32_t*)(dir[cs>>ZM_WORDBITS] + ((size_t)(cs&ZM_OFFMASK)<<3));
-                acc += ((Entity*)(dir[os>>ZM_WORDBITS] + ((size_t)(os&ZM_OFFMASK)<<3)))->hp;
-            }
+            for (int k = 0; k < nt; k++) acc += tether_read(dir, refs[k])->hp;
         }
         T[r] = now_ns() - t0; sink ^= acc;
     }

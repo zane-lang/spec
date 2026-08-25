@@ -73,6 +73,29 @@ keep it to code plus the labels passed to `section()`/`print_result()`.
 `runbench.py` regenerates `benchmark.html`; its `TEST_META` strings are
 reader-facing HTML, not code comments.
 
+Nothing warns you when the harness falls behind: it drifted for eight spec
+commits before anyone looked, because **no guard grep covers `bench/`** and the
+C keeps compiling whatever the spec says. So when `spec/memory.md` changes,
+check the harness in the same pass. What it now mirrors, section by section:
+
+| Harness | Spec |
+| --- | --- |
+| `zm_alloc` — fixed-size region, bump only, no slot ever handed back | §3.1, §3.2 |
+| `zm_alloc_dyn` / `zm_free_dyn` — dynamic region, LIFO stacks keyed on (size, alignment), no-straddle, oversized spans | §3.1, §3.2 |
+| `zlist_*` — 128-byte first block, byte-based doubling, stack before frontier, in-place growth only inside the chunk | §3.6 |
+| `ZAnchor {target, kind}` — 8-byte cell, free-address stack, lazy creation | §4.1, §4.2, §4.3 |
+| `zm_merge_ref` / `zm_compress` / `zm_retire_cell` — forwarding, path compression, retirement at drain | §4.4, §4.5, §4.6 |
+
+The **labels** in `section()`/`print_result()` and the `TEST_META` prose are
+reader-facing text and drift the same way spec prose does — the retired-forms
+grep and the `owner`→`host` / `&`-is-a-**guest** rename apply to them, even
+though the guard greps in the next section are scoped to `spec/`. Two committed
+artifacts, `zane_bench_results.txt` and `benchmark.html`, are program output
+pinned to a real run on the maintainer's machine: never hand-edit their numbers
+or labels to match a code change, and never regenerate them from a run on other
+hardware. A change that moves the measurements is finished by the maintainer
+re-running, not by you.
+
 ## Validate before committing (spec edits)
 The generics system was unified into a `<>`-header / `()`-call model (canonical
 home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
