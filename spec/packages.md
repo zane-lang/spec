@@ -107,6 +107,8 @@ Two imports that would give one entity two spellings in the same file are a comp
 
 A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed.
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
+
 ### 3.6 Imports affect plain-name resolution only
 
 An import changes how plain names resolve and nothing else. It does not contribute operator candidates ([`operators.md`](operators.md) §2.2), does not affect method lookup ([`functions.md`](functions.md) §6.1), and does not affect which implicit constructors apply at a coercion site, which the home-package rule of [`types.md`](types.md) §4.5 settles.
@@ -120,6 +122,8 @@ import math$+        // ILLEGAL: operators resolve by operand home package
 
 A cross-package method call is written with the qualifier at the call site instead ([`functions.md`](functions.md) §6.2).
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
+
 ### 3.7 An alias preserves the casing class
 
 An `as` alias **MUST** have the same initial case as the name it renames, because an initial capital is semantic ([`lexical.md`](lexical.md) §3). A value name cannot be aliased to a type-shaped name, or the reverse.
@@ -130,6 +134,8 @@ import math$Vector as Vec     // legal: both uppercase
 import math$sqrt as Root      // ILLEGAL: a value renamed to a type-shaped name
 ```
 
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
+
 ### 3.8 Colliding bare names are an error at the import
 
 Two imports may bring one bare name into a file only when the result is a legal overload set: every declaration sharing the name must be a verb, and they must differ in the ordered parameter types that decide overload identity ([`functions.md`](functions.md) §4.1). Dispatch is then an ordinary call-site choice.
@@ -137,6 +143,8 @@ Two imports may bring one bare name into a file only when the result is a legal 
 Any other collision is a compile-time error reported at the import declaration rather than at the use site, so the file's own import list states the conflict. A lambda-variable is a symbol rather than a verb and can never accumulate an overload set ([`functions.md`](functions.md) §7.3), so a collision involving one is always an error. A bare name that collides with a member of the file's own package (§3.2) is an error on the same terms; an import never shadows.
 
 The narrower forms of §3.3 are the remedy: where `import pkg$` would collide, `import pkg$member` or an `as` alias takes only what the file needs.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
 ### 3.9 `$` separates a package namespace from its member
 

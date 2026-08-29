@@ -202,7 +202,7 @@ And uses package members through that key:
 math$vec(...)
 ```
 
-Source code never writes version-prefixed package names directly. The compiler resolves keys through `zane.coda` and `zane-versions.coda`.
+`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). Whichever form it takes, the key is what names the dependency: source code never writes version-prefixed package names directly, and the compiler resolves keys through `zane.coda` and `zane-versions.coda`.
 
 ---
 
