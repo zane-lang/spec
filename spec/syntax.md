@@ -720,10 +720,6 @@ The first two take storage primitives rather than fundamental types and the thir
 
 ### 5.2 Writing an exit
 
-```zane
-@controlflow$exitFromCall()
-```
-
 The exit takes no condition; a conditional exit is written by placing it in a branch, and a run of statements before an exit is written by placing them in the same block:
 
 ```zane

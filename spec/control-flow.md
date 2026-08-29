@@ -189,7 +189,7 @@ The language provides exactly three control-flow operations:
 @controlflow$exitFromCall()
 ```
 
-`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the invocation it sits in (§4.2).
+`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the innermost invocation that has a frame (§4.2).
 
 The two that take arguments take **storage primitives** rather than the fundamental types, and the third takes no arguments at all. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
@@ -198,7 +198,7 @@ An intrinsic is called like a function, so its arguments are coercion sites ([`t
 
 
 ### 4.2 `exitFromCall` ends the innermost invocation that has a frame
-`@controlflow$exitFromCall()` ends the invocation whose body contains it and resumes at that invocation's call site.
+`@controlflow$exitFromCall()` ends the innermost invocation that has a frame of its own, and resumes at that invocation's call site.
 
 Which invocation that is follows from the lowering of §2.3 rather than from nesting in the source. A verb declaring a `@concepts$Block` parameter is expanded at its call site and so has no frame of its own, and a block never crosses a call boundary. The exit therefore passes through every block and every block-taking call it is written inside, and ends the nearest enclosing verb that is a real call. A lambda is a function value with a frame of its own ([`functions.md`](functions.md) §7.2), so an exit inside a lambda body ends the lambda.
 
@@ -212,7 +212,7 @@ if(shouldStop) {
 
 The condition there belongs to `if`, so it is `core`'s `Bool` like any other argument. Nothing in the language's exit names a type, and ordinary source reaches every exit through the branching verb it already uses.
 
-The exit carries no value, so it is legal only in a verb whose return type is `Unit`. A verb with any other return type leaves early with `return`, which carries the value out through the same blocks (§2.3).
+The exit carries no value, so the invocation it ends **MUST** have return type `Unit`. Because expansion decides which invocation that is, the check lands at the call site for an exit written in a block or in a block-taking verb's body: one such verb is legal in a `Unit` caller and rejected in a caller that must produce a value. An invocation with any other return type leaves early with `return`, which carries the value out through the same blocks (§2.3).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
 
 
@@ -277,5 +277,5 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
 | Intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
-| Exit | `@controlflow$exitFromCall()` ends the innermost invocation that has a frame, passing through blocks and block-taking calls; it takes no condition, carries no value, and is legal only in a `Unit` verb |
+| Exit | `@controlflow$exitFromCall()` ends the innermost invocation that has a frame, passing through blocks and block-taking calls; it takes no condition and carries no value, so the invocation it ends must return `Unit` |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |
