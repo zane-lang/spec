@@ -180,7 +180,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Case sensitivity | Identifiers compare by exact bytes; case is never folded |
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
-| Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, or as the left operand of `$` |
+| Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, after the `as` of a whole-package import alias, or as the left operand of `$` |
 | Number parameter | A lowercase name (`n`) declared `n Number` (in a type's `<>` header or inline in a verb); a number, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |

@@ -212,7 +212,7 @@ An intrinsic is called like a function, so its arguments are coercion sites ([`t
 ### 4.2 `exitFromCall` ends its caller's invocation
 `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it. Control does not resume after that call site; the caller's invocation is over.
 
-It reaches one level, not all of them. The verb holding the intrinsic ends too, because its frame sits inside the one being left, but a verb that merely calls such a verb is unaffected.
+It reaches one level, not all of them. The verb holding the intrinsic ends too, because its frame sits inside the one being left, but the invocation that called *that* one is unaffected: in `outer` → `helper` → `guard`, the exit ends `helper` and `outer` runs on.
 
 This is what makes an exit declarable. A verb whose body is the intrinsic exits whoever calls it, so `core` declares the exit every program uses (§3.6) rather than the language spelling one as grammar:
 

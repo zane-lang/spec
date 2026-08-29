@@ -146,7 +146,7 @@ EnumName.property FieldType [
 
 `Int`, `Float`, `Bool`, `String`, `Unit`
 
-These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3), and are written unqualified in a file that imports `core` with the whole-package form. See [`types.md`](types.md) §2.6 for their semantics.
+These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
 ### 2.2 Named types
 
@@ -780,7 +780,7 @@ a ''* b               // ILLEGAL: there is no second loose tier
 ### 7.2 Control-flow keywords
 Zane has none.
 
-`if`, `elif`, `else`, `guard`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). `guard` in particular is an ordinary verb over the exit intrinsic (§5.2), not grammar.
+`if`, `elif`, `else`, and `guard` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). `guard` in particular is an ordinary verb over the exit intrinsic (§5.2), not grammar. Counted repetition is a method call on the counter rather than a named construct — `i!to(end)` ([`control-flow.md`](control-flow.md) §3.4).
 
 ### 7.3 Comments
 
