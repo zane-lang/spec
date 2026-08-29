@@ -229,7 +229,7 @@ Array<T, n>
 @controlflow$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch and repeat.
+The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch, repeat, and exit.
 
 Every `@` namespace is reachable from every package without an import.
 
