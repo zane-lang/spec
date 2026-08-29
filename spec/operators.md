@@ -1,6 +1,6 @@
 # Zane Operator System
 
-This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, and boolean keywords.
+This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, Boolean algebra, and the loose forms.
 
 > **See also:** [`syntax.md`](syntax.md) §3.9 and §7 for operator declarations and surface forms. [`effects.md`](effects.md) §2 for `mut` and side effects.
 
@@ -13,7 +13,7 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
-- **`Boolean algebra`.** `Bool` draws from the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement, and it declares no `/`.
+- **`Boolean algebra`.** `Bool` draws from the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement, `==` is equality, and it declares neither `/` nor `<`.
 - **`Loose forms`.** A `'` prefix moves a binary operator into a mirror of the precedence table below the unprefixed one, so a chain of comparisons can be combined without brackets.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
@@ -67,15 +67,18 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
 ### 2.4 Boolean operators
-`Bool` implements three of the primitive operators of §2.1 as a Boolean algebra, and declares nothing beyond them:
+`Bool` implements four of the primitive operators of §2.1 — the three of a Boolean algebra, plus equality — and declares nothing beyond them:
 
 | Expression | Meaning |
 |---|---|
 | `a * b` | conjunction |
 | `a + b` | disjunction |
 | `~a` | complement |
+| `a == b` | equality |
 
-The derived operators of §2.3 follow without separate implementations. `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or; `a - b` is `a + ~b`, which is `b` implies `a`. `/` is not among the three, because a Boolean algebra has no division, so `a / b` on two `Bool` operands is an ordinary no-match error.
+The derived operators of §2.3 that rest on those four follow without separate implementations: `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or, and `a - b` is `a + ~b`, which is `b` implies `a`.
+
+The two primitives `Bool` leaves undeclared are the two a Boolean algebra has no use for. It has no division, so `a / b` on two `Bool` operands is an ordinary no-match error; and it is not ordered, so `a < b` is a no-match error too, along with the `>`, `<=`, and `>=` that §2.3 derives from `<`.
 
 Conjunction and disjunction are interderivable through `~`; see §4.4.
 
@@ -223,6 +226,6 @@ An operator token may appear only in operator position; it has no value form. Th
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
 | Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
-| Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement; `~=` is exclusive or and `-` is implication by derivation. Both operands are evaluated. |
+| Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement, and `==` as equality; `~=` is exclusive or and `-` is implication by derivation. It declares no `/` and no `<`, so those and the operators derived from `<` are no-match errors. Both operands are evaluated. |
 | Loose forms | A `'` prefix selects a binary operator at a mirrored level below every unprefixed one; one tier only, binary only, same implementation. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |

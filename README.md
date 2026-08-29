@@ -49,7 +49,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | Document | Purpose |
 |---|---|
 | [`spec/control-flow.md`](spec/control-flow.md) | Block arguments, the three control-flow intrinsics, the `core` branching and repetition built on them, and 1-based ordinal rules |
-| [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, and boolean keywords |
+| [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, Boolean algebra, and loose forms |
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
 | [`spec/packages.md`](spec/packages.md) | Directory-defined namespaces and compilation units, file-scoped imports, explicit member access, package visibility, and package-scope state |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, version pinning, fetching, and caching |
