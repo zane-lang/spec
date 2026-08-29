@@ -8,13 +8,13 @@ This document specifies how Zane branches and repeats. Neither is a language con
 
 ## 1. Overview
 
-Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, and three intrinsics that a verb can use to run one conditionally, run one repeatedly, or end the invocation it sits in. Everything a reader recognizes as control flow is built from those.
+Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, and three intrinsics that a verb can use to run one conditionally, run one repeatedly, or end the invocation that called it. Everything a reader recognizes as control flow is built from those.
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
-- **`Branching and repetition are calls`.** `if`, `elif`, `else`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
+- **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
 - **`Three intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` are the only primitives. The first two are stated over storage primitives and the third takes nothing at all, so none depends on a package.
 - **`Repetition is bounded by construction`.** `repeat` takes a count, so no control flow built on it can repeat without a written bound.
-- **`No control-flow keywords`.** The exit is an intrinsic taking no condition, so nothing in the language's control-flow surface names a type, and a conditional exit is written by putting it in a branch.
+- **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
 
 ---
@@ -50,22 +50,20 @@ A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`co
 ### 2.3 A block is a scope for bindings, not for control transfer
 A block owns the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
 
-It is **transparent** to control transfer. `return`, `abort`, and `@controlflow$exitFromCall` written inside a block act on the invocation containing the *call*, not on the block:
+It is **transparent** to control transfer. `return` and `abort` written inside a block act on the invocation containing the *call*, not on the block, and a call to an exiting verb such as `core`'s `guard` (§3.6) ends that same invocation:
 
 ```zane
 Unit reportUntilNegative(values IntList) {
     i Int = Int(1)
     i!to(values:size()) {
-        if(values[i] < Int(0)) {
-            @controlflow$exitFromCall()
-        }
+        guard(values[i] < Int(0))
         print(values[i])
     }
     return Unit()
 }
 ```
 
-The exit above leaves `reportUntilNegative`, so it ends the repetition and everything after it, not one pass of it. A `return` inside a block returns from the enclosing verb and carries its value out the same way:
+`i!to` is frameless, so `guard`'s caller is `reportUntilNegative` and the exit leaves it — ending the repetition and everything after it, not one pass of it. A `return` inside a block returns from the enclosing verb and carries its value out the same way:
 
 ```zane
 Int firstNegative(values IntList) {
@@ -163,18 +161,32 @@ No `core` declaration repeats without a count, and none can be written (§4.3). 
 Unit connect(connection Connection, maxTries Int) {
     attempt Int = Int(1)
     attempt!to(maxTries) {
-        if(connection:up()) {
-            @controlflow$exitFromCall()
-        }
+        guard(connection:up())
         log(connection:ping())
     }
     return Unit()
 }
 ```
 
-The exit leaves `connect`, not the repetition (§2.3). Zane has no construct that ends a repetition and resumes after it: a search that must carry a result onward `return`s it from inside the block, and work that must follow a repetition sits after a call to the verb that performs it.
+The `guard` leaves `connect`, not the repetition (§2.3). Zane has no construct that ends a repetition and resumes after it: a search that must carry a result onward `return`s it from inside the block, and work that must follow a repetition sits after a call to the verb that performs it.
 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#doing-without-while) — "Doing without `while`".
+
+### 3.6 `guard` exits the verb that calls it
+`guard(condition)` ends its caller's invocation when the condition is `true`, and does nothing when it is `false`. It is a `core` declaration like the rest of this section, not grammar, and its body is the exit intrinsic inside a branch (§4.2).
+
+```zane
+Unit configure(settings Settings) {
+    guard(settings:isEmpty())
+    apply(settings)
+    return Unit()
+}
+```
+
+Its condition is an ordinary argument, so it is `core`'s `Bool` and reaches it through the same coercion as any other argument. A type usable in an `if` is usable in a `guard` on identical terms; the language itself names no type for either.
+
+`guard` takes no block. A run of statements before an exit is a branch whose block ends with a `guard`, which is the same shape written one level out.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
 
 ---
 
@@ -189,7 +201,7 @@ The language provides exactly three control-flow operations:
 @controlflow$exitFromCall()
 ```
 
-`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the innermost invocation that has a frame (§4.2).
+`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the invocation that called the verb containing it (§4.2).
 
 The two that take arguments take **storage primitives** rather than the fundamental types, and the third takes no arguments at all. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
@@ -197,22 +209,40 @@ An intrinsic is called like a function, so its arguments are coercion sites ([`t
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
-### 4.2 `exitFromCall` ends the innermost invocation that has a frame
-`@controlflow$exitFromCall()` ends the innermost invocation that has a frame of its own, and resumes at that invocation's call site.
+### 4.2 `exitFromCall` ends its caller's invocation
+`@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it. Control does not resume after that call site; the caller's invocation is over.
 
-Which invocation that is follows from the lowering of §2.3 rather than from nesting in the source. A verb declaring a `@concepts$Block` parameter is expanded at its call site and so has no frame of its own, and a block never crosses a call boundary. The exit therefore passes through every block and every block-taking call it is written inside, and ends the nearest enclosing verb that is a real call. A lambda is a function value with a frame of its own ([`functions.md`](functions.md) §7.2), so an exit inside a lambda body ends the lambda.
+It reaches one level, not all of them. The verb holding the intrinsic ends too, because its frame sits inside the one being left, but a verb that merely calls such a verb is unaffected.
 
-It takes no condition. A conditional exit is a branch whose block is the exit, which is how `core`'s `if` supplies one:
+This is what makes an exit declarable. A verb whose body is the intrinsic exits whoever calls it, so `core` declares the exit every program uses (§3.6) rather than the language spelling one as grammar:
 
 ```zane
-if(shouldStop) {
-    @controlflow$exitFromCall()
+package core
+
+Unit guard(condition Bool) {
+    if(condition) {
+        @controlflow$exitFromCall()
+    }
+    return Unit()
 }
 ```
 
-The condition there belongs to `if`, so it is `core`'s `Bool` like any other argument. Nothing in the language's exit names a type, and ordinary source reaches every exit through the branching verb it already uses.
+Which invocation is the caller follows from the lowering of §2.3 rather than from nesting in the source. A verb declaring a `@concepts$Block` parameter is expanded at its call site and has no frame of its own, so a call written inside a block belongs to the verb the block was written in:
 
-The exit carries no value, so the invocation it ends **MUST** have return type `Unit`. Because expansion decides which invocation that is, the check lands at the call site for an exit written in a block or in a block-taking verb's body: one such verb is legal in a `Unit` caller and rejected in a caller that must produce a value. An invocation with any other return type leaves early with `return`, which carries the value out through the same blocks (§2.3).
+```zane
+Unit main() {
+    if(true) {
+        guard(true)
+    }
+    return Unit()
+}
+```
+
+`if` is frameless, so `guard`'s caller is `main`, and the exit ends `main` at that line. A lambda is a function value with a frame of its own ([`functions.md`](functions.md) §7.2), so it is a caller like any other.
+
+Writing the intrinsic directly in a verb's own body is therefore not a way to leave that verb — it leaves the verb's caller. A verb that wants to stop itself calls an exiting verb such as `guard`, or `return`s.
+
+The exit carries no value, so the invocation it ends **MUST** have return type `Unit`. Because the caller is decided at the call site, an exiting verb is legal in a `Unit` caller and rejected in a caller that must produce a value; the check belongs to the call, not to the exiting verb's declaration. An invocation with any other return type leaves early with `return`, which carries the value out through blocks the same way (§2.3).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
 
 
@@ -239,7 +269,7 @@ twice() {
 
 The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §4.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks. Being the fundamental types' home package gives `core` first place in unqualified method lookup, not exclusive rights: any package may declare methods on them, reached by a qualifier where lookup does not find them ([`functions.md`](functions.md) §6.1 and §6.3).
 
-Exits compose the same way. Such a verb is expanded at its call site, so it has no frame of its own and an `@controlflow$exitFromCall()` written in its body ends the *caller* (§4.2). A package can therefore declare an exiting construct of its own, which is what an exit spelled as grammar could never be: a keyword can only ever exit where it is written, so it cannot be handed to anyone.
+Exits are declarable on the same footing, and need no block at all. An `@controlflow$exitFromCall()` in any verb's body ends that verb's caller (§4.2), so a package may declare an exiting verb of its own exactly as `core` declares `guard`. That is what an exit spelled as grammar could never be: a keyword can only exit where it is written, so it cannot be handed to anyone.
 
 ---
 
@@ -269,7 +299,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Block argument | A braced run of statements passed to a call; type `@concepts$Block` or `Block<T>`; no parameters, no name, never a value |
 | Capture | A block reads and writes its enclosing scope's bindings |
 | Escape | A block may not be stored, returned, bound, placed in storage, or spawned; it may be handed to another verb |
-| Scope | A block owns its own declarations but is transparent to `return`, `abort`, and `@controlflow$exitFromCall`, which act on the invocation containing the call |
+| Scope | A block owns its own declarations but is transparent to `return` and `abort`, and a `guard` written in one exits the verb the block was written in |
 | Lowering | A verb taking a block parameter is expanded at its call site, transitively, so a block never crosses a call boundary and an exit inside one is a jump within one frame |
 | Yielding | A `Block<T>` ends its yielding paths with `resolve`; `return` still leaves the enclosing verb |
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
@@ -277,5 +307,5 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
 | Intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
-| Exit | `@controlflow$exitFromCall()` ends the innermost invocation that has a frame, passing through blocks and block-taking calls; it takes no condition and carries no value, so the invocation it ends must return `Unit` |
+| Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit` |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

@@ -706,7 +706,7 @@ g()
 
 ## 5. Control Flow
 
-Zane has no control-flow grammar. Branching, repetition, and exits are all calls: the surface forms of the first two are ordinary calls with block arguments (§4.9) declared by the `core` package (see [`control-flow.md`](control-flow.md) §3), and the exit is an intrinsic.
+Zane has no control-flow grammar. Branching, repetition, and exiting are all calls, declared by the `core` package (see [`control-flow.md`](control-flow.md) §3); the first two are ordinary calls with block arguments (§4.9), and the exit is an ordinary call over the intrinsic below.
 
 ### 5.1 Control-flow intrinsics
 
@@ -720,16 +720,13 @@ The first two take storage primitives rather than fundamental types and the thir
 
 ### 5.2 Writing an exit
 
-The exit takes no condition; a conditional exit is written by placing it in a branch, and a run of statements before an exit is written by placing them in the same block:
+`@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, so an exit is written by *calling* a verb built on it — `core` supplies `guard`:
 
 ```zane
-if(shouldStop) {
-    log("stopping")
-    @controlflow$exitFromCall()
-}
+guard(shouldStop)
 ```
 
-It ends the innermost invocation that has a frame, passing through blocks and block-taking calls ([`control-flow.md`](control-flow.md) §4.2).
+The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it would end that verb's caller ([`control-flow.md`](control-flow.md) §4.2).
 
 ---
 
@@ -783,7 +780,7 @@ a ''* b               // ILLEGAL: there is no second loose tier
 ### 7.2 Control-flow keywords
 Zane has none.
 
-`if`, `elif`, `else`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). Exiting is not a keyword either: it is the intrinsic `@controlflow$exitFromCall()` (§5.2).
+`if`, `elif`, `else`, `guard`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). `guard` in particular is an ordinary verb over the exit intrinsic (§5.2), not grammar.
 
 ### 7.3 Comments
 

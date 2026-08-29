@@ -31,8 +31,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`error-handling.md`](error-handling.md) §3.3
 
 ### 2.3 call exit
-- **Meaning:** `@controlflow$exitFromCall()` ends the innermost invocation that has a frame of its own. Blocks and block-taking verbs are expanded at their call sites and so have none, which is what lets an exit written inside them reach the enclosing verb.
-- **Why this name:** The exit is itself a call, and what it ends is the call containing it.
+- **Meaning:** `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, reaching one level and no further. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it exits whoever calls it.
+- **Why this name:** What the exit ends is the call it was reached from, not its own frame.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.2
 
 ### 2.4 value-typed mutation rule
