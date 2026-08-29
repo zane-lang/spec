@@ -81,8 +81,8 @@ Transparency is what keeps an exit usable at any depth: a construct that opened 
 
 Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
 
-An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). It ends the innermost invocation that has a frame of its own, and the expansion above is what decides which invocation that is (§4.2).
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-could-not-become-a-call) — "The exit that could not become a call".
+An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). A call to an exiting verb ends the invocation that made it, and the expansion above is what decides which invocation that is: the block-taking verbs in between have no frame, so the call is made by the innermost enclosing verb that does (§4.2).
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
 
 
 ### 2.4 A block may yield a value
