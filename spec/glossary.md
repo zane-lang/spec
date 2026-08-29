@@ -30,10 +30,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The form is a shorthand for the subset of handler behavior that resolves a replacement value and does nothing else.
 - **Canonical home:** [`error-handling.md`](error-handling.md) §3.3
 
-### 2.3 scope-exit guard
-- **Meaning:** `guard` conditionally exits the current lexical scope instead of introducing another nested branch. It is the only control-flow construct with its own grammar, because a call cannot leave the scope it is evaluated in.
-- **Why this name:** The term emphasizes that `guard` is about leaving the surrounding scope, not about starting a new control-flow block.
-- **Canonical home:** [`control-flow.md`](control-flow.md) §4
+### 2.3 call exit
+- **Meaning:** `@controlflow$exitFromCall()` ends the innermost invocation that has a frame of its own. Blocks and block-taking verbs are expanded at their call sites and so have none, which is what lets an exit written inside them reach the enclosing verb.
+- **Why this name:** The exit is itself a call, and what it ends is the call containing it.
+- **Canonical home:** [`control-flow.md`](control-flow.md) §4.2
 
 ### 2.4 value-typed mutation rule
 - **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.8 1-based ordinal counting
 - **Meaning:** Counted repetition and positional indexing start at `1`, so an ordered sequence's final valid position is its size.
 - **Why this name:** The term makes the rule about ordinal positions explicit and distinguishes it from raw numeric arithmetic.
-- **Canonical home:** [`control-flow.md`](control-flow.md) §6
+- **Canonical home:** [`control-flow.md`](control-flow.md) §5
 
 ---
 
@@ -200,7 +200,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, a named field entry of a field-constructor call, or a `guard` condition. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
@@ -314,9 +314,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`control-flow.md`](control-flow.md) §2
 
 ### 4.7 control-flow intrinsic
-- **Meaning:** `@controlflow$branch` and `@controlflow$repeat`, the two compiler operations every branching and repeating construct is built from. Both are stated over storage primitives and callable from any package.
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three compiler operations every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
 - **Why this name:** They are the intrinsic operations of control flow, owned by the compiler rather than by any package.
-- **Canonical home:** [`control-flow.md`](control-flow.md) §5.1
+- **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
 ### 4.8 ordinary `core`
 - **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.

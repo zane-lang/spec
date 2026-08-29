@@ -706,25 +706,34 @@ g()
 
 ## 5. Control Flow
 
-Branching and repetition are calls, not grammar. Their surface forms are ordinary calls with block arguments (§4.9) and are declared by the `core` package; see [`control-flow.md`](control-flow.md) §3. The language itself contributes `guard` and the intrinsics of §5.2.
+Zane has no control-flow grammar. Branching, repetition, and exits are all calls: the surface forms of the first two are ordinary calls with block arguments (§4.9) declared by the `core` package (see [`control-flow.md`](control-flow.md) §3), and the exit is an intrinsic.
 
-### 5.1 `guard`
-
-```zane
-guard conditionExpr
-guard conditionExpr { ... }
-```
-
-`guard` is the one control-flow construct with its own grammar. It opens no scope, so its exit is not trapped by one.
-
-### 5.2 Control-flow intrinsics
+### 5.1 Control-flow intrinsics
 
 ```zane
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
 @controlflow$repeat(count @primitives$Int, body @concepts$Block)
+@controlflow$exitFromCall()
 ```
 
-Both take storage primitives rather than fundamental types, so neither depends on any package. Any package may call them.
+The first two take storage primitives rather than fundamental types and the third takes nothing, so none depends on any package. Any package may call them.
+
+### 5.2 Writing an exit
+
+```zane
+@controlflow$exitFromCall()
+```
+
+The exit takes no condition; a conditional exit is written by placing it in a branch, and a run of statements before an exit is written by placing them in the same block:
+
+```zane
+if(shouldStop) {
+    log("stopping")
+    @controlflow$exitFromCall()
+}
+```
+
+It ends the innermost invocation that has a frame, passing through blocks and block-taking calls ([`control-flow.md`](control-flow.md) §4.2).
 
 ---
 
@@ -776,9 +785,9 @@ a ''* b               // ILLEGAL: there is no second loose tier
 > **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
 
 ### 7.2 Control-flow keywords
-`guard`
+Zane has none.
 
-`if`, `elif`, `else`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3).
+`if`, `elif`, `else`, and `loop` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). Exiting is not a keyword either: it is the intrinsic `@controlflow$exitFromCall()` (§5.2).
 
 ### 7.3 Comments
 

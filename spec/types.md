@@ -88,9 +88,9 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 `Int`, `Float`, `Bool`, `String`, and `Unit` are the **fundamental types**: the types the `core` package declares and that nearly every Zane program is written in terms of. The name records what they are used for, not a standing in the language. `core` is an ordinary package — fetched, versioned, pinned, and remapped like any other dependency ([`dependencies.md`](dependencies.md) §14) — and its members are reached through an import on the same terms as any other package's ([`packages.md`](packages.md) §3).
 
-The language names none of them. A `guard` condition coerces to `@primitives$Bool` and the control-flow intrinsics take storage primitives ([`control-flow.md`](control-flow.md) §4.1 and §5.1), so no construct in the grammar depends on a declaration in any package.
+The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int` and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what a `guard` condition converts through, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int` and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
 Because `core` is an ordinary dependency, two of its versions may be linked side by side like any other package's ([`dependencies.md`](dependencies.md) §11), and a project that wants them collapsed opts into remapping (§15 there). No version of `Int` is forced on a program, and none is the language's.
 
@@ -422,9 +422,8 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr }`
-- The condition expression of a `guard`, whose destination type is `@primitives$Bool`
 
-Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. A `guard` condition fills a slot fixed by the language instead. Branching and repetition need no entry of their own: they are ordinary calls ([`control-flow.md`](control-flow.md) §3), so their conditions and bounds are already covered by the argument entries above.
+Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
@@ -456,7 +455,7 @@ The **source type** (parameter type) of an implicit constructor **MUST** be a va
 
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type, a reference type, or a storage primitive in the `@primitives$` namespace.
 
-A primitive destination is what lets a language construct state its contract without naming any package's type. A `guard` condition coerces to `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
+A primitive destination is what lets a compiler intrinsic state its contract without naming any package's type. `@controlflow$branch` takes a `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
 
 ```zane
 type Celsius = struct { value Float; }
@@ -582,7 +581,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, and a `guard` condition — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |

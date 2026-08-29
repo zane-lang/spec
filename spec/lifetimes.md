@@ -117,7 +117,7 @@ Unit loadCar(this Boat, car Car) mut {
 }
 ```
 
-This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or guard condition first, then perform a single move in the symbol's declaration block.
+This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or the deciding condition first, then perform a single move in the symbol's declaration block.
 
 The restriction applies only to symbol move-sources. A hosting verb result or `#variant` case form (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
 
