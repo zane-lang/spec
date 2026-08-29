@@ -30,10 +30,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The form is a shorthand for the subset of handler behavior that resolves a replacement value and does nothing else.
 - **Canonical home:** [`error-handling.md`](error-handling.md) §3.3
 
-### 2.3 scope-exit guard
-- **Meaning:** `guard` conditionally exits the current lexical scope instead of introducing another nested branch.
-- **Why this name:** The term emphasizes that `guard` is about leaving the surrounding scope, not about starting a new control-flow block.
-- **Canonical home:** [`control-flow.md`](control-flow.md) §3
+### 2.3 call exit
+- **Meaning:** `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, reaching one level and no further. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it exits whoever calls it.
+- **Why this name:** What the exit ends is the call it was reached from, not its own frame.
+- **Canonical home:** [`control-flow.md`](control-flow.md) §4.2
 
 ### 2.4 value-typed mutation rule
 - **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
@@ -56,7 +56,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`effects.md`](effects.md) §6
 
 ### 2.8 1-based ordinal counting
-- **Meaning:** Counted loops and positional indexing start at `1`, so an ordered sequence's final valid position is its size.
+- **Meaning:** Counted repetition and positional indexing start at `1`, so an ordered sequence's final valid position is its size.
 - **Why this name:** The term makes the rule about ordinal positions explicit and distinguishes it from raw numeric arithmetic.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §5
 
@@ -200,8 +200,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, a named field entry of a field-constructor call, a condition, or a counted-loop bound. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
-- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors supplied by the bundled `core` implementation — the site says where one may be inserted, not that arbitrary conversion is built in.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould
@@ -284,12 +284,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 4. Packages, Operators, and Versioning
 
 ### 4.1 home-package operator rule
-- **Meaning:** A source operator implementation may be declared only in the home package of one of its user-defined operand types. Fundamental-only operators live in the bundled `core` implementation.
+- **Meaning:** A source operator implementation may be declared only in the home package of one of its user-defined operand types. Operators over the fundamental types alone live in `core`.
 - **Why this name:** The rule ties operator declarations to the package that "owns" one operand type and prevents unrelated helper imports from changing operator meaning.
 - **Canonical home:** [`operators.md`](operators.md) §2.2
 
 ### 4.2 placeholder-prefix rewriting
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag before caching and linking.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
 - **Why this name:** The committed `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
@@ -297,3 +297,33 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A package's canonical identity is its full source URL, while local aliases are only import conveniences.
 - **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
+
+### 4.4 import spelling rule
+- **Meaning:** An import states how its members are written in that file — qualified, aliased, or bare — and that is the only spelling available there.
+- **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import chooses how it is written.
+- **Canonical home:** [`packages.md`](packages.md) §3.3 and §3.4
+
+### 4.5 loose form
+- **Meaning:** A binary operator written with a leading `'`, calling the same implementation at a mirrored precedence level below every unprefixed operator. One tier only, binary only.
+- **Why this name:** The prefix loosens how tightly the operator binds and changes nothing else about it.
+- **Canonical home:** [`operators.md`](operators.md) §3.1
+
+### 4.6 block argument
+- **Meaning:** A braced run of statements passed to a call and executed by the callee. It captures its surroundings, never becomes a value, and cannot outlive the call.
+- **Why this name:** It is an argument like any other, and what it carries is a block rather than a value.
+- **Canonical home:** [`control-flow.md`](control-flow.md) §2
+
+### 4.7 control-flow intrinsic
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three compiler operations every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
+- **Why this name:** They are the intrinsic operations of control flow, owned by the compiler rather than by any package.
+- **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
+
+### 4.8 ordinary `core`
+- **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.
+- **Why this name:** The label records the whole rule — what is notable about `core` is precisely that nothing about it is special.
+- **Canonical home:** [`types.md`](types.md) §2.6 and [`dependencies.md`](dependencies.md) §14
+
+### 4.9 spawn target
+- **Meaning:** Only a function or method call may be spawned, and never one whose verb declares a block parameter, since a block captures the frame that wrote it.
+- **Why this name:** The term names the position the restriction applies to — what a `spawn` may point at.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §3.1

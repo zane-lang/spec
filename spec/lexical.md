@@ -41,7 +41,7 @@ The first letter of an identifier selects its lexical class.
 | Lowercase | Value, binding, or parameter | `x`, `count`, `n`, `transform` |
 | Lowercase | Package name | `math`, `json`, `httpClient` |
 
-Package names share lowercase-initial casing with value names but are syntactically distinct: they appear only after the `package` keyword, after `import`, or as the left operand of `$`. The surrounding syntax, not casing, disambiguates them from ordinary value names.
+Package names share lowercase-initial casing with value names but are syntactically distinct: they appear only after the `package` keyword, after `import`, after the `as` of a **whole-package** import alias, or as the left operand of `$`. The surrounding syntax, not casing, disambiguates them from ordinary value names.
 
 ### 3.1 Types must be uppercase
 
@@ -98,8 +98,9 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 | Sigil | Meaning | Canonical home |
 |---|---|---|
 | `&` | Guest type (`&Node`) | [`memory.md`](memory.md) §2 |
-| `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`) | [`syntax.md`](syntax.md) §2.7 |
+| `@` | Reserved compiler namespace (`@primitives$`, `@concepts$`, `@controlflow$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
+| `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
 
 ---
 
@@ -179,7 +180,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Case sensitivity | Identifiers compare by exact bytes; case is never folded |
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
-| Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, or as the left operand of `$` |
+| Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, after the `as` of a whole-package import alias, or as the left operand of `$` |
 | Number parameter | A lowercase name (`n`) declared `n Number` (in a type's `<>` header or inline in a verb); a number, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |

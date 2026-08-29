@@ -84,9 +84,17 @@ grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred t
 
 `'[A-Z]` is back on that list. A leading `'` was the **borrow** type marker
 (`'Node`) for one release of the design; the borrow mode for reference types has
-since been removed, so `'` is again a character Zane's lexis does not use. A
-reference-type parameter has exactly two modes, `T` and `&T` (`spec/memory.md`
-§2.9), and `&` is the only marker a type may carry (`spec/syntax.md` §2.3).
+since been removed. A reference-type parameter has exactly two modes, `T` and
+`&T` (`spec/memory.md` §2.9), and `&` is the only marker a type may carry
+(`spec/syntax.md` §2.3).
+
+`'` itself is **no longer unused** — it now prefixes the **loose form** of a
+binary operator (`'*`, `'+`, …), which calls the same implementation one
+precedence tier lower (`spec/operators.md` §3.1, sigil table
+`spec/lexical.md` §4.3). The grep is unaffected and stays as written: a loose
+operator is always `'` followed by punctuation, never by an uppercase letter, so
+`'[A-Z]` still matches only the retired borrow marker. Do not widen it to a bare
+`'`.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.

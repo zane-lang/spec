@@ -291,6 +291,8 @@ name = expr
 
 When showing declaration syntax, avoid examples that look like a symbol is being re-declared. If the symbol already exists, use `name = expr` rather than `name Type`, `name Type(...)`, or `name Type{...}`.
 
+**Examples elide `import core$`.** `core` is an ordinary package, so a real source file imports it before writing `Int`, `Bool`, `if`, or counted repetition ([`packages.md`](../spec/packages.md) §3, [`types.md`](../spec/types.md) §2.6). Repeating that line in every example would bury what each one is showing, so every example is written as though the file already carried it, and `core`'s members appear unqualified. Write an `import` in an example only when the example is *about* imports. The same applies to the `@` namespaces, which need no import at all.
+
 Use the appropriate language tag (`c`, `go`, `rust`, `swift`, `python`, `zig`) for examples in Language Comparison sections.
 
 ### 5.5 ILLEGAL examples

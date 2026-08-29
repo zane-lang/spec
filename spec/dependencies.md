@@ -31,6 +31,7 @@ version-pattern v*.+.++
 
 deps [
     key  version
+    core v1.4.0
     math v6.2.9
 ]
 
@@ -59,6 +60,7 @@ The optional top-level **`remaps`** block is a bare list of the canonical packag
 resolutions [
     key  url                                commit
     zane https://github.com/zane-lang/zane  9f1c0aa
+    core https://github.com/zane-lang/core  4b7e91c
     math https://github.com/zane-lang/math  a3f8c2d
 ]
 ```
@@ -137,7 +139,7 @@ Conceptually:
 !math$vec  →  v1.0.1%math$vec
 ```
 
-The `%` separates the version tag from the package key so the version boundary is unambiguous and two different packages can never collide on a shared prefix. `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7), so the first `%` always delimits the version from the key during the remap rewrite. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
+The `%` separates the version tag from the package name so the version boundary is unambiguous and two different packages can never collide on a shared prefix. The name after `%` is the **library's own** package name — the basename of its source directory ([`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7), so the first `%` always delimits the version from the name during the remap rewrite. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
@@ -170,7 +172,7 @@ The URL and version are mangled into safe path components using Go-style path ma
 2. Any **SSH user prefix** (such as `git@`) is stripped.
 3. Any **SCP-style host/path separator** `:` (as in `git@github.com:zane-lang/math`) is normalized to `/`.
 
-Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the version/key boundary unambiguous.)
+Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the version/name boundary unambiguous.)
 
 The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
@@ -200,7 +202,7 @@ And uses package members through that key:
 math$vec(...)
 ```
 
-Source code never writes version-prefixed package names directly. The compiler resolves keys through `zane.coda` and `zane-versions.coda`.
+`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). Whichever form it takes, the key is what names the dependency: source code never writes version-prefixed package names directly, and the compiler resolves keys through `zane.coda` and `zane-versions.coda`.
 
 ---
 
@@ -268,13 +270,15 @@ At a high level, dependency resolution proceeds in this order:
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler and its bundled `core` implementation; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
 
-- The compiler and `core` implementation are released under one toolchain tag, so a project always builds with matching definitions of the fundamental language types. This frees the toolchain to evolve without preserving backward compatibility across versions: each project states the toolchain version it builds with.
-- The standard library is **not** special, and no ordinary library is coupled to the toolchain tag. `std` and every other source library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`. The bundled `core` implementation is compiler infrastructure rather than a manifest dependency; see [`types.md`](types.md) §2.6.
+- The tag covers the compiler alone. What the compiler supplies is the grammar, the `@` namespaces, and the control-flow intrinsics — none of which name a declaration in any package ([`control-flow.md`](control-flow.md) §4.1) — so pinning it fixes the language without fixing any library.
+- **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
+- This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
 
 ---
 

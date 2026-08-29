@@ -71,7 +71,21 @@ type Name = struct {
 
 ```zane
 import packageName
+import packageName as alias
+import packageName$member
+import packageName$member as alias
+import packageName$[memberA, memberB]
+import packageName$
 ```
+
+The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
+
+```zane
+import math$[sqrt, pow] as m   // ILLEGAL: a list has no single name to rename
+import math$ as m              // ILLEGAL: nothing is qualified to rename
+```
+
+> **See also:** [`packages.md`](packages.md) §3 for what each form makes available.
 
 ### 1.6 Type and alias declarations
 
@@ -132,7 +146,7 @@ EnumName.property FieldType [
 
 `Int`, `Float`, `Bool`, `String`, `Unit`
 
-These type names are available unqualified in every source file. Their bundled `core` implementation has no source-level package qualifier or import form. See [`types.md`](types.md) §2.6 for their semantics.
+These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
 ### 2.2 Named types
 
@@ -212,9 +226,12 @@ Array<T, n>
 ```zane
 @primitives$name
 @concepts$name
+@controlflow$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals.
+The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch, repeat, and exit.
+
+Every `@` namespace is reachable from every package without an import.
 
 ### 2.8 Compiler concept types for literals
 
@@ -227,6 +244,15 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
+
+`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.9). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the same rule as the other concept types and may never be stored.
+
+```zane
+@concepts$Block
+@concepts$Block<Bool>
+```
+
+> **See also:** [`control-flow.md`](control-flow.md) §2 for what a block argument does.
 
 ### 2.9 Function types
 
@@ -636,34 +662,71 @@ newState State = match state, event {
 
 > **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
 
+### 4.9 Block arguments
+
+A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. At most one of them may **trail** the argument list; the rest are written in ordinary argument position. A trailing block's `{` **MUST** open on the same line as the call, which is what distinguishes it from a statement block on the following line (§6.3 of [`lexical.md`](lexical.md)).
+
+```zane
+repeatTwice() {
+    print("hi")
+}
+
+ran Bool = if(ready) {
+    start()
+}
+```
+
+A trailing block fills the callee's last parameter, whose declared type is `@concepts$Block` or `@concepts$Block<T>`. A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
+
+```zane
+ran!elif({ expensive() }) {
+    handle()
+}
+```
+
+A block takes no parameters and is never named. A block that yields a value ends its yielding paths with `resolve` (§6.2 uses the same keyword at a handler):
+
+```zane
+value Int = compute() {
+    resolve Int(3)
+}
+```
+
+```zane
+f({ x }, { y })       // legal: two block arguments, neither trailing
+f({ x }) { y }        // legal: the same call with the last one trailing
+f { x } { y }         // ILLEGAL: only one block may trail
+g()
+{
+    print("plain block")   // a statement block, not an argument: `{` opens a new line
+}
+```
+
 ---
 
 ## 5. Control Flow
 
-### 5.1 `if` / `elif` / `else`
+Zane has no control-flow grammar. Branching, repetition, and exiting are all calls, declared by the `core` package (see [`control-flow.md`](control-flow.md) §3); the first two are ordinary calls with block arguments (§4.9), and the exit is an ordinary call over the intrinsic below.
+
+### 5.1 Control-flow intrinsics
 
 ```zane
-if conditionExpr { ... }
-if conditionExpr { ... } elif conditionExpr { ... }
-if conditionExpr { ... } else { ... }
-if conditionExpr { ... } elif conditionExpr { ... } else { ... }
+@controlflow$branch(condition @primitives$Bool, body @concepts$Block)
+@controlflow$repeat(count @primitives$Int, body @concepts$Block)
+@controlflow$exitFromCall()
 ```
 
-An `if` chain may contain zero or more `elif` branches followed by an optional `else` branch.
+The first two take storage primitives rather than fundamental types and the third takes nothing, so none depends on any package. Any package may call them.
 
-### 5.2 `guard`
+### 5.2 Writing an exit
+
+`@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, so an exit is written by *calling* a verb built on it — `core` supplies `guard`:
 
 ```zane
-guard conditionExpr
-guard conditionExpr { ... }
+guard(shouldStop)
 ```
 
-### 5.3 `loop`
-
-```zane
-loop name from startExpr to endExpr { ... }
-loop name to endExpr { ... }
-```
+The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it would end that verb's caller ([`control-flow.md`](control-flow.md) §4.2).
 
 ---
 
@@ -702,13 +765,24 @@ expr ?? fallbackExpr
 ### 7.1 Operators
 `~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
 
-### 7.2 Boolean keywords
-`and`, `or`
+Every binary operator above also has a **loose form**, written with a leading `'`:
 
-### 7.3 Control-flow keywords
-`if`, `elif`, `else`, `guard`, `loop`, `from`, `to`
+`'*`, `'/`, `'+`, `'-`, `'<`, `'>`, `'<=`, `'>=`, `'==`, `'~=`
 
-### 7.4 Comments
+```zane
+a == b '* c == d      // legal
+a ''* b               // ILLEGAL: there is no second loose tier
+'~a                   // ILLEGAL: unary operators have no loose form
+```
+
+> **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
+
+### 7.2 Control-flow keywords
+Zane has none.
+
+`if`, `elif`, `else`, and `guard` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). `guard` in particular is an ordinary verb over the exit intrinsic (§5.2), not grammar. Counted repetition is a method call on the counter rather than a named construct — `i!to(end)` ([`control-flow.md`](control-flow.md) §3.4).
+
+### 7.3 Comments
 
 ```zane
 // single-line comment
