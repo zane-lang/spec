@@ -202,7 +202,7 @@ typedef uint32_t ZRef;
 typedef struct { uint32_t target; uint32_t kind; } ZAnchor;
 _Static_assert(sizeof(ZAnchor) == 8, "anchor cell must be one 8-byte slot");
 
-typedef struct { uint32_t chunk; uint32_t off; int live; } ZBump;
+typedef struct { uint32_t chunk; uint32_t off; int live; uint8_t *cbase; } ZBump;
 typedef struct { uint32_t size; uint32_t align; uint32_t head; } ZSizeStack;
 
 static struct {
@@ -239,19 +239,28 @@ static uint32_t zm_take_chunk(void) {
 
 static void *zbump(ZBump *b, size_t size, size_t align) {
     assert(size <= ZM_CHUNK);
-    if (!b->live) { b->chunk = zm_take_chunk(); b->off = 0; b->live = 1; }
+    if (!b->live) { b->chunk = zm_take_chunk(); b->cbase = zm.dir[b->chunk]; b->off = 0; b->live = 1; }
     size_t off = ((size_t)b->off + (align - 1)) & ~(align - 1);
     if (off + size > ZM_CHUNK) {
         b->chunk = zm_take_chunk();
+        b->cbase = zm.dir[b->chunk];
         off = 0;
     }
-    void *p = zm.dir[b->chunk] + off;
+    void *p = b->cbase + off;
     b->off = (uint32_t)(off + size);
     return p;
 }
 
-static void *zm_fixed_alloc(size_t s) {
-    return zbump(&zm.fixed, (s + ZM_ALIGN - 1) & ~(size_t)(ZM_ALIGN - 1), ZM_ALIGN);
+static inline void *zm_fixed_alloc(size_t s) {
+    s = (s + ZM_ALIGN - 1) & ~(size_t)(ZM_ALIGN - 1);
+    size_t off = zm.fixed.off;
+    if (off + s > ZM_CHUNK) {
+        zm.fixed.chunk = zm_take_chunk();
+        zm.fixed.cbase = zm.dir[zm.fixed.chunk];
+        off = 0;
+    }
+    zm.fixed.off = (uint32_t)(off + s);
+    return zm.fixed.cbase + off;
 }
 static void zm_fixed_release(void *p, size_t s) { (void)p; (void)s; }
 
@@ -285,6 +294,20 @@ static void *zd_try_stack(size_t size, size_t align) {
     return p;
 }
 
+static void *zd_take(ZSizeStack *s) {
+    if (s->head != ZD_NIL) {
+        void *p = zm_resolve(s->head);
+        s->head = *(uint32_t*)p;
+        return p;
+    }
+    if (s->size > ZM_CHUNK) return zd_span(s->size);
+    return zbump(&zm.dyn, s->size, s->align);
+}
+static void zd_give(ZSizeStack *s, void *p) {
+    *(uint32_t*)p = s->head;
+    s->head = zm_seg(p);
+}
+
 static void *zd_alloc(size_t size, size_t align) {
     void *p = zd_try_stack(size, align);
     if (p) return p;
@@ -316,6 +339,7 @@ static void *za_page_alloc(void) {
 #else
     if (!zm.pool.live) {
         zm.pool.chunk = zm_take_chunk();
+        zm.pool.cbase = zm.dir[zm.pool.chunk];
         zm.pool.off = (zm.pool.chunk == 0) ? ZM_ALIGN : 0;
         zm.pool.live = 1;
     }
@@ -427,10 +451,11 @@ static void zm_reset(void) {
     zm.next_chunk = 0;
     zm.fixed.live = zm.dyn.live = zm.pool.live = 0;
     zm.fixed.off  = zm.dyn.off  = zm.pool.off  = 0;
-    memset(zm.stacks, 0, sizeof(zm.stacks));
+    for (int i = 0; i < ZD_STACKS; i++) zm.stacks[i].head = ZD_NIL;
     zm.anchor_free = 0;
     zm.retire_top = 0;
     zm.fixed.chunk = zm_take_chunk();
+    zm.fixed.cbase = zm.dir[zm.fixed.chunk];
     zm.fixed.live = 1;
 #ifdef ZM_INTERLEAVE
     zm.fixed.off = ZM_ALIGN;
@@ -1058,8 +1083,9 @@ static void test9(void) {
 typedef void*(*ChildAllocFn)(int);
 typedef void (*ChildFreeFn)(void*,int);
 
-static void *zane_children_alloc(int n){ (void)n; return zd_alloc(ZM_LIST_MIN, ZM_LINE); }
-static void  zane_children_free(void*p,int n){ (void)n; zd_free(p, ZM_LIST_MIN, ZM_LINE); }
+static ZSizeStack *zane_children_stack = NULL;
+static void *zane_children_alloc(int n){ (void)n; return zd_take(zane_children_stack); }
+static void  zane_children_free(void*p,int n){ (void)n; zd_give(zane_children_stack, p); }
 static void *ma_children_alloc(int n){ return malloc((size_t)n*sizeof(TNode*)); }
 static void  ma_children_free(void*p,int n){ (void)n; free(p); }
 static void *po_children_alloc(int n){ return pool_alloc((size_t)n*sizeof(TNode*)); }
@@ -1103,6 +1129,7 @@ static void test10(void) {
     section("Test 10 -- Hosting tree teardown  [~4000 nodes, cascade post-order destroy]");
     double T[RUNS];
     size_t znode_size = sizeof(TNode)+sizeof(ZRef);
+    zane_children_stack = zd_stack(ZM_LIST_MIN, ZM_LINE);
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,zm_af,zane_children_alloc);double t0=now_ns();destroy_zane(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Zane — no guests", T);
@@ -1561,6 +1588,20 @@ static void test16(void) {
     section("Test 16 -- Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]");
     double T[RUNS];
     void **blocks = (void**)malloc(REUSE_BLOCKS * sizeof(void*));
+    ZSizeStack *st[3];
+    for (int s = 0; s < 3; s++) st[s] = zd_stack(REUSE_SIZES[s], ZM_LINE);
+
+    for (int r = 0; r < RUNS; r++) {
+        zm_reset();
+        double t0 = now_ns();
+        for (int round = 0; round < REUSE_ROUNDS; round++)
+            for (int s = 0; s < 3; s++) {
+                for (int i = 0; i < REUSE_BLOCKS; i++) blocks[i] = zd_take(st[s]);
+                for (int i = 0; i < REUSE_BLOCKS; i++) zd_give(st[s], blocks[i]);
+            }
+        T[r] = now_ns() - t0; sink ^= (int64_t)(uintptr_t)blocks[0];
+    }
+    print_result("Boxed payload (static size class)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
@@ -1572,7 +1613,7 @@ static void test16(void) {
             }
         T[r] = now_ns() - t0; sink ^= (int64_t)(uintptr_t)blocks[0];
     }
-    print_result("Zane dynamic region (exact-size stacks)", T);
+    print_result("Backing store (runtime size class)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
@@ -1635,8 +1676,11 @@ typedef struct { int64_t value; uint32_t left, right; } VNode;
 _Static_assert(sizeof(VNode) == 16, "VNode must be 16 bytes");
 typedef struct MNode { int64_t value; struct MNode *left, *right; } MNode;
 
+static ZSizeStack *bh_stack = NULL;
+static ZSizeStack *bv_stack = NULL;
+
 static uint32_t bh_build(int depth) {
-    HNode *n = (HNode*)zd_alloc(sizeof(HNode), 8);
+    HNode *n = (HNode*)zd_take(bh_stack);
     uint32_t off = zm_seg(n);
     n->value = depth;
     *zm_backptr(n, sizeof(HNode)) = 0;
@@ -1655,12 +1699,12 @@ static void bh_guest_all(uint32_t off) {
 static uint32_t bh_relocate(uint32_t off) {
     if (!off) return 0;
     HNode *src = (HNode*)zm_resolve(off);
-    HNode *dst = (HNode*)zd_alloc(sizeof(HNode), 8);
+    HNode *dst = (HNode*)zd_take(bh_stack);
     *zm_backptr(dst, sizeof(HNode)) = 0;
     zm_rehost(src, dst, sizeof(HNode));
     dst->left  = bh_relocate(dst->left);
     dst->right = bh_relocate(dst->right);
-    zd_free(src, sizeof(HNode), 8);
+    zd_give(bh_stack, src);
     return zm_seg(dst);
 }
 static int64_t bh_sum(uint32_t off) {
@@ -1670,7 +1714,7 @@ static int64_t bh_sum(uint32_t off) {
 }
 
 static uint32_t bv_build(int depth) {
-    VNode *n = (VNode*)zd_alloc(sizeof(VNode), 8);
+    VNode *n = (VNode*)zd_take(bv_stack);
     uint32_t off = zm_seg(n);
     n->value = depth;
     n->left  = depth > 0 ? bv_build(depth - 1) : 0;
@@ -1680,7 +1724,7 @@ static uint32_t bv_build(int depth) {
 static uint32_t bv_deepcopy(uint32_t off) {
     if (!off) return 0;
     VNode *src = (VNode*)zm_resolve(off);
-    VNode *dst = (VNode*)zd_alloc(sizeof(VNode), 8);
+    VNode *dst = (VNode*)zd_take(bv_stack);
     dst->value = src->value;
     dst->left  = bv_deepcopy(src->left);
     dst->right = bv_deepcopy(src->right);
@@ -1717,6 +1761,8 @@ static void test17(void) {
     double T[RUNS];
     int64_t expected;
 
+    bh_stack = zd_stack(sizeof(HNode), 8);
+    bv_stack = zd_stack(sizeof(VNode), 8);
     zm_reset();
     { uint32_t root = bv_build(BX_DEPTH); expected = bv_sum(root); }
 

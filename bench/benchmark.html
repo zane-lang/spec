@@ -56,10 +56,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      15.02,
-      204.95,
-      244.31,
-      2141.18
+      33.74,
+      277.87,
+      555.51,
+      3476.04
     ],
     "colors": [
       "#3aab76",
@@ -105,9 +105,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      0.03,
-      193.66,
-      934.96
+      0.1,
+      564.08,
+      3102.08
     ],
     "colors": [
       "#7c6ff7",
@@ -145,10 +145,10 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      38.01,
-      346.43,
-      1116.64,
-      3538.18
+      74.2,
+      1214.37,
+      2605.72,
+      8384.48
     ],
     "colors": [
       "#3aab76",
@@ -182,22 +182,22 @@ const TESTS=[
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
       "Inline array  (Array<Entity, 100000>)",
-      "UList (chunk=8, linked)",
       "CChunked (chunk=64, ptr-array)",
+      "UList (chunk=8, linked)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      39.08,
-      43.38,
-      67.87,
-      98.06,
-      152.14
+      121.3,
+      138.28,
+      143.77,
+      223.93,
+      290.61
     ],
     "colors": [
       "#3aab76",
-      "#3aab76",
       "#c45a8a",
+      "#3aab76",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -244,10 +244,10 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      184.9,
-      206.9,
-      221.53,
-      809.51
+      407.49,
+      421.81,
+      646.28,
+      1216.49
     ],
     "colors": [
       "#7c6ff7",
@@ -297,9 +297,9 @@ const TESTS=[
       "Segmented tether (chunk dir cached)"
     ],
     "data": [
-      83.53,
-      92.8,
-      99.0
+      193.02,
+      213.14,
+      214.87
     ],
     "colors": [
       "#4a9edd",
@@ -347,19 +347,19 @@ const TESTS=[
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Pool (per-size free-list)",
       "Zane (fixed-region bump)",
-      "malloc / free"
+      "malloc / free",
+      "Pool (per-size free-list)"
     ],
     "data": [
-      1706.0,
-      1771.03,
-      2044.83
+      3078.65,
+      3917.74,
+      5047.3
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
-      "#e05a3a"
+      "#e05a3a",
+      "#c49a2a"
     ],
     "meta": [
       {
@@ -394,20 +394,20 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Pool (per-size free-list)",
       "Zane (fixed-region bump)",
+      "Pool (per-size free-list)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      5702.89,
-      5738.39,
-      6408.78,
-      58713.66
+      13186.71,
+      13255.26,
+      14582.75,
+      94491.48
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -453,9 +453,9 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      100.72,
-      525.22,
-      1013.64
+      144.97,
+      1092.28,
+      2744.29
     ],
     "colors": [
       "#7c6ff7",
@@ -495,24 +495,24 @@ const TESTS=[
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 three Zane guest densities vs malloc and pool",
     "labels": [
-      "Zane \u2014 no guests",
-      "Pool cascade destroy",
       "Zane \u2014 single root guest",
+      "Zane \u2014 no guests",
       "Zane \u2014 one guest per node",
+      "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      46.24,
-      48.54,
-      49.09,
-      50.26,
-      90.45
+      78.47,
+      78.92,
+      82.24,
+      93.82,
+      205.08
     ],
     "colors": [
-      "#7c6ff7",
-      "#c49a2a",
       "#5a4faa",
+      "#7c6ff7",
       "#b8a4ff",
+      "#c49a2a",
       "#e05a3a"
     ],
     "meta": [
@@ -537,6 +537,10 @@ const TESTS=[
         "val": "128B dynamic blocks returned to the size stack"
       },
       {
+        "label": "Stack key",
+        "val": "resolved once \u2014 a child list's size and alignment are fixed"
+      },
+      {
         "label": "malloc",
         "val": "free(node) per node, coalescing on each"
       },
@@ -557,9 +561,9 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1772.59,
-      1813.46,
-      1983.19
+      2765.6,
+      2773.63,
+      3106.54
     ],
     "colors": [
       "#c49a2a",
@@ -607,8 +611,8 @@ const TESTS=[
       "Hosted Array shards, concurrent (4 workers)"
     ],
     "data": [
-      52.13,
-      180.58
+      104.4,
+      283.28
     ],
     "colors": [
       "#3aab76",
@@ -650,7 +654,7 @@ const TESTS=[
       "Payload scan (8 passes)"
     ],
     "data": [
-      664.59
+      1496.29
     ],
     "colors": [
       "#6b7280"
@@ -687,7 +691,7 @@ const TESTS=[
       "Mixed 10:1 (scan-heavy)"
     ],
     "data": [
-      3284.24
+      9328.34
     ],
     "colors": [
       "#6b7280"
@@ -729,12 +733,12 @@ const TESTS=[
       "4 forwarding hops"
     ],
     "data": [
-      167.88,
-      284.29,
-      366.3,
-      429.68,
-      452.05,
-      643.34
+      314.18,
+      678.82,
+      977.66,
+      1016.36,
+      1098.75,
+      1925.37
     ],
     "colors": [
       "#4a9edd",
@@ -791,19 +795,22 @@ const TESTS=[
     "labels": [
       "Frontier bump only (no reuse)",
       "Pool (per-size free-list)",
-      "Zane dynamic region (exact-size stacks)",
+      "Boxed payload (static size class)",
+      "Backing store (runtime size class)",
       "malloc / free"
     ],
     "data": [
-      61.8,
-      183.12,
-      304.19,
-      1766.61
+      179.99,
+      445.47,
+      970.13,
+      1042.76,
+      3404.25
     ],
     "colors": [
       "#3aab76",
       "#c49a2a",
-      "#7c6ff7",
+      "#6b7280",
+      "#6b7280",
       "#e05a3a"
     ],
     "meta": [
@@ -824,6 +831,10 @@ const TESTS=[
         "val": "(byte size, alignment) \u2014 never approximate"
       },
       {
+        "label": "Static vs runtime",
+        "val": "a boxed payload indexes its stack directly; a backing store looks its up"
+      },
+      {
         "label": "Asserted",
         "val": "a freed block is handed back for the same size and alignment, and withheld from a different one"
       },
@@ -832,8 +843,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. The second row is the same workload with the stacks bypassed, which is what the fixed-size region does \u2014 faster per operation, but it never reuses a byte.",
-    "details": "The dynamic region's exact-size stacks cost ~304us for 60,000 alloc-and-release pairs \u2014 about 5ns a pair, against ~1ns for the same workload with the stacks bypassed (~62us). That difference is the whole price of the pop-and-push, and it is what the fixed-size region declines to pay. What it buys is the memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, while the stack run recycles inside ~1.8 MB. Pool's free-list is ~1.7x faster again (~183us), but part of that gap is this harness rather than the design: zd_alloc hashes the (size, alignment) pair on every call, where a compiler knows both statically for a typed allocation and would index the stack directly. Resolving the key up front recovers about a quarter of the cost; what remains is inherent, since a free-list link here is a segmented offset resolved through the chunk directory rather than a raw pointer. malloc (~1.77ms) is 5.8x behind the stacks either way. The assertions carry as much as the timings here: a freed block comes back for a request of the same byte size and alignment, and is withheld from a request that differs in either."
+    "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. The first two rows are the region's two kinds of block (\u00a73.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. The third row is the same workload with the stacks bypassed, which is what the fixed-size region does \u2014 faster per operation, but it never reuses a byte.",
+    "details": "The first two rows are \u00a73.2's two kinds of dynamic block, and the difference between them is the cost of not knowing a size until runtime. A boxed payload takes its size and alignment from the member's declared type, so its stack is picked once and every allocation is a pop; a growable backing store's size is a runtime value and has to be looked up on each call. Both then pay the pop-and- push, which is what separates them from the bypassed-stack row \u2014 and that row is what the fixed-size region does, faster per operation but never reusing a byte. What the stacks buy is the memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, while the stack runs recycle inside ~1.8 MB. Pool's free-list stays ahead of both because a free-list link there is a raw pointer, where \u00a73.1 makes one here a segmented offset resolved through the chunk directory; that part is inherent to the addressing and not recoverable. malloc is far behind either way. The assertions carry as much as the timings: a freed block comes back for a request of the same byte size and alignment, and is withheld from a request that differs in either. The assertions carry as much as the timings here: a freed block comes back for a request of the same byte size and alignment, and is withheld from a request that differs in either."
   },
   {
     "t": "T17 \u2014 boxed members",
@@ -846,11 +857,11 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      32.29,
-      38.81,
-      49.21,
-      55.7,
-      120.73
+      45.15,
+      54.08,
+      79.43,
+      88.45,
+      175.72
     ],
     "colors": [
       "#3aab76",
@@ -875,6 +886,10 @@ const TESTS=[
       {
         "label": "Boxed payload",
         "val": "exact node size, node alignment; no size class, no floor"
+      },
+      {
+        "label": "Stack key",
+        "val": "resolved once from the member's type, not per allocation"
       },
       {
         "label": "Relocation",

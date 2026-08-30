@@ -3,7 +3,14 @@
 # Authored after inspecting a real run of zane_bench (see
 # zane_bench_results.txt).
 #
-# PROVENANCE AND NOISE. Measured on the maintainer's machine with the process
+# STALE: this run is from the CI container, not the maintainer's machine. It was
+# regenerated after the two harness fixes (lean fixed-region bump path; size
+# stacks keyed once for statically-sized blocks) so that the committed results
+# match the committed source. Replace it with a pinned run and re-pin these
+# notes; the figures below are the container's and the T16 row split has not
+# been measured on quiet hardware yet.
+#
+# PROVENANCE AND NOISE. Previously measured on the maintainer's machine with the process
 # pinned to four cores (taskset -c 0-3), so the four-worker pool in T8 and T12
 # has real cores and those rows measure something. Two full runs of the same
 # binary were compared to size the noise: the median row moved 8%, three
@@ -175,19 +182,21 @@ installs four forwarding edges, so merging two anchored identities allocates no
 new cell.
 
 [Test 16]
-The dynamic region's exact-size stacks cost ~304us for 60,000 alloc-and-release
-pairs — about 5ns a pair, against ~1ns for the same workload with the stacks
-bypassed (~62us). That difference is the whole price of the pop-and-push, and it
-is what the fixed-size region declines to pay. What it buys is the memory: the
-frontier-only run bumps through 17.9 MB of fresh chunks to hold a 1 MB live set,
-while the stack run recycles inside ~1.8 MB. Pool's free-list is ~1.7x faster
-again (~183us), but part of that gap is this harness rather than the design:
-zd_alloc hashes the (size, alignment) pair on every call, where a compiler
-knows both statically for a typed allocation and would index the stack
-directly. Resolving the key up front recovers about a quarter of the cost; what
-remains is inherent, since a free-list link here is a segmented offset resolved
-through the chunk directory rather than a raw pointer. malloc (~1.77ms) is 5.8x
-behind the stacks either way. The
+The first two rows are §3.2's two kinds of dynamic block, and the difference
+between them is the cost of not knowing a size until runtime. A boxed payload
+takes its size and alignment from the member's declared type, so its stack is
+picked once and every allocation is a pop; a growable backing store's size is a
+runtime value and has to be looked up on each call. Both then pay the pop-and-
+push, which is what separates them from the bypassed-stack row — and that row is
+what the fixed-size region does, faster per operation but never reusing a byte.
+What the stacks buy is the memory: the frontier-only run bumps through 17.9 MB
+of fresh chunks to hold a 1 MB live set, while the stack runs recycle inside
+~1.8 MB. Pool's free-list stays ahead of both because a free-list link there is
+a raw pointer, where §3.1 makes one here a segmented offset resolved through the
+chunk directory; that part is inherent to the addressing and not recoverable.
+malloc is far behind either way. The assertions carry as much as the timings: a
+freed block comes back for a request of the same byte size and alignment, and is
+withheld from a request that differs in either. The
 assertions carry as much as the timings here: a freed block comes back for a
 request of the same byte size and alignment, and is withheld from a request that
 differs in either.
