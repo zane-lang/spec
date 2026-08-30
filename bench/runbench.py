@@ -225,14 +225,15 @@ TEST_META = {
     "Test 15": {
         "short": "T15 — forwarding hops",
         "title": "Guest resolution across forwarding anchors",
-        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. The last two rows separate hop count from cache footprint: one resolves after path compression, the other resolves the terminal identity over the identical structure.",
+        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. The last two rows separate the hop count from the cache footprint: one compresses as it resolves, so its first pass walks the chain and the rest are terminal, and the other resolves the terminal identity directly over the identical structure — the floor the compressing row is converging on.",
         "meta": [
             ("Chains", "20,000"),
             ("Passes", "8 per timed run"),
             ("Hop cost", "one dependent anchor-cell load per uncompressed hop"),
             ("Chain build", "depth+1 hosts, each guested before the move"),
-            ("Path compression", "resolution rewrites the tether to the terminal identity"),
-            ("Footprint control", "terminal resolve over the same 4-hop structure"),
+            ("Path compression", "first pass walks and rewrites the tether; later passes are terminal"),
+            ("Footprint floor", "terminal resolve over the same 4-hop structure"),
+            ("Asserted", "a compressed tether equals the chain's terminal identity"),
             ("Retirement", "forwarders return to the pool free stack when the source scope drains"),
             ("Runs", "20 — median reported"),
         ],

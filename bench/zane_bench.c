@@ -1503,16 +1503,17 @@ static void test15(void) {
         void *via_comp  = zm_deref_compress(&scratch[c]);
         assert(via_chain == via_comp);
         assert(((ZAnchor*)zm_resolve(scratch[c]))->kind == ZA_PAYLOAD);
+        assert(scratch[c] == terminals[c]);
     }
     for (int r = 0; r < RUNS; r++) {
+        memcpy(scratch, tethers, FWD_CHAINS * sizeof(ZRef));
         int64_t acc = 0;
-        for (int c = 0; c < FWD_CHAINS; c++) acc += ((Entity*)zm_deref(scratch[c]))->hp;
         double t0 = now_ns();
         for (int p = 0; p < FWD_PASSES; p++)
-            for (int c = 0; c < FWD_CHAINS; c++) acc += ((Entity*)zm_deref(scratch[c]))->hp;
+            for (int c = 0; c < FWD_CHAINS; c++) acc += ((Entity*)zm_deref_compress(&scratch[c]))->hp;
         T[r] = now_ns() - t0; sink ^= acc;
     }
-    print_result("4 hops, after path compression", T);
+    print_result("4 hops, compressing as it goes", T);
 
     for (int r = 0; r < RUNS; r++) {
         int64_t acc = 0;
