@@ -26,10 +26,12 @@ HTML_OUT     = os.path.join(SCRIPT_DIR, "benchmark.html")
 
 # ─────────────────────────────────────────────────────────────
 # Test metadata: short name, title, setup, and per-impl facts.
-# These match the Zane memory model: ownership is default, the tether (&)
-# is opt-in, allocation is a per-scope bump arena over 1 MiB chunks, and a
-# tether is a u32 segmented offset to a bump-allocated anchor cell; each
-# owner stores a u32 backpointer to its cell.
+# These track spec/memory.md: hosting is the default and the guest (&) is
+# opt-in; a scope owns a fixed-size region and a dynamic region that never
+# share a chunk; anchors live in one runtime-global pool of 8-byte cells; and
+# a guest is represented internally by a u32 tether — a segmented offset to an
+# anchor cell that either terminates at a payload or forwards to another
+# anchor. Each hosted payload stores a u32 backpointer to its terminal cell.
 #
 # The "Details:" note for each test is NOT stored here. It is read from
 # explanations.txt — result interpretation authored after looking at a real
@@ -40,46 +42,46 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "Objects created with zm_alloc_lazy: back-ptr set to 0, no anchor allocated. Allocation is one frontier bump; free is a no-op — the arena reclaims in bulk on reset.",
+        "setup": "Hosts created with zm_host: one fixed-region frontier bump plus a backpointer zeroed to 0, so no anchor exists. Release is a no-op — the fixed-size region reclaims nothing per object; its bytes are dead space until the scope drains.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
-            ("Back-ptr init", "0 — no anchor at creation"),
-            ("Alloc cost", "one frontier bump + zero-write"),
-            ("Free cost", "no-op — arena reclaims in bulk on reset"),
-            ("Anchor created", "never — no tethers in this test"),
+            ("Object size", "32B + 4B backpointer"),
+            ("Backpointer init", "0 — no anchor at creation"),
+            ("Alloc cost", "one fixed-region bump + zero-write"),
+            ("Release cost", "no-op — fixed region reclaims only at drain"),
+            ("Anchor created", "never — no guests in this test"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 2": {
         "short": "T2 — random-order free",
-        "title": "Sequential alloc, then random-order free (only free timed)",
-        "setup": "Alloc and shuffle untimed. Under the bump arena, free is a no-op regardless of order — reclamation is bulk on reset, not per object.",
+        "title": "Sequential alloc, then random-order release (only release timed)",
+        "setup": "Alloc and shuffle untimed. In the fixed-size region release is a no-op regardless of order — that region has no free list and no coalescing, so order cannot matter.",
         "meta": [
             ("Object size", "40B runtime"),
-            ("Back-ptr", "0 — untethered"),
-            ("Timed phase", "free loop only"),
-            ("Free path", "no-op — bulk reclaim on reset"),
+            ("Backpointer", "0 — no guest taken"),
+            ("Timed phase", "release loop only"),
+            ("Release path", "no-op — bulk reclaim at scope drain"),
         ],
     },
     "Test 3": {
         "short": "T3 — mixed sizes",
-        "title": "Mixed-size alloc and random-order free",
-        "setup": "Raw block alloc/free of four sizes in random order.",
+        "title": "Mixed-size alloc and random-order release",
+        "setup": "Raw fixed-region blocks of four sizes, released in random order. The fixed-size region is a pure bump: no size classes, no free list, no coalescing.",
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),
-            ("Free order", "Fisher-Yates shuffle"),
-            ("Note", "raw block allocs — no back-ptr slot"),
+            ("Release order", "Fisher-Yates shuffle"),
+            ("Note", "raw blocks — no backpointer slot"),
         ],
     },
     "Test 4": {
         "short": "T4 — iteration",
         "title": "Iterating 100k entity objects — five layouts",
-        "setup": "Five layouts iterated, no alloc/free during the timed loop.",
+        "setup": "Five layouts iterated, no alloc or release during the timed loop.",
         "meta": [
             ("Object type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Object size", "32 bytes"),
-            ("Spec analogue", "Array[100000]<Entity> — fixed-size inline storage"),
+            ("Spec analogue", "Array&lt;Entity, 100000&gt; — fixed-size inline storage"),
             ("CChunked", "64 elements × 32B = 2048B per chunk"),
             ("UList", "8 elements × 32B = 256B per chunk"),
             ("Measured op", "sum all hp fields (read-only scan)"),
@@ -87,38 +89,41 @@ TEST_META = {
         ],
     },
     "Test 5": {
-        "short": "T5 — buffer growth",
-        "title": "Growing an owned contiguous buffer by appending 100k items",
-        "setup": "Dynamic List<T> is deferred on main, so this preserves the workload with a user-space growable buffer built from contiguous owned storage. Zane doubles in-place at the frontier. CChunked and UList never copy — they allocate new chunks.",
+        "short": "T5 — list growth",
+        "title": "Growing a List backing store by appending 100k items",
+        "setup": "The growth rules of memory.md §3.6, in order: a new list starts at a 128-byte block; on exhaustion it asks for exactly twice its current block size, checks that size's exact-size stack first, then grows in place only if its block is the dynamic frontier allocation and the doubled size still fits inside the 1 MiB chunk, and otherwise relocates into a fresh block or an oversized span.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
-            ("Spec analogue", "growable buffer layered over Array-like inline storage"),
-            ("Zane", "~14 in-place frontier doublings, no malloc"),
-            ("CChunked", "1,563 malloc calls, zero copies"),
-            ("UList", "12,500 malloc calls, zero copies"),
+            ("First block", "128B — capacity floor(128 / 32) = 4 elements"),
+            ("Growth", "13 in-place frontier doublings, 128B → 1 MiB"),
+            ("Oversized spans", "2 relocations: 1→2 MiB and 2→4 MiB"),
+            ("Alignment", "cache-line (64B) — a growable backing store"),
+            ("Old blocks", "returned to the (size, 64) exact-size stacks"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 6": {
-        "short": "T6 — ref access",
-        "title": "Ref access via a segmented tether vs direct pointer",
-        "setup": "Tether dereference path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) to the owner's anchor cell; the cell holds the owner's segmented offset (tether → cell → owner → field). Both hops resolve through the chunk directory. Cells live in a dedicated anchor-cell region, separate from the payload stream.",
+        "short": "T6 — guest access",
+        "title": "Guest access via a segmented tether vs a direct pointer",
+        "setup": "Terminal resolution path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) naming a cell in the global anchor pool; the cell's first u32 is the payload's segmented offset and its second identifies the cell as a payload anchor rather than a forwarder (tether → cell → payload → field). Both hops resolve through the chunk directory. Anchor pages are their own chunks, never shared with payloads.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Segmented tether, dir cached", "chunk directory hoisted; cell load → owner"),
+            ("Segmented tether, dir cached", "chunk directory hoisted; cell load → payload"),
             ("Segmented tether, dir reloaded", "chunk directory re-fetched per access"),
             ("Tether size", "u32 segmented offset — half a 64-bit pointer"),
-            ("Offset 0", "0 = untethered; no cell is ever placed at offset 0"),
+            ("Anchor cell", "8B slot: u32 target + u32 payload/forwarding kind"),
+            ("Tethered cost", "16B minimum: 4B tether + 8B cell + 4B backpointer"),
+            ("Identity 0", "reserved by the pool as the untethered sentinel"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 7": {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
-        "setup": "Each spawn writes back-ptr = 0. Each kill is a no-op free — the arena reclaims dead entities in bulk on reset.",
+        "setup": "Each spawn writes backpointer = 0. Each kill is a no-op release — these are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
         "meta": [
-            ("Entity size", "32B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Entity size", "32B + 4B backpointer"),
+            ("Anchor", "never created — no guests"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "30 new entities"),
             ("Kills/frame", "20 oldest + hp-drained deaths"),
@@ -128,10 +133,10 @@ TEST_META = {
     "Test 8": {
         "short": "T8 — particle system",
         "title": "Particle system: burst-spawn short-lifetime objects every frame",
-        "setup": "Maximum churn. Every death is a no-op free — the arena reclaims dead particles in bulk on reset.",
+        "setup": "Maximum churn. Every death is a no-op release from the fixed-size region.",
         "meta": [
-            ("Particle size", "24B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Particle size", "24B + 4B backpointer"),
+            ("Anchor", "never created — no guests"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "60 particles"),
             ("Lifetime", "TTL = random 10–30 frames"),
@@ -142,77 +147,121 @@ TEST_META = {
     "Test 9": {
         "short": "T9 — fragmentation",
         "title": "Checkerboard fragmentation then refill — only refill timed",
-        "setup": "Phases A+B untimed. Phase C timed. Under the arena, Phase B frees are no-ops, so Phase C simply bumps the frontier for the new objects.",
+        "setup": "Phases A+B untimed. Phase C timed. These are fixed-region hosts, so Phase B's releases are no-ops and Phase C simply bumps the frontier past the dead space.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
+            ("Object size", "32B + 4B backpointer"),
             ("Anchor", "never created"),
             ("Phase A (prep)", "alloc 100k objects"),
-            ("Phase B (prep)", "free every even-indexed"),
+            ("Phase B (prep)", "release every even-indexed"),
             ("Phase C (timed)", "alloc 50k new objects"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 10": {
         "short": "T10 — tree teardown",
-        "title": "Cascade destruction — three Zane ref strategies vs malloc and pool",
-        "setup": "Three Zane variants: no tethers (backpointer stays 0), single parent tether (only the root gets an anchor cell), individual tethers (every node gets its own cell). All use post-order DFS; under the arena, freeing is a no-op and the nodes' memory is reclaimed in bulk.",
+        "title": "Cascade destruction — three Zane guest densities vs malloc and pool",
+        "setup": "Three Zane variants: no guests (every backpointer stays 0), a single root guest, and one guest per node. All use post-order DFS. Node payloads are fixed-region hosts, so their release is a no-op; each node's child list is a 128-byte cache-line-aligned dynamic block that is pushed back onto its exact-size stack.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
-            ("No tethers", "backpointer = 0; no per-node free"),
-            ("Single parent tether", "one tether to root; 3,999 nodes untethered"),
-            ("Individual tethers", "every node mints its own anchor cell"),
+            ("No guests", "backpointer = 0; no anchor allocated"),
+            ("Single root guest", "one anchor; 3,999 nodes unanchored"),
+            ("One guest per node", "every node mints its own anchor cell"),
+            ("Child lists", "128B dynamic blocks returned to the size stack"),
             ("malloc", "free(node) per node, coalescing on each"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 11": {
         "short": "T11 — stress test",
-        "title": "Fragmentation stress: objects + owned buffers, random spawn / push / kill cycles",
-        "setup": "All alloc through zm_alloc_lazy; frees are no-ops under the arena. Back-ptr always 0.",
+        "title": "Fragmentation stress: hosts + lists, random spawn / push / kill cycles",
+        "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and go back onto the (size, 64) exact-size stacks when a list dies. This is the workload where the dynamic region's reuse path actually runs.",
         "meta": [
-            ("Object size", "32B + 4B back-ptr"),
-            ("Owned buffers", "256–512B + 4B back-ptr"),
-            ("Anchor", "never created — no tethers"),
+            ("Object size", "32B + 4B backpointer"),
+            ("List blocks", "128 / 256 / 512B, cache-line aligned"),
+            ("Anchor", "never created — no guests"),
             ("Cycles", "200 cycles"),
-            ("Per cycle", "spawn + create buffers + push + update + kill"),
+            ("Per cycle", "spawn + create lists + push + update + kill"),
             ("Concurrency", "not added — shared randomized mutation would distort the workload"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 12": {
         "short": "T12 — concurrent scan",
-        "title": "Concurrent shard scan over four independent Array[25000]<Entity> workloads",
-        "setup": "Four read-only shards of the same owned inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
+        "title": "Concurrent shard scan over four independent Array&lt;Entity, 25000&gt; workloads",
+        "setup": "Four read-only shards of one hosted inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
         "meta": [
             ("Workers", "4"),
             ("Shard size", "25,000 entities"),
-            ("Total layout", "Array[100000]<Entity> split into 4 independent shards"),
+            ("Total layout", "Array&lt;Entity, 100000&gt; split into 4 independent shards"),
             ("Scheduler", "persistent work-stealing pool pre-started and warmed before timed runs"),
             ("Correctness", "aggregate hp sum asserted every run"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 13": {
-        "short": "T13 — partial-tether scan",
-        "title": "Partial-tether repeated payload scan (cell placement A/B)",
-        "setup": "100k objects, ~20% tethered, then repeated payload-only field scans. Under the default separate region the payload stream is dense; built with -DZM_INTERLEAVE the anchor cells sit between payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic tether density.",
+        "short": "T13 — partial-guest scan",
+        "title": "Partial-guest repeated payload scan (anchor placement A/B)",
+        "setup": "100k hosts, ~20% guested, then repeated payload-only field scans. Under the default the anchor pool owns its own chunks and the payload stream stays dense; built with -DZM_INTERLEAVE the cells are taken from the fixed region beside the payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic guest density.",
         "meta": [
-            ("Objects", "100,000"),
-            ("Tethered", "~20% (every 5th)"),
+            ("Hosts", "100,000"),
+            ("Guested", "~20% (every 5th)"),
             ("Passes", "8 per timed run"),
-            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
+            ("A/B", "default = global anchor pool; -DZM_INTERLEAVE = cells beside payloads"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 14": {
         "short": "T14 — scan-heavy mixed",
-        "title": "Scan-heavy mixed workload, 10 scans : 1 deref (cell placement A/B)",
-        "setup": "Aggregates 10 payload scans per 1 tether-deref pass over the tethered subset. Models the real-world weighting the 1:1 micro-tests hide: the separate region should win the aggregate because the pervasive scan dominates, even though its individual deref is dearer than the interleaved layout's.",
+        "title": "Scan-heavy mixed workload, 10 scans : 1 resolve (anchor placement A/B)",
+        "setup": "Aggregates 10 payload scans per 1 tether-resolve pass over the guested subset. Models the real-world weighting the 1:1 micro-tests hide: the global pool should win the aggregate because the pervasive scan dominates, even though its individual resolve is dearer than the interleaved layout's.",
         "meta": [
-            ("Objects", "100,000"),
-            ("Tethered", "~20% (every 5th)"),
-            ("Ratio", "10 payload scans : 1 deref pass"),
-            ("A/B", "default = separate region; -DZM_INTERLEAVE = cells beside payloads"),
+            ("Hosts", "100,000"),
+            ("Guested", "~20% (every 5th)"),
+            ("Ratio", "10 payload scans : 1 resolve pass"),
+            ("A/B", "default = global anchor pool; -DZM_INTERLEAVE = cells beside payloads"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 15": {
+        "short": "T15 — forwarding hops",
+        "title": "Guest resolution across forwarding anchors",
+        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. The last two rows separate hop count from cache footprint: one resolves after path compression, the other resolves the terminal identity over the identical structure.",
+        "meta": [
+            ("Chains", "20,000"),
+            ("Passes", "8 per timed run"),
+            ("Hop cost", "one dependent anchor-cell load per uncompressed hop"),
+            ("Chain build", "depth+1 hosts, each guested before the move"),
+            ("Path compression", "resolution rewrites the tether to the terminal identity"),
+            ("Footprint control", "terminal resolve over the same 4-hop structure"),
+            ("Retirement", "forwarders return to the pool free stack when the source scope drains"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 16": {
+        "short": "T16 — dynamic churn",
+        "title": "Dynamic-region block churn: exact-size stacks vs a pure frontier",
+        "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. The second row is the same workload with the stacks bypassed, which is what the fixed-size region does — faster per operation, but it never reuses a byte.",
+        "meta": [
+            ("Sizes", "128 / 256 / 512B, cache-line aligned"),
+            ("Blocks", "2,000 per size per round"),
+            ("Rounds", "10 — round 1 bumps, rounds 2-10 pop"),
+            ("Reuse key", "(byte size, alignment) — never approximate"),
+            ("Asserted", "a freed block is handed back for the same size and alignment, and withheld from a different one"),
+            ("Runs", "20 — median reported"),
+        ],
+    },
+    "Test 17": {
+        "short": "T17 — boxed members",
+        "title": "Boxed members: rehost relocation vs deep value copy",
+        "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region sized to exactly the node type. Rehosting a reference-type root relocates every boxed descendant into destination-owned storage recursively (memory.md §3.5), retargeting each contained host's anchor on the way; copying a value tree allocates and copies every payload afresh so the two share no storage (§2.3); constructing a fresh one builds each node once in its final owning payload and copies nothing.",
+        "meta": [
+            ("Tree", "complete binary, depth 12 — 8,191 nodes"),
+            ("Hosted node", "24B — value, two handles, and a 4B backpointer"),
+            ("Value node", "16B — value and two handles, no identity"),
+            ("Boxed payload", "exact node size, node alignment; no size class, no floor"),
+            ("Relocation", "recursive; old blocks returned to their exact-size stacks"),
+            ("Deep copy", "recursive; source keeps its own storage"),
+            ("Fresh construction", "built directly in the destination — no copy"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -236,41 +285,62 @@ IMPL_COLORS = {
 
 # Second-level colour variants for Zane sub-variants
 ZANE_VARIANTS = {
-    "no tethers":        "#7c6ff7",
-    "single parent":     "#5a4faa",
-    "individual tethers":"#b8a4ff",
-    "lazy anchors":      "#7c6ff7",
-    "mmap":              "#7c6ff7",
-    "in-place":          "#7c6ff7",
-    "refill":            "#7c6ff7",
+    "no guests":          "#7c6ff7",
+    "single root":        "#5a4faa",
+    "one guest per node": "#b8a4ff",
+    "lazy anchors":       "#7c6ff7",
+    "mmap":               "#7c6ff7",
+    "in-place":           "#7c6ff7",
+    "refill":             "#7c6ff7",
+    "size stacks":        "#7c6ff7",
 }
+
+# Forwarding-hop depth (T15) — darker with each hop
+HOP_COLORS = [
+    ("terminal anchor (0 hops)",     "#4a9edd"),
+    ("1 forwarding hop",             "#9a8ae0"),
+    ("2 forwarding hops",            "#7c6ff7"),
+    ("4 forwarding hops",            "#5a4faa"),
+    ("after path compression",       "#3aab76"),
+    ("terminal anchor, same",        "#4a9edd"),
+]
+
+# Boxed-member operations (T17)
+BOX_COLORS = [
+    ("rehost hosted tree, no guests",       "#7c6ff7"),
+    ("rehost hosted tree, every node",      "#5a4faa"),
+    ("deep-copy value tree",                "#c45a8a"),
+    ("construct fresh value tree",          "#3aab76"),
+]
+
 
 def get_color(impl_name):
     """Pick a colour based on the implementation name."""
-    # Check Zane variants first
     lower = impl_name.lower()
-    if "zane" in lower or "anchor" in lower or "tether" in lower or "ref path" in lower:
+
+    for key, color in HOP_COLORS:
+        if key in lower:
+            return color
+    for key, color in BOX_COLORS:
+        if lower.startswith(key):
+            return color
+
+    if "zane" in lower or "anchor" in lower or "tether" in lower or "guest" in lower:
         for key, color in ZANE_VARIANTS.items():
             if key in lower:
                 return color
-        # specific patterns
-        if "anchor only" in lower:
-            return "#7c6ff7"
-        if "full ref" in lower and "null" in lower:
-            return "#9a8ae0"
-        if "full ref" in lower:
-            return "#b8a4ff"
         return "#7c6ff7"
 
-    # Check general patterns
+    if lower.startswith("frontier bump"):
+        return "#3aab76"
+
     for prefix, color in IMPL_COLORS.items():
         if impl_name.startswith(prefix):
             return color
 
-    # Pointer variants
-    if lower.startswith("owned array shards, concurrent"):
+    if lower.startswith("hosted array shards, concurrent"):
         return "#7c6ff7"
-    if lower.startswith("owned array shards, sequential"):
+    if lower.startswith("hosted array shards, sequential"):
         return "#3aab76"
     if "sequential" in lower:
         return "#c49a2a"
@@ -458,6 +528,7 @@ const TESTS={tests_json};
 let chart=null;
 function renderInfo(t){{
   const half=Math.ceil(t.meta.length/2);
+  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${{r.label}}</span><span class="info-val">${{r.val}}</span></div>`).join('');
   document.getElementById('info').innerHTML=
     `<div class="info-title">${{t.title}}</div>`+
@@ -470,7 +541,7 @@ function show(idx){{
   const t=TESTS[idx];
   document.getElementById('wrap').style.height=Math.max(140,t.labels.length*54+80)+'px';
   renderInfo(t);
-  document.getElementById('leg').innerHTML=t.labels.map((l,i)=>`<span class="litem"><span class="sw" style="background:${{t.colors[i]}}"></span>${{l}}</span>`).join('');
+  document.getElementById('leg').innerHTML=t.labels.map((l,i)=>`<span class="litem"><span class="sw" style="background:${{t.colors[i]}}"></span>${{esc(l)}}</span>`).join('');
   if(chart) chart.destroy();
   chart=new Chart(document.getElementById('ch'),{{
     type:'bar',
