@@ -7,8 +7,8 @@
 # pinned to four cores (taskset -c 0-3), so the four-worker pool in T8 and T12
 # has real cores and those rows measure something. Two full runs of the same
 # binary were compared to size the noise: the median row moved 8%, three
-# quarters of rows moved under 10.4%, and the tail reached 31% (T14, T4, T1's
-# Pool row). Treat every absolute figure below as one run's median, good to
+# quarters of rows moved under 10.4%, and the tail reached 31% (T14, T4, T9).
+# Treat every absolute figure below as one run's median, good to
 # about one significant figure. The durable content is the ratios, the
 # orderings, and effects large enough to survive that band; where two rows fall
 # inside it the note says they are a tie rather than picking a winner.
@@ -165,10 +165,11 @@ that ~366us floor and the ~168us top row is not hops at all: a depth-4 chain is
 five hosts and five anchor cells, so the working set is five times larger. Depth
 costs a load per hop, which compression removes, and a cache footprint, which it
 does not. The interleaved build sharpens the point — with cells scattered among
-payloads the hop rows cost 30-43% more (~917us at four hops) while its terminal
-and compressed rows match the default's, so cell locality matters precisely when
-a chain is being walked. The test also asserts what it cannot time: that a
-compressed tether is exactly the chain's terminal identity, and the accounting
+payloads the hop rows cost 25-43% more (~917us at four hops) while its terminal
+row matches the default's and its compressed row is if anything quicker, so cell
+locality hurts precisely when a chain is being walked and not otherwise. The
+test also asserts what it cannot time: that a compressed tether is exactly the
+chain's terminal identity, and the accounting
 §4.2 promises — building a depth-4 chain allocates exactly five cells and
 installs four forwarding edges, so merging two anchored identities allocates no
 new cell.
