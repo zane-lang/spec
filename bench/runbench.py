@@ -499,6 +499,7 @@ def build_test_js(tests, explanations):
 
 
 def generate_html(tests_json):
+    """Render the full benchmark page, embedding the tests array as JS."""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -595,6 +596,7 @@ show(0);
 # ─────────────────────────────────────────────────────────────
 
 def main():
+    """Compile and run the benchmark (or reuse the results file), then emit HTML."""
     parser = argparse.ArgumentParser(description="Zane benchmark runner + HTML generator")
     parser.add_argument("--from-file", action="store_true",
                         help="Skip compile+run, parse existing results file")
