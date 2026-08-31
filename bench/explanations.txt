@@ -1,17 +1,34 @@
 # Benchmark result explanations.
 #
 # Authored after inspecting a real run of zane_bench (see
-# zane_bench_results.txt), measured on the maintainer's laptop with the process
-# pinned to one core (taskset -c 0) — a physical, steal-free machine, but
-# noisier than the 285K desktop earlier numbers came from. Across the three
-# builds the unchanged-code controls varied ~13% run-to-run (malloc/free min
-# 1.92-2.22 ms), so absolute times and close calls here are noisy; the notes
-# lean on relative ordering and on the large, repeatable effects.
+# zane_bench_results.txt).
+#
+# PROVENANCE AND NOISE. Measured on the maintainer's machine with the process
+# pinned to four cores (taskset -c 0-3), so the four-worker pool in T8 and T12
+# has real cores and those rows measure something. This machine is quiet by the
+# standards of a shared container but not silent: across repeat runs of the same
+# code the median row moved ~8%, three quarters stayed under ~10%, and the tail
+# reached 30% or more (T4's inline scan moved 92% between two runs that did not
+# touch it). Treat every absolute figure below as one run's median, good to about
+# one significant figure. The durable content is the ratios, the orderings, and
+# effects large enough to survive that band; where two rows fall inside it the
+# note says they are a tie rather than picking a winner. Ratios taken *within* a
+# single run are much steadier than absolute times across runs, so the notes lean
+# on those.
 #
 # runbench.py reads this file alongside the results and renders each block as
 # the "Details:" note for its test. Some tests (T13, T14) are a compile-time
-# A/B: the committed run is the default (separate) layout, and the note carries
-# the comparison against the -DZM_INTERLEAVE build.
+# A/B: the committed run is the default (global anchor pool) layout, and the
+# note carries the comparison against the -DZM_INTERLEAVE build. Three
+# default/interleaved pairs have been taken so far; all six A/B measurements
+# favour the global pool, which is what the notes report, and none of them pins
+# the magnitude.
+#
+# One caution specific to the committed pair: the interleaved run was taken on a
+# quieter machine than its default partner. On the tests that mint no guests the
+# two builds run identical code, and there the interleaved run came out ~24%
+# faster — so its A/B numbers are biased *toward* the interleaved layout, and it
+# lost anyway.
 #
 # Format: one block per test, opened by "[Test N]". Lines starting with '#'
 # are comments; blank lines separate blocks.
@@ -22,96 +39,186 @@
 # which reuses that results file instead of re-running.
 
 [Test 1]
-Zane's bump-arena alloc (~175us median) comes in ~13x faster than malloc
-(~2.21ms) and ~1.5x faster than Pool (~263us). The raw Arena baseline (~16us)
-is an order of magnitude quicker still because Zane also zero-writes a 4-byte
-backpointer into every object; with no tethers taken, that per-object write is
-the only thing separating Zane from a pure bump allocator.
+Zane's fixed-region bump (~229us) comes in ~13x faster than malloc (~2.9ms) and
+~1.6x faster than Pool (~362us). The raw Arena baseline (~21us) is still an
+order of magnitude quicker, because Zane zero-writes a 4-byte backpointer into
+every host and checks a chunk boundary that Arena's single flat frontier does
+not have. That gap is the honest cost of a chunked region: it narrowed from
+13.6x to 11.0x against Arena when the fixed-region path stopped re-checking a
+liveness flag and re-aligning an offset it had already rounded.
 
 [Test 2]
-Only the free loop is timed. Zane's frees are no-ops, so it finishes in ~0.03us
-— effectively unmeasurable — while malloc (~928us) and Pool (~192us) pay real
-per-object cost. This is the bulk-reclaim model at its most extreme: nothing is
-returned per object, so free order cannot matter.
+Only the release loop is timed. These hosts provably never gain a guest, so
+their release does nothing at all and Zane finishes in ~0.04us — effectively
+unmeasurable — while malloc (~1.3ms) and Pool (~278us) pay real per-object
+cost. This is the bulk-reclaim half of the model at its most extreme: the
+fixed-size region has no free list, so release order cannot matter. A host that
+*has* been guested pays more, because its anchor is returned when its hosting
+identity ends; T10 measures that, and T16 measures the other region, where
+every release does real work.
 
 [Test 3]
-With four interleaved sizes Zane (~285us) stays ~12x ahead of malloc (~3.46ms)
-and ~4x ahead of Pool (~1.18ms): the bump arena has no size classes, so mixed
-sizes are just more frontier bumps. The raw Arena baseline (~31us) again leads
-because Zane carries the per-object backpointer write.
+With four interleaved sizes Zane (~389us) stays ~21x ahead of malloc (~8.0ms)
+and ~7x ahead of Pool (~2.7ms): the fixed-size region has no size classes, so
+mixed sizes are just more frontier bumps. Both competitors were unusually slow
+in this run — malloc's median more than doubled against the previous one on
+untouched code — so read the ordering, not the multiples.
 
 [Test 4]
 No allocation is timed here — this is pure layout cost. Contiguous inline
-storage (~56us) is the clear floor; the chunked layouts stay close on locality
-(UList ~60us, CChunked ~79us). The scattered pointer array costs ~79us walked in
-order and ~117us shuffled — the shuffle is where a pointer-chase actually hurts,
-since the prefetcher can no longer hide the random hops.
+storage (~75us) is the floor, with the chunked layouts close behind (UList
+~83us, CChunked ~88us). The scattered pointer array costs ~133us walked in
+order and ~194us shuffled — the shuffle is where a pointer-chase actually
+hurts, since the prefetcher can no longer hide the random hops. The ~2.6x
+spread between best and worst layout is the durable result; the gap between the
+top three is not, and this row moved 92% between two runs of identical code.
 
 [Test 5]
-Growing an owned buffer, Zane's in-place frontier doublings (~80us median, ~74us
-min) now come in *below* the old free-stack build (~85us min) — the regression
-this test used to show is gone. The backing store is cache-line-aligned, so its
-32-byte entities no longer straddle 64-byte lines during the write-heavy fill.
-Zane also beats C's realloc vector (~230us) and the never-copy chunked forms
-(CChunked ~272us, UList ~861us).
+Filling 100k 32-byte entities takes 13 in-place frontier doublings from the
+128-byte first block up to exactly 1 MiB — the whole chunk — and then two
+relocations into oversized spans, copying 1 MiB and then 2 MiB, because a block
+never grows in place across a chunk boundary (§3.6). At ~299us Zane is level
+with C's realloc vector (~313us), which can extend its mapping through the large
+steps instead of copying them; the 4% margin is inside the noise and the two
+have traded places between runs. Both beat the never-copy chunked forms
+(CChunked ~320us, UList ~1.12ms). The pre-redesign harness won this test
+outright by growing in place without limit, which the chunk rule forbids —
+losing that win is the price of bounding a block to one chunk, and it is paid
+only by the last two doublings.
 
 [Test 6]
 The segmented tether adds one dependent load — the anchor cell — over a raw
-pointer: ~82us min baseline vs ~100us min tether, about 1.22x. With cells in
-their own region the payload-only baseline stays dense, and the deref pays for
-the cell load it no longer shares with the payload's line (see T13/T14 for the
-scan-vs-deref tradeoff at scale). Whether the chunk directory is register-cached
-or reloaded is within noise here.
+pointer: ~117us baseline vs ~142us terminal resolve, about 1.21x. That is the
+terminal case only: the cell's second word is read to confirm it is a payload
+anchor rather than a forwarder, and T15 measures what an older identity pays.
+Whether the chunk directory is register-cached or reloaded is inside the noise —
+the two land within 1% here and swap between runs.
 
 [Test 7]
-At steady-state churn the allocators sit close (Zane ~2.07ms, Pool ~2.05ms,
-malloc ~2.45ms): once entity counts stabilize, per-frame update and simulation
+At steady-state churn Zane (~2.41ms) and Pool (~2.46ms) tie, with malloc
+(~3.27ms) behind: once entity counts stabilize, per-frame update and simulation
 work dominate and the raw allocation gaps from Tests 1-3 mostly wash out.
 
 [Test 8]
-Under maximum churn Zane (~6.33ms) leads malloc (~7.22ms) and sits close to Pool
-(~6.56ms). The work-stealing update variant is far slower (~11.7ms): the
-per-frame particle work is too small to amortize scheduling, so coordination
-overhead dominates — a caution against parallelizing fine-grained frame work.
+Under maximum churn Pool (~6.86ms) leads Zane (~7.70ms) and malloc (~8.11ms).
+The work-stealing update variant is more than an order of magnitude slower
+(~107ms) with four real cores available, so this is not a pinning artifact: the
+per-frame particle work is genuinely too small to amortize scheduling, and
+coordination swamps it. Fine-grained frame work does not want a thread pool.
 
 [Test 9]
-Only the refill is timed. Zane just bumps the frontier for the 50k new objects
-(~94us), never touching the freed holes, so fragmentation history is
-irrelevant. malloc (~1.21ms) and Pool (~554us) refill from the slots freed in
-Phase B and carry that history — roughly 13x and 6x slower.
+Only the refill is timed. Zane just bumps the fixed-region frontier for the 50k
+new objects (~92us), never touching the dead space left by Phase B, so
+fragmentation history is irrelevant to it. malloc (~1.12ms) and Pool (~574us)
+refill from the slots freed in Phase B and carry that history — roughly 12x and
+6x slower. This is the clearest demonstration of what the fixed-size region buys
+by declining to reclaim anything before the scope drains.
 
 [Test 10]
-All three Zane variants land together (~33-48us) because arena teardown does no
-per-node free work — the timed cost is just the post-order walk, and the tether
-count barely moves it. malloc's per-node free with coalescing is ~119us (~3.6x
-slower) and Pool is ~61us.
+Guest density barely registers: single root guest ~53us, no guests ~53us, one
+guest per node ~56us. The last of those retires 4,000 payload anchors to the
+pool's free stack as their hosting identities end, and it costs ~5% over
+retiring none — anchors are never enumerated, so the price is one backpointer
+test per node against an object the post-order walk has already pulled into
+cache. No guests and the single root guest are a dead tie. The walk also
+returns each node's
+128-byte child list to its exact-size stack; because a child list's size and
+alignment are fixed, that stack is picked once rather than looked up per node.
+malloc's per-node free with coalescing is ~98us (~1.8x slower) and Pool is
+~54us, level with Zane.
 
 [Test 11]
-The mixed workload compresses the field (Zane ~1.83ms, malloc ~1.98ms, Pool
-~2.07ms): updates, scans, and randomized maintenance dominate the time, so the
-allocator strategy is only a small slice of the total — the expected outcome for
-a realistic churn pattern.
+The mixed workload compresses the field (Pool ~1.86ms, Zane ~1.91ms, malloc
+~2.04ms): updates, scans, and randomized maintenance dominate, so the allocator
+is only a small slice of the total — the expected outcome for a realistic churn
+pattern, and Zane and Pool are indistinguishable. This is the test where both
+regions run at once: entities bump and never come back, while the 128/256/512
+byte list blocks cycle through the exact-size stacks as lists are created and
+killed.
 
 [Test 12]
-Four read-only shards summed sequentially (~77us) and concurrently (~79us) land
-in a tie on this machine — the shard work is small enough that pool coordination
-cancels the parallelism. Both produce the asserted-identical total, which is the
-correctness point of the test.
+Four read-only shards summed sequentially (~57us) and concurrently (~175us):
+concurrency loses by 3x. With four cores actually available to the pool this is
+a real result rather than a pinning artifact — the shard work is small enough
+that coordination costs more than the parallelism returns. Both paths produce
+the asserted-identical total, which is the correctness point of the test.
 
 [Test 13]
-Eight payload-only scans over 100k objects with ~20% tethered: ~764us median
-(~657us min). Against the -DZM_INTERLEAVE build (~628us min) the two are within
-this run's noise. That is the honest result at a realistic tether density: the
-interleaving penalty scales with the tethered fraction (~cell_size/object_size
-per tethered object), so at 20% it is only a few percent — below the run-to-run
-variance a single scan can resolve. Test 14 is where the weighting makes it
-visible.
+Eight payload-only scans over 100k hosts with ~20% guested: ~698us median. The
+-DZM_INTERLEAVE build was slower in all three pairs taken — by 0.1%, 5.1% and
+10.9% — and in the committed pair it was slower despite running on a machine
+that was ~24% quicker on code the two builds share. The direction is consistent
+across every pair; the magnitude is not, and a single scan at 20% guest density
+is close to where the predicted penalty (~cell_size/object_size per guested
+object) stops being separable from run-to-run variance. T14 is where the
+weighting makes it plainer.
 
 [Test 14]
-Ten payload scans per one tether-deref pass: ~4.07ms median (~3.48ms min) versus
-the -DZM_INTERLEAVE build's ~3.78ms min — the separate layout is ~8% faster.
-Multiplying the payload scan ten-to-one lifts its density advantage above the
-noise floor, even though the separate layout's individual deref is dearer (T6).
-This is the real-world weighting the 1:1 micro-tests hide: pervasive scans are
-common and un-hoistable, tether derefs occasional, so protecting the scan wins
-the aggregate.
+Ten payload scans per one tether-resolve pass: ~4.13ms median. The interleaved
+build was slower in all three pairs — by 8.9%, 26.4% and 4.8% — and, as in T13,
+the committed pair's interleaved run had a ~24% machine advantage on shared code
+and still lost. Six A/B measurements across three pairs, all in the same
+direction, is good evidence that protecting the payload scan wins the aggregate;
+none of them pins the size, because the spread on this row between two runs of
+identical code has itself reached 31%. The design argument is what the test is
+for: pervasive scans are common and un-hoistable while resolves are occasional,
+so the global pool should win here even though its individual resolve is dearer
+(T6).
+
+[Test 15]
+Each uncompressed forwarding hop costs about one more dependent anchor-cell
+load: ~164us terminal, ~316us at one hop, ~469us at two, ~802us at four. The
+compressing and same-footprint rows are the substance. Compressing as it
+resolves — the first of eight
+passes walks the chain and rewrites the tether, the other seven find it terminal
+— costs ~707us against a floor of ~660us for resolving the terminal identity
+directly over the identical structure. So compression recovers about two thirds
+of the four-hop penalty on the very first repeated access, which is what §4.8
+claims for it, and the residual is the store it does on every pass. The gap
+between that ~660us floor and the ~164us terminal-anchor row is not hops at
+all: a depth-4
+chain is five hosts and five anchor cells, so the working set is five times
+larger. Depth costs a load per hop, which compression removes, and a cache
+footprint, which it does not. The interleaved build sharpens the point — with
+cells scattered among payloads the hop rows cost more while the terminal and
+compressed rows do not, so cell locality hurts precisely when a chain is being
+walked and not otherwise. The test also asserts what it cannot time: that a
+compressed tether is exactly the chain's terminal identity, and the accounting
+§4.2 promises — building a depth-4 chain allocates exactly five cells and
+installs four forwarding edges, so merging two anchored identities allocates no
+new cell.
+
+[Test 16]
+The boxed-payload and backing-store rows are §3.2's two kinds of dynamic block,
+and the difference
+between them is the cost of not knowing a size until runtime: a boxed payload
+takes size and alignment from the member's declared type, so its stack is picked
+once (~623us for 60,000 alloc-and-release pairs, about 10ns a pair), while a
+growable backing store's size is a runtime value and must be looked up on each
+call (~657us). That ~6% is all the lookup costs — worth knowing, because an
+earlier one-off measurement of it came out four times larger and was wrong. Both
+then pay the pop-and-push, which is what separates them from the frontier-only
+row (~60us, about 1ns a pair) — and that row is what the fixed-size region does,
+faster per operation but never reusing a byte. What the stacks buy is the
+memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a
+1 MB live set, while the stack runs recycle inside ~1.8 MB. Pool's free list
+(~509us) stays ahead of both because a link there is a raw pointer, where §3.1
+makes one here a segmented offset resolved through the chunk directory; that
+part is inherent to the addressing and not recoverable. malloc (~1.88ms) is far
+behind either way. The assertions carry as much as the timings: a freed block
+comes back for a request of the same byte size and alignment, and is withheld
+from a request that differs in either.
+
+[Test 17]
+Rehosting an 8,191-node boxed tree relocates every descendant recursively:
+~42us with no guests, ~53us with a guest on every node. That ~27% is the
+per-host anchor retarget, and it stays O(1) per host — no guest is ever
+enumerated. The pair worth reading is the value side. Deep-copying the tree from
+an existing place costs ~34us; constructing a fresh one costs ~20us. Both are
+O(structure), which is the content of §2.3 — a copy walks and reallocates every
+node — and the gap between them is the copy proper, since a fresh non-place
+result is built directly in its destination and pays only the construction. That
+is why nesting costs nothing extra and only an existing source pays. Relocation
+costs more than the copy because a hosted node is 24 bytes to the value node's
+16 and each old block is returned to its stack on the way. malloc's equivalent
+deep copy is ~125us, ~3.7x the value copy.
