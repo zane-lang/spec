@@ -120,7 +120,8 @@ guest per node ~56us. The last of those retires 4,000 payload anchors to the
 pool's free stack as their hosting identities end, and it costs ~5% over
 retiring none — anchors are never enumerated, so the price is one backpointer
 test per node against an object the post-order walk has already pulled into
-cache. The first two rows are a dead tie. The walk also returns each node's
+cache. No guests and the single root guest are a dead tie. The walk also
+returns each node's
 128-byte child list to its exact-size stack; because a child list's size and
 alignment are fixed, that stack is picked once rather than looked up per node.
 malloc's per-node free with coalescing is ~98us (~1.8x slower) and Pool is
@@ -167,13 +168,15 @@ so the global pool should win here even though its individual resolve is dearer
 [Test 15]
 Each uncompressed forwarding hop costs about one more dependent anchor-cell
 load: ~164us terminal, ~316us at one hop, ~469us at two, ~802us at four. The
-last two rows are the substance. Compressing as it resolves — the first of eight
+compressing and same-footprint rows are the substance. Compressing as it
+resolves — the first of eight
 passes walks the chain and rewrites the tether, the other seven find it terminal
 — costs ~707us against a floor of ~660us for resolving the terminal identity
 directly over the identical structure. So compression recovers about two thirds
 of the four-hop penalty on the very first repeated access, which is what §4.8
 claims for it, and the residual is the store it does on every pass. The gap
-between that ~660us floor and the ~164us top row is not hops at all: a depth-4
+between that ~660us floor and the ~164us terminal-anchor row is not hops at
+all: a depth-4
 chain is five hosts and five anchor cells, so the working set is five times
 larger. Depth costs a load per hop, which compression removes, and a cache
 footprint, which it does not. The interleaved build sharpens the point — with
@@ -186,14 +189,15 @@ installs four forwarding edges, so merging two anchored identities allocates no
 new cell.
 
 [Test 16]
-The first two rows are §3.2's two kinds of dynamic block, and the difference
+The boxed-payload and backing-store rows are §3.2's two kinds of dynamic block,
+and the difference
 between them is the cost of not knowing a size until runtime: a boxed payload
 takes size and alignment from the member's declared type, so its stack is picked
 once (~623us for 60,000 alloc-and-release pairs, about 10ns a pair), while a
 growable backing store's size is a runtime value and must be looked up on each
 call (~657us). That ~6% is all the lookup costs — worth knowing, because an
 earlier one-off measurement of it came out four times larger and was wrong. Both
-then pay the pop-and-push, which is what separates them from the bypassed-stack
+then pay the pop-and-push, which is what separates them from the frontier-only
 row (~60us, about 1ns a pair) — and that row is what the fixed-size region does,
 faster per operation but never reusing a byte. What the stacks buy is the
 memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a

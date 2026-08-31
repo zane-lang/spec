@@ -550,7 +550,7 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants: no guests (every backpointer stays 0), a single root guest, and one guest per node. All use post-order DFS. Node payloads are fixed-region hosts, so their release is a no-op; each node's child list is a 128-byte cache-line-aligned dynamic block that is pushed back onto its exact-size stack.",
-    "details": "Guest density barely registers: single root guest ~53us, no guests ~53us, one guest per node ~56us. The last of those retires 4,000 payload anchors to the pool's free stack as their hosting identities end, and it costs ~5% over retiring none \u2014 anchors are never enumerated, so the price is one backpointer test per node against an object the post-order walk has already pulled into cache. The first two rows are a dead tie. The walk also returns each node's 128-byte child list to its exact-size stack; because a child list's size and alignment are fixed, that stack is picked once rather than looked up per node. malloc's per-node free with coalescing is ~98us (~1.8x slower) and Pool is ~54us, level with Zane."
+    "details": "Guest density barely registers: single root guest ~53us, no guests ~53us, one guest per node ~56us. The last of those retires 4,000 payload anchors to the pool's free stack as their hosting identities end, and it costs ~5% over retiring none \u2014 anchors are never enumerated, so the price is one backpointer test per node against an object the post-order walk has already pulled into cache. No guests and the single root guest are a dead tie. The walk also returns each node's 128-byte child list to its exact-size stack; because a child list's size and alignment are fixed, that stack is picked once rather than looked up per node. malloc's per-node free with coalescing is ~98us (~1.8x slower) and Pool is ~54us, level with Zane."
   },
   {
     "t": "T11 \u2014 stress test",
@@ -657,7 +657,7 @@ const TESTS=[
       697.67
     ],
     "colors": [
-      "#6b7280"
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -694,7 +694,7 @@ const TESTS=[
       4132.65
     ],
     "colors": [
-      "#6b7280"
+      "#7c6ff7"
     ],
     "meta": [
       {
@@ -745,7 +745,7 @@ const TESTS=[
       "#9a8ae0",
       "#7c6ff7",
       "#4a9edd",
-      "#6b7280",
+      "#3aab76",
       "#5a4faa"
     ],
     "meta": [
@@ -786,8 +786,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md \u00a74.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. The last two rows separate the hop count from the cache footprint: one compresses as it resolves, so its first pass walks the chain and the rest are terminal, and the other resolves the terminal identity directly over the identical structure \u2014 the floor the compressing row is converging on.",
-    "details": "Each uncompressed forwarding hop costs about one more dependent anchor-cell load: ~164us terminal, ~316us at one hop, ~469us at two, ~802us at four. The last two rows are the substance. Compressing as it resolves \u2014 the first of eight passes walks the chain and rewrites the tether, the other seven find it terminal \u2014 costs ~707us against a floor of ~660us for resolving the terminal identity directly over the identical structure. So compression recovers about two thirds of the four-hop penalty on the very first repeated access, which is what \u00a74.8 claims for it, and the residual is the store it does on every pass. The gap between that ~660us floor and the ~164us top row is not hops at all: a depth-4 chain is five hosts and five anchor cells, so the working set is five times larger. Depth costs a load per hop, which compression removes, and a cache footprint, which it does not. The interleaved build sharpens the point \u2014 with cells scattered among payloads the hop rows cost more while the terminal and compressed rows do not, so cell locality hurts precisely when a chain is being walked and not otherwise. The test also asserts what it cannot time: that a compressed tether is exactly the chain's terminal identity, and the accounting \u00a74.2 promises \u2014 building a depth-4 chain allocates exactly five cells and installs four forwarding edges, so merging two anchored identities allocates no new cell."
+    "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md \u00a74.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. Two of the rows separate the hop count from the cache footprint. &#34;4 hops, compressing as it goes&#34; rewrites each tether as it resolves, so its first pass walks the chain and the other seven find it terminal; &#34;terminal anchor, same footprint&#34; resolves the terminal identity directly over the identical structure, and is the floor the compressing row converges on.",
+    "details": "Each uncompressed forwarding hop costs about one more dependent anchor-cell load: ~164us terminal, ~316us at one hop, ~469us at two, ~802us at four. The compressing and same-footprint rows are the substance. Compressing as it resolves \u2014 the first of eight passes walks the chain and rewrites the tether, the other seven find it terminal \u2014 costs ~707us against a floor of ~660us for resolving the terminal identity directly over the identical structure. So compression recovers about two thirds of the four-hop penalty on the very first repeated access, which is what \u00a74.8 claims for it, and the residual is the store it does on every pass. The gap between that ~660us floor and the ~164us terminal-anchor row is not hops at all: a depth-4 chain is five hosts and five anchor cells, so the working set is five times larger. Depth costs a load per hop, which compression removes, and a cache footprint, which it does not. The interleaved build sharpens the point \u2014 with cells scattered among payloads the hop rows cost more while the terminal and compressed rows do not, so cell locality hurts precisely when a chain is being walked and not otherwise. The test also asserts what it cannot time: that a compressed tether is exactly the chain's terminal identity, and the accounting \u00a74.2 promises \u2014 building a depth-4 chain allocates exactly five cells and installs four forwarding edges, so merging two anchored identities allocates no new cell."
   },
   {
     "t": "T16 \u2014 dynamic churn",
@@ -809,8 +809,8 @@ const TESTS=[
     "colors": [
       "#3aab76",
       "#c49a2a",
-      "#6b7280",
-      "#6b7280",
+      "#7c6ff7",
+      "#b8a4ff",
       "#e05a3a"
     ],
     "meta": [
@@ -843,8 +843,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. The first two rows are the region's two kinds of block (\u00a73.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. The third row is the same workload with the stacks bypassed, which is what the fixed-size region does \u2014 faster per operation, but it never reuses a byte.",
-    "details": "The first two rows are \u00a73.2's two kinds of dynamic block, and the difference between them is the cost of not knowing a size until runtime: a boxed payload takes size and alignment from the member's declared type, so its stack is picked once (~623us for 60,000 alloc-and-release pairs, about 10ns a pair), while a growable backing store's size is a runtime value and must be looked up on each call (~657us). That ~6% is all the lookup costs \u2014 worth knowing, because an earlier one-off measurement of it came out four times larger and was wrong. Both then pay the pop-and-push, which is what separates them from the bypassed-stack row (~60us, about 1ns a pair) \u2014 and that row is what the fixed-size region does, faster per operation but never reusing a byte. What the stacks buy is the memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, while the stack runs recycle inside ~1.8 MB. Pool's free list (~509us) stays ahead of both because a link there is a raw pointer, where \u00a73.1 makes one here a segmented offset resolved through the chunk directory; that part is inherent to the addressing and not recoverable. malloc (~1.88ms) is far behind either way. The assertions carry as much as the timings: a freed block comes back for a request of the same byte size and alignment, and is withheld from a request that differs in either."
+    "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. &#34;Boxed payload&#34; and &#34;backing store&#34; are the region's two kinds of block (\u00a73.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. &#34;Frontier bump only&#34; is the same workload with the stacks bypassed, which is what the fixed-size region does \u2014 faster per operation, but it never reuses a byte.",
+    "details": "The boxed-payload and backing-store rows are \u00a73.2's two kinds of dynamic block, and the difference between them is the cost of not knowing a size until runtime: a boxed payload takes size and alignment from the member's declared type, so its stack is picked once (~623us for 60,000 alloc-and-release pairs, about 10ns a pair), while a growable backing store's size is a runtime value and must be looked up on each call (~657us). That ~6% is all the lookup costs \u2014 worth knowing, because an earlier one-off measurement of it came out four times larger and was wrong. Both then pay the pop-and-push, which is what separates them from the frontier-only row (~60us, about 1ns a pair) \u2014 and that row is what the fixed-size region does, faster per operation but never reusing a byte. What the stacks buy is the memory: the frontier-only run bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, while the stack runs recycle inside ~1.8 MB. Pool's free list (~509us) stays ahead of both because a link there is a raw pointer, where \u00a73.1 makes one here a segmented offset resolved through the chunk directory; that part is inherent to the addressing and not recoverable. malloc (~1.88ms) is far behind either way. The assertions carry as much as the timings: a freed block comes back for a request of the same byte size and alignment, and is withheld from a request that differs in either."
   },
   {
     "t": "T17 \u2014 boxed members",

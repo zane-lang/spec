@@ -226,7 +226,7 @@ TEST_META = {
     "Test 15": {
         "short": "T15 — forwarding hops",
         "title": "Guest resolution across forwarding anchors",
-        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. The last two rows separate the hop count from the cache footprint: one compresses as it resolves, so its first pass walks the chain and the rest are terminal, and the other resolves the terminal identity directly over the identical structure — the floor the compressing row is converging on.",
+        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. Two of the rows separate the hop count from the cache footprint. &#34;4 hops, compressing as it goes&#34; rewrites each tether as it resolves, so its first pass walks the chain and the other seven find it terminal; &#34;terminal anchor, same footprint&#34; resolves the terminal identity directly over the identical structure, and is the floor the compressing row converges on.",
         "meta": [
             ("Chains", "20,000"),
             ("Passes", "8 per timed run"),
@@ -242,7 +242,7 @@ TEST_META = {
     "Test 16": {
         "short": "T16 — dynamic churn",
         "title": "Dynamic-region block churn: exact-size stacks vs a pure frontier",
-        "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. The first two rows are the region's two kinds of block (§3.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. The third row is the same workload with the stacks bypassed, which is what the fixed-size region does — faster per operation, but it never reuses a byte.",
+        "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. &#34;Boxed payload&#34; and &#34;backing store&#34; are the region's two kinds of block (§3.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. &#34;Frontier bump only&#34; is the same workload with the stacks bypassed, which is what the fixed-size region does — faster per operation, but it never reuses a byte.",
         "meta": [
             ("Sizes", "128 / 256 / 512B, cache-line aligned"),
             ("Blocks", "2,000 per size per round"),
@@ -305,8 +305,20 @@ HOP_COLORS = [
     ("1 forwarding hop",             "#9a8ae0"),
     ("2 forwarding hops",            "#7c6ff7"),
     ("4 forwarding hops",            "#5a4faa"),
-    ("after path compression",       "#3aab76"),
+    ("compressing as it goes",       "#3aab76"),
     ("terminal anchor, same",        "#4a9edd"),
+]
+
+# Single-row Zane measurements (T13, T14)
+SOLO_COLORS = [
+    ("payload scan", "#7c6ff7"),
+    ("mixed 10:1",   "#7c6ff7"),
+]
+
+# Dynamic-region block kinds (T16)
+DYN_COLORS = [
+    ("boxed payload",   "#7c6ff7"),
+    ("backing store",   "#b8a4ff"),
 ]
 
 # Boxed-member operations (T17)
@@ -326,6 +338,12 @@ def get_color(impl_name):
         if key in lower:
             return color
     for key, color in BOX_COLORS:
+        if lower.startswith(key):
+            return color
+    for key, color in DYN_COLORS:
+        if lower.startswith(key):
+            return color
+    for key, color in SOLO_COLORS:
         if lower.startswith(key):
             return color
 
@@ -630,6 +648,13 @@ def main():
     missing = [t["test_key"] for t in tests if t["test_key"] not in explanations]
     if missing:
         print(f"Note: no explanation in {os.path.basename(EXPLANATIONS)} for: {', '.join(missing)}")
+    greyed = [(t["test_key"], r["impl"]) for t in tests for r in t["results"]
+              if get_color(r["impl"]) == "#6b7280"]
+    if greyed:
+        print("Warning: no colour rule matches these labels (they render grey):")
+        for key, impl in greyed:
+            print(f"  {key}: {impl}")
+
     tests_json = build_test_js(tests, explanations)
     html = generate_html(tests_json)
 
