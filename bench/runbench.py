@@ -42,7 +42,7 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "Hosts created with zm_host: one fixed-region frontier bump plus a backpointer zeroed to 0, so no anchor exists. Release is a no-op — the fixed-size region reclaims nothing per object; its bytes are dead space until the scope drains.",
+        "setup": "One fixed-region frontier bump plus a 4-byte backpointer zeroed to 0, so no anchor exists. Release is a no-op — the fixed-size region reclaims only when the scope drains.",
         "meta": [
             ("Object size", "32B + 4B backpointer"),
             ("Backpointer init", "0 — no anchor at creation"),
@@ -55,7 +55,7 @@ TEST_META = {
     "Test 2": {
         "short": "T2 — random-order free",
         "title": "Sequential alloc, then random-order release (only release timed)",
-        "setup": "Alloc and shuffle untimed. In the fixed-size region release is a no-op regardless of order — that region has no free list and no coalescing, so order cannot matter.",
+        "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
         "meta": [
             ("Object size", "40B runtime"),
             ("Backpointer", "0 — no guest taken"),
@@ -66,7 +66,7 @@ TEST_META = {
     "Test 3": {
         "short": "T3 — mixed sizes",
         "title": "Mixed-size alloc and random-order release",
-        "setup": "Raw fixed-region blocks of four sizes, released in random order. The fixed-size region is a pure bump: no size classes, no free list, no coalescing.",
+        "setup": "Raw fixed-region blocks of four sizes, released in random order. The region is a pure bump: no size classes, no free list, no coalescing.",
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),
@@ -77,7 +77,7 @@ TEST_META = {
     "Test 4": {
         "short": "T4 — iteration",
         "title": "Iterating 100k entity objects — five layouts",
-        "setup": "Five layouts iterated, no alloc or release during the timed loop.",
+        "setup": "Five layouts iterated; no alloc or release inside the timed loop.",
         "meta": [
             ("Object type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("Object size", "32 bytes"),
@@ -91,7 +91,7 @@ TEST_META = {
     "Test 5": {
         "short": "T5 — list growth",
         "title": "Growing a List backing store by appending 100k items",
-        "setup": "The growth rules of memory.md §3.6, in order: a new list starts at a 128-byte block; on exhaustion it asks for exactly twice its current block size, checks that size's exact-size stack first, then grows in place only if its block is the dynamic frontier allocation and the doubled size still fits inside the 1 MiB chunk, and otherwise relocates into a fresh block or an oversized span.",
+        "setup": "The growth rules of memory.md §3.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("First block", "128B — capacity floor(128 / 32) = 4 elements"),
@@ -105,7 +105,7 @@ TEST_META = {
     "Test 6": {
         "short": "T6 — guest access",
         "title": "Guest access via a segmented tether vs a direct pointer",
-        "setup": "Terminal resolution path: a tether is a u32 segmented offset (chunk id + in-chunk word offset) naming a cell in the global anchor pool; the cell's first u32 is the payload's segmented offset and its second identifies the cell as a payload anchor rather than a forwarder (tether → cell → payload → field). Both hops resolve through the chunk directory. Anchor pages are their own chunks, never shared with payloads.",
+        "setup": "Terminal resolution: a tether is a u32 segmented offset naming a cell in the global anchor pool, and the cell holds the payload's offset plus a word marking it a payload anchor rather than a forwarder. Both hops resolve through the chunk directory; anchor pages are their own chunks.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
             ("Segmented tether, dir cached", "chunk directory hoisted; cell load → payload"),
@@ -120,7 +120,7 @@ TEST_META = {
     "Test 7": {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
-        "setup": "Each spawn writes backpointer = 0. Each kill is a no-op release — these are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
+        "setup": "Each spawn zeroes a backpointer; each kill is a no-op release. These are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
         "meta": [
             ("Entity size", "32B + 4B backpointer"),
             ("Anchor", "never created — no guests"),
@@ -147,7 +147,7 @@ TEST_META = {
     "Test 9": {
         "short": "T9 — fragmentation",
         "title": "Checkerboard fragmentation then refill — only refill timed",
-        "setup": "Phases A+B untimed. Phase C timed. These are fixed-region hosts, so Phase B's releases are no-ops and Phase C simply bumps the frontier past the dead space.",
+        "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
         "meta": [
             ("Object size", "32B + 4B backpointer"),
             ("Anchor", "never created"),
@@ -160,7 +160,7 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — three Zane guest densities vs malloc and pool",
-        "setup": "Three Zane variants: no guests (every backpointer stays 0), a single root guest, and one guest per node. All use post-order DFS. Node payloads are fixed-region hosts, so their release is a no-op; each node's child list is a 128-byte cache-line-aligned dynamic block that is pushed back onto its exact-size stack.",
+        "setup": "Three Zane variants — no guests, a single root guest, one guest per node — all torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
             ("No guests", "backpointer = 0; no anchor allocated"),
@@ -175,7 +175,7 @@ TEST_META = {
     "Test 11": {
         "short": "T11 — stress test",
         "title": "Fragmentation stress: hosts + lists, random spawn / push / kill cycles",
-        "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and go back onto the (size, 64) exact-size stacks when a list dies. This is the workload where the dynamic region's reuse path actually runs.",
+        "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
         "meta": [
             ("Object size", "32B + 4B backpointer"),
             ("List blocks", "128 / 256 / 512B, cache-line aligned"),
@@ -189,7 +189,7 @@ TEST_META = {
     "Test 12": {
         "short": "T12 — concurrent scan",
         "title": "Concurrent shard scan over four independent Array&lt;Entity, 25000&gt; workloads",
-        "setup": "Four read-only shards of one hosted inline array are summed either sequentially or on four worker threads. Each run asserts that the aggregate hp total matches the deterministic baseline.",
+        "setup": "Four read-only shards of one hosted inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
         "meta": [
             ("Workers", "4"),
             ("Shard size", "25,000 entities"),
@@ -202,7 +202,7 @@ TEST_META = {
     "Test 13": {
         "short": "T13 — partial-guest scan",
         "title": "Partial-guest repeated payload scan (anchor placement A/B)",
-        "setup": "100k hosts, ~20% guested, then repeated payload-only field scans. Under the default the anchor pool owns its own chunks and the payload stream stays dense; built with -DZM_INTERLEAVE the cells are taken from the fixed region beside the payloads and every scan drags them through cache. Isolates the pervasive-scan cost of cell placement at a realistic guest density.",
+        "setup": "100k hosts, ~20% guested, then repeated payload-only field scans. By default the anchor pool owns its own chunks and the payload stream stays dense; -DZM_INTERLEAVE puts the cells beside the payloads so every scan drags them through cache.",
         "meta": [
             ("Hosts", "100,000"),
             ("Guested", "~20% (every 5th)"),
@@ -214,7 +214,7 @@ TEST_META = {
     "Test 14": {
         "short": "T14 — scan-heavy mixed",
         "title": "Scan-heavy mixed workload, 10 scans : 1 resolve (anchor placement A/B)",
-        "setup": "Aggregates 10 payload scans per 1 tether-resolve pass over the guested subset. Models the real-world weighting the 1:1 micro-tests hide: the global pool should win the aggregate because the pervasive scan dominates, even though its individual resolve is dearer than the interleaved layout's.",
+        "setup": "Ten payload scans per one tether-resolve pass. Models the weighting the 1:1 micro-tests hide: the pervasive scan should dominate, even though the pool's individual resolve is dearer than the interleaved layout's.",
         "meta": [
             ("Hosts", "100,000"),
             ("Guested", "~20% (every 5th)"),
@@ -226,7 +226,7 @@ TEST_META = {
     "Test 15": {
         "short": "T15 — forwarding hops",
         "title": "Guest resolution across forwarding anchors",
-        "setup": "Moving into an already-anchored destination keeps the destination cell terminal and turns the source cell into a forwarder pointing at it (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. Each chain is built by repeatedly rehosting into a freshly guested destination; the timed loop resolves the oldest tether, which walks the whole chain. Two of the rows separate the hop count from the cache footprint. &#34;4 hops, compressing as it goes&#34; rewrites each tether as it resolves, so its first pass walks the chain and the other seven find it terminal; &#34;terminal anchor, same footprint&#34; resolves the terminal identity directly over the identical structure, and is the floor the compressing row converges on.",
+        "setup": "Moving into an already-anchored destination keeps that cell terminal and turns the source into a forwarder (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. The timed loop resolves the oldest tether. Two rows separate hop count from cache footprint: one compresses as it resolves, the other resolves a terminal identity over the identical structure — the floor the first converges on.",
         "meta": [
             ("Chains", "20,000"),
             ("Passes", "8 per timed run"),
@@ -242,7 +242,7 @@ TEST_META = {
     "Test 16": {
         "short": "T16 — dynamic churn",
         "title": "Dynamic-region block churn: exact-size stacks vs a pure frontier",
-        "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the dynamic region one LIFO stack per (byte size, alignment) pair: an allocation pops that stack first and only bumps the frontier when it is empty. &#34;Boxed payload&#34; and &#34;backing store&#34; are the region's two kinds of block (§3.2): a boxed payload's size and alignment come from its type, so its stack is picked once, while a growable backing store's size is a runtime value and has to be looked up per call. &#34;Frontier bump only&#34; is the same workload with the stacks bypassed, which is what the fixed-size region does — faster per operation, but it never reuses a byte.",
+        "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
         "meta": [
             ("Sizes", "128 / 256 / 512B, cache-line aligned"),
             ("Blocks", "2,000 per size per round"),
@@ -256,7 +256,7 @@ TEST_META = {
     "Test 17": {
         "short": "T17 — boxed members",
         "title": "Boxed members: rehost relocation vs deep value copy",
-        "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region sized to exactly the node type. Rehosting a reference-type root relocates every boxed descendant into destination-owned storage recursively (memory.md §3.5), retargeting each contained host's anchor on the way; copying a value tree allocates and copies every payload afresh so the two share no storage (§2.3); constructing a fresh one builds each node once in its final owning payload and copies nothing.",
+        "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. Rehosting the root relocates every boxed descendant recursively (memory.md §3.5), retargeting each contained host's anchor; a value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
         "meta": [
             ("Tree", "complete binary, depth 12 — 8,191 nodes"),
             ("Hosted node", "24B — value, two handles, and a 4B backpointer"),
@@ -549,9 +549,9 @@ def generate_html(tests_json):
 <script>
 const TESTS={tests_json};
 let chart=null;
+const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function renderInfo(t){{
   const half=Math.ceil(t.meta.length/2);
-  const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${{r.label}}</span><span class="info-val">${{r.val}}</span></div>`).join('');
   document.getElementById('info').innerHTML=
     `<div class="info-title">${{t.title}}</div>`+
