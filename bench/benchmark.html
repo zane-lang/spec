@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zane Memory Model Benchmark</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
     --bg:#0d0f12;--surface:#151820;--border:#242830;--text:#e8eaf0;--muted:#6b7280;
     --accent:#7c6ff7;--tab-bg:#1c2028;--tab-act:#242a35;--info-bg:#131820;--divider:#1e242e;--label:#8b92a0;
+    --track:#151a22;--whisker:#e8eaf0;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 32px 60px;max-width:980px;margin:0 auto;}
@@ -29,21 +29,49 @@
   .info-div{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}
   .info-details{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
   .info-details strong{color:var(--label);font-weight:600;}
-  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:var(--muted);}
-  .litem{display:flex;align-items:center;gap:5px;}
-  .sw{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
-  .chart-wrap{position:relative;width:100%;}
+
+  .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
+  .chart-cap{font-size:11px;color:var(--muted);}
+  .scale-toggle{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .scale-btn{padding:3px 10px;font-size:10.5px;font-family:inherit;border:none;background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;}
+  .scale-btn.on{background:var(--tab-act);color:var(--text);}
+
+  .chart{display:flex;flex-direction:column;gap:8px;}
+  .row{display:grid;grid-template-columns:230px 1fr 150px;gap:12px;align-items:center;}
+  .rname{font-size:11.5px;color:var(--label);text-align:right;line-height:1.35;overflow-wrap:break-word;}
+  .row.fastest .rname{color:var(--text);}
+  .rtrack{position:relative;height:26px;background:var(--track);border-radius:4px;}
+  .rbar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 3px 3px 4px;min-width:2px;transition:width .35s cubic-bezier(.2,.8,.2,1);}
+  .rwhisker{position:absolute;top:50%;height:1px;background:var(--whisker);opacity:.4;}
+  .rcap{position:absolute;top:50%;transform:translateY(-50%);width:1px;height:9px;background:var(--whisker);opacity:.4;}
+  .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;}
+  .rval{font-size:11.5px;color:var(--text);}
+  .rmult{font-size:10.5px;color:var(--muted);}
+  .row.fastest .rmult{color:#3aab76;}
+  footer{margin-top:28px;font-size:10.5px;color:var(--muted);}
+
+  @media (max-width:720px){
+    .row{grid-template-columns:1fr;gap:3px;}
+    .rname{text-align:left;}
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>Zane Memory Model Benchmark</h1>
-  <p><span>20 runs per test · median reported · ns precision</span> — compiled with gcc -O2</p>
+  <p><span>20 runs per test &middot; median reported &middot; ns precision</span> &mdash; compiled with gcc -O2</p>
 </header>
 <div class="tabs" id="tabs"></div>
 <div class="info" id="info"></div>
-<div class="legend" id="leg"></div>
-<div class="chart-wrap" id="wrap"><canvas id="ch"></canvas></div>
+<div class="chart-head">
+  <span class="chart-cap">bar = median &middot; whisker = min&ndash;max across runs &middot; lower is faster</span>
+  <div class="scale-toggle" id="scale">
+    <button class="scale-btn" data-s="linear">linear</button>
+    <button class="scale-btn" data-s="log">log</button>
+  </div>
+</div>
+<div class="chart" id="chart"></div>
+<footer>Rows sorted fastest &rarr; slowest. The &times; figure is each row's slowdown relative to the fastest row in this test. Hover a row for exact min / median / max.</footer>
 <script>
 const TESTS=[
   {
@@ -56,10 +84,22 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      20.92,
-      229.02,
-      361.89,
-      2937.29
+      20.921,
+      229.017,
+      361.892,
+      2937.294
+    ],
+    "mins": [
+      20.516,
+      227.433,
+      338.163,
+      2864.295
+    ],
+    "maxs": [
+      32.375,
+      853.465,
+      429.325,
+      6490.794
     ],
     "colors": [
       "#3aab76",
@@ -106,8 +146,18 @@ const TESTS=[
     ],
     "data": [
       0.04,
-      277.67,
-      1302.59
+      277.671,
+      1302.586
+    ],
+    "mins": [
+      0.036,
+      259.429,
+      1229.663
+    ],
+    "maxs": [
+      0.196,
+      447.015,
+      2582.795
     ],
     "colors": [
       "#7c6ff7",
@@ -145,10 +195,22 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      75.06,
-      388.98,
-      2703.63,
-      8005.45
+      75.056,
+      388.977,
+      2703.633,
+      8005.453
+    ],
+    "mins": [
+      51.116,
+      383.756,
+      1632.046,
+      6151.267
+    ],
+    "maxs": [
+      127.823,
+      1569.633,
+      4413.387,
+      12508.802
     ],
     "colors": [
       "#3aab76",
@@ -188,11 +250,25 @@ const TESTS=[
       "Pointer array, shuffled"
     ],
     "data": [
-      75.23,
-      82.86,
-      87.94,
+      75.231,
+      82.859,
+      87.935,
       132.97,
-      194.37
+      194.365
+    ],
+    "mins": [
+      74.1,
+      82.385,
+      87.296,
+      129.675,
+      179.761
+    ],
+    "maxs": [
+      193.908,
+      233.712,
+      994.016,
+      260.942,
+      244.665
     ],
     "colors": [
       "#3aab76",
@@ -244,10 +320,22 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      299.38,
-      312.86,
-      319.7,
-      1123.87
+      299.377,
+      312.856,
+      319.701,
+      1123.872
+    ],
+    "mins": [
+      286.266,
+      298.081,
+      316.545,
+      1105.982
+    ],
+    "maxs": [
+      660.939,
+      784.743,
+      429.312,
+      1262.087
     ],
     "colors": [
       "#7c6ff7",
@@ -297,9 +385,19 @@ const TESTS=[
       "Segmented tether (chunk dir cached)"
     ],
     "data": [
-      117.46,
-      141.52,
-      142.31
+      117.459,
+      141.517,
+      142.309
+    ],
+    "mins": [
+      115.942,
+      135.413,
+      138.928
+    ],
+    "maxs": [
+      200.531,
+      198.939,
+      202.089
     ],
     "colors": [
       "#4a9edd",
@@ -353,8 +451,18 @@ const TESTS=[
     ],
     "data": [
       2411.28,
-      2464.09,
-      3272.96
+      2464.088,
+      3272.961
+    ],
+    "mins": [
+      2344.942,
+      2400.899,
+      2788.114
+    ],
+    "maxs": [
+      2543.076,
+      4773.067,
+      5559.599
     ],
     "colors": [
       "#7c6ff7",
@@ -400,10 +508,22 @@ const TESTS=[
       "Zane + work-stealing update"
     ],
     "data": [
-      6857.18,
-      7699.9,
-      8109.06,
-      107281.27
+      6857.182,
+      7699.904,
+      8109.055,
+      107281.269
+    ],
+    "mins": [
+      6374.221,
+      7432.995,
+      7791.882,
+      77709.744
+    ],
+    "maxs": [
+      7361.18,
+      12639.899,
+      8526.911,
+      151294.342
     ],
     "colors": [
       "#c49a2a",
@@ -453,9 +573,19 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      92.27,
-      574.24,
-      1124.24
+      92.265,
+      574.237,
+      1124.239
+    ],
+    "mins": [
+      89.626,
+      135.191,
+      671.376
+    ],
+    "maxs": [
+      195.002,
+      736.912,
+      1393.02
     ],
     "colors": [
       "#7c6ff7",
@@ -502,11 +632,25 @@ const TESTS=[
       "malloc cascade destroy"
     ],
     "data": [
-      53.13,
-      53.21,
-      53.57,
-      55.84,
-      98.33
+      53.127,
+      53.207,
+      53.572,
+      55.837,
+      98.335
+    ],
+    "mins": [
+      0.032,
+      0.027,
+      0.03,
+      0.022,
+      0.05
+    ],
+    "maxs": [
+      54.357,
+      57.139,
+      54.79,
+      63.999,
+      109.125
     ],
     "colors": [
       "#5a4faa",
@@ -561,9 +705,19 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1863.64,
-      1911.45,
-      2037.76
+      1863.644,
+      1911.449,
+      2037.764
+    ],
+    "mins": [
+      1830.015,
+      1878.507,
+      1984.17
+    ],
+    "maxs": [
+      1898.964,
+      2069.232,
+      2107.228
     ],
     "colors": [
       "#c49a2a",
@@ -611,8 +765,16 @@ const TESTS=[
       "Hosted Array shards, concurrent (4 workers)"
     ],
     "data": [
-      57.24,
-      174.74
+      57.243,
+      174.735
+    ],
+    "mins": [
+      56.704,
+      104.518
+    ],
+    "maxs": [
+      71.055,
+      397.148
     ],
     "colors": [
       "#3aab76",
@@ -654,7 +816,13 @@ const TESTS=[
       "Payload scan (8 passes)"
     ],
     "data": [
-      697.67
+      697.675
+    ],
+    "mins": [
+      672.259
+    ],
+    "maxs": [
+      765.734
     ],
     "colors": [
       "#7c6ff7"
@@ -691,7 +859,13 @@ const TESTS=[
       "Mixed 10:1 (scan-heavy)"
     ],
     "data": [
-      4132.65
+      4132.649
+    ],
+    "mins": [
+      4004.087
+    ],
+    "maxs": [
+      4369.692
     ],
     "colors": [
       "#7c6ff7"
@@ -733,12 +907,28 @@ const TESTS=[
       "4 forwarding hops"
     ],
     "data": [
-      164.24,
-      316.38,
-      469.44,
-      659.54,
-      707.13,
-      802.41
+      164.241,
+      316.382,
+      469.445,
+      659.536,
+      707.131,
+      802.408
+    ],
+    "mins": [
+      162.372,
+      312.985,
+      467.685,
+      643.479,
+      691.163,
+      733.3
+    ],
+    "maxs": [
+      181.057,
+      369.218,
+      508.171,
+      739.818,
+      815.735,
+      951.706
     ],
     "colors": [
       "#4a9edd",
@@ -800,11 +990,25 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      59.86,
-      509.01,
+      59.861,
+      509.008,
       622.77,
-      657.39,
-      1877.19
+      657.389,
+      1877.195
+    ],
+    "mins": [
+      59.522,
+      267.848,
+      612.068,
+      646.252,
+      1822.564
+    ],
+    "maxs": [
+      70.595,
+      626.099,
+      673.784,
+      920.295,
+      1977.16
     ],
     "colors": [
       "#3aab76",
@@ -857,11 +1061,25 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      19.63,
-      33.6,
-      42.1,
-      53.4,
-      124.52
+      19.627,
+      33.597,
+      42.099,
+      53.404,
+      124.516
+    ],
+    "mins": [
+      19.069,
+      28.391,
+      41.842,
+      53.195,
+      122.634
+    ],
+    "maxs": [
+      21.323,
+      34.6,
+      43.759,
+      56.376,
+      175.561
     ],
     "colors": [
       "#3aab76",
@@ -912,8 +1130,15 @@ const TESTS=[
     "details": "Rehosting an 8,191-node boxed tree relocates every descendant recursively: ~42us with no guests, ~53us with a guest on every node. That ~27% is the per- host anchor retarget, and it stays O(1) per host \u2014 no guest is ever enumerated. The value side is the pair worth reading: deep-copying from an existing place costs ~34us, constructing a fresh tree ~20us. Both are O(structure), which is the content of \u00a72.3, and the gap between them is the copy proper, since a fresh non-place result is built directly in its destination. That is why only an existing source pays. Relocation costs more than the copy because a hosted node is 24 bytes to the value node's 16 and each old block is returned to its stack on the way. malloc's equivalent deep copy is ~125us, ~3.7x the value copy."
   }
 ];
-let chart=null;
+let cur=0, scale='linear';
 const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function fmt(us){
+  if(us>=1000) return (us/1000).toFixed(2)+' ms';
+  if(us>=1)    return us.toFixed(2)+' µs';
+  return (us*1000).toFixed(1)+' ns';
+}
+
 function renderInfo(t){
   const half=Math.ceil(t.meta.length/2);
   const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${r.label}</span><span class="info-val">${r.val}</span></div>`).join('');
@@ -924,23 +1149,51 @@ function renderInfo(t){
     `<hr class="info-div">`+
     `<div class="info-details"><strong>Setup: </strong>${t.setup}${t.details ? ' <strong>Details: </strong>'+t.details : ''}</div>`;
 }
-function show(idx){
-  const t=TESTS[idx];
-  document.getElementById('wrap').style.height=Math.max(140,t.labels.length*54+80)+'px';
-  renderInfo(t);
-  document.getElementById('leg').innerHTML=t.labels.map((l,i)=>`<span class="litem"><span class="sw" style="background:${t.colors[i]}"></span>${esc(l)}</span>`).join('');
-  if(chart) chart.destroy();
-  chart=new Chart(document.getElementById('ch'),{
-    type:'bar',
-    data:{labels:t.labels,datasets:[{data:t.data,backgroundColor:t.colors,borderRadius:3,barThickness:32}]},
-    options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2230',borderColor:'#2e3545',borderWidth:1,titleColor:'#8b92a0',bodyColor:'#e8eaf0',callbacks:{label:ctx=>' '+ctx.parsed.x.toFixed(2)+' us  (median of 20 runs)'}}},
-      scales:{x:{title:{display:true,text:'us — lower is faster',font:{size:11,family:'inherit'},color:'#4a5060'},grid:{color:'#1a2030'},ticks:{font:{size:11,family:'inherit'},color:'#6b7280'}},
-              y:{ticks:{font:{size:11,family:'inherit'},color:'#8b92a0',autoSkip:false},grid:{display:false}}}
-    }
-  });
+
+function autoScale(t){
+  const vals=t.data.filter(v=>v>0);
+  if(!vals.length) return 'linear';
+  return (Math.max(...vals)/Math.min(...vals) > 100) ? 'log' : 'linear';
 }
+
+function widthPct(v,t,s){
+  const hi=Math.max(...t.maxs, ...t.data);
+  if(v<=0||hi<=0) return 0;
+  if(s==='linear') return Math.min(100, v/hi*100);
+  const pos=[...t.data,...t.mins].filter(x=>x>0);
+  const lo=Math.min(...pos);
+  const l0=Math.log(lo/1.6), l1=Math.log(hi*1.02);
+  return Math.min(100, Math.max(0,(Math.log(v)-l0)/(l1-l0))*100);
+}
+
+function renderChart(t,s){
+  const best=Math.min(...t.data);
+  document.getElementById('chart').innerHTML=t.labels.map((label,i)=>{
+    const v=t.data[i], mn=t.mins[i], mx=t.maxs[i];
+    const w=widthPct(v,t,s), wl=widthPct(mn,t,s), wr=widthPct(mx,t,s);
+    const mult=best>0 ? v/best : 1;
+    const multTxt=(mult<1.005) ? 'fastest' : '×'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
+    const whisker=(wr-wl>0.4)
+      ? `<span class="rwhisker" style="left:${wl}%;width:${wr-wl}%"></span>`+
+        `<span class="rcap" style="left:${wl}%"></span><span class="rcap" style="left:${wr}%"></span>`
+      : '';
+    return `<div class="row${mult<1.005?' fastest':''}" title="min ${fmt(mn)}  ·  median ${fmt(v)}  ·  max ${fmt(mx)}">`+
+      `<span class="rname">${esc(label)}</span>`+
+      `<span class="rtrack"><span class="rbar" style="width:${w}%;background:${t.colors[i]}"></span>${whisker}</span>`+
+      `<span class="rmeta"><span class="rval">${fmt(v)}</span><span class="rmult">${multTxt}</span></span>`+
+      `</div>`;
+  }).join('');
+  document.querySelectorAll('.scale-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+}
+
+function show(idx){
+  cur=idx;
+  const t=TESTS[idx];
+  scale=autoScale(t);
+  renderInfo(t);
+  renderChart(t,scale);
+}
+
 const el=document.getElementById('tabs');
 TESTS.forEach((t,i)=>{
   const b=document.createElement('button');
@@ -948,6 +1201,9 @@ TESTS.forEach((t,i)=>{
   b.textContent=t.t;
   b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');show(i);};
   el.appendChild(b);
+});
+document.querySelectorAll('.scale-btn').forEach(b=>{
+  b.onclick=()=>{scale=b.dataset.s;renderChart(TESTS[cur],scale);};
 });
 show(0);
 </script>

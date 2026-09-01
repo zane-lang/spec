@@ -3,7 +3,8 @@
 Zane Memory Model Benchmark Runner
 
 Compiles zane_bench.c, runs it, parses the structured output,
-and generates benchmark.html with interactive Chart.js visualisations.
+and generates benchmark.html — a self-contained interactive page
+(pure HTML/CSS bars, no external dependencies).
 
 Usage:
     python3 bench/runbench.py              # compile, run, generate HTML
@@ -478,7 +479,9 @@ def build_test_js(tests, explanations):
         results_sorted = sorted(t["results"], key=lambda r: r["median_us"])
 
         labels = [r["impl"] for r in results_sorted]
-        data   = [round(r["median_us"], 2) for r in results_sorted]
+        data   = [round(r["median_us"], 3) for r in results_sorted]
+        mins   = [round(r["min_ns"] / 1000.0, 3) for r in results_sorted]
+        maxs   = [round(r["max_ns"] / 1000.0, 3) for r in results_sorted]
         colors = [get_color(r["impl"]) for r in results_sorted]
 
         js_meta = [{"label": k, "val": v} for k, v in meta.get("meta", [])]
@@ -488,6 +491,8 @@ def build_test_js(tests, explanations):
             "title":   meta.get("title", t["section"]),
             "labels":  labels,
             "data":    data,
+            "mins":    mins,
+            "maxs":    maxs,
             "colors":  colors,
             "meta":    js_meta,
             "setup":   meta.get("setup", ""),
@@ -498,97 +503,172 @@ def build_test_js(tests, explanations):
     return json.dumps(js_tests, indent=2)
 
 
-def generate_html(tests_json):
-    """Render the full benchmark page, embedding the tests array as JS."""
-    return f"""<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zane Memory Model Benchmark</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  :root {{
+  :root {
     --bg:#0d0f12;--surface:#151820;--border:#242830;--text:#e8eaf0;--muted:#6b7280;
     --accent:#7c6ff7;--tab-bg:#1c2028;--tab-act:#242a35;--info-bg:#131820;--divider:#1e242e;--label:#8b92a0;
-  }}
-  *{{box-sizing:border-box;margin:0;padding:0;}}
-  body{{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 32px 60px;max-width:980px;margin:0 auto;}}
-  header{{margin-bottom:36px;border-bottom:1px solid var(--border);padding-bottom:24px;}}
-  header h1{{font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}}
-  header p{{font-size:12px;color:var(--muted);}}
-  header p span{{color:var(--accent);}}
-  .tabs{{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px;}}
-  .tab{{padding:5px 11px;font-size:11px;font-family:inherit;font-weight:500;border-radius:4px;border:1px solid var(--border);background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;letter-spacing:.01em;}}
-  .tab.on{{background:var(--tab-act);color:var(--text);border-color:#363d4d;}}
-  .tab:hover:not(.on){{border-color:#363d4d;color:var(--text);}}
-  .info{{background:var(--info-bg);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;}}
-  .info-title{{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;letter-spacing:-0.01em;}}
-  .info-col{{display:flex;flex-direction:column;gap:5px;}}
-  .info-row{{display:flex;gap:10px;font-size:11.5px;}}
-  .info-lbl{{color:var(--label);white-space:nowrap;min-width:104px;}}
-  .info-val{{color:var(--text);}}
-  .info-div{{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}}
-  .info-details{{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}}
-  .info-details strong{{color:var(--label);font-weight:600;}}
-  .legend{{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:var(--muted);}}
-  .litem{{display:flex;align-items:center;gap:5px;}}
-  .sw{{width:10px;height:10px;border-radius:2px;flex-shrink:0;}}
-  .chart-wrap{{position:relative;width:100%;}}
+    --track:#151a22;--whisker:#e8eaf0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 32px 60px;max-width:980px;margin:0 auto;}
+  header{margin-bottom:36px;border-bottom:1px solid var(--border);padding-bottom:24px;}
+  header h1{font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}
+  header p{font-size:12px;color:var(--muted);}
+  header p span{color:var(--accent);}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px;}
+  .tab{padding:5px 11px;font-size:11px;font-family:inherit;font-weight:500;border-radius:4px;border:1px solid var(--border);background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;letter-spacing:.01em;}
+  .tab.on{background:var(--tab-act);color:var(--text);border-color:#363d4d;}
+  .tab:hover:not(.on){border-color:#363d4d;color:var(--text);}
+  .info{background:var(--info-bg);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:0 32px;}
+  .info-title{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;letter-spacing:-0.01em;}
+  .info-col{display:flex;flex-direction:column;gap:5px;}
+  .info-row{display:flex;gap:10px;font-size:11.5px;}
+  .info-lbl{color:var(--label);white-space:nowrap;min-width:104px;}
+  .info-val{color:var(--text);}
+  .info-div{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}
+  .info-details{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
+  .info-details strong{color:var(--label);font-weight:600;}
+
+  .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
+  .chart-cap{font-size:11px;color:var(--muted);}
+  .scale-toggle{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .scale-btn{padding:3px 10px;font-size:10.5px;font-family:inherit;border:none;background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;}
+  .scale-btn.on{background:var(--tab-act);color:var(--text);}
+
+  .chart{display:flex;flex-direction:column;gap:8px;}
+  .row{display:grid;grid-template-columns:230px 1fr 150px;gap:12px;align-items:center;}
+  .rname{font-size:11.5px;color:var(--label);text-align:right;line-height:1.35;overflow-wrap:break-word;}
+  .row.fastest .rname{color:var(--text);}
+  .rtrack{position:relative;height:26px;background:var(--track);border-radius:4px;}
+  .rbar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 3px 3px 4px;min-width:2px;transition:width .35s cubic-bezier(.2,.8,.2,1);}
+  .rwhisker{position:absolute;top:50%;height:1px;background:var(--whisker);opacity:.4;}
+  .rcap{position:absolute;top:50%;transform:translateY(-50%);width:1px;height:9px;background:var(--whisker);opacity:.4;}
+  .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;}
+  .rval{font-size:11.5px;color:var(--text);}
+  .rmult{font-size:10.5px;color:var(--muted);}
+  .row.fastest .rmult{color:#3aab76;}
+  footer{margin-top:28px;font-size:10.5px;color:var(--muted);}
+
+  @media (max-width:720px){
+    .row{grid-template-columns:1fr;gap:3px;}
+    .rname{text-align:left;}
+  }
 </style>
 </head>
 <body>
 <header>
   <h1>Zane Memory Model Benchmark</h1>
-  <p><span>20 runs per test · median reported · ns precision</span> — compiled with gcc -O2</p>
+  <p><span>20 runs per test &middot; median reported &middot; ns precision</span> &mdash; compiled with gcc -O2</p>
 </header>
 <div class="tabs" id="tabs"></div>
 <div class="info" id="info"></div>
-<div class="legend" id="leg"></div>
-<div class="chart-wrap" id="wrap"><canvas id="ch"></canvas></div>
+<div class="chart-head">
+  <span class="chart-cap">bar = median &middot; whisker = min&ndash;max across runs &middot; lower is faster</span>
+  <div class="scale-toggle" id="scale">
+    <button class="scale-btn" data-s="linear">linear</button>
+    <button class="scale-btn" data-s="log">log</button>
+  </div>
+</div>
+<div class="chart" id="chart"></div>
+<footer>Rows sorted fastest &rarr; slowest. The &times; figure is each row's slowdown relative to the fastest row in this test. Hover a row for exact min / median / max.</footer>
 <script>
-const TESTS={tests_json};
-let chart=null;
+const TESTS=__TESTS_JSON__;
+let cur=0, scale='linear';
 const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function renderInfo(t){{
+
+function fmt(us){
+  if(us>=1000) return (us/1000).toFixed(2)+' ms';
+  if(us>=1)    return us.toFixed(2)+' \u00b5s';
+  return (us*1000).toFixed(1)+' ns';
+}
+
+function renderInfo(t){
   const half=Math.ceil(t.meta.length/2);
-  const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${{r.label}}</span><span class="info-val">${{r.val}}</span></div>`).join('');
+  const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${r.label}</span><span class="info-val">${r.val}</span></div>`).join('');
   document.getElementById('info').innerHTML=
-    `<div class="info-title">${{t.title}}</div>`+
-    `<div class="info-col">${{rows(t.meta.slice(0,half))}}</div>`+
-    `<div class="info-col">${{rows(t.meta.slice(half))}}</div>`+
+    `<div class="info-title">${t.title}</div>`+
+    `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
+    `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-details"><strong>Setup: </strong>${{t.setup}}${{t.details ? ' <strong>Details: </strong>'+t.details : ''}}</div>`;
-}}
-function show(idx){{
+    `<div class="info-details"><strong>Setup: </strong>${t.setup}${t.details ? ' <strong>Details: </strong>'+t.details : ''}</div>`;
+}
+
+function autoScale(t){
+  const vals=t.data.filter(v=>v>0);
+  if(!vals.length) return 'linear';
+  return (Math.max(...vals)/Math.min(...vals) > 100) ? 'log' : 'linear';
+}
+
+function widthPct(v,t,s){
+  const hi=Math.max(...t.maxs, ...t.data);
+  if(v<=0||hi<=0) return 0;
+  if(s==='linear') return Math.min(100, v/hi*100);
+  const pos=[...t.data,...t.mins].filter(x=>x>0);
+  const lo=Math.min(...pos);
+  const l0=Math.log(lo/1.6), l1=Math.log(hi*1.02);
+  return Math.min(100, Math.max(0,(Math.log(v)-l0)/(l1-l0))*100);
+}
+
+function renderChart(t,s){
+  const best=Math.min(...t.data);
+  document.getElementById('chart').innerHTML=t.labels.map((label,i)=>{
+    const v=t.data[i], mn=t.mins[i], mx=t.maxs[i];
+    const w=widthPct(v,t,s), wl=widthPct(mn,t,s), wr=widthPct(mx,t,s);
+    const mult=best>0 ? v/best : 1;
+    const multTxt=(mult<1.005) ? 'fastest' : '\u00d7'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
+    const whisker=(wr-wl>0.4)
+      ? `<span class="rwhisker" style="left:${wl}%;width:${wr-wl}%"></span>`+
+        `<span class="rcap" style="left:${wl}%"></span><span class="rcap" style="left:${wr}%"></span>`
+      : '';
+    return `<div class="row${mult<1.005?' fastest':''}" title="min ${fmt(mn)}  \u00b7  median ${fmt(v)}  \u00b7  max ${fmt(mx)}">`+
+      `<span class="rname">${esc(label)}</span>`+
+      `<span class="rtrack"><span class="rbar" style="width:${w}%;background:${t.colors[i]}"></span>${whisker}</span>`+
+      `<span class="rmeta"><span class="rval">${fmt(v)}</span><span class="rmult">${multTxt}</span></span>`+
+      `</div>`;
+  }).join('');
+  document.querySelectorAll('.scale-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+}
+
+function show(idx){
+  cur=idx;
   const t=TESTS[idx];
-  document.getElementById('wrap').style.height=Math.max(140,t.labels.length*54+80)+'px';
+  scale=autoScale(t);
   renderInfo(t);
-  document.getElementById('leg').innerHTML=t.labels.map((l,i)=>`<span class="litem"><span class="sw" style="background:${{t.colors[i]}}"></span>${{esc(l)}}</span>`).join('');
-  if(chart) chart.destroy();
-  chart=new Chart(document.getElementById('ch'),{{
-    type:'bar',
-    data:{{labels:t.labels,datasets:[{{data:t.data,backgroundColor:t.colors,borderRadius:3,barThickness:32}}]}},
-    options:{{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{{legend:{{display:false}},tooltip:{{backgroundColor:'#1c2230',borderColor:'#2e3545',borderWidth:1,titleColor:'#8b92a0',bodyColor:'#e8eaf0',callbacks:{{label:ctx=>' '+ctx.parsed.x.toFixed(2)+' us  (median of 20 runs)'}}}}}},
-      scales:{{x:{{title:{{display:true,text:'us — lower is faster',font:{{size:11,family:'inherit'}},color:'#4a5060'}},grid:{{color:'#1a2030'}},ticks:{{font:{{size:11,family:'inherit'}},color:'#6b7280'}}}},
-              y:{{ticks:{{font:{{size:11,family:'inherit'}},color:'#8b92a0',autoSkip:false}},grid:{{display:false}}}}}}
-    }}
-  }});
-}}
+  renderChart(t,scale);
+}
+
 const el=document.getElementById('tabs');
-TESTS.forEach((t,i)=>{{
+TESTS.forEach((t,i)=>{
   const b=document.createElement('button');
   b.className='tab'+(i===0?' on':'');
   b.textContent=t.t;
-  b.onclick=()=>{{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');show(i);}};
+  b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');show(i);};
   el.appendChild(b);
-}});
+});
+document.querySelectorAll('.scale-btn').forEach(b=>{
+  b.onclick=()=>{scale=b.dataset.s;renderChart(TESTS[cur],scale);};
+});
 show(0);
 </script>
 </body>
 </html>"""
+
+
+def generate_html(tests_json):
+    """Render the full benchmark page, embedding the tests array as JS.
+
+    The page is fully self-contained: bars are plain HTML/CSS (no CDN
+    dependency, so it renders offline), and each row carries its own label,
+    value, min-max whisker, and slowdown multiplier vs the fastest row --
+    no separate legend duplicating the row labels.
+    """
+    return HTML_TEMPLATE.replace("__TESTS_JSON__", tests_json)
 
 
 # ─────────────────────────────────────────────────────────────
