@@ -1440,31 +1440,7 @@ static void test12(void) {
 }
 
 static void test13(void) {
-    record_test("Test 13", "Partial-guest repeated scan  [100k hosts, 20% guested, payload-only]");
-    double T[RUNS];
-    zm_reset();
-    size_t osz = sizeof(Entity) + sizeof(ZRef);
-    Entity **objs = (Entity**)malloc(N * sizeof(Entity*));
-    for (int i = 0; i < N; i++) {
-        objs[i] = (Entity*)zm_host(osz);
-        objs[i]->hp = i % 100 + 1;
-        if (i % 5 == 0) zm_mint_guest(objs[i], osz);
-    }
-    for (int r = 0; r < RUNS; r++) {
-        int64_t acc = 0;
-        for (int i = 0; i < N; i++) acc += objs[i]->hp;
-        double t0 = now_ns();
-        for (int p = 0; p < 8; p++)
-            for (int i = 0; i < N; i++) acc += objs[i]->hp;
-        T[r] = now_ns() - t0; sink ^= acc;
-    }
-    record_row("Payload scan (8 passes)", T);
-    for (int i = 0; i < N; i++) zm_host_release(objs[i], osz);
-    free(objs);
-}
-
-static void test14(void) {
-    record_test("Test 14", "Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]");
+    record_test("Test 13", "Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]");
     double T[RUNS];
     zm_reset();
     size_t osz = sizeof(Entity) + sizeof(ZRef);
@@ -1537,8 +1513,8 @@ static void fwd_measure(const char *label, int depth, ZRef *tethers, size_t osz)
     zm_scope_drain();
 }
 
-static void test15(void) {
-    record_test("Test 15", "Guest resolution across forwarding anchors  [20k guests x 8 passes]");
+static void test14(void) {
+    record_test("Test 14", "Guest resolution across forwarding anchors  [20k guests x 8 passes]");
     size_t osz = sizeof(Entity) + sizeof(ZRef);
     ZRef *tethers = (ZRef*)malloc(FWD_CHAINS * sizeof(ZRef));
     ZRef *scratch = (ZRef*)malloc(FWD_CHAINS * sizeof(ZRef));
@@ -1618,8 +1594,8 @@ static void test15(void) {
 #define REUSE_ROUNDS 10
 static const size_t REUSE_SIZES[3] = { 128, 256, 512 };
 
-static void test16(void) {
-    record_test("Test 16", "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]");
+static void test15(void) {
+    record_test("Test 15", "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]");
     double T[RUNS];
     void **blocks = (void**)malloc(REUSE_BLOCKS * sizeof(void*));
     ZSizeStack *st[3];
@@ -1790,8 +1766,8 @@ static void bm_destroy(MNode *n) {
     bm_destroy(n->left); bm_destroy(n->right); free(n);
 }
 
-static void test17(void) {
-    record_test("Test 17", "Boxed members: rehost relocation vs deep value copy  [8191 nodes]");
+static void test16(void) {
+    record_test("Test 16", "Boxed members: rehost relocation vs deep value copy  [8191 nodes]");
     double T[RUNS];
     int64_t expected;
 
@@ -1894,7 +1870,7 @@ int main(void) {
 
     test1(); test2(); test3(); test4(); test5();
     test6(); test7(); test8(); test9(); test10(); test11(); test12();
-    test13(); test14(); test15(); test16(); test17();
+    test13(); test14(); test15(); test16();
 
     workers_shutdown();
     emit_json(stdout);

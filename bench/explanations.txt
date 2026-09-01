@@ -19,11 +19,11 @@
 # runbench.py reads this file alongside the results and renders each block as
 # the "Reading the result" note for its test — a section below that test's
 # chart. It interprets the numbers; the configuration lives in the panel above
-# the chart, and checked invariants live in that panel's meta rows. Some tests (T13, T14) are a compile-time
-# A/B: the committed run is the default (global anchor pool) layout, and the
-# note carries the comparison against the -DZM_INTERLEAVE build. Three
-# default/interleaved pairs have been taken so far; all six A/B measurements
-# favour the global pool, which is what the notes report, and none of them pins
+# the chart, and checked invariants live in that panel's meta rows. One test
+# (T13) is a compile-time A/B: the committed run is the default (global anchor
+# pool) layout, and the note carries the comparison against the -DZM_INTERLEAVE
+# build. Three default/interleaved pairs have been taken so far; all three
+# favour the global pool, which is what the note reports, and none of them pins
 # the magnitude.
 #
 # One caution specific to the committed pair: the interleaved run was taken on a
@@ -94,7 +94,7 @@ The extra dependent load costs ~1.21x: ~117us direct against ~142us tethered,
 about a quarter of a nanosecond on each of 100k accesses, most of it absorbed
 by the pipeline. Caching the chunk directory or re-fetching it lands within 1%
 — inside the noise, so the directory is not on the critical path. This is the
-terminal case only; T15 measures what an identity that has outlived a move
+terminal case only; T14 measures what an identity that has outlived a move
 pays.
 
 [Test 7]
@@ -150,23 +150,17 @@ startup cost — the ~117us difference is spent coordinating work that takes
 showing rather than computation.
 
 [Test 13]
-~698us for eight passes, ~0.9ns per host per pass. The interleaved build lost
-all three pairs — by 0.1%, 5.1% and 10.9% — and lost the committed one from a
-~24% machine advantage on code the two builds share. The direction is
-consistent; the magnitude is not, and the narrowest gap would be noise on its
-own. A payload-only scan is where the global pool should look best, since
-interleaving puts cells in a stream this test never reads. T14 weights it
-properly.
+~4.13ms for the weighted mix. The interleaved build lost all three pairs — by
+8.9%, 26.4% and 4.8% — the committed one from a ~24% machine advantage. Three
+measurements in one direction is reasonable evidence that protecting the scan
+wins the aggregate; none pins its size, this row having moved 31% between
+identical runs. A payload-only companion agreed on all three pairs before it
+was retired as redundant with this test, which weights the same effect
+properly. The design argument follows: scans are pervasive and un-hoistable
+where resolves are occasional, so the pool's dearer resolve (T6) is the right
+trade.
 
 [Test 14]
-~4.13ms for the weighted mix. The interleaved build lost all three pairs — by
-8.9%, 26.4% and 4.8% — the committed one from a ~24% machine advantage. Six
-measurements in one direction is good evidence that protecting the scan wins
-the aggregate; none pins its size, this row having moved 31% between identical
-runs. The design argument follows: scans are pervasive and un-hoistable where
-resolves are occasional, so the pool's dearer resolve (T6) is the right trade.
-
-[Test 15]
 Hops are linear and expensive: ~164us, ~316us, ~469us and ~802us at zero, one,
 two and four. Compression costs ~707us against the ~660us floor, recovering
 about two thirds of the four-hop penalty on the very first repeated access —
@@ -174,7 +168,7 @@ what §4.8 claims for it — and the ~47us residual is the store it makes on
 every pass. The floor is the figure to notice: it sits ~4x above the ~164us
 terminal row on footprint alone, five hosts and five cells against one.
 
-[Test 16]
+[Test 15]
 Not knowing a size until runtime costs ~6%: ~623us against ~657us over 60,000
 pairs. The stacks cost far more — the frontier-only row runs ~60us, an order
 of magnitude under both — and what they buy is memory rather than time:
@@ -183,7 +177,7 @@ where the stack runs recycle inside ~1.8 MB. Pool (~509us) stays ahead because
 its link is a raw pointer where §3.1 makes this one a segmented offset:
 inherent, not recoverable.
 
-[Test 17]
+[Test 16]
 Guesting every node costs rehosting ~27% — ~42us against ~53us — and no more,
 because each host retargets its own anchor and no guest is ever enumerated.
 The value pair is the one to read: ~34us to deep-copy from an existing place

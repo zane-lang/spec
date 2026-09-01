@@ -96,17 +96,12 @@
     Hosted Array shards, concurrent (4 workers)  median    174735.00 ns  min    104518.00 ns  max    397148.00 ns  (  174.735 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 13 -- Partial-guest repeated scan  [100k hosts, 20% guested, payload-only]                 |
-  +--------------------------------------------------------------------------------------------------+
-    Payload scan (8 passes)             median    697675.00 ns  min    672259.00 ns  max    765734.00 ns  (  697.675 us)
-
-  +--------------------------------------------------------------------------------------------------+
-  |  Test 14 -- Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]                |
+  |  Test 13 -- Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]                |
   +--------------------------------------------------------------------------------------------------+
     Mixed 10:1 (scan-heavy)             median   4132649.00 ns  min   4004087.00 ns  max   4369692.00 ns  ( 4132.649 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 15 -- Guest resolution across forwarding anchors  [20k guests x 8 passes]                  |
+  |  Test 14 -- Guest resolution across forwarding anchors  [20k guests x 8 passes]                  |
   +--------------------------------------------------------------------------------------------------+
     Terminal anchor (0 hops)            median    164241.00 ns  min    162372.00 ns  max    181057.00 ns  (  164.241 us)
     1 forwarding hop                    median    316382.00 ns  min    312985.00 ns  max    369218.00 ns  (  316.382 us)
@@ -116,7 +111,7 @@
     Terminal anchor, same footprint     median    659536.00 ns  min    643479.00 ns  max    739818.00 ns  (  659.536 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 16 -- Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]                   |
+  |  Test 15 -- Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]                   |
   +--------------------------------------------------------------------------------------------------+
     Boxed payload (static size class)   median    622770.50 ns  min    612068.00 ns  max    673784.00 ns  (  622.770 us)
     Backing store (runtime size class)  median    657389.00 ns  min    646252.00 ns  max    920295.00 ns  (  657.389 us)
@@ -125,7 +120,7 @@
     Pool (per-size free-list)           median    509008.00 ns  min    267848.00 ns  max    626099.00 ns  (  509.008 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 17 -- Boxed members: rehost relocation vs deep value copy  [8191 nodes]                    |
+  |  Test 16 -- Boxed members: rehost relocation vs deep value copy  [8191 nodes]                    |
   +--------------------------------------------------------------------------------------------------+
     Rehost hosted tree, no guests       median     42099.00 ns  min     41842.00 ns  max     43759.00 ns  (   42.099 us)
     Rehost hosted tree, every node guested  median     53404.50 ns  min     53195.00 ns  max     56376.00 ns  (   53.404 us)

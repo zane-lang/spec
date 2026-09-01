@@ -455,7 +455,7 @@ const TESTS=[
       }
     ],
     "setup": "Terminal resolution: a tether is a u32 segmented offset naming a cell in the global anchor pool, and the cell holds the payload's offset plus a word marking it a payload anchor rather than a forwarder. Both hops resolve through the chunk directory; anchor pages are their own chunks.",
-    "note": "The extra dependent load costs ~1.21x: ~117us direct against ~142us tethered, about a quarter of a nanosecond on each of 100k accesses, most of it absorbed by the pipeline. Caching the chunk directory or re-fetching it lands within 1% \u2014 inside the noise, so the directory is not on the critical path. This is the terminal case only; T15 measures what an identity that has outlived a move pays."
+    "note": "The extra dependent load costs ~1.21x: ~117us direct against ~142us tethered, about a quarter of a nanosecond on each of 100k accesses, most of it absorbed by the pipeline. Caching the chunk directory or re-fetching it lands within 1% \u2014 inside the noise, so the directory is not on the critical path. This is the terminal case only; T14 measures what an identity that has outlived a move pays."
   },
   {
     "t": "T7 \u2014 game loop",
@@ -832,51 +832,7 @@ const TESTS=[
     "note": "Concurrency loses by 3x: ~57us sequential against ~175us on four workers. With the pool pre-warmed and four real cores this is a genuine result rather than startup cost \u2014 the ~117us difference is spent coordinating work that takes 57us to do outright. It is also much the least repeatable row here, ranging ~105-397us where the sequential row holds to ~57-71us, which is contention showing rather than computation."
   },
   {
-    "t": "T13 \u2014 partial-guest scan",
-    "title": "Partial-guest repeated payload scan (anchor placement A/B)",
-    "labels": [
-      "Payload scan (8 passes)"
-    ],
-    "data": [
-      697.675
-    ],
-    "mins": [
-      672.259
-    ],
-    "maxs": [
-      765.734
-    ],
-    "colors": [
-      "#7c6ff7"
-    ],
-    "eliminated": [],
-    "meta": [
-      {
-        "label": "Hosts",
-        "val": "100,000"
-      },
-      {
-        "label": "Guested",
-        "val": "~20% (every 5th)"
-      },
-      {
-        "label": "Passes",
-        "val": "8 per timed run"
-      },
-      {
-        "label": "A/B",
-        "val": "default = global anchor pool; -DZM_INTERLEAVE = cells beside payloads"
-      },
-      {
-        "label": "Runs",
-        "val": "20 \u2014 median reported"
-      }
-    ],
-    "setup": "100k hosts, ~20% guested, then repeated payload-only field scans. By default the anchor pool owns its own chunks and the payload stream stays dense; -DZM_INTERLEAVE puts the cells beside the payloads so every scan drags them through cache.",
-    "note": "~698us for eight passes, ~0.9ns per host per pass. The interleaved build lost all three pairs \u2014 by 0.1%, 5.1% and 10.9% \u2014 and lost the committed one from a ~24% machine advantage on code the two builds share. The direction is consistent; the magnitude is not, and the narrowest gap would be noise on its own. A payload-only scan is where the global pool should look best, since interleaving puts cells in a stream this test never reads. T14 weights it properly."
-  },
-  {
-    "t": "T14 \u2014 scan-heavy mixed",
+    "t": "T13 \u2014 scan-heavy mixed",
     "title": "Scan-heavy mixed workload, 10 scans : 1 resolve (anchor placement A/B)",
     "labels": [
       "Mixed 10:1 (scan-heavy)"
@@ -917,10 +873,10 @@ const TESTS=[
       }
     ],
     "setup": "Ten payload scans per one tether-resolve pass. Models the weighting the 1:1 micro-tests hide: the pervasive scan should dominate, even though the pool's individual resolve is dearer than the interleaved layout's.",
-    "note": "~4.13ms for the weighted mix. The interleaved build lost all three pairs \u2014 by 8.9%, 26.4% and 4.8% \u2014 the committed one from a ~24% machine advantage. Six measurements in one direction is good evidence that protecting the scan wins the aggregate; none pins its size, this row having moved 31% between identical runs. The design argument follows: scans are pervasive and un-hoistable where resolves are occasional, so the pool's dearer resolve (T6) is the right trade."
+    "note": "~4.13ms for the weighted mix. The interleaved build lost all three pairs \u2014 by 8.9%, 26.4% and 4.8% \u2014 the committed one from a ~24% machine advantage. Three measurements in one direction is reasonable evidence that protecting the scan wins the aggregate; none pins its size, this row having moved 31% between identical runs. A payload-only companion agreed on all three pairs before it was retired as redundant with this test, which weights the same effect properly. The design argument follows: scans are pervasive and un-hoistable where resolves are occasional, so the pool's dearer resolve (T6) is the right trade."
   },
   {
-    "t": "T15 \u2014 forwarding hops",
+    "t": "T14 \u2014 forwarding hops",
     "title": "Guest resolution across forwarding anchors",
     "labels": [
       "Terminal anchor (0 hops)",
@@ -1009,7 +965,7 @@ const TESTS=[
     "note": "Hops are linear and expensive: ~164us, ~316us, ~469us and ~802us at zero, one, two and four. Compression costs ~707us against the ~660us floor, recovering about two thirds of the four-hop penalty on the very first repeated access \u2014 what \u00a74.8 claims for it \u2014 and the ~47us residual is the store it makes on every pass. The floor is the figure to notice: it sits ~4x above the ~164us terminal row on footprint alone, five hosts and five cells against one."
   },
   {
-    "t": "T16 \u2014 dynamic churn",
+    "t": "T15 \u2014 dynamic churn",
     "title": "Dynamic-region block churn: exact-size stacks vs a pure frontier",
     "labels": [
       "Frontier bump only (no reuse)",
@@ -1081,7 +1037,7 @@ const TESTS=[
     "note": "Not knowing a size until runtime costs ~6%: ~623us against ~657us over 60,000 pairs. The stacks cost far more \u2014 the frontier-only row runs ~60us, an order of magnitude under both \u2014 and what they buy is memory rather than time: frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set where the stack runs recycle inside ~1.8 MB. Pool (~509us) stays ahead because its link is a raw pointer where \u00a73.1 makes this one a segmented offset: inherent, not recoverable."
   },
   {
-    "t": "T17 \u2014 boxed members",
+    "t": "T16 \u2014 boxed members",
     "title": "Boxed members: rehost relocation vs deep value copy",
     "labels": [
       "Construct fresh value tree in place",

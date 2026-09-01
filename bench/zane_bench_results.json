@@ -334,18 +334,6 @@
     },
     {
       "id": "Test 13",
-      "title": "Partial-guest repeated scan  [100k hosts, 20% guested, payload-only]",
-      "rows": [
-        {
-          "label": "Payload scan (8 passes)",
-          "median_ns": 697675.0,
-          "min_ns": 672259.0,
-          "max_ns": 765734.0
-        }
-      ]
-    },
-    {
-      "id": "Test 14",
       "title": "Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]",
       "rows": [
         {
@@ -357,7 +345,7 @@
       ]
     },
     {
-      "id": "Test 15",
+      "id": "Test 14",
       "title": "Guest resolution across forwarding anchors  [20k guests x 8 passes]",
       "rows": [
         {
@@ -399,7 +387,7 @@
       ]
     },
     {
-      "id": "Test 16",
+      "id": "Test 15",
       "title": "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]",
       "rows": [
         {
@@ -435,7 +423,7 @@
       ]
     },
     {
-      "id": "Test 17",
+      "id": "Test 16",
       "title": "Boxed members: rehost relocation vs deep value copy  [8191 nodes]",
       "rows": [
         {

@@ -183,19 +183,7 @@ TEST_META = {
         ],
     },
     "Test 13": {
-        "short": "T13 — partial-guest scan",
-        "title": "Partial-guest repeated payload scan (anchor placement A/B)",
-        "setup": "100k hosts, ~20% guested, then repeated payload-only field scans. By default the anchor pool owns its own chunks and the payload stream stays dense; -DZM_INTERLEAVE puts the cells beside the payloads so every scan drags them through cache.",
-        "meta": [
-            ("Hosts", "100,000"),
-            ("Guested", "~20% (every 5th)"),
-            ("Passes", "8 per timed run"),
-            ("A/B", "default = global anchor pool; -DZM_INTERLEAVE = cells beside payloads"),
-            ("Runs", "20 — median reported"),
-        ],
-    },
-    "Test 14": {
-        "short": "T14 — scan-heavy mixed",
+        "short": "T13 — scan-heavy mixed",
         "title": "Scan-heavy mixed workload, 10 scans : 1 resolve (anchor placement A/B)",
         "setup": "Ten payload scans per one tether-resolve pass. Models the weighting the 1:1 micro-tests hide: the pervasive scan should dominate, even though the pool's individual resolve is dearer than the interleaved layout's.",
         "meta": [
@@ -206,8 +194,8 @@ TEST_META = {
             ("Runs", "20 — median reported"),
         ],
     },
-    "Test 15": {
-        "short": "T15 — forwarding hops",
+    "Test 14": {
+        "short": "T14 — forwarding hops",
         "title": "Guest resolution across forwarding anchors",
         "setup": "Moving into an already-anchored destination keeps that cell terminal and turns the source into a forwarder (memory.md §4.5), so a guest minted before the move gains one hop per move it survived. The timed loop resolves the oldest tether. Two rows separate hop count from cache footprint: one compresses as it resolves, the other resolves a terminal identity over the identical structure — the floor the first converges on.",
         "meta": [
@@ -223,8 +211,8 @@ TEST_META = {
             ("Runs", "20 — median reported"),
         ],
     },
-    "Test 16": {
-        "short": "T16 — dynamic churn",
+    "Test 15": {
+        "short": "T15 — dynamic churn",
         "title": "Dynamic-region block churn: exact-size stacks vs a pure frontier",
         "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md §3.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
         "meta": [
@@ -237,8 +225,8 @@ TEST_META = {
             ("Runs", "20 — median reported"),
         ],
     },
-    "Test 17": {
-        "short": "T17 — boxed members",
+    "Test 16": {
+        "short": "T16 — boxed members",
         "title": "Boxed members: rehost relocation vs deep value copy",
         "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. Rehosting the root relocates every boxed descendant recursively (memory.md §3.5), retargeting each contained host's anchor; a value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
         "meta": [
@@ -283,7 +271,7 @@ ZANE_VARIANTS = {
     "size stacks":        "#7c6ff7",
 }
 
-# Forwarding-hop depth (T15) — darker with each hop
+# Forwarding-hop depth (T14) — darker with each hop
 HOP_COLORS = [
     ("terminal anchor (0 hops)",     "#4a9edd"),
     ("1 forwarding hop",             "#9a8ae0"),
@@ -293,19 +281,18 @@ HOP_COLORS = [
     ("terminal anchor, same",        "#4a9edd"),
 ]
 
-# Single-row Zane measurements (T13, T14)
+# Single-row Zane measurement (T13)
 SOLO_COLORS = [
-    ("payload scan", "#7c6ff7"),
-    ("mixed 10:1",   "#7c6ff7"),
+    ("mixed 10:1", "#7c6ff7"),
 ]
 
-# Dynamic-region block kinds (T16)
+# Dynamic-region block kinds (T15)
 DYN_COLORS = [
     ("boxed payload",   "#7c6ff7"),
     ("backing store",   "#b8a4ff"),
 ]
 
-# Boxed-member operations (T17)
+# Boxed-member operations (T16)
 BOX_COLORS = [
     ("rehost hosted tree, no guests",       "#7c6ff7"),
     ("rehost hosted tree, every node",      "#5a4faa"),
