@@ -8,7 +8,7 @@
   :root {
     --bg:#0d0f12;--surface:#151820;--border:#242830;--text:#e8eaf0;--muted:#6b7280;
     --accent:#7c6ff7;--tab-bg:#1c2028;--tab-act:#242a35;--info-bg:#131820;--divider:#1e242e;--label:#8b92a0;
-    --track:#151a22;--whisker:#e8eaf0;
+    --track:#151a22;--whisker:#e8eaf0;--prose:#ccd1dc;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 32px 60px;max-width:980px;margin:0 auto;}
@@ -24,11 +24,15 @@
   .info-title{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;letter-spacing:-0.01em;}
   .info-col{display:flex;flex-direction:column;gap:5px;}
   .info-row{display:flex;gap:10px;font-size:11.5px;}
-  .info-lbl{color:var(--label);white-space:nowrap;min-width:104px;}
+  .info-lbl{color:var(--label);white-space:nowrap;min-width:104px;flex-shrink:0;}
   .info-val{color:var(--text);}
   .info-div{grid-column:1/-1;border:none;border-top:1px solid var(--divider);margin:10px 0;}
   .info-details{grid-column:1/-1;font-size:11.5px;color:var(--muted);line-height:1.65;border-left:2px solid var(--accent);padding-left:10px;}
   .info-details strong{color:var(--label);font-weight:600;}
+
+  .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
+  .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
+  .notes p{font-size:12.5px;line-height:1.85;color:var(--prose);max-width:74ch;}
 
   .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
   .chart-cap{font-size:11px;color:var(--muted);}
@@ -72,6 +76,7 @@
   </div>
 </div>
 <div class="chart" id="chart"></div>
+<section class="notes" id="notes"></section>
 <footer>Rows sorted fastest &rarr; slowest. The &times; figure is each row's slowdown relative to the fastest row in this test. The axis stops at twice the slowest median, so one outlier run cannot squash every bar; a whisker running past it is drawn dashed and uncapped. Hover a row for exact min / median / max.</footer>
 <script>
 const TESTS=[
@@ -1148,7 +1153,10 @@ function renderInfo(t){
     `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
     `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-details"><strong>Setup: </strong>${t.setup}${t.details ? ' <strong>Details: </strong>'+t.details : ''}</div>`;
+    `<div class="info-details"><strong>Setup: </strong>${t.setup}</div>`;
+  const n=document.getElementById('notes');
+  n.innerHTML=t.details ? `<h2>Reading the result</h2><p>${t.details}</p>` : '';
+  n.hidden=!t.details;
 }
 
 // The axis follows the whiskers only while they stay within AXIS_CAP times the
