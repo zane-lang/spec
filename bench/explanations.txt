@@ -40,8 +40,7 @@
 
 [Test 1]
 Zane's fixed-region bump (~229us) is ~13x faster than malloc (~2.9ms) and
-~1.6x faster than Pool (~362us). Zane's release is a no-op — the region
-reclaims only when the scope drains — so its figure is allocation alone, where
+~1.6x faster than Pool (~362us), and its figure is allocation alone where
 malloc and Pool pay for both halves. The raw Arena baseline (~21us) is still
 ~11x quicker: Zane zero-writes a 4-byte backpointer per host and checks a
 chunk boundary that Arena's flat frontier does not have. That is the honest
@@ -124,11 +123,11 @@ coalescing is ~98us (~1.8x slower); Pool (~54us) is level with Zane.
 
 [Test 11]
 The mixed workload compresses the field to a tie: Pool ~1.86ms, Zane ~1.91ms,
-malloc ~2.04ms, a 9% span that sits inside the noise band. Updates, scans and
-randomized maintenance dominate, so the allocator is only a small slice of the
-total and none of the three separates from the others. Both regions run at
-once here — entities bump and never come back, while the 128/256/512-byte list
-blocks cycle through the exact-size stacks.
+malloc ~2.04ms. Updates, scans and randomized maintenance dominate, so the
+allocator is only a small slice of the total. Within one run the rows barely
+move — this is the steadiest multi-row test in the suite — but the 9% span
+between them is inside the ~8-10% a median shifts across runs, so the ordering
+is not durable.
 
 [Test 12]
 Four read-only shards summed sequentially (~57us) and concurrently (~175us):
@@ -140,22 +139,22 @@ repeatable here, ranging ~105-397us where the sequential one holds to
 ~57-71us. Both paths produce the asserted-identical total.
 
 [Test 13]
-Eight payload-only scans over 100k hosts at ~20% guest density: ~698us median,
-~0.9ns per host per pass. The -DZM_INTERLEAVE build was slower in all three
-pairs taken — by 0.1%, 5.1% and 10.9% — and in the committed pair it lost
-despite running on a machine ~24% quicker on code the two builds share. The
-direction is consistent across every pair; the magnitude is not, and the
-smallest gap is inside the noise. T14 makes the weighting plainer.
+Eight payload-only scans: ~698us median, ~0.9ns per host per pass. The
+-DZM_INTERLEAVE build was slower in all three pairs taken — by 0.1%, 5.1% and
+10.9% — and in the committed pair it lost despite running on a machine ~24%
+quicker on code the two builds share. The direction is consistent across every
+pair; the magnitude is not, and the smallest gap is inside the noise. T14
+makes the weighting plainer.
 
 [Test 14]
-Ten payload scans per one tether-resolve pass: ~4.13ms median. The interleaved
-build was slower in all three pairs — by 8.9%, 26.4% and 4.8% — and, as in
-T13, its run in the committed pair had a ~24% machine advantage and still
-lost. Six measurements in one direction is good evidence that protecting the
-payload scan wins the aggregate; none pins the size, since this row has moved
-31% between identical runs. Hence the design argument: scans are pervasive and
-un-hoistable where resolves are occasional, so the global pool wins here
-despite its dearer resolve (T6).
+The 10:1 mix runs ~4.13ms median. The interleaved build was slower in all
+three pairs — by 8.9%, 26.4% and 4.8% — and, as in T13, its run in the
+committed pair had a ~24% machine advantage and still lost. Six measurements
+in one direction is good evidence that protecting the payload scan wins the
+aggregate; none pins the size, since this row has moved 31% between identical
+runs. Hence the design argument: scans are pervasive and un-hoistable where
+resolves are occasional, so the global pool wins here despite its dearer
+resolve (T6).
 
 [Test 15]
 Each uncompressed hop costs about one more dependent anchor-cell load: ~164us
@@ -168,14 +167,13 @@ store on every pass. That floor sits above the ~164us row on footprint, not
 hops: a depth-4 chain is five hosts and five cells.
 
 [Test 16]
-Not knowing a size until runtime costs ~6%: a boxed payload picks its stack
-once (~623us for 60,000 alloc-and-release pairs), where a growable backing
-store looks its size up on every call (~657us) (§3.2). Both pay a pop-and-push
-that the frontier-only row (~60us) skips, and what it buys is memory —
-frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set,
-where the stack runs recycle inside ~1.8 MB. Pool (~509us) stays ahead on
-raw-pointer links, where §3.1 makes one here a segmented offset: inherent to
-the addressing, not recoverable. malloc (~1.88ms) trails.
+Not knowing a size until runtime costs ~6%: ~623us against ~657us for 60,000
+alloc-and-release pairs (§3.2). Both pay a pop-and-push that the frontier-only
+row (~60us) skips, and what it buys is memory — frontier-only bumps through
+17.9 MB of fresh chunks to hold a 1 MB live set, where the stack runs recycle
+inside ~1.8 MB. Pool (~509us) stays ahead on raw-pointer links, where §3.1
+makes one here a segmented offset: inherent to the addressing, not
+recoverable. malloc (~1.88ms) trails.
 
 [Test 17]
 Rehosting an 8,191-node boxed tree relocates every descendant recursively:
