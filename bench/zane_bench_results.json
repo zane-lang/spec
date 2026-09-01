@@ -1,0 +1,474 @@
+{
+  "schema": 1,
+  "config": {
+    "n": 100000,
+    "runs": 20,
+    "interleaved": false,
+    "chunk_bytes": 1048576,
+    "region_bytes": 536870912
+  },
+  "provenance": {
+    "note": "Migrated verbatim from the committed zane_bench_results.txt. Measured on the maintainer's machine with the process pinned to four cores (taskset -c 0-3), gcc -O2. Predates the T1 arena-with-init row; that row appears after the next run. T2's Zane row and T10's spread were corrected in place; see each test's provenance_note.",
+    "per_run_samples": false
+  },
+  "tests": [
+    {
+      "id": "Test 1",
+      "title": "Sequential alloc + sequential free  [32 bytes x 100k]",
+      "rows": [
+        {
+          "label": "Zane (fixed-region bump, lazy anchors)",
+          "median_ns": 229017.0,
+          "min_ns": 227433.0,
+          "max_ns": 853465.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 2937294.0,
+          "min_ns": 2864295.0,
+          "max_ns": 6490794.0
+        },
+        {
+          "label": "Arena (bump + O(1) reset)",
+          "median_ns": 20921.0,
+          "min_ns": 20516.0,
+          "max_ns": 32375.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 361892.0,
+          "min_ns": 338163.0,
+          "max_ns": 429325.0
+        }
+      ],
+      "provenance_note": "Predates the 'Arena + one-field init' row; that row appears after the next run."
+    },
+    {
+      "id": "Test 2",
+      "title": "Random-order free only  [32B x 100k  |  alloc+shuffle NOT timed]",
+      "rows": [
+        {
+          "label": "Zane (fixed-region bump, lazy anchors)",
+          "eliminated": true
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 1302586.5,
+          "min_ns": 1229663.0,
+          "max_ns": 2582795.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 277671.0,
+          "min_ns": 259429.0,
+          "max_ns": 447015.0
+        }
+      ]
+    },
+    {
+      "id": "Test 3",
+      "title": "Mixed sizes (8/16/32/64B) alloc + random-order free  [100k total]",
+      "rows": [
+        {
+          "label": "Zane (fixed-region bump)",
+          "median_ns": 388977.0,
+          "min_ns": 383756.0,
+          "max_ns": 1569633.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 8005452.5,
+          "min_ns": 6151267.0,
+          "max_ns": 12508802.0
+        },
+        {
+          "label": "Arena (bulk reset)",
+          "median_ns": 75056.5,
+          "min_ns": 51116.0,
+          "max_ns": 127823.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 2703633.5,
+          "min_ns": 1632046.0,
+          "max_ns": 4413387.0
+        }
+      ]
+    },
+    {
+      "id": "Test 4",
+      "title": "Iteration: inline (hosted) vs pointer-chase  [32B Entity x 100k]",
+      "rows": [
+        {
+          "label": "Inline array  (Array<Entity, 100000>)",
+          "median_ns": 75231.5,
+          "min_ns": 74100.0,
+          "max_ns": 193908.0
+        },
+        {
+          "label": "Pointer array, sequential",
+          "median_ns": 132970.0,
+          "min_ns": 129675.0,
+          "max_ns": 260942.0
+        },
+        {
+          "label": "Pointer array, shuffled",
+          "median_ns": 194365.5,
+          "min_ns": 179761.0,
+          "max_ns": 244665.0
+        },
+        {
+          "label": "UList (chunk=8, linked)",
+          "median_ns": 82859.5,
+          "min_ns": 82385.0,
+          "max_ns": 233712.0
+        },
+        {
+          "label": "CChunked (chunk=64, ptr-array)",
+          "median_ns": 87935.0,
+          "min_ns": 87296.0,
+          "max_ns": 994016.0
+        }
+      ]
+    },
+    {
+      "id": "Test 5",
+      "title": "List backing-store growth  [push 100k x 32B Entity items]",
+      "rows": [
+        {
+          "label": "Zane List (128B start, doubling)",
+          "median_ns": 299377.0,
+          "min_ns": 286266.0,
+          "max_ns": 660939.0
+        },
+        {
+          "label": "C realloc vector",
+          "median_ns": 312855.5,
+          "min_ns": 298081.0,
+          "max_ns": 784743.0
+        },
+        {
+          "label": "UList (chunk=8, no realloc)",
+          "median_ns": 1123872.0,
+          "min_ns": 1105982.0,
+          "max_ns": 1262087.0
+        },
+        {
+          "label": "CChunked (chunk=64, ptr-array)",
+          "median_ns": 319701.0,
+          "min_ns": 316545.0,
+          "max_ns": 429312.0
+        }
+      ]
+    },
+    {
+      "id": "Test 6",
+      "title": "Guest access via segmented tether vs direct pointer  [100k accesses]",
+      "rows": [
+        {
+          "label": "Direct pointer (baseline)",
+          "median_ns": 117459.0,
+          "min_ns": 115942.0,
+          "max_ns": 200531.0
+        },
+        {
+          "label": "Segmented tether (chunk dir cached)",
+          "median_ns": 142309.0,
+          "min_ns": 138928.0,
+          "max_ns": 202089.0
+        },
+        {
+          "label": "Segmented tether (chunk dir reloaded)",
+          "median_ns": 141516.5,
+          "min_ns": 135413.0,
+          "max_ns": 198939.0
+        }
+      ]
+    },
+    {
+      "id": "Test 7",
+      "title": "Game loop  [500 frames: 30 spawns + 20+ kills + update per frame]",
+      "rows": [
+        {
+          "label": "Zane (fixed-region bump)",
+          "median_ns": 2411280.0,
+          "min_ns": 2344942.0,
+          "max_ns": 2543076.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 3272961.5,
+          "min_ns": 2788114.0,
+          "max_ns": 5559599.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 2464088.0,
+          "min_ns": 2400899.0,
+          "max_ns": 4773067.0
+        }
+      ]
+    },
+    {
+      "id": "Test 8",
+      "title": "Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]",
+      "rows": [
+        {
+          "label": "Zane (fixed-region bump)",
+          "median_ns": 7699903.5,
+          "min_ns": 7432995.0,
+          "max_ns": 12639899.0
+        },
+        {
+          "label": "Zane + work-stealing update",
+          "median_ns": 107281268.5,
+          "min_ns": 77709744.0,
+          "max_ns": 151294342.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 8109055.0,
+          "min_ns": 7791882.0,
+          "max_ns": 8526911.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 6857182.5,
+          "min_ns": 6374221.0,
+          "max_ns": 7361180.0
+        }
+      ]
+    },
+    {
+      "id": "Test 9",
+      "title": "Checkerboard fragmentation + refill  [alloc 100k, free evens, alloc 50k (timed)]",
+      "rows": [
+        {
+          "label": "Zane -- refill (fixed-region bump)",
+          "median_ns": 92265.0,
+          "min_ns": 89626.0,
+          "max_ns": 195002.0
+        },
+        {
+          "label": "malloc -- refill fragmented heap",
+          "median_ns": 1124239.5,
+          "min_ns": 671376.0,
+          "max_ns": 1393020.0
+        },
+        {
+          "label": "Pool -- refill from free-list",
+          "median_ns": 574237.0,
+          "min_ns": 135191.0,
+          "max_ns": 736912.0
+        }
+      ]
+    },
+    {
+      "id": "Test 10",
+      "title": "Hosting tree teardown  [~4000 nodes, cascade post-order destroy]",
+      "rows": [
+        {
+          "label": "Zane \u2014 no guests",
+          "median_ns": 53207.0
+        },
+        {
+          "label": "Zane \u2014 one guest per node",
+          "median_ns": 55837.5
+        },
+        {
+          "label": "Zane \u2014 single root guest",
+          "median_ns": 53126.5
+        },
+        {
+          "label": "malloc cascade destroy",
+          "median_ns": 98335.5
+        },
+        {
+          "label": "Pool cascade destroy",
+          "median_ns": 53572.0
+        }
+      ],
+      "provenance_note": "Medians only. Measured before build_tree was fixed to always spend its node budget: 3 of 20 runs per row built a 1-node tree, which corrupted min/max. Re-run to restore the spread."
+    },
+    {
+      "id": "Test 11",
+      "title": "Fragmentation stress  [200 cycles: spawn+list-create+push+update+kill]",
+      "rows": [
+        {
+          "label": "Zane (fixed bump + size stacks)",
+          "median_ns": 1911449.0,
+          "min_ns": 1878507.0,
+          "max_ns": 2069232.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 2037764.5,
+          "min_ns": 1984170.0,
+          "max_ns": 2107228.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 1863644.0,
+          "min_ns": 1830015.0,
+          "max_ns": 1898964.0
+        }
+      ]
+    },
+    {
+      "id": "Test 12",
+      "title": "Concurrent shard scan  [4 x Array<Entity, 25000> read-only shard sums]",
+      "rows": [
+        {
+          "label": "Hosted Array shards, sequential",
+          "median_ns": 57243.0,
+          "min_ns": 56704.0,
+          "max_ns": 71055.0
+        },
+        {
+          "label": "Hosted Array shards, concurrent (4 workers)",
+          "median_ns": 174735.0,
+          "min_ns": 104518.0,
+          "max_ns": 397148.0
+        }
+      ]
+    },
+    {
+      "id": "Test 13",
+      "title": "Partial-guest repeated scan  [100k hosts, 20% guested, payload-only]",
+      "rows": [
+        {
+          "label": "Payload scan (8 passes)",
+          "median_ns": 697675.0,
+          "min_ns": 672259.0,
+          "max_ns": 765734.0
+        }
+      ]
+    },
+    {
+      "id": "Test 14",
+      "title": "Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]",
+      "rows": [
+        {
+          "label": "Mixed 10:1 (scan-heavy)",
+          "median_ns": 4132649.0,
+          "min_ns": 4004087.0,
+          "max_ns": 4369692.0
+        }
+      ]
+    },
+    {
+      "id": "Test 15",
+      "title": "Guest resolution across forwarding anchors  [20k guests x 8 passes]",
+      "rows": [
+        {
+          "label": "Terminal anchor (0 hops)",
+          "median_ns": 164241.0,
+          "min_ns": 162372.0,
+          "max_ns": 181057.0
+        },
+        {
+          "label": "1 forwarding hop",
+          "median_ns": 316382.0,
+          "min_ns": 312985.0,
+          "max_ns": 369218.0
+        },
+        {
+          "label": "2 forwarding hops",
+          "median_ns": 469445.0,
+          "min_ns": 467685.0,
+          "max_ns": 508171.0
+        },
+        {
+          "label": "4 forwarding hops",
+          "median_ns": 802408.0,
+          "min_ns": 733300.0,
+          "max_ns": 951706.0
+        },
+        {
+          "label": "4 hops, compressing as it goes",
+          "median_ns": 707131.0,
+          "min_ns": 691163.0,
+          "max_ns": 815735.0
+        },
+        {
+          "label": "Terminal anchor, same footprint",
+          "median_ns": 659536.0,
+          "min_ns": 643479.0,
+          "max_ns": 739818.0
+        }
+      ]
+    },
+    {
+      "id": "Test 16",
+      "title": "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]",
+      "rows": [
+        {
+          "label": "Boxed payload (static size class)",
+          "median_ns": 622770.5,
+          "min_ns": 612068.0,
+          "max_ns": 673784.0
+        },
+        {
+          "label": "Backing store (runtime size class)",
+          "median_ns": 657389.0,
+          "min_ns": 646252.0,
+          "max_ns": 920295.0
+        },
+        {
+          "label": "Frontier bump only (no reuse)",
+          "median_ns": 59861.5,
+          "min_ns": 59522.0,
+          "max_ns": 70595.0
+        },
+        {
+          "label": "malloc / free",
+          "median_ns": 1877195.0,
+          "min_ns": 1822564.0,
+          "max_ns": 1977160.0
+        },
+        {
+          "label": "Pool (per-size free-list)",
+          "median_ns": 509008.0,
+          "min_ns": 267848.0,
+          "max_ns": 626099.0
+        }
+      ]
+    },
+    {
+      "id": "Test 17",
+      "title": "Boxed members: rehost relocation vs deep value copy  [8191 nodes]",
+      "rows": [
+        {
+          "label": "Rehost hosted tree, no guests",
+          "median_ns": 42099.0,
+          "min_ns": 41842.0,
+          "max_ns": 43759.0
+        },
+        {
+          "label": "Rehost hosted tree, every node guested",
+          "median_ns": 53404.5,
+          "min_ns": 53195.0,
+          "max_ns": 56376.0
+        },
+        {
+          "label": "Deep-copy value tree (place source)",
+          "median_ns": 33597.0,
+          "min_ns": 28391.0,
+          "max_ns": 34600.0
+        },
+        {
+          "label": "Construct fresh value tree in place",
+          "median_ns": 19626.5,
+          "min_ns": 19069.0,
+          "max_ns": 21323.0
+        },
+        {
+          "label": "malloc deep copy",
+          "median_ns": 124516.5,
+          "min_ns": 122634.0,
+          "max_ns": 175561.0
+        }
+      ]
+    }
+  ]
+}

@@ -15,7 +15,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 2 -- Random-order free only  [32B x 100k  |  alloc+shuffle NOT timed]                      |
   +--------------------------------------------------------------------------------------------------+
-    Zane (fixed-region bump, lazy anchors)  median        39.50 ns  min        36.00 ns  max       196.00 ns  (    0.040 us)
+    Zane (fixed-region bump, lazy anchors)  no-op -- loop eliminated by the compiler
     malloc / free                       median   1302586.50 ns  min   1229663.00 ns  max   2582795.00 ns  ( 1302.586 us)
     Pool (per-size free-list)           median    277671.00 ns  min    259429.00 ns  max    447015.00 ns  (  277.671 us)
 
@@ -76,11 +76,11 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 10 -- Hosting tree teardown  [~4000 nodes, cascade post-order destroy]                     |
   +--------------------------------------------------------------------------------------------------+
-    Zane — no guests                  median     53207.00 ns  min        27.00 ns  max     57139.00 ns  (   53.207 us)
-    Zane — one guest per node         median     55837.50 ns  min        22.00 ns  max     63999.00 ns  (   55.837 us)
-    Zane — single root guest          median     53126.50 ns  min        32.00 ns  max     54357.00 ns  (   53.127 us)
-    malloc cascade destroy              median     98335.50 ns  min        50.00 ns  max    109125.00 ns  (   98.335 us)
-    Pool cascade destroy                median     53572.00 ns  min        30.00 ns  max     54790.00 ns  (   53.572 us)
+    Zane — no guests                    median     53207.00 ns  min     53207.00 ns  max     53207.00 ns  (   53.207 us)
+    Zane — one guest per node           median     55837.50 ns  min     55837.50 ns  max     55837.50 ns  (   55.837 us)
+    Zane — single root guest            median     53126.50 ns  min     53126.50 ns  max     53126.50 ns  (   53.127 us)
+    malloc cascade destroy              median     98335.50 ns  min     98335.50 ns  max     98335.50 ns  (   98.335 us)
+    Pool cascade destroy                median     53572.00 ns  min     53572.00 ns  max     53572.00 ns  (   53.572 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 11 -- Fragmentation stress  [200 cycles: spawn+list-create+push+update+kill]               |
@@ -132,6 +132,3 @@
     Deep-copy value tree (place source)  median     33597.00 ns  min     28391.00 ns  max     34600.00 ns  (   33.597 us)
     Construct fresh value tree in place  median     19626.50 ns  min     19069.00 ns  max     21323.00 ns  (   19.627 us)
     malloc deep copy                    median    124516.50 ns  min    122634.00 ns  max    175561.00 ns  (  124.516 us)
-
-  (sink = 251384796)
-

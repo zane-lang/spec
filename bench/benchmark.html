@@ -45,6 +45,9 @@
   .rname{font-size:11.5px;color:var(--label);text-align:right;line-height:1.35;overflow-wrap:break-word;}
   .row.fastest .rname{color:var(--text);}
   .rtrack{position:relative;height:26px;background:var(--track);border-radius:4px;}
+  .row.elim .rname{color:var(--muted);}
+  .relim{position:absolute;inset:0;display:flex;align-items:center;padding-left:10px;
+    font-size:11px;font-style:italic;color:var(--muted);border:1px dashed var(--border);border-radius:4px;}
   .rbar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 3px 3px 4px;min-width:2px;transition:width .35s cubic-bezier(.2,.8,.2,1);}
   .rwhisker{position:absolute;top:50%;transform:translateY(-50%);height:1px;background:var(--whisker);opacity:.4;}
   .rwhisker.clipped{background:repeating-linear-gradient(to right,var(--whisker) 0 4px,transparent 4px 7px);}
@@ -113,6 +116,7 @@ const TESTS=[
       "#c49a2a",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Object size",
@@ -124,7 +128,7 @@ const TESTS=[
       },
       {
         "label": "Alloc cost",
-        "val": "one fixed-region bump + zero-write"
+        "val": "one fixed-region bump + zero-write (touches every object)"
       },
       {
         "label": "Release cost",
@@ -135,40 +139,42 @@ const TESTS=[
         "val": "never \u2014 no guests in this test"
       },
       {
+        "label": "Arena rows",
+        "val": "pure bump vs. the same bump initializing one field"
+      },
+      {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "One fixed-region frontier bump plus a 4-byte backpointer zeroed to 0, so no anchor exists. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains.",
-    "note": "Zane's bump (~229us) runs ~13x faster than malloc (~2.9ms) and ~1.6x faster than Pool (~362us) \u2014 and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Arena (~21us) is a further ~11x ahead, and that gap is the whole price of the chunked design: a per-host backpointer write, plus the chunk-boundary check a flat frontier never makes."
+    "setup": "One fixed-region frontier bump plus a 4-byte backpointer zeroed to 0, so no anchor exists. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains. Two arena rows bracket the result: a pure bump that never touches the memory it hands out, and the same bump writing one 4-byte field per object at Zane's 40-byte stride.",
+    "note": "Zane's bump (~229us) runs ~13x faster than malloc (~2.9ms) and ~1.6x faster than Pool (~362us) \u2014 and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Arena (~21us) is a further ~11x ahead, but read that row for what it is rather than as an allocator that beats this one: it bumps a pointer and never writes to the memory it hands out, so it pays no cache-line fills at all. Zane's backpointer write touches every one of the 100k objects across ~4 MB, and the fills that one write pulls in are the large majority of the ~208us between the two rows; the chunk-boundary check a flat frontier never makes is the small remainder. An arena that initializes a single field per object lands beside Zane, not here. The \"Arena + one-field init\" row says this directly rather than in prose; it postdates this run and appears once the suite is run again. What the pure-bump row marks is the floor for address arithmetic, and that is a floor no allocator which initializes anything can reach."
   },
   {
     "t": "T2 \u2014 random-order free",
     "title": "Sequential alloc, then random-order release (only release timed)",
     "labels": [
-      "Zane (fixed-region bump, lazy anchors)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      0.04,
       277.671,
       1302.586
     ],
     "mins": [
-      0.036,
       259.429,
       1229.663
     ],
     "maxs": [
-      0.196,
       447.015,
       2582.795
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
       "#e05a3a"
+    ],
+    "eliminated": [
+      "Zane (fixed-region bump, lazy anchors)"
     ],
     "meta": [
       {
@@ -181,7 +187,7 @@ const TESTS=[
       },
       {
         "label": "Timed phase",
-        "val": "release loop only"
+        "val": "none \u2014 the release loop is a no-op the compiler removes"
       },
       {
         "label": "Release path",
@@ -189,7 +195,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
-    "note": "The whole 100k-object release loop measures ~39ns \u2014 three malloc frees' worth, for a hundred thousand objects \u2014 so what this row shows is not a fast release path but the absence of one. malloc (~1.3ms) and Pool (~278us) spend ~13ns and ~2.8ns an object returning blocks to a structure that later allocations must search. Shuffling costs them nothing extra; having the structure at all is the cost."
+    "note": "Zane's ~39ns is not a fast release loop; it is no loop at all. zm_host_release is an empty function, so the compiler deletes the 100k-iteration loop outright and what is left between the two timestamps is the timestamps. Read the row as the absence of a release path rather than a measurement of one. malloc (~1.3ms) and Pool (~278us) spend ~13ns and ~2.8ns an object returning blocks to a structure that later allocations must search. Shuffling costs them nothing extra; having the structure at all is the cost."
   },
   {
     "t": "T3 \u2014 mixed sizes",
@@ -224,6 +230,7 @@ const TESTS=[
       "#c49a2a",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Sizes",
@@ -283,6 +290,7 @@ const TESTS=[
       "#e05a3a",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Object type",
@@ -349,6 +357,7 @@ const TESTS=[
       "#c45a8a",
       "#3aab76"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Element type",
@@ -410,6 +419,7 @@ const TESTS=[
       "#7c6ff7",
       "#7c6ff7"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Direct",
@@ -475,6 +485,7 @@ const TESTS=[
       "#c49a2a",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Entity size",
@@ -537,6 +548,7 @@ const TESTS=[
       "#e05a3a",
       "#7c6ff7"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Particle size",
@@ -598,6 +610,7 @@ const TESTS=[
       "#c49a2a",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Object size",
@@ -645,18 +658,18 @@ const TESTS=[
       98.335
     ],
     "mins": [
-      0.032,
-      0.027,
-      0.03,
-      0.022,
-      0.05
+      53.127,
+      53.207,
+      53.572,
+      55.837,
+      98.335
     ],
     "maxs": [
-      54.357,
-      57.139,
-      54.79,
-      63.999,
-      109.125
+      53.127,
+      53.207,
+      53.572,
+      55.837,
+      98.335
     ],
     "colors": [
       "#5a4faa",
@@ -665,6 +678,7 @@ const TESTS=[
       "#b8a4ff",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Tree size",
@@ -700,7 +714,7 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants \u2014 no guests, a single root guest, one guest per node \u2014 all torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack.",
-    "note": "Guest density barely registers: ~53us with none, ~53us with a single root guest, ~56us with one per node. Retiring 4,000 payload anchors therefore costs ~5%, because anchors are never enumerated \u2014 the price is one backpointer test per node, against an object the post-order walk already holds in cache. malloc's coalescing puts it at ~98us, ~1.8x; Pool (~54us) ties Zane. Teardown scales with the tree, not with how much of it is guested."
+    "note": "Guest density barely registers: ~53us with none, ~53us with a single root guest, ~56us with one per node. Retiring 4,000 payload anchors therefore costs ~5%, because anchors are never enumerated \u2014 the price is one backpointer test per node, against an object the post-order walk already holds in cache. malloc's coalescing puts it at ~98us, ~1.8x; Pool (~54us) ties Zane. Teardown scales with the tree, not with how much of it is guested. These medians predate a fix to build_tree: three of every twenty runs drew zero children at the root and tore down a single node, so the spread each row reported was meaningless while the median, taken from the seventeen valid runs, was not. The min and max are withheld until the suite is run again."
   },
   {
     "t": "T11 \u2014 stress test",
@@ -730,6 +744,7 @@ const TESTS=[
       "#7c6ff7",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Object size",
@@ -786,6 +801,7 @@ const TESTS=[
       "#3aab76",
       "#7c6ff7"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Workers",
@@ -833,6 +849,7 @@ const TESTS=[
     "colors": [
       "#7c6ff7"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Hosts",
@@ -876,6 +893,7 @@ const TESTS=[
     "colors": [
       "#7c6ff7"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Hosts",
@@ -944,6 +962,7 @@ const TESTS=[
       "#3aab76",
       "#5a4faa"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Chains",
@@ -1027,6 +1046,7 @@ const TESTS=[
       "#b8a4ff",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Sizes",
@@ -1098,6 +1118,7 @@ const TESTS=[
       "#5a4faa",
       "#e05a3a"
     ],
+    "eliminated": [],
     "meta": [
       {
         "label": "Tree",
@@ -1145,7 +1166,7 @@ const esc=x=>String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 
 function fmt(us){
   if(us>=1000) return (us/1000).toFixed(2)+' ms';
-  if(us>=1)    return us.toFixed(2)+' µs';
+  if(us>=1)    return us.toFixed(2)+' \u00b5s';
   return (us*1000).toFixed(1)+' ns';
 }
 
@@ -1193,18 +1214,23 @@ function renderChart(t,s){
     const clipped=mx>hi;
     const isBest=v===best;
     const mult=best>0 ? v/best : 1;
-    const multTxt=isBest ? 'fastest' : '×'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
+    const multTxt=isBest ? 'fastest' : '\u00d7'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
     const whisker=(wr-wl>0.4)
       ? `<span class="rwhisker${clipped?' clipped':''}" style="left:${wl}%;width:${wr-wl}%"></span>`+
         `<span class="rcap" style="left:${wl}%"></span>`+
         (clipped ? '' : `<span class="rcap" style="left:${wr}%"></span>`)
       : '';
-    return `<div class="row${isBest?' fastest':''}" title="min ${fmt(mn)}  ·  median ${fmt(v)}  ·  max ${fmt(mx)}${clipped?'  (clipped)':''}">`+
+    return `<div class="row${isBest?' fastest':''}" title="min ${fmt(mn)}  \u00b7  median ${fmt(v)}  \u00b7  max ${fmt(mx)}${clipped?'  (clipped)':''}">`+
       `<span class="rname">${esc(label)}</span>`+
       `<span class="rtrack"><span class="rbar" style="width:${w}%;background:${t.colors[i]}"></span>${whisker}</span>`+
       `<span class="rmeta"><span class="rval">${fmt(v)}</span><span class="rmult">${multTxt}</span></span>`+
       `</div>`;
-  }).join('');
+  }).join('')+(t.eliminated||[]).map(label=>
+    `<div class="row elim" title="the timed loop is a no-op; the compiler removes it">`+
+    `<span class="rname">${esc(label)}</span>`+
+    `<span class="rtrack"><span class="relim">no-op \u2014 loop eliminated by the compiler</span></span>`+
+    `<span class="rmeta"><span class="rval">\u2014</span></span>`+
+    `</div>`).join('');
   document.querySelectorAll('.scale-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
 }
 

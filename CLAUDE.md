@@ -69,9 +69,29 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
 source; never treat its C as Zane. It *models* the memory design
 (`spec/memory.md`), so when that design changes the harness is updated to track
 it. The `.c` carries **no explanatory comments** (it holds no prose voice) —
-keep it to code plus the labels passed to `section()`/`print_result()`.
-`runbench.py` regenerates `benchmark.html`; its `TEST_META` strings are
-reader-facing HTML, not code comments.
+keep it to code plus the labels passed to `record_test()`/`record_row()`.
+
+The harness **emits JSON on stdout** and prints nothing else; no tool parses
+formatted text. The pipeline is:
+
+| file | role |
+| --- | --- |
+| `zane_bench.c` | the harness; `record_test`/`record_row` collect, `emit_json` writes |
+| `benchmeta.py` | per-test `TEST_META` and chart colours — reader-facing prose, not code comments |
+| `template.html` | the page skeleton, with a `__TESTS_JSON__` placeholder |
+| `explanations.txt` | result interpretation, one `[Test N]` block each |
+| `zane_bench_results.json` | the pinned measurements — the artifact to preserve |
+| `zane_bench_results.txt`, `benchmark.html` | both **generated**; never hand-edit |
+
+`python3 runbench.py` compiles, runs, and regenerates both outputs;
+`--from-file` re-renders from the committed JSON without measuring.
+
+The pinned JSON was taken on the maintainer's machine with the process pinned
+to four cores, and `explanations.txt` quotes its numbers. **Do not overwrite it
+from a container** — an unpinned re-run degrades every note in the file, not
+just the one you meant to update. A row whose number is known-bad is corrected
+in place instead: drop the field and set `provenance_note` on the test, which
+`runbench.py` prints on every render.
 
 ## Validate before committing (spec edits)
 The generics system was unified into a `<>`-header / `()`-call model (canonical

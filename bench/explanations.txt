@@ -1,7 +1,7 @@
 # Benchmark result explanations.
 #
 # Authored after inspecting a real run of zane_bench (see
-# zane_bench_results.txt).
+# zane_bench_results.json, and zane_bench_results.txt rendered from it).
 #
 # PROVENANCE AND NOISE. Measured on the maintainer's machine with the process
 # pinned to four cores (taskset -c 0-3), so the four-worker pool in T8 and T12
@@ -35,10 +35,10 @@
 # Format: one block per test, opened by "[Test N]". Lines starting with '#'
 # are comments; blank lines separate blocks.
 #
-# Keeping this in sync: these notes are pinned to the committed
-# zane_bench_results.txt. After editing them, rebuild the HTML with
+# Keeping this in sync: these notes are pinned to the measurements in the
+# committed zane_bench_results.json. After editing them, rebuild the page with
 #   python3 runbench.py --from-file
-# which reuses that results file instead of re-running.
+# which re-renders from that file instead of measuring again.
 
 [Test 1]
 Zane's bump (~229us) runs ~13x faster than malloc (~2.9ms) and ~1.6x faster
@@ -51,9 +51,10 @@ backpointer write touches every one of the 100k objects across ~4 MB, and the
 fills that one write pulls in are the large majority of the ~208us between
 the two rows; the chunk-boundary check a flat frontier never makes is the
 small remainder. An arena that initializes a single field per object lands
-beside Zane, not here. What this row marks is the floor for address
-arithmetic, which is a floor no allocator that initializes anything can
-reach.
+beside Zane, not here. The "Arena + one-field init" row says this directly
+rather than in prose; it postdates this run and appears once the suite is run
+again. What the pure-bump row marks is the floor for address arithmetic, and
+that is a floor no allocator which initializes anything can reach.
 
 [Test 2]
 Zane's ~39ns is not a fast release loop; it is no loop at all. zm_host_release
@@ -126,7 +127,11 @@ guest, ~56us with one per node. Retiring 4,000 payload anchors therefore costs
 ~5%, because anchors are never enumerated — the price is one backpointer test
 per node, against an object the post-order walk already holds in cache.
 malloc's coalescing puts it at ~98us, ~1.8x; Pool (~54us) ties Zane. Teardown
-scales with the tree, not with how much of it is guested.
+scales with the tree, not with how much of it is guested. These medians
+predate a fix to build_tree: three of every twenty runs drew zero children at
+the root and tore down a single node, so the spread each row reported was
+meaningless while the median, taken from the seventeen valid runs, was not.
+The min and max are withheld until the suite is run again.
 
 [Test 11]
 The mixed workload compresses the field to a tie: Pool ~1.86ms, Zane ~1.91ms,
