@@ -600,12 +600,6 @@ function renderInfo(t){
     `<div class="info-details"><strong>Setup: </strong>${t.setup}${t.details ? ' <strong>Details: </strong>'+t.details : ''}</div>`;
 }
 
-function autoScale(t){
-  const vals=t.data.filter(v=>v>0);
-  if(!vals.length) return 'linear';
-  return (Math.max(...vals)/Math.min(...vals) > 100) ? 'log' : 'linear';
-}
-
 // The axis follows the whiskers only while they stay within AXIS_CAP times the
 // slowest median. Past that a single outlier run would set the scale for every
 // row and squash the medians -- the figure the bars exist to compare -- into a
@@ -653,7 +647,6 @@ function renderChart(t,s){
 function show(idx){
   cur=idx;
   const t=TESTS[idx];
-  scale=autoScale(t);
   renderInfo(t);
   renderChart(t,scale);
 }
