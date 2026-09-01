@@ -44,17 +44,25 @@
 Zane's bump (~229us) runs ~13x faster than malloc (~2.9ms) and ~1.6x faster
 than Pool (~362us) — and since only Zane's release is free, its figure is
 allocation alone where the other two carry their frees inside it. Arena
-(~21us) is a further ~11x ahead, and that gap is the whole price of the
-chunked design: a per-host backpointer write, plus the chunk-boundary check a
-flat frontier never makes.
+(~21us) is a further ~11x ahead, but read that row for what it is rather than
+as an allocator that beats this one: it bumps a pointer and never writes to
+the memory it hands out, so it pays no cache-line fills at all. Zane's
+backpointer write touches every one of the 100k objects across ~4 MB, and the
+fills that one write pulls in are the large majority of the ~208us between
+the two rows; the chunk-boundary check a flat frontier never makes is the
+small remainder. An arena that initializes a single field per object lands
+beside Zane, not here. What this row marks is the floor for address
+arithmetic, which is a floor no allocator that initializes anything can
+reach.
 
 [Test 2]
-The whole 100k-object release loop measures ~39ns — three malloc frees' worth,
-for a hundred thousand objects — so what this row shows is not a fast release
-path but the absence of one. malloc (~1.3ms) and Pool (~278us) spend ~13ns and
-~2.8ns an object returning blocks to a structure that later allocations must
-search. Shuffling costs them nothing extra; having the structure at all is the
-cost.
+Zane's ~39ns is not a fast release loop; it is no loop at all. zm_host_release
+is an empty function, so the compiler deletes the 100k-iteration loop outright
+and what is left between the two timestamps is the timestamps. Read the row as
+the absence of a release path rather than a measurement of one. malloc
+(~1.3ms) and Pool (~278us) spend ~13ns and ~2.8ns an object returning blocks
+to a structure that later allocations must search. Shuffling costs them
+nothing extra; having the structure at all is the cost.
 
 [Test 3]
 Mixed sizes cost Zane nothing structural: ~389us, ~3.9ns a block, and the

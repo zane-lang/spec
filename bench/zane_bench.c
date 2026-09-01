@@ -183,8 +183,9 @@ static void bench_pool_shutdown(void) {
 #define ZM_ALIGN      8
 #define ZM_MAXSZ      512
 #define ZM_NC         (ZM_MAXSZ / ZM_ALIGN)
-#define ZM_CHUNK      (1UL << 20)
-#define ZM_WORDBITS   17
+#define ZM_CHUNKBITS  20
+#define ZM_CHUNK      (1UL << ZM_CHUNKBITS)
+#define ZM_WORDBITS   (ZM_CHUNKBITS - 3)
 #define ZM_OFFMASK    ((1u << ZM_WORDBITS) - 1)
 #define ZM_NCHUNKS    (REGION_SIZE / ZM_CHUNK)
 #define ZM_LINE       64
@@ -224,7 +225,7 @@ static inline uint32_t zm_seg(void *p) {
     assert((uint8_t*)p >= zm.base && (uint8_t*)p < zm.base + REGION_SIZE);
     size_t bo = (uint8_t*)p - zm.base;
     assert((bo & 7) == 0);
-    return ((uint32_t)(bo >> 20) << ZM_WORDBITS) | (uint32_t)((bo & (ZM_CHUNK - 1)) >> 3);
+    return ((uint32_t)(bo >> ZM_CHUNKBITS) << ZM_WORDBITS) | (uint32_t)((bo & (ZM_CHUNK - 1)) >> 3);
 }
 static inline void *zm_resolve(uint32_t seg) {
     uint32_t chunk_id = seg >> ZM_WORDBITS;
@@ -479,7 +480,7 @@ static void ar_init(void) {
     ar.base = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(ar.base != MAP_FAILED);
-    for (size_t i = 0; i < 256UL * 1024 * 1024; i += 4096) ar.base[i] = 0;
+    for (size_t i = 0; i < REGION_SIZE; i += 4096) ar.base[i] = 0;
     ar.top = 0;
 }
 static inline void   ar_reset(void)       { ar.top = 0; }
@@ -491,7 +492,12 @@ static inline int    zm_cls(size_t s)   { return (int)(s / ZM_ALIGN) - 1; }
 typedef struct PNode { struct PNode *next; } PNode;
 static PNode *pool_heads[ZM_NC];
 
-static void pool_flush(void) { memset(pool_heads, 0, sizeof(pool_heads)); }
+static void pool_flush(void) {
+    for (int c = 0; c < ZM_NC; c++) {
+        for (PNode *n = pool_heads[c], *nx; n; n = nx) { nx = n->next; free(n); }
+        pool_heads[c] = NULL;
+    }
+}
 static void *pool_alloc(size_t s) {
     s=zm_round(s); int c=zm_cls(s);
     if (pool_heads[c]) { void *p=pool_heads[c]; pool_heads[c]=pool_heads[c]->next; return p; }
@@ -858,8 +864,7 @@ static void  po_free_e (void*p,size_t s){pool_free(p,s);}
 static void game_loop_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     if (prewarm) { pool_flush(); pool_warm(sizeof(Entity), MAX_ENTITIES); }
     for (int r=0; r<RUNS; r++) {
-        if (!prewarm) { if (af==zm_alloc_e) zm_reset(); }
-        else zm_reset();
+        if (af == zm_alloc_e) zm_reset();
         rng_state = 0x7e57c0deULL + (uint64_t)r;
         EntityPool ep; ep_init(&ep, MAX_ENTITIES);
         double t0 = now_ns();
@@ -1158,7 +1163,7 @@ static void test10(void) {
     print_result("malloc cascade destroy", T);
 
     pool_flush();pool_warm(sizeof(TNode),TREE_NODES);
-    for(int b=1;b<=MAX_BRANCH;b++) pool_warm((size_t)b*sizeof(TNode*),TREE_NODES/MAX_BRANCH);
+    for(int b=1;b<MAX_BRANCH;b++) pool_warm((size_t)b*sizeof(TNode*),TREE_NODES/MAX_BRANCH);
     for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;int rem=TREE_NODES;TNode*root=build_tree(&rem,po_af,po_children_alloc);double t0=now_ns();destroy_pool(root);T[r]=now_ns()-t0;sink^=(int64_t)rem;}
     print_result("Pool cascade destroy", T);
 }

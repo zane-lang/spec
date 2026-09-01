@@ -48,7 +48,7 @@ TEST_META = {
         "meta": [
             ("Object size", "32B + 4B backpointer"),
             ("Backpointer init", "0 — no anchor at creation"),
-            ("Alloc cost", "one fixed-region bump + zero-write"),
+            ("Alloc cost", "one fixed-region bump + zero-write (touches every object)"),
             ("Release cost", "no-op — fixed region reclaims only at drain"),
             ("Anchor created", "never — no guests in this test"),
             ("Runs", "20 — median reported"),
@@ -61,7 +61,7 @@ TEST_META = {
         "meta": [
             ("Object size", "40B runtime"),
             ("Backpointer", "0 — no guest taken"),
-            ("Timed phase", "release loop only"),
+            ("Timed phase", "release loop only — no-op, so the compiler removes it"),
             ("Release path", "no-op — bulk reclaim at scope drain"),
         ],
     },
