@@ -42,7 +42,8 @@
   .row.fastest .rname{color:var(--text);}
   .rtrack{position:relative;height:26px;background:var(--track);border-radius:4px;}
   .rbar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 3px 3px 4px;min-width:2px;transition:width .35s cubic-bezier(.2,.8,.2,1);}
-  .rwhisker{position:absolute;top:50%;height:1px;background:var(--whisker);opacity:.4;}
+  .rwhisker{position:absolute;top:50%;transform:translateY(-50%);height:1px;background:var(--whisker);opacity:.4;}
+  .rwhisker.clipped{background:repeating-linear-gradient(to right,var(--whisker) 0 4px,transparent 4px 7px);}
   .rcap{position:absolute;top:50%;transform:translateY(-50%);width:1px;height:9px;background:var(--whisker);opacity:.4;}
   .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;}
   .rval{font-size:11.5px;color:var(--text);}
@@ -71,7 +72,7 @@
   </div>
 </div>
 <div class="chart" id="chart"></div>
-<footer>Rows sorted fastest &rarr; slowest. The &times; figure is each row's slowdown relative to the fastest row in this test. Hover a row for exact min / median / max.</footer>
+<footer>Rows sorted fastest &rarr; slowest. The &times; figure is each row's slowdown relative to the fastest row in this test. The axis stops at twice the slowest median, so one outlier run cannot squash every bar; a whisker running past it is drawn dashed and uncapped. Hover a row for exact min / median / max.</footer>
 <script>
 const TESTS=[
   {
@@ -1156,8 +1157,19 @@ function autoScale(t){
   return (Math.max(...vals)/Math.min(...vals) > 100) ? 'log' : 'linear';
 }
 
-function widthPct(v,t,s){
-  const hi=Math.max(...t.maxs, ...t.data);
+// The axis follows the whiskers only while they stay within AXIS_CAP times the
+// slowest median. Past that a single outlier run would set the scale for every
+// row and squash the medians -- the figure the bars exist to compare -- into a
+// fraction of the track, so the axis stops at the cap and the whiskers that run
+// past it are clipped (drawn dashed and uncapped) instead.
+const AXIS_CAP=2;
+
+function axisTop(t){
+  const topMedian=Math.max(...t.data);
+  return Math.min(Math.max(...t.maxs, ...t.data), topMedian*AXIS_CAP);
+}
+
+function widthPct(v,hi,t,s){
   if(v<=0||hi<=0) return 0;
   if(s==='linear') return Math.min(100, v/hi*100);
   const pos=[...t.data,...t.mins].filter(x=>x>0);
@@ -1168,16 +1180,19 @@ function widthPct(v,t,s){
 
 function renderChart(t,s){
   const best=Math.min(...t.data);
+  const hi=axisTop(t);
   document.getElementById('chart').innerHTML=t.labels.map((label,i)=>{
     const v=t.data[i], mn=t.mins[i], mx=t.maxs[i];
-    const w=widthPct(v,t,s), wl=widthPct(mn,t,s), wr=widthPct(mx,t,s);
+    const w=widthPct(v,hi,t,s), wl=widthPct(mn,hi,t,s), wr=widthPct(mx,hi,t,s);
+    const clipped=mx>hi;
     const mult=best>0 ? v/best : 1;
     const multTxt=(mult<1.005) ? 'fastest' : '×'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
     const whisker=(wr-wl>0.4)
-      ? `<span class="rwhisker" style="left:${wl}%;width:${wr-wl}%"></span>`+
-        `<span class="rcap" style="left:${wl}%"></span><span class="rcap" style="left:${wr}%"></span>`
+      ? `<span class="rwhisker${clipped?' clipped':''}" style="left:${wl}%;width:${wr-wl}%"></span>`+
+        `<span class="rcap" style="left:${wl}%"></span>`+
+        (clipped ? '' : `<span class="rcap" style="left:${wr}%"></span>`)
       : '';
-    return `<div class="row${mult<1.005?' fastest':''}" title="min ${fmt(mn)}  ·  median ${fmt(v)}  ·  max ${fmt(mx)}">`+
+    return `<div class="row${mult<1.005?' fastest':''}" title="min ${fmt(mn)}  ·  median ${fmt(v)}  ·  max ${fmt(mx)}${clipped?'  (clipped)':''}">`+
       `<span class="rname">${esc(label)}</span>`+
       `<span class="rtrack"><span class="rbar" style="width:${w}%;background:${t.colors[i]}"></span>${whisker}</span>`+
       `<span class="rmeta"><span class="rval">${fmt(v)}</span><span class="rmult">${multTxt}</span></span>`+
