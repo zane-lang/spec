@@ -17,7 +17,9 @@
 # on those.
 #
 # runbench.py reads this file alongside the results and renders each block as
-# the "Details:" note for its test. Some tests (T13, T14) are a compile-time
+# the "Reading the result" note for its test — a section below that test's
+# chart. It interprets the numbers; the configuration lives in the panel above
+# the chart, and checked invariants live in that panel's meta rows. Some tests (T13, T14) are a compile-time
 # A/B: the committed run is the default (global anchor pool) layout, and the
 # note carries the comparison against the -DZM_INTERLEAVE build. Three
 # default/interleaved pairs have been taken so far; all six A/B measurements

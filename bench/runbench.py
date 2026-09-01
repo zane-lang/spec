@@ -34,9 +34,10 @@ HTML_OUT     = os.path.join(SCRIPT_DIR, "benchmark.html")
 # anchor cell that either terminates at a payload or forwards to another
 # anchor. Each hosted payload stores a u32 backpointer to its terminal cell.
 #
-# The "Details:" note for each test is NOT stored here. It is read from
-# explanations.txt — result interpretation authored after looking at a real
-# run — so it describes the measured numbers rather than predicting them.
+# The "Reading the result" note for each test is NOT stored here. It is read
+# from explanations.txt — result interpretation authored after looking at a
+# real run — so it describes the measured numbers rather than predicting them.
+# It renders as its own section below the chart, not as a caption on the panel.
 # ─────────────────────────────────────────────────────────────
 
 TEST_META = {
@@ -497,7 +498,7 @@ def build_test_js(tests, explanations):
             "colors":  colors,
             "meta":    js_meta,
             "setup":   meta.get("setup", ""),
-            "details": explanations.get(key, ""),
+            "note":    explanations.get(key, ""),
         }
         js_tests.append(entry)
 
@@ -605,8 +606,8 @@ function renderInfo(t){
     `<hr class="info-div">`+
     `<div class="info-details"><strong>Setup: </strong>${t.setup}</div>`;
   const n=document.getElementById('notes');
-  n.innerHTML=t.details ? `<h2>Reading the result</h2><p>${t.details}</p>` : '';
-  n.hidden=!t.details;
+  n.innerHTML=t.note ? `<h2>Reading the result</h2><p>${t.note}</p>` : '';
+  n.hidden=!t.note;
 }
 
 // The axis follows the whiskers only while they stay within AXIS_CAP times the
