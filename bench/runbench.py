@@ -234,7 +234,7 @@ TEST_META = {
             ("Passes", "8 per timed run"),
             ("Hop cost", "one dependent anchor-cell load per uncompressed hop"),
             ("Chain build", "depth+1 hosts, each guested before the move"),
-            ("Path compression", "first pass walks and rewrites the tether; later passes are terminal"),
+            ("Path compression", "first pass walks and rewrites the tether; later passes find it terminal and store it back unchanged"),
             ("Footprint floor", "terminal resolve over the same 4-hop structure"),
             ("Asserted", "a compressed tether equals the chain's terminal identity"),
             ("Cell accounting", "a depth-4 chain allocates 5 cells for 4 forwarding edges — merging two anchored identities allocates none"),
@@ -638,14 +638,15 @@ function renderChart(t,s){
     const v=t.data[i], mn=t.mins[i], mx=t.maxs[i];
     const w=widthPct(v,hi,t,s), wl=widthPct(mn,hi,t,s), wr=widthPct(mx,hi,t,s);
     const clipped=mx>hi;
+    const isBest=v===best;
     const mult=best>0 ? v/best : 1;
-    const multTxt=(mult<1.005) ? 'fastest' : '\u00d7'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
+    const multTxt=isBest ? 'fastest' : '\u00d7'+(mult>=100?mult.toFixed(0):mult.toFixed(mult>=10?1:2));
     const whisker=(wr-wl>0.4)
       ? `<span class="rwhisker${clipped?' clipped':''}" style="left:${wl}%;width:${wr-wl}%"></span>`+
         `<span class="rcap" style="left:${wl}%"></span>`+
         (clipped ? '' : `<span class="rcap" style="left:${wr}%"></span>`)
       : '';
-    return `<div class="row${mult<1.005?' fastest':''}" title="min ${fmt(mn)}  \u00b7  median ${fmt(v)}  \u00b7  max ${fmt(mx)}${clipped?'  (clipped)':''}">`+
+    return `<div class="row${isBest?' fastest':''}" title="min ${fmt(mn)}  \u00b7  median ${fmt(v)}  \u00b7  max ${fmt(mx)}${clipped?'  (clipped)':''}">`+
       `<span class="rname">${esc(label)}</span>`+
       `<span class="rtrack"><span class="rbar" style="width:${w}%;background:${t.colors[i]}"></span>${whisker}</span>`+
       `<span class="rmeta"><span class="rval">${fmt(v)}</span><span class="rmult">${multTxt}</span></span>`+
