@@ -236,6 +236,7 @@ TEST_META = {
             ("Path compression", "first pass walks and rewrites the tether; later passes are terminal"),
             ("Footprint floor", "terminal resolve over the same 4-hop structure"),
             ("Asserted", "a compressed tether equals the chain's terminal identity"),
+            ("Cell accounting", "a depth-4 chain allocates 5 cells for 4 forwarding edges — merging two anchored identities allocates none"),
             ("Retirement", "forwarders return to the pool free stack when the source scope drains"),
             ("Runs", "20 — median reported"),
         ],

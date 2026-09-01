@@ -899,7 +899,7 @@ const TESTS=[
       }
     ],
     "setup": "Ten payload scans per one tether-resolve pass. Models the weighting the 1:1 micro-tests hide: the pervasive scan should dominate, even though the pool's individual resolve is dearer than the interleaved layout's.",
-    "details": "Ten payload scans per one tether-resolve pass: ~4.13ms median. The interleaved build was slower in all three pairs \u2014 by 8.9%, 26.4% and 4.8% \u2014 and, as in T13, its run in the committed pair had a ~24% machine advantage and still lost. Six measurements in one direction is good evidence that protecting the payload scan wins the aggregate; none pins the size, since this row has moved 31% between identical runs. Hence the design argument: scans are pervasive where resolves are occasional, so the global pool wins here despite its dearer resolve (T6)."
+    "details": "Ten payload scans per one tether-resolve pass: ~4.13ms median. The interleaved build was slower in all three pairs \u2014 by 8.9%, 26.4% and 4.8% \u2014 and, as in T13, its run in the committed pair had a ~24% machine advantage and still lost. Six measurements in one direction is good evidence that protecting the payload scan wins the aggregate; none pins the size, since this row has moved 31% between identical runs. Hence the design argument: scans are pervasive and un-hoistable where resolves are occasional, so the global pool wins here despite its dearer resolve (T6)."
   },
   {
     "t": "T15 \u2014 forwarding hops",
@@ -972,6 +972,10 @@ const TESTS=[
       {
         "label": "Asserted",
         "val": "a compressed tether equals the chain's terminal identity"
+      },
+      {
+        "label": "Cell accounting",
+        "val": "a depth-4 chain allocates 5 cells for 4 forwarding edges \u2014 merging two anchored identities allocates none"
       },
       {
         "label": "Retirement",
@@ -1054,7 +1058,7 @@ const TESTS=[
       }
     ],
     "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
-    "details": "A boxed payload takes size and alignment from its member's declared type, so its stack is picked once (~623us for 60,000 alloc-and-release pairs); a growable backing store looks its size up on every call (~657us). That ~6% is the whole cost of not knowing a size until runtime (\u00a73.2). Both pay a pop-and-push that the frontier-only row (~60us) skips, and what it buys is memory: frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, where the stack runs recycle inside ~1.8 MB. Pool (~509us) leads on raw-pointer links; malloc (~1.88ms) trails."
+    "details": "Not knowing a size until runtime costs ~6%: a boxed payload picks its stack once (~623us for 60,000 alloc-and-release pairs), where a growable backing store looks its size up on every call (~657us) (\u00a73.2). Both pay a pop-and-push that the frontier-only row (~60us) skips, and what it buys is memory \u2014 frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set, where the stack runs recycle inside ~1.8 MB. Pool (~509us) stays ahead on raw-pointer links, where \u00a73.1 makes one here a segmented offset: inherent to the addressing, not recoverable. malloc (~1.88ms) trails."
   },
   {
     "t": "T17 \u2014 boxed members",
