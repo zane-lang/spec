@@ -17,10 +17,11 @@
 # 158.7us over all twenty and 152.8us over the last nineteen. And absolute
 # figures move a great deal between runs of identical code: every row here
 # came in 1.2-2.8x faster than the run before it. So treat each figure as one
-# run's median, good to about one significant figure. The durable content is the ratios, the orderings, and
-# effects large enough to survive that band; where two rows fall inside it the
-# note says they tie rather than picking a winner, and where a finding did not
-# survive the last re-run the note says that too.
+# run's median, good to about one significant figure. The durable content is
+# the ratios, the orderings, and effects large enough to survive that band;
+# where two rows fall inside it the note says they tie rather than picking a
+# winner, and where a finding did not survive the last re-run the note says
+# that too.
 #
 # runbench.py reads this file alongside the results and renders each block as
 # the "Reading the result" note for its test — a section below that test's
