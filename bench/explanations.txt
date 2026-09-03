@@ -3,9 +3,10 @@
 # Authored after inspecting a real run of zane_bench (see
 # zane_bench_results.json, and zane_bench_results.txt rendered from it).
 #
-# PROVENANCE AND NOISE. The committed run is a fresh full-suite run on the
-# maintainer's machine. How its cores were allocated is not recorded, which
-# matters only for the four-worker rows in T8 and T12 — see T12's note.
+# PROVENANCE AND NOISE. The committed run is a fresh full-suite run, taken
+# under WSL2 with no core pinning, on a hybrid CPU: 8 performance cores and
+# 16 efficiency cores. That matters for the two rows that spawn threads, T8
+# and T12, and for nothing else — see T12's note.
 #
 # Every row now carries all 20 per-run samples in zane_bench_results.json, so
 # the spread below is checkable rather than asserted, and it shows two things.
@@ -152,16 +153,20 @@ fastest and slowest is inside what a median shifts between runs, and the
 ordering duly moved.
 
 [Test 12]
-Concurrency loses by ~7.8x: ~24us sequential against ~191us on four workers.
-The ~167us difference is spent coordinating work that takes 24us to do
-outright. It is much the least repeatable row in the suite, ranging ~72-322us
-where the sequential row settles to ~24us after its first pass — contention
-showing rather than computation. Read the multiple as an upper bound rather
-than a measurement: the previous run reported ~3x and is the one documented as
-pinned to four cores, where this run's core allocation is not recorded, so
-some of the gap between ~3x and ~7.8x may be workers contending for fewer
-cores than they assume. The direction survives either way. Distributing a 24us
-scan costs more than doing it.
+Concurrency loses, and by how much depends on where the four workers land.
+The scan splits into four equal shards and waits for all of them, so a pass
+runs at the speed of its slowest shard — and on a hybrid host with 8
+performance cores against 16 efficiency ones, nothing pins a worker to
+either. The 20 passes spread 4.5x accordingly: ~72us at best, ~194us median,
+~322us at worst, against ~24us sequential. The best pass is the one to read.
+At ~2.9x sequential it reproduces the ~3.1x an earlier run measured with the
+process pinned to four cores, so the ~7.9x median is core placement, not the
+cost of distributing. The finding survives either reading: distributing a
+24us scan costs several times more than doing it outright, because per-shard
+work this small cannot amortize the handoff. T8 shows the other side of the
+same coin — at ~23ms a pass its work-stealing row spreads only 1.28x, both
+because the work amortizes placement and because stealing lets a fast core
+drain a slow one's queue.
 
 [Test 13]
 ~3.57ms for the weighted mix. The A/B evidence predates this run, which is
