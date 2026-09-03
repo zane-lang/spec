@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -91,17 +92,27 @@ def load_results(path):
 
 
 def pin_results(doc):
-    """Replace the committed results file, atomically.
+    """Replace the committed results file, atomically and without narrowing it.
 
     It is the artifact everything else is pinned to, so it is never left
     half-written: serialize to a temporary file beside it and rename only once
-    the write has closed cleanly.
+    the write has closed cleanly. mkstemp creates that file 0600, so carry the
+    target's own mode across -- otherwise pinning a run silently makes the
+    artifact owner-only, which git does not track and so nobody would see.
     """
+    try:
+        mode = stat.S_IMODE(os.stat(RESULTS_JSON).st_mode)
+    except FileNotFoundError:
+        umask = os.umask(0)
+        os.umask(umask)
+        mode = 0o666 & ~umask
+
     fd, tmp = tempfile.mkstemp(dir=SCRIPT_DIR, prefix=".zane_bench_results.", text=True)
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(doc, f, indent=2)
             f.write("\n")
+        os.chmod(tmp, mode)
         os.replace(tmp, RESULTS_JSON)
     except BaseException:
         try:
