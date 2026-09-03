@@ -266,6 +266,7 @@ def report(doc, explanations):
 # ─────────────────────────────────────────────────────────────
 
 def main():
+    """Pick a source of measurements, then render the reading copy and the page."""
     parser = argparse.ArgumentParser(description="Zane benchmark runner + page generator")
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--from-file", action="store_true",
