@@ -14,10 +14,10 @@
 # row's max is warm-up rather than variance. The median is taken over all 20
 # samples, warm-up included; it is quoted here because it barely moves when
 # that pass is dropped, not because the pass is excluded. T1's Zane row is
-# 158.7us over all twenty and 152.8us over the last nineteen. And absolute figures move a great deal between runs
-# of identical code: every row here came in 1.2-2.8x faster than the run
-# before it. So treat each figure as one run's median, good to about one
-# significant figure. The durable content is the ratios, the orderings, and
+# 158.7us over all twenty and 152.8us over the last nineteen. And absolute
+# figures move a great deal between runs of identical code: every row here
+# came in 1.2-2.8x faster than the run before it. So treat each figure as one
+# run's median, good to about one significant figure. The durable content is the ratios, the orderings, and
 # effects large enough to survive that band; where two rows fall inside it the
 # note says they tie rather than picking a winner, and where a finding did not
 # survive the last re-run the note says that too.
@@ -134,17 +134,22 @@ found it. Zane's flat line against those two curves is what reclaiming nothing
 until the scope drains buys.
 
 [Test 10]
-Guest density does not register at all: ~35us with no guests, ~35us with a
-single root guest, ~34us with one per node — the fully guested row nominally
-the fastest of the three, which is how a null result looks. Retiring 4,000
-payload anchors costs nothing measurable here, because anchors are never
-enumerated: the price is one backpointer test per node, against an object the
-post-order walk already holds in cache. The previous run put that price at
-~5%; it is smaller than this test can resolve. malloc's coalescing puts it at
-~80us, ~2.4x; Pool (~36us) ties Zane. This is also the first run since
-build_tree was fixed to always spend its node budget, so the first in which
-every pass tore down the same 4,000 nodes — the rows now hold within 1.0-1.3x,
-where the spread the previous run reported was meaningless.
+Read the ratios here, not the absolutes, and read the guest-density rows with
+care. These figures were measured before build_tree was fixed, when the first
+child of every node took the whole node budget and each later sibling was
+NULL — a 4,000-node chain of depth 3,999 with no branch points, rather than a
+branching tree. What survives is the comparison against the other allocators,
+since every row ran on that same shape: malloc's coalescing costs ~2.4x
+Zane's teardown and Pool (~36us) ties it, and a check on the corrected
+topology reproduced both. What does not survive is the reading that guest
+density is free. These numbers put the fully guested row nominally fastest of
+the three, which the chain produced; on a real branching tree the same check
+put it a few percent behind, in line with the ~5% an earlier run reported.
+The mechanism is what makes the cost small either way: anchors are never
+enumerated, so retiring 4,000 payload anchors is one backpointer test per
+node, against an object the post-order walk already holds in cache. Teardown
+scales with the tree, not with how much of it is guested — but the figures
+above need a re-run before they say so.
 
 [Test 11]
 The mixed workload compresses the field to a tie, and the previous run's

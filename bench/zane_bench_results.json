@@ -1020,7 +1020,8 @@
             35620.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured before build_tree was fixed. Every node with budget left drew at least one child, so the first child took the whole remaining budget and each later sibling slot was NULL: the structure was a 4,000-node chain of depth 3,999 with no branch points, not a branching tree. The cross-allocator ratios survive because every row ran on that same shape, but the absolutes and the guest-density reading do not. Re-run for figures on the corrected topology (depth ~20-26, ~1,070 branch points)."
     },
     {
       "id": "Test 11",
