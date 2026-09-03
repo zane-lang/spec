@@ -33,6 +33,7 @@
   .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
   .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
   .notes p{font-size:12.5px;line-height:1.85;color:var(--prose);max-width:74ch;}
+  .notes .stale{font-size:11.5px;font-style:italic;color:var(--muted);margin-bottom:8px;}
 
   .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
   .chart-cap{font-size:11px;color:var(--muted);}
@@ -102,7 +103,11 @@ function renderInfo(t){
     `<hr class="info-div">`+
     `<div class="info-details"><strong>Setup: </strong>${esc(t.setup)}</div>`;
   const n=document.getElementById('notes');
-  n.innerHTML=t.note ? `<h2>Reading the result</h2><p>${esc(t.note)}</p>` : '';
+  n.innerHTML=t.note
+    ? `<h2>Reading the result</h2>`+
+      (t.noteStale ? `<p class="stale">This note interprets the committed pinned run, not the measurements above.</p>` : '')+
+      `<p>${esc(t.note)}</p>`
+    : '';
   n.hidden=!t.note;
 }
 

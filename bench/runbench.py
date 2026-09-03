@@ -35,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 
 import benchmeta
 
@@ -89,6 +90,27 @@ def load_results(path):
     return doc
 
 
+def pin_results(doc):
+    """Replace the committed results file, atomically.
+
+    It is the artifact everything else is pinned to, so it is never left
+    half-written: serialize to a temporary file beside it and rename only once
+    the write has closed cleanly.
+    """
+    fd, tmp = tempfile.mkstemp(dir=SCRIPT_DIR, prefix=".zane_bench_results.", text=True)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(doc, f, indent=2)
+            f.write("\n")
+        os.replace(tmp, RESULTS_JSON)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        raise
+
+
 def compile_and_run():
     """Compile the harness and run it, returning its parsed JSON output."""
     print("Compiling zane_bench.c ...")
@@ -123,7 +145,7 @@ BANNER_RULE  = "  +" + "=" * 99 + "+"
 SECTION_RULE = "  +" + "-" * 98 + "+"
 
 
-def render_text(doc):
+def render_text(doc, notes_pinned=True):
     """Render the reading copy of the results, one block per test."""
     cfg = doc.get("config", {})
     out = ["", BANNER_RULE,
@@ -132,6 +154,10 @@ def render_text(doc):
            "  |  N = %d  .  %d runs each  .  MEDIAN reported (ns, 2 d.p.)"
            "                                  |" % (cfg.get("n", 0), cfg.get("runs", 0)),
            BANNER_RULE]
+    if not notes_pinned:
+        out.append("  |  measurements below are NOT the pinned run"
+                   "                                          |")
+        out.append(BANNER_RULE)
 
     for test in doc["tests"]:
         title = f"{test['id']} -- {test['title']}"
@@ -188,8 +214,13 @@ def load_explanations():
 # HTML rendering
 # ─────────────────────────────────────────────────────────────
 
-def build_tests_json(doc, explanations):
-    """Build the JS TESTS array from measurements + metadata + explanations."""
+def build_tests_json(doc, explanations, notes_pinned=True):
+    """Build the JS TESTS array from measurements + metadata + explanations.
+
+    The notes in explanations.txt quote the pinned run's figures. When the
+    measurements being rendered are not that run, each note is flagged so the
+    page says whose numbers it is describing rather than implying these.
+    """
     js_tests = []
     for test in doc["tests"]:
         key  = test["id"]
@@ -213,6 +244,7 @@ def build_tests_json(doc, explanations):
             "meta":       [{"label": k, "val": v} for k, v in meta.get("meta", [])],
             "setup":      meta.get("setup", ""),
             "note":       explanations.get(key, ""),
+            "noteStale":  not notes_pinned,
         })
 
     return json.dumps(js_tests, indent=2)
@@ -286,23 +318,27 @@ def main():
     else:
         doc = compile_and_run()
         if args.save:
-            with open(RESULTS_JSON, "w") as f:
-                json.dump(doc, f, indent=2)
-                f.write("\n")
+            pin_results(doc)
             print(f"Pinned this run to {RESULTS_JSON}")
         else:
             print(f"Measured but not pinned. {os.path.basename(RESULTS_JSON)} is "
                   f"unchanged; pass --save to replace it with this run.")
 
+    notes_pinned = bool(args.from_file or args.save or
+                        (args.json and os.path.abspath(args.json) == RESULTS_JSON))
+    if not notes_pinned:
+        print("Note: explanations.txt describes the pinned run, not these "
+              "measurements; the page and table say so.")
+
     with open(RESULTS_TXT, "w") as f:
-        f.write(render_text(doc))
+        f.write(render_text(doc, notes_pinned))
     print(f"Wrote {RESULTS_TXT}")
 
     explanations = load_explanations()
     report(doc, explanations)
 
     with open(HTML_OUT, "w") as f:
-        f.write(render_html(build_tests_json(doc, explanations)))
+        f.write(render_html(build_tests_json(doc, explanations, notes_pinned)))
     print(f"Generated {HTML_OUT}")
 
 

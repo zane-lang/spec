@@ -33,6 +33,7 @@
   .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
   .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
   .notes p{font-size:12.5px;line-height:1.85;color:var(--prose);max-width:74ch;}
+  .notes .stale{font-size:11.5px;font-style:italic;color:var(--muted);margin-bottom:8px;}
 
   .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
   .chart-cap{font-size:11px;color:var(--muted);}
@@ -153,7 +154,8 @@ const TESTS=[
       }
     ],
     "setup": "One fixed-region frontier bump plus a 4-byte backpointer zeroed to 0, so no anchor exists. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains. Two arena rows bracket the result: a pure bump that never touches the memory it hands out, and the same bump writing one 4-byte field per object at Zane's 40-byte stride.",
-    "note": "Zane's bump (~159us) runs ~13x faster than malloc (~2.06ms) and ~1.5x faster than Pool (~231us) \u2014 and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Arena (~14us) is a further ~11x ahead, but read that row for what it is rather than as an allocator that beats this one: it bumps a pointer and never writes to the memory it hands out, so it pays no cache-line fills at all. The row beside it settles the point. The same flat arena writing one 4-byte field per object costs ~155us, which is Zane's ~159us to within 2%. Nothing separating those two is the chunked design; what separates either of them from the pure bump is the cache-line fills that one write pulls in across ~4 MB, and every allocator that initializes an object pays those. What the pure-bump row marks is the floor for address arithmetic, and that is a floor no allocator which initializes anything can reach."
+    "note": "Zane's bump (~159us) runs ~13x faster than malloc (~2.06ms) and ~1.5x faster than Pool (~231us) \u2014 and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Arena (~14us) is a further ~11x ahead, but read that row for what it is rather than as an allocator that beats this one: it bumps a pointer and never writes to the memory it hands out, so it pays no cache-line fills at all. The row beside it settles the point. The same flat arena writing one 4-byte field per object costs ~155us, which is Zane's ~159us to within 2%. Nothing separating those two is the chunked design; what separates either of them from the pure bump is the cache-line fills that one write pulls in across ~4 MB, and every allocator that initializes an object pays those. What the pure-bump row marks is the floor for address arithmetic, and that is a floor no allocator which initializes anything can reach.",
+    "noteStale": false
   },
   {
     "t": "T2 \u2014 random-order free",
@@ -200,7 +202,8 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
-    "note": "Zane's row is not a fast release loop; it is no loop at all. zm_host_release is an empty function, so the compiler deletes the 100k-iteration loop outright, and the harness reports the row as eliminated rather than timing two timestamps around nothing. malloc (~959us) and Pool (~194us) spend ~9.6ns and ~1.9ns an object returning blocks to a structure that later allocations must search. Shuffling costs them nothing extra; having the structure at all is the cost."
+    "note": "Zane's row is not a fast release loop; it is no loop at all. zm_host_release is an empty function, so the compiler deletes the 100k-iteration loop outright, and the harness reports the row as eliminated rather than timing two timestamps around nothing. malloc (~959us) and Pool (~194us) spend ~9.6ns and ~1.9ns an object returning blocks to a structure that later allocations must search. Shuffling costs them nothing extra; having the structure at all is the cost.",
+    "noteStale": false
   },
   {
     "t": "T3 \u2014 mixed sizes",
@@ -255,7 +258,8 @@ const TESTS=[
       }
     ],
     "setup": "Raw fixed-region blocks of four sizes, released in random order. The region is a pure bump: no size classes, no free list, no coalescing.",
-    "note": "Mixed sizes cost Zane nothing structural: ~260us, ~2.6ns a block, and the ordering against malloc (~3.51ms, ~13x) and Pool (~980us, ~3.8x) is what T1 already showed at a single size. Arena (~29us) is again the floor. The multiples are the part to distrust \u2014 the previous run put malloc at ~21x and Pool at ~7x on this same code, both competitors having been unusually slow that day. The ordering is what has held across both."
+    "note": "Mixed sizes cost Zane nothing structural: ~260us, ~2.6ns a block, and the ordering against malloc (~3.51ms, ~13x) and Pool (~980us, ~3.8x) is what T1 already showed at a single size. Arena (~29us) is again the floor. The multiples are the part to distrust \u2014 the previous run put malloc at ~21x and Pool at ~7x on this same code, both competitors having been unusually slow that day. The ordering is what has held across both.",
+    "noteStale": false
   },
   {
     "t": "T4 \u2014 iteration",
@@ -327,7 +331,8 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated; no alloc or release inside the timed loop.",
-    "note": "Layout alone spans ~3.2x. Contiguous inline storage (~33us) is the floor, the chunked forms sit close behind (UList ~47us, CChunked ~51us), and the scattered pointer array costs ~106us. What did not survive the re-run is the shuffle: walking the pointer array in order (~106us) and shuffled (~101us) now tie, where the previous run had the shuffled walk costing ~1.5x the sequential one. Whatever separated them there did not reproduce here, so treat the prefetcher story that reading invited as unsupported. The gap between contiguous storage and any scattered form is what both runs agree on."
+    "note": "Layout alone spans ~3.2x. Contiguous inline storage (~33us) is the floor, the chunked forms sit close behind (UList ~47us, CChunked ~51us), and the scattered pointer array costs ~106us. What did not survive the re-run is the shuffle: walking the pointer array in order (~106us) and shuffled (~101us) now tie, where the previous run had the shuffled walk costing ~1.5x the sequential one. Whatever separated them there did not reproduce here, so treat the prefetcher story that reading invited as unsupported. The gap between contiguous storage and any scattered form is what both runs agree on.",
+    "noteStale": false
   },
   {
     "t": "T5 \u2014 list growth",
@@ -394,7 +399,8 @@ const TESTS=[
       }
     ],
     "setup": "The growth rules of memory.md \u00a73.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
-    "note": "Copying costs Zane nothing measurable, and this run puts it in front: ~162us against C's realloc vector (~224us), which extends its mapping instead of copying, and CChunked (~204us). The previous run had those three inside each other's noise, so read the ~1.3x lead as \"not behind\" rather than as a win. Only UList (~749us) is clearly last, in both runs. Bounding a block to one chunk is what forces the relocations, and it stays cheap because only the two oversized spans copy at all; growth at the frontier moves nothing."
+    "note": "Copying costs Zane nothing measurable, and this run puts it in front: ~162us against C's realloc vector (~224us), which extends its mapping instead of copying, and CChunked (~204us). The previous run had those three inside each other's noise, so read the ~1.3x lead as \"not behind\" rather than as a win. Only UList (~749us) is clearly last, in both runs. Bounding a block to one chunk is what forces the relocations, and it stays cheap because only the two oversized spans copy at all; growth at the frontier moves nothing.",
+    "noteStale": false
   },
   {
     "t": "T6 \u2014 guest access",
@@ -460,7 +466,8 @@ const TESTS=[
       }
     ],
     "setup": "Terminal resolution: a tether is a u32 segmented offset naming a cell in the global anchor pool, and the cell holds the payload's offset plus a word marking it a payload anchor rather than a forwarder. Both hops resolve through the chunk directory; anchor pages are their own chunks.",
-    "note": "The extra dependent load costs ~1.24x: ~84us direct against ~104us tethered, about a fifth of a nanosecond on each of 100k accesses, most of it absorbed by the pipeline. Caching the chunk directory or re-fetching it lands within ~3% \u2014 inside the noise, so the directory is not on the critical path. This is the terminal case only; T14 measures what an identity that has outlived a move pays."
+    "note": "The extra dependent load costs ~1.24x: ~84us direct against ~104us tethered, about a fifth of a nanosecond on each of 100k accesses, most of it absorbed by the pipeline. Caching the chunk directory or re-fetching it lands within ~3% \u2014 inside the noise, so the directory is not on the critical path. This is the terminal case only; T14 measures what an identity that has outlived a move pays.",
+    "noteStale": false
   },
   {
     "t": "T7 \u2014 game loop",
@@ -518,7 +525,8 @@ const TESTS=[
       }
     ],
     "setup": "Each spawn zeroes a backpointer; each kill is a no-op release. These are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
-    "note": "Once entity counts stabilize the allocator stops mattering: Zane (~1.19ms) and Pool (~1.18ms) tie, malloc (~1.39ms) trails by ~18%, and the order-of-magnitude gaps of T1-T3 have gone into per-frame update work. All three are steady here, each holding within 1.2-1.4x across its 20 passes. The erratic malloc the previous run reported \u2014 its slowest pass twice its fastest \u2014 did not reproduce, so steadiness is no longer what separates them."
+    "note": "Once entity counts stabilize the allocator stops mattering: Zane (~1.19ms) and Pool (~1.18ms) tie, malloc (~1.39ms) trails by ~18%, and the order-of-magnitude gaps of T1-T3 have gone into per-frame update work. All three are steady here, each holding within 1.2-1.4x across its 20 passes. The erratic malloc the previous run reported \u2014 its slowest pass twice its fastest \u2014 did not reproduce, so steadiness is no longer what separates them.",
+    "noteStale": false
   },
   {
     "t": "T8 \u2014 particle system",
@@ -585,7 +593,8 @@ const TESTS=[
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region.",
-    "note": "Maximum churn narrows the field rather than widening it: Pool (~3.49ms), Zane (~3.70ms) and malloc (~3.99ms) span 14%, against an order of magnitude in T1-T3. The work-stealing row is the result worth keeping \u2014 ~23.6ms, ~6.4x plain Zane, with the pool already warm, so startup does not explain it. Per-frame particle work is too small to amortize scheduling. The multiple is softer than the ~14x the previous run reported and the row is far steadier here (~22.9-29.2ms against ~78-151ms), but both runs say the same thing: distributing this much work costs several times more than doing it."
+    "note": "Maximum churn narrows the field rather than widening it: Pool (~3.49ms), Zane (~3.70ms) and malloc (~3.99ms) span 14%, against an order of magnitude in T1-T3. The work-stealing row is the result worth keeping \u2014 ~23.6ms, ~6.4x plain Zane, with the pool already warm, so startup does not explain it. Per-frame particle work is too small to amortize scheduling. The multiple is softer than the ~14x the previous run reported and the row is far steadier here (~22.9-29.2ms against ~78-151ms), but both runs say the same thing: distributing this much work costs several times more than doing it.",
+    "noteStale": false
   },
   {
     "t": "T9 \u2014 fragmentation",
@@ -643,7 +652,8 @@ const TESTS=[
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
-    "note": "A bump frontier cannot be fragmented, and the refill shows it: Zane takes ~77us for the 50k objects, ~1.5ns each, the rate it would charge on an untouched region \u2014 and it holds that rate across all 20 passes. The competitors do not, which is the part the per-run samples now make visible. malloc (~852us) and Pool (~346us) refill from the freed slots at ~17ns and ~7ns an object, ~11x and ~4.5x, and both degrade as the run proceeds: malloc's passes climb from ~480us to ~890us and Pool's from ~81us to ~474us before plateauing, each cycle handing the free list back in a worse order than it found it. Zane's flat line against those two curves is what reclaiming nothing until the scope drains buys."
+    "note": "A bump frontier cannot be fragmented, and the refill shows it: Zane takes ~77us for the 50k objects, ~1.5ns each, the rate it would charge on an untouched region \u2014 and it holds that rate across all 20 passes. The competitors do not, which is the part the per-run samples now make visible. malloc (~852us) and Pool (~346us) refill from the freed slots at ~17ns and ~7ns an object, ~11x and ~4.5x, and both degrade as the run proceeds: malloc's passes climb from ~480us to ~890us and Pool's from ~81us to ~474us before plateauing, each cycle handing the free list back in a worse order than it found it. Zane's flat line against those two curves is what reclaiming nothing until the scope drains buys.",
+    "noteStale": false
   },
   {
     "t": "T10 \u2014 tree teardown",
@@ -719,7 +729,8 @@ const TESTS=[
       }
     ],
     "setup": "Three Zane variants \u2014 no guests, a single root guest, one guest per node \u2014 all torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack.",
-    "note": "Read the ratios here, not the absolutes, and read the guest-density rows with care. These figures were measured before build_tree was fixed, when the first child of every node took the whole node budget and each later sibling was NULL \u2014 a 4,000-node chain of depth 3,999 with no branch points, rather than a branching tree. What survives is the comparison against the other allocators, since every row ran on that same shape: malloc's coalescing costs ~2.4x Zane's teardown and Pool (~36us) ties it, and a check on the corrected topology reproduced both. What does not survive is the reading that guest density is free. These numbers put the fully guested row nominally fastest of the three, which the chain produced; on a real branching tree the same check put it a few percent behind, in line with the ~5% an earlier run reported. The mechanism is what makes the cost small either way: anchors are never enumerated, so retiring 4,000 payload anchors is one backpointer test per node, against an object the post-order walk already holds in cache. Teardown scales with the tree, not with how much of it is guested \u2014 but the figures above need a re-run before they say so."
+    "note": "Read the ratios here, not the absolutes, and read the guest-density rows with care. These figures were measured before build_tree was fixed, when the first child of every node took the whole node budget and each later sibling was NULL \u2014 a 4,000-node chain of depth 3,999 with no branch points, rather than a branching tree. What survives is the comparison against the other allocators, since every row ran on that same shape: malloc's coalescing costs ~2.4x Zane's teardown and Pool (~36us) ties it, and a check on the corrected topology reproduced both. What does not survive is the reading that guest density is free. These numbers put the fully guested row nominally fastest of the three, which the chain produced; on a real branching tree the same check put it a few percent behind, in line with the ~5% an earlier run reported. The mechanism is what makes the cost small either way: anchors are never enumerated, so retiring 4,000 payload anchors is one backpointer test per node, against an object the post-order walk already holds in cache. Teardown scales with the tree, not with how much of it is guested \u2014 but the figures above need a re-run before they say so.",
+    "noteStale": false
   },
   {
     "t": "T11 \u2014 stress test",
@@ -781,7 +792,8 @@ const TESTS=[
       }
     ],
     "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
-    "note": "The mixed workload compresses the field to a tie, and the previous run's caution proved right: Zane ~1.35ms, Pool ~1.40ms, malloc ~1.47ms, where that run had Pool in front of Zane. Updates, scans and randomized maintenance dominate, so the allocator is only a small slice of the total. The 9% between fastest and slowest is inside what a median shifts between runs, and the ordering duly moved."
+    "note": "The mixed workload compresses the field to a tie, and the previous run's caution proved right: Zane ~1.35ms, Pool ~1.40ms, malloc ~1.47ms, where that run had Pool in front of Zane. Updates, scans and randomized maintenance dominate, so the allocator is only a small slice of the total. The 9% between fastest and slowest is inside what a median shifts between runs, and the ordering duly moved.",
+    "noteStale": false
   },
   {
     "t": "T12 \u2014 concurrent scan",
@@ -834,7 +846,8 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of one hosted inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
-    "note": "Concurrency loses, and by how much depends on where the four workers land. The scan splits into four equal shards and waits for all of them, so a pass runs at the speed of its slowest shard \u2014 and on a hybrid host with 8 performance cores against 16 efficiency ones, nothing pins a worker to either. The 20 passes spread 4.5x accordingly: ~72us at best, ~194us median, ~322us at worst, against ~24us sequential. The best pass is the one to read. At ~2.9x sequential it reproduces the ~3.1x an earlier run measured with the process pinned to four cores, so the ~7.9x median is core placement, not the cost of distributing. The finding survives either reading: distributing a 24us scan costs several times more than doing it outright, because per-shard work this small cannot amortize the handoff. T8 shows the other side of the same coin \u2014 at ~23ms a pass its work-stealing row spreads only 1.28x, both because the work amortizes placement and because stealing lets a fast core drain a slow one's queue."
+    "note": "Concurrency loses, and by how much depends on where the four workers land. The scan splits into four equal shards and waits for all of them, so a pass runs at the speed of its slowest shard \u2014 and on a hybrid host with 8 performance cores against 16 efficiency ones, nothing pins a worker to either. The 20 passes spread 4.5x accordingly: ~72us at best, ~194us median, ~322us at worst, against ~24us sequential. The best pass is the one to read. At ~2.9x sequential it reproduces the ~3.1x an earlier run measured with the process pinned to four cores, so the ~7.9x median is core placement, not the cost of distributing. The finding survives either reading: distributing a 24us scan costs several times more than doing it outright, because per-shard work this small cannot amortize the handoff. T8 shows the other side of the same coin \u2014 at ~23ms a pass its work-stealing row spreads only 1.28x, both because the work amortizes placement and because stealing lets a fast core drain a slow one's queue.",
+    "noteStale": false
   },
   {
     "t": "T13 \u2014 scan-heavy mixed",
@@ -878,7 +891,8 @@ const TESTS=[
       }
     ],
     "setup": "Ten payload scans per one tether-resolve pass. Models the weighting the 1:1 micro-tests hide: the pervasive scan should dominate, even though the pool's individual resolve is dearer than the interleaved layout's.",
-    "note": "~3.57ms for the weighted mix. The A/B evidence predates this run, which is default-only: across three default/interleaved pairs the interleaved build lost every one \u2014 by 8.9%, 26.4% and 4.8% \u2014 one of them from a ~24% machine advantage. Three measurements in one direction is reasonable evidence that protecting the scan wins the aggregate; none pins its size. A payload-only companion agreed on all three pairs before it was retired as redundant with this test, which weights the same effect properly. The design argument follows: scans are pervasive and un-hoistable where resolves are occasional, so the pool's dearer resolve (T6) is the right trade."
+    "note": "~3.57ms for the weighted mix. The A/B evidence predates this run, which is default-only: across three default/interleaved pairs the interleaved build lost every one \u2014 by 8.9%, 26.4% and 4.8% \u2014 one of them from a ~24% machine advantage. Three measurements in one direction is reasonable evidence that protecting the scan wins the aggregate; none pins its size. A payload-only companion agreed on all three pairs before it was retired as redundant with this test, which weights the same effect properly. The design argument follows: scans are pervasive and un-hoistable where resolves are occasional, so the pool's dearer resolve (T6) is the right trade.",
+    "noteStale": false
   },
   {
     "t": "T14 \u2014 forwarding hops",
@@ -967,7 +981,8 @@ const TESTS=[
       }
     ],
     "setup": "Moving into an already-anchored destination keeps that cell terminal and turns the source into a forwarder (memory.md \u00a74.5), so a guest minted before the move gains one hop per move it survived. The timed loop resolves the oldest tether. Two rows separate hop count from cache footprint: one compresses as it resolves, the other resolves a terminal identity over the identical structure \u2014 the floor the first converges on.",
-    "note": "Hops are linear and expensive: ~124us, ~212us, ~333us and ~605us at zero, one, two and four. Compression costs ~357us against the ~298us floor, recovering about four fifths of the four-hop penalty on the very first repeated access \u2014 what \u00a74.8 claims for it \u2014 and the ~59us residual is the store it makes on every pass. The floor is the figure to notice: it sits ~2.4x above the ~124us terminal row on footprint alone, five hosts and five cells against one."
+    "note": "Hops are linear and expensive: ~124us, ~212us, ~333us and ~605us at zero, one, two and four. Compression costs ~357us against the ~298us floor, recovering about four fifths of the four-hop penalty on the very first repeated access \u2014 what \u00a74.8 claims for it \u2014 and the ~59us residual is the store it makes on every pass. The floor is the figure to notice: it sits ~2.4x above the ~124us terminal row on footprint alone, five hosts and five cells against one.",
+    "noteStale": false
   },
   {
     "t": "T15 \u2014 dynamic churn",
@@ -1039,7 +1054,8 @@ const TESTS=[
       }
     ],
     "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
-    "note": "Not knowing a size until runtime costs nothing measurable: ~237us for the runtime size class against ~242us for the static one over 60,000 pairs, the runtime row nominally ahead. The previous run put the static row ~6% in front. The effect is inside the noise in both and this run reverses its sign, so the honest reading is that a runtime size class is free, not that it is cheap. The stacks cost far more \u2014 the frontier-only row runs ~50us, ~4.8x under both \u2014 and what they buy is memory rather than time: frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set where the stack runs recycle inside ~1.8 MB. Pool (~212us) stays ahead by ~1.1x because its link is a raw pointer where \u00a73.1 makes this one a segmented offset: inherent, not recoverable."
+    "note": "Not knowing a size until runtime costs nothing measurable: ~237us for the runtime size class against ~242us for the static one over 60,000 pairs, the runtime row nominally ahead. The previous run put the static row ~6% in front. The effect is inside the noise in both and this run reverses its sign, so the honest reading is that a runtime size class is free, not that it is cheap. The stacks cost far more \u2014 the frontier-only row runs ~50us, ~4.8x under both \u2014 and what they buy is memory rather than time: frontier-only bumps through 17.9 MB of fresh chunks to hold a 1 MB live set where the stack runs recycle inside ~1.8 MB. Pool (~212us) stays ahead by ~1.1x because its link is a raw pointer where \u00a73.1 makes this one a segmented offset: inherent, not recoverable.",
+    "noteStale": false
   },
   {
     "t": "T16 \u2014 boxed members",
@@ -1119,7 +1135,8 @@ const TESTS=[
       }
     ],
     "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. Rehosting the root relocates every boxed descendant recursively (memory.md \u00a73.5), retargeting each contained host's anchor; a value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
-    "note": "Guesting every node costs rehosting ~28% \u2014 ~42us against ~33us \u2014 and no more, because each host retargets its own anchor and no guest is ever enumerated. That is the steadiest figure in the suite, the previous run having put it at ~27%. The value pair is the one to read: ~18us to deep-copy from an existing place against ~12us to construct fresh. Both are O(structure) as \u00a72.3 requires, and the ~5us between them is the copy itself, which is why only an existing source pays it. malloc's deep copy is ~95us, ~5.4x."
+    "note": "Guesting every node costs rehosting ~28% \u2014 ~42us against ~33us \u2014 and no more, because each host retargets its own anchor and no guest is ever enumerated. That is the steadiest figure in the suite, the previous run having put it at ~27%. The value pair is the one to read: ~18us to deep-copy from an existing place against ~12us to construct fresh. Both are O(structure) as \u00a72.3 requires, and the ~5us between them is the copy itself, which is why only an existing source pays it. malloc's deep copy is ~95us, ~5.4x.",
+    "noteStale": false
   }
 ];
 let cur=0, scale='linear';
@@ -1141,7 +1158,11 @@ function renderInfo(t){
     `<hr class="info-div">`+
     `<div class="info-details"><strong>Setup: </strong>${esc(t.setup)}</div>`;
   const n=document.getElementById('notes');
-  n.innerHTML=t.note ? `<h2>Reading the result</h2><p>${esc(t.note)}</p>` : '';
+  n.innerHTML=t.note
+    ? `<h2>Reading the result</h2>`+
+      (t.noteStale ? `<p class="stale">This note interprets the committed pinned run, not the measurements above.</p>` : '')+
+      `<p>${esc(t.note)}</p>`
+    : '';
   n.hidden=!t.note;
 }
 
