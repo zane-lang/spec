@@ -83,15 +83,21 @@ formatted text. The pipeline is:
 | `zane_bench_results.json` | the pinned measurements — the artifact to preserve |
 | `zane_bench_results.txt`, `benchmark.html` | both **generated**; never hand-edit |
 
-`python3 runbench.py` compiles, runs, and regenerates both outputs;
-`--from-file` re-renders from the committed JSON without measuring.
+`python3 runbench.py` compiles, runs, and renders the page from what it just
+measured, **without** touching the committed JSON; `--save` is the separate act
+of pinning a run, and `--from-file` re-renders from the committed JSON without
+measuring at all.
 
-The pinned JSON was taken on the maintainer's machine with the process pinned
-to four cores, and `explanations.txt` quotes its numbers. **Do not overwrite it
-from a container** — an unpinned re-run degrades every note in the file, not
-just the one you meant to update. A row whose number is known-bad is corrected
-in place instead: drop the field and set `provenance_note` on the test, which
-`runbench.py` prints on every render.
+That split exists because `explanations.txt` quotes the pinned numbers, so
+replacing them silently invalidates every note in the file. The committed run
+was taken under WSL2 with no core pinning, on a hybrid CPU — 8 performance
+cores and 16 efficiency ones — which is why T12's four workers spread 4.5x
+across their twenty passes and why that row and T8 are the two whose absolute
+figures do not reproduce elsewhere. **Do not pin a run from a container.**
+
+A row whose number is known-bad is corrected in place instead: drop the field
+and set `provenance_note` on the test, which `runbench.py` prints on every
+render.
 
 ## Validate before committing (spec edits)
 The generics system was unified into a `<>`-header / `()`-call model (canonical

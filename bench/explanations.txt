@@ -11,8 +11,10 @@
 # Every row now carries all 20 per-run samples in zane_bench_results.json, so
 # the spread below is checkable rather than asserted, and it shows two things.
 # The first pass of a row is almost always its slowest, often by 3-5x, so a
-# row's max is warm-up rather than variance and the medians quoted here come
-# from the settled passes. And absolute figures move a great deal between runs
+# row's max is warm-up rather than variance. The median is taken over all 20
+# samples, warm-up included; it is quoted here because it barely moves when
+# that pass is dropped, not because the pass is excluded. T1's Zane row is
+# 158.7us over all twenty and 152.8us over the last nineteen. And absolute figures move a great deal between runs
 # of identical code: every row here came in 1.2-2.8x faster than the run
 # before it. So treat each figure as one run's median, good to about one
 # significant figure. The durable content is the ratios, the orderings, and

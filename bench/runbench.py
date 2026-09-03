@@ -17,8 +17,14 @@ Layout:
     zane_bench_results.txt    generated from the JSON, for reading
     benchmark.html            generated
 
+The committed results file is the pinned artifact the notes in
+explanations.txt quote, so measuring never replaces it on its own: a plain run
+renders the page from what it just measured and leaves the file alone, and
+--save is the separate act of pinning.
+
 Usage:
     python3 bench/runbench.py                 # compile, run, render
+    python3 bench/runbench.py --save          # ... and pin the run as committed results
     python3 bench/runbench.py --from-file     # render from the committed JSON
     python3 bench/runbench.py --json PATH     # render from an arbitrary results file
 """
@@ -218,7 +224,10 @@ def render_html(tests_json):
         template = f.read()
     if "__TESTS_JSON__" not in template:
         sys.exit(f"ERROR: {TEMPLATE} has no __TESTS_JSON__ placeholder")
-    return template.replace("__TESTS_JSON__", tests_json)
+    # The array is embedded in an inline <script>. "<" never appears outside a
+    # JSON string, so escaping it globally touches only string contents, and it
+    # stops a label or title closing the script element.
+    return template.replace("__TESTS_JSON__", tests_json.replace("<", "\\u003c"))
 
 
 # ─────────────────────────────────────────────────────────────
@@ -263,6 +272,8 @@ def main():
                         help="Render from the committed results file, without re-running")
     source.add_argument("--json", metavar="PATH",
                         help="Render from an arbitrary results file")
+    parser.add_argument("--save", action="store_true",
+                        help="Pin this run: overwrite the committed results file")
     args = parser.parse_args()
 
     if args.json:
@@ -273,11 +284,14 @@ def main():
         doc = load_results(RESULTS_JSON)
     else:
         doc = compile_and_run()
-        with open(RESULTS_JSON, "w") as f:
-            json.dump(doc, f, indent=2)
-            f.write("\n")
-        print(f"Measurements saved to {RESULTS_JSON}")
-        doc = load_results(RESULTS_JSON)
+        if args.save:
+            with open(RESULTS_JSON, "w") as f:
+                json.dump(doc, f, indent=2)
+                f.write("\n")
+            print(f"Pinned this run to {RESULTS_JSON}")
+        else:
+            print(f"Measured but not pinned. {os.path.basename(RESULTS_JSON)} is "
+                  f"unchanged; pass --save to replace it with this run.")
 
     with open(RESULTS_TXT, "w") as f:
         f.write(render_text(doc))

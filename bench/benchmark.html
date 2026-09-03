@@ -261,7 +261,7 @@ const TESTS=[
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
-      "Inline array  (Array<Entity, 100000>)",
+      "Inline array  (Array\u003cEntity, 100000>)",
       "UList (chunk=8, linked)",
       "CChunked (chunk=64, ptr-array)",
       "Pointer array, shuffled",
@@ -1133,15 +1133,15 @@ function fmt(us){
 
 function renderInfo(t){
   const half=Math.ceil(t.meta.length/2);
-  const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${r.label}</span><span class="info-val">${r.val}</span></div>`).join('');
+  const rows=col=>col.map(r=>`<div class="info-row"><span class="info-lbl">${esc(r.label)}</span><span class="info-val">${esc(r.val)}</span></div>`).join('');
   document.getElementById('info').innerHTML=
-    `<div class="info-title">${t.title}</div>`+
+    `<div class="info-title">${esc(t.title)}</div>`+
     `<div class="info-col">${rows(t.meta.slice(0,half))}</div>`+
     `<div class="info-col">${rows(t.meta.slice(half))}</div>`+
     `<hr class="info-div">`+
-    `<div class="info-details"><strong>Setup: </strong>${t.setup}</div>`;
+    `<div class="info-details"><strong>Setup: </strong>${esc(t.setup)}</div>`;
   const n=document.getElementById('notes');
-  n.innerHTML=t.note ? `<h2>Reading the result</h2><p>${t.note}</p>` : '';
+  n.innerHTML=t.note ? `<h2>Reading the result</h2><p>${esc(t.note)}</p>` : '';
   n.hidden=!t.note;
 }
 
