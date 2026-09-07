@@ -317,8 +317,13 @@ def main():
     source.add_argument("--json", metavar="PATH",
                         help="Render from an arbitrary results file")
     parser.add_argument("--save", action="store_true",
-                        help="Pin this run: overwrite the committed results file")
+                        help="Pin this run: measure, then overwrite the committed "
+                             "results file (fresh runs only)")
     args = parser.parse_args()
+
+    if args.save and (args.json or args.from_file):
+        parser.error("--save pins a run; it needs one, so it cannot be combined "
+                     "with --from-file or --json")
 
     if args.json:
         print(f"Reading {args.json}")
