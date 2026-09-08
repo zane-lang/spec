@@ -164,9 +164,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It maps each enum member to a value of a named property, and it is named where the value is read, so "enum map property" describes both the table and its access form.
 - **Canonical home:** [`adt.md`](adt.md) §6
 
-### 3.21 member-versus-value delimiter
-- **Meaning:** `;` terminates every member of a `struct`/`variant` body (and their `#` forms) and every arm of a `match` block, and is always trailing (newlines insignificant there); `,` separates the elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, and the case list of a `match` group `[ … ]`) and is never trailing; a newline separates statements.
-- **Why this name:** The delimiter is chosen by what is being separated — a declaration member versus a value-collection element versus a statement — so the name states the distinction the rule turns on.
+### 3.21 bracket-picked separator
+- **Meaning:** The bracket decides how the entries inside it are separated: a `{ }` body terminates each entry with `;`, always trailing; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing. A `{ }` holding statements rather than entries is a code block, where a newline separates.
+- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states what does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
 ### 3.22 verb

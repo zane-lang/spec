@@ -230,7 +230,7 @@ A type or number parameter introduced inline in a verb's signature is inferred f
 
 ```zane
 Vector<T>(x T Type, y T Type) {  // T introduced inline; x and y share it
-    return init{ x, y }
+    return init{ x; y; }
 }
 
 vec Vector(Int(2), Int(3))       // T inferred as Int from the arguments
@@ -246,7 +246,7 @@ The distinction from §5.2 is purely structural, read off the parameter's shape.
 
 ```zane
 Vector<T>(T Type) {
-    return init{ x = T(0), y = T(0) }
+    return init{ x = T(0); y = T(0); }
 }
 
 Array<T, n>(T Type, n Number) {

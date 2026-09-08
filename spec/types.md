@@ -106,7 +106,7 @@ type Player<T Type> = #struct {
     extraSettings T;
 }
 
-Player<T>(name String, extraSettings T Type) => init{name, extraSettings}
+Player<T>(name String, extraSettings T Type) => init{name; extraSettings;}
 
 player Player<Unit> = Player("Manuel", Unit())
 completed Unit = performWork()
@@ -135,19 +135,19 @@ package Graph
 
 Node(id Int, scale Float, label String) {
     return init{
-        _id = id,
-        scale = scale,
-        label = label
+        _id = id;
+        scale = scale;
+        label = label;
     }
 }
 ```
 
-Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below means exactly `{ return init{x, y} }`:
+Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below means exactly `{ return init{x; y;} }`:
 
 ```zane
 package Math
 
-Vec2(x Float, y Float) => init{x, y}
+Vec2(x Float, y Float) => init{x; y;}
 ```
 
 Positional constructors **MAY** be overloaded by arity or parameter types.
@@ -163,9 +163,9 @@ Node(id Int, scale Float, label String) {
     scaled Float = scale * scale       // ordinary statements run first
     nextId Int = id + Int(1)
     return init{
-        _id = nextId,
-        scale = scaled,
-        label = label
+        _id = nextId;
+        scale = scaled;
+        label = label;
     }
 }
 ```
@@ -181,8 +181,8 @@ type Vector = struct {
     y Int;
 }
 
-Vector{x Int, y Int} {
-    return init{x, y}
+Vector{x Int; y Int;} {
+    return init{x; y;}
 }
 ```
 
@@ -198,14 +198,14 @@ type Weapon = #struct {
 }
 
 Weapon{
-    name String = "Pistol",
-    fireRate Float(1),
-    damage Float = 10
+    name String = "Pistol";
+    fireRate Float(1);
+    damage Float = 10;
 } {
-    return init{name, fireRate, damage}
+    return init{name; fireRate; damage;}
 }
 
-starter Weapon{fireRate = Float(2)}
+starter Weapon{fireRate = Float(2);}
 ```
 
 ### 3.4 Named constructors
@@ -216,8 +216,8 @@ package Math
 
 type Vector2 = struct { x Float; y Float; }
 
-Vector2.zeros() => init{ x = Float(0), y = Float(0) }
-Vector2.diagonal(n Float) => init{ x = n, y = n }
+Vector2.zeros() => init{ x = Float(0); y = Float(0); }
+Vector2.diagonal(n Float) => init{ x = n; y = n; }
 
 o Vector2.zeros()            // o : Vector2
 d Vector2.diagonal(Float(3)) // d : Vector2
@@ -243,27 +243,27 @@ Field-constructor call sites may use implicit field access when the argument exp
 ```zane
 x Int(3)
 y Int(2)
-vec Vector{x, y}
+vec Vector{x; y;}
 ```
 
-`Vector{x, y}` is shorthand for `Vector{x = x, y = y}`.
+`Vector{x; y;}` is shorthand for `Vector{x = x; y = y;}`.
 
 ### 3.6 Implicit field access in `init{ }`
 Inside `init{ }`, a bare field name is shorthand for `fieldName = fieldName` when a symbol of that name is in scope:
 
 ```zane
-Vector{x Int, y Int} {
-    return init{x, y}
+Vector{x Int; y Int;} {
+    return init{x; y;}
 }
 ```
 
 This is shorthand for:
 
 ```zane
-Vector{x Int, y Int} {
+Vector{x Int; y Int;} {
     return init{
-        x = x,
-        y = y
+        x = x;
+        y = y;
     }
 }
 ```
@@ -272,10 +272,10 @@ Vector{x Int, y Int} {
 `init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
 
 ```zane
-Vector{x Int, y Int} {
+Vector{x Int; y Int;} {
     temp Vector = init{
-        x = x,
-        y = y
+        x = x;
+        y = y;
     }
     return temp
 }
@@ -298,14 +298,14 @@ type Car = #struct {
 
 // legal: `&` parameter allows storing into `&` field
 Car(engine &Engine) {
-    return init{engine = engine}
+    return init{engine = engine;}
 }
 ```
 
 ```zane
 // ILLEGAL: plain parameter cannot be bound into `&` storage
 Car(engine Engine) {
-    return init{engine = engine}   // ERROR: plain parameter MUST NOT be bound into `&` storage
+    return init{engine = engine;}   // ERROR: plain parameter MUST NOT be bound into `&` storage
 }
 ```
 
@@ -334,7 +334,7 @@ type Car = #struct {
 }
 
 Car(engine Engine) {
-    return init{engine = engine}
+    return init{engine = engine;}
 }
 
 car Car(Engine())   // legal: plain host field accepts a temporary
@@ -346,7 +346,7 @@ A constructor for a parameterized type receives its type and number parameters i
 ```zane
 // inferred: T is introduced inline and deduced from the value arguments
 Vector<T>(x T Type, y T Type) {
-    return init{x, y}
+    return init{x; y;}
 }
 
 // explicit: the type and size are passed as arguments
@@ -380,7 +380,7 @@ type Feet = struct {
 }
 
 // implicit conversion from Feet to Meters
-implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
+implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048);}
 
 Unit printDistance(d Meters) {
     ...
@@ -399,10 +399,10 @@ A named field entry of a field-constructor call is a coercion site too, so the c
 
 ```zane
 type Trip = struct { distance Meters; label String; }
-Trip{distance Meters, label String} => init{distance, label}
+Trip{distance Meters; label String;} => init{distance; label;}
 
-Trip{distance = Feet(Float(10)), label = "hike"}   // field entry expects Meters, Feet provided
-// desugars to: Trip{distance = Meters(Feet(Float(10))), label = "hike"}
+Trip{distance = Feet(Float(10)); label = "hike";}   // field entry expects Meters, Feet provided
+// desugars to: Trip{distance = Meters(Feet(Float(10))); label = "hike";}
 ```
 
 The `init{ }` inside a constructor body is **not** a coercion site: there the constructor writes its own value's fields, so like a `return` the conversion is written explicitly (see §4.2).
@@ -421,7 +421,7 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a method call (the subject is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
-- Named field entries of a field-constructor call `Type{ field = expr }`
+- Named field entries of a field-constructor call `Type{ field = expr; }`
 
 Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 
@@ -431,7 +431,7 @@ An implicit constructor is **never** inserted at any other position. In particul
 - Assignments to already-declared symbols: `name = expr`
 - Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
 - `return` expressions, even when the return type is declared
-- Named field entries of an `init{ field = expr }` initializer inside a constructor body
+- Named field entries of an `init{ field = expr; }` initializer inside a constructor body
 
 At each of these positions the destination type is one you fix yourself — a local declaration, existing storage, the return type in the enclosing signature, or the fields the constructor builds through `init{ }` — rather than a contract supplied by a callee or language construct, so the conversion must be written explicitly.
 
@@ -461,7 +461,7 @@ A primitive destination is what lets a compiler intrinsic state its contract wit
 type Celsius = struct { value Float; }
 type Fahrenheit = struct { value Float; }
 
-implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9)}   // legal: value → value
+implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9);}   // legal: value → value
 ```
 
 ```zane
@@ -469,7 +469,7 @@ type Logger = #struct { verbosity Int; }
 type LogConfig = struct { verbosity Int; }
 
 implicit Logger(cfg LogConfig) {   // legal: value → reference
-    return init{verbosity = cfg.verbosity}
+    return init{verbosity = cfg.verbosity;}
 }
 ```
 
@@ -478,7 +478,7 @@ type Source = #struct { data String; }
 type Destination = #struct { payload String; }
 
 implicit Destination(s Source) {   // ILLEGAL: source type is a reference type
-    return init{payload = s.data}
+    return init{payload = s.data;}
 }
 ```
 
@@ -493,7 +493,7 @@ package Units
 type Meters = struct { value Float; }
 
 // legal: declared in home package of Meters
-implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048)}
+implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048);}
 ```
 
 ```zane
@@ -501,7 +501,7 @@ package Conversions
 import Units
 
 // ILLEGAL: neither Meters nor Feet is defined in Conversions
-implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048)}
+implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048);}
 ```
 
 ### 4.6 Method subjects are never implicitly converted
@@ -580,8 +580,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
-| Field constructor | Declares field parameters directly, may assign default values, and may use `init{field}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
+| Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |
