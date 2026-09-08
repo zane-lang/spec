@@ -182,7 +182,8 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 A `{ }` is the one bracket with two readings, and the two are told apart by what the entries are rather than by lookahead: a body holds `;`-terminated entries, a code block holds statements. Every `{ }` is introduced by a token that says which it is — a mould keyword, `match`, `init`, a type name, or a verb's signature — so the parser always knows both which separator applies and whether a newline is structural.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing" tells where the two marks and the trailing asymmetry came from.
 
 ---
 
