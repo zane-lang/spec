@@ -14,7 +14,7 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
-- **`Delimiter follows the separated thing`.** `;` terminates every member of a `struct`/`variant` body (always trailing), `,` separates elements of a value collection (never trailing), and a newline separates statements. `{ }` holds a member body or code block; `[ ]` holds a flat list.
+- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a newline separates.
 
 ---
 
@@ -125,11 +125,11 @@ A comparison never has a type on its immediate left, and a type expression never
 
 ## 6. Delimiters and Brackets
 
-Zane chooses its delimiter by *what is being separated*, and its bracket by *what kind of thing is inside*. The choice is mechanical, so the same character never means two things in one context.
+The **bracket picks the separator**. A `{ }` body terminates each entry with `;`; a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule turns on the bracket alone rather than on what the construct means, so the same character never means two things in one context.
 
-### 6.1 `;` terminates members of a declaration body
+### 6.1 `;` terminates an entry inside `{ }`
 
-A `;` **terminates** every member of a `struct` or `variant` type-definition body, marked or unmarked with `#`, and every arm of a `match` block (§6.4). It is **always trailing**: every member ends with a `;`, inline or multiline, single-member or many, because newlines are **insignificant inside these bodies**. The last member carries a `;` exactly like every other, so the form is uniform.
+A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; and the entries of a field-constructor header or call site (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
 
 ```zane
 type Node = #struct {
@@ -138,16 +138,21 @@ type Node = #struct {
     label String;
 }
 
-type Color = struct { r Int; g Int; b Int; }   // inline body, every member ends in ';'
+type Color = struct { r Int; g Int; b Int; }   // inline body, every entry ends in ';'
+
+Vec2(x Float, y Float) => init{x; y;}
 ```
 
-### 6.2 `,` separates elements of a value collection
+A `,` may still appear *inside* an entry, where it separates a nested list under §6.2 — a `match` arm's per-scrutinee selectors, or the arguments of a call in a field's initializer. The `;` terminates the entry; a `,` separates parts within one.
 
-A `,` separates the elements of a value collection: array literals, `enum`, call and constructor arguments, `init{ }` fields, generic arguments, and the case list within a `match` group `[ … ]`. It is **never trailing**: a `,` appears only *between* elements, never after the last one.
+### 6.2 `,` separates an entry inside `[ ]`, `( )`, and `< >`
+
+A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all — a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.8) — separates with `,` on the same terms.
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])
 type Colors = enum [ red, green, blue ]
+Node(id Int, scale Float, label String)
 ```
 
 ### 6.3 Newlines separate statements
@@ -162,11 +167,19 @@ Unit main() {
 }
 ```
 
-### 6.4 `{ }` versus `[ ]`
+### 6.4 Brackets and their separators
 
-`{ }` encloses a named-typed-member body (`struct`, `variant`, and their `#` forms), a `match` block of `;`-terminated arms, and a code or `init{ }` block. `[ ]` encloses a flat list: an array, an `enum`, a `match` case group, or a function-type parameter list.
+Each bracket takes exactly one separator, so the bracket predicts both the mark and its trailing behaviour:
 
-Because the parser always knows whether it is inside a type-expression body or a code block, it always knows whether a newline separates statements or is insignificant.
+| Bracket | Encloses | Separator |
+|---|---|---|
+| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site | `;`, always trailing |
+| `{ }` | a code block: a function body, a control-flow block, or a block argument | a newline (§6.3) |
+| `[ ]` | a flat list: an array, an `enum` body, a `match` case group, a function-type parameter list | `,`, never trailing |
+| `( )` | a parameter list or an argument list | `,`, never trailing |
+| `< >` | a generic header or a generic argument list | `,`, never trailing |
+
+A `{ }` is the one bracket with two readings, and the two are told apart by what the entries are rather than by lookahead: a body holds `;`-terminated entries, a code block holds statements. Every `{ }` is introduced by a token that says which it is — a mould keyword, `match`, `init`, a type name, or a verb's signature — so the parser always knows both which separator applies and whether a newline is structural.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing".
@@ -187,7 +200,7 @@ Because the parser always knows whether it is inside a type-expression body or a
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a guest type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
-| Member terminator | `;` terminates every member of a `struct`/`variant` body (marked or unmarked with `#`) and every arm of a `match` block; always trailing, inline or multiline; newlines are insignificant there |
-| Value separator | `,` separates elements of a value collection (arrays, `enum`, call/constructor args, `init{}` fields, generic args, `match` case groups); never trailing |
+| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries); always trailing, inline or multiline; newlines are insignificant there |
+| Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
-| Brackets | `{ }` holds a member body or code/`init{}` block; `[ ]` holds a flat list |
+| Brackets | The bracket picks the separator: `{ }` takes `;` (or newlines, as a code block), `[ ]`/`( )`/`< >` take `,` |

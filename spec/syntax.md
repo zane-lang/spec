@@ -14,15 +14,15 @@ New symbol declarations:
 
 ```zane
 name VarType(args, ...)
-name VarType{field = expr, ...}
-name VarType{fieldA, fieldB, ...}
+name VarType{field = expr; ...}
+name VarType{fieldA; fieldB; ...}
 name VarType = expr
 name &VarType = expr
 name ReturnType(param ParamType, ...) { body }
 name ReturnType(param ParamType, ...) => expr
 ```
 
-`VarType{fieldA, fieldB}` is shorthand for `VarType{fieldA = fieldA, fieldB = fieldB}`.
+`VarType{fieldA; fieldB;}` is shorthand for `VarType{fieldA = fieldA; fieldB = fieldB;}`.
 
 The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.diagonal(Float(3))` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.diagonal` or a per-case type.
 
@@ -347,15 +347,15 @@ The subject takes **no** marker, for either kind of type: `&` is never written o
 
 ```zane
 TypeName(param ParamType, ...) {
-    return init{ field = expr, ... }
+    return init{ field = expr; ... }
 }
 TypeName(param &ParamType, ...) {
-    return init{ field = expr, ... }
+    return init{ field = expr; ... }
 }
-TypeName(param ParamType, ...) => init{ field = expr, ... }
-TypeName(param &ParamType, ...) => init{ field = expr, ... }
-TypeName<T>(param T Type, ...) { return init{ field = expr, ... } }
-TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = expr, ... } }
+TypeName(param ParamType, ...) => init{ field = expr; ... }
+TypeName(param &ParamType, ...) => init{ field = expr; ... }
+TypeName<T>(param T Type, ...) { return init{ field = expr; ... } }
+TypeName<T, n>(param Container<T Type, n Number>, ...) { return init{ field = expr; ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
@@ -365,8 +365,8 @@ A constructor for a parameterized type has no `<>` header; its name carries the 
 A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
 
 ```zane
-TypeName.zeros() => init{ field = expr, ... }
-TypeName.fromParts(param ParamType, ...) { return init{ field = expr, ... } }
+TypeName.zeros() => init{ field = expr; ... }
+TypeName.fromParts(param ParamType, ...) { return init{ field = expr; ... } }
 ```
 
 ```zane
@@ -378,28 +378,28 @@ p TypeName.fromParts(arg)
 
 ```zane
 TypeName{
-    fieldA FieldType,
-    fieldB FieldType(args...),
-    fieldC FieldType = expr,
+    fieldA FieldType;
+    fieldB FieldType(args...);
+    fieldC FieldType = expr;
     ...
 } {
-    return init{fieldA, fieldB, fieldC}
+    return init{fieldA; fieldB; fieldC;}
 }
 TypeName{
-    fieldA FieldType,
-    fieldB FieldType(args...),
-    fieldC FieldType = expr,
+    fieldA FieldType;
+    fieldB FieldType(args...);
+    fieldC FieldType = expr;
     ...
-} => init{fieldA, fieldB, fieldC}
+} => init{fieldA; fieldB; fieldC;}
 ```
 
-Each field entry uses either the bare required-field form `field FieldType` or an initialized storage form such as `field FieldType = expr`. This is a constructor-header-specific exception to the symbol-declaration rule above: the bare form declares a required constructor input that the call site must supply, not a standalone symbol declaration with its own storage.
+A field-constructor header is a `{ }` body, so its entries are `;`-terminated and always trailing ([`lexical.md`](lexical.md) §6.1). Each field entry uses either the bare required-field form `field FieldType` or an initialized storage form such as `field FieldType = expr`. The bare form declares a required constructor input that the call site must supply, not a standalone symbol declaration with its own storage.
 
 Field-constructor call sites may use explicit or implicit field names:
 
 ```zane
-name TypeName{fieldA = expr, fieldB = expr}
-name TypeName{fieldA, fieldB}
+name TypeName{fieldA = expr; fieldB = expr;}
+name TypeName{fieldA; fieldB;}
 ```
 
 A field-constructor call may omit any field whose constructor entry includes an initializer.
@@ -408,9 +408,9 @@ A field-constructor call may omit any field whose constructor entry includes an 
 
 ```zane
 implicit TypeName(param ParamType) {
-    return init{ field = expr, ... }
+    return init{ field = expr; ... }
 }
-implicit TypeName(param ParamType) => init{ field = expr, ... }
+implicit TypeName(param ParamType) => init{ field = expr; ... }
 ```
 
 Implicit constructors use the `implicit` modifier and are written only in positional form with exactly one parameter.
@@ -420,7 +420,7 @@ Illegal forms:
 ```zane
 implicit TypeName() { ... }           // ILLEGAL: exactly one parameter is required
 implicit TypeName(a A, b B) { ... }   // ILLEGAL: implicit constructors are single-parameter only
-implicit TypeName{field FieldType} { ... } // ILLEGAL: field-constructor form is not allowed
+implicit TypeName{field FieldType;} { ... } // ILLEGAL: field-constructor form is not allowed
 ```
 
 ### 3.6 Subscript definitions
@@ -445,13 +445,13 @@ ReturnType (this SubjectType)[index ParamType] => expr
 
 ```zane
 init{
-    field = expr,
-    otherField,
+    field = expr;
+    otherField;
     ...
 }
 ```
 
-A bare field name inside `init{ }` is shorthand for `fieldName = fieldName`.
+`init{ }` is a `{ }` body, so its fields are `;`-terminated and always trailing ([`lexical.md`](lexical.md) §6.1). A bare field name inside `init{ }` is shorthand for `fieldName = fieldName`.
 
 ### 3.8 Lambda literals and lambda-variable declarations
 

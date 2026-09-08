@@ -212,7 +212,7 @@ Int scaledId(this Node, factor Int) => this._id * factor
 Unit noOperation() => Unit()
 ```
 
-`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x, y}` is shorthand for `{ return init{x, y} }`.
+`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x; y;}` is shorthand for `{ return init{x; y;} }`.
 
 ### 3.5 Block-bodied verbs return explicitly
 

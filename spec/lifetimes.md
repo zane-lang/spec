@@ -302,7 +302,7 @@ result Expr = Expr.intLit("0")
 A guest naming inside the value is what a constructor's `init{ }` normally settles:
 
 ```zane
-Main(io std$IO) => init{io, terminal = Terminal(io)}
+Main(io std$IO) => init{io; terminal = Terminal(io);}
 ```
 
 `io` moves into the Main's own field, and the guest inside `terminal` follows it there ([`memory.md`](memory.md) §2.8.1). A `Main` may therefore be stored anywhere, while a `Car` holding a guest to storage it does not own may only go where that storage outlives it.
@@ -346,7 +346,7 @@ main.terminal!setIO(main.io)       // → main.terminal.io = main.io
 A constructor is the same case. Its `init{ }` fills an object whose destination the body cannot see, so what the body can state is which parameters land in it:
 
 ```zane
-Terminal(io &IO) => init{io}       // recorded: io comes to rest at the result's io
+Terminal(io &IO) => init{io;}       // recorded: io comes to rest at the result's io
 ```
 
 ```zane

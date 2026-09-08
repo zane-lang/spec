@@ -121,7 +121,7 @@ A payload that is itself a constructed value — a `struct` or another variant �
 
 ```zane
 e Expr.op(Operation.fromParts(a, b))          // build the Operation payload, then wrap it
-e Expr.qualifiedIdent(QualifiedIdent{ packageName, member })
+e Expr.qualifiedIdent(QualifiedIdent{ packageName; member; })
 ```
 
 Naming a case takes its payload whole; to reach a nested case, write another case form for the payload. There is no `Expr.op.fromParts(...)` reaching into a payload's own construction, and no `Outer.a.b(...)` chaining through one case into another — the mirror, on the construction side, of matching one level and going no deeper (§5.3).
