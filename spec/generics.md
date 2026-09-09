@@ -263,11 +263,18 @@ A `Type` value parameter is usable as a type inside the body (for example, `T(0)
 
 ### 5.4 Concept-typed literals must be wrapped
 
-A bare source literal carries a compiler concept type (such as `@concepts$Number`), not a concrete storage type. A bare literal **MUST NOT** drive inference of a type parameter, because the compiler cannot choose between `Int`, `Float`, and other concrete types. Wrap the literal in its destination type:
+A bare source literal carries a compiler concept type, not a concrete storage type. Whether it may drive inference turns on whether that concept type fixes a concrete type. A `@concepts$Number` or `@concepts$Text` does not — the compiler cannot choose between `Int`, `Float`, and other concrete types — so such a literal **MUST NOT** drive inference of a type parameter. Wrap it in its destination type:
 
 ```zane
 vec Vector(Int(2), Int(3))   // legal: each argument is a concrete Int
 vec Vector(2, 3)             // ILLEGAL: literals cannot drive inference of T
+```
+
+A `[ ]` literal is the case where the concept type does carry concrete parameters. Its `@concepts$Collection<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it. The wrap is therefore required of the **elements** rather than of the bracket:
+
+```zane
+arr Array([Int(1), Int(2), Int(3)])   // legal: elements are concrete, so T = Int and n = 3
+arr Array([1, 2, 3])                  // ILLEGAL: bare elements fix no T, as in Vector(2, 3)
 ```
 
 This single explicit wrap at the call site is the deliberate cost that replaces a `<>` type-argument list at every call.

@@ -238,10 +238,20 @@ Every `@` namespace is reachable from every package without an import.
 ```zane
 @concepts$Number
 @concepts$Text
-@concepts$Collection
+@concepts$Collection<T, n>
 ```
 
 These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
+
+An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Collection<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
+
+A literal with no elements fixes no `T`, so an array literal **MUST** hold at least one element. An empty collection is built by naming its type, which supplies the element type the literal cannot:
+
+```zane
+nums Array([Int(1), Int(2), Int(3)])   // legal: T and n read from the literal
+empty Array(Int, 0)                    // legal: the type is named, not inferred
+empty []                               // ILLEGAL: an empty literal fixes no element type
+```
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 

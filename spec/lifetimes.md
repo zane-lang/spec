@@ -361,7 +361,7 @@ main Main()
 A swallowed `T` parameter is recorded the same way, and that is what settles an argument carrying a guest. Neither frame sees the problem alone — the argument reaches a parameter in the call-site scope, and inside the callee both parameters share it:
 
 ```zane
-cars List<Car> = []
+cars List(Car)
 {
     innerHolder Holder(Engine(Int(2)))
     arriving Car(innerHolder.engine)
