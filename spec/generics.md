@@ -97,7 +97,7 @@ Inference is therefore not a separate mechanism. It is the same `T Type` binding
 
 Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
 
-A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the literal's length).
+A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the argument's length).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#the-parameter-model) — "The parameter model" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
@@ -288,14 +288,14 @@ This single explicit wrap at the call site is the deliberate cost that replaces 
 ### 6.1 Inferred from a literal
 
 ```zane
-Array<T, n>(values Array<T Type, n Number>) {
+Array<T, n>(values @concepts$Collection<T Type, n Number>) {
     // T and n inferred from the literal
 }
 
 arr Array([Int(1), Int(2), Int(3)])         // T = Int and n = 3 inferred from the literal
 ```
 
-The value-parameter type `Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length.
+The value-parameter type `@concepts$Collection<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
 
 ### 6.2 Explicit type and size
 
