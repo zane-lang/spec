@@ -278,7 +278,7 @@ pairs Map({
 
 It could not carry a useful count in any case. Entries with equal keys collapse, and a key is an expression, so the number of entries written is only an upper bound on the number stored — where an array literal's `n` is exact.
 
-An empty `{ }` is always a code block, never a map literal (§4.9), so the two never compete for the same text.
+An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.9), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
 
 `Map` in the examples above is illustrative. What this section fixes is the **literal** and the concept type it carries; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 

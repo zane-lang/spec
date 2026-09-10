@@ -168,7 +168,7 @@ A third guard covers the separator. **The bracket picks the separator**
 `,`, never trailing. `init{ }` and the field-constructor header and call site
 used `,` under the previous rule, so those are the two forms a session is most
 likely to write back — every other C-family language separates them with commas,
-and the pull is strong. Both greps should come back empty:
+and the pull is strong. Both greps come back empty on the current spec:
 
 ```sh
 grep -RIn "init{[^}]*," spec/
