@@ -80,7 +80,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
-- **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. Having no storage form, a concept-typed value lowers into whatever destination type is statically fixed. A `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
+- **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. A `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8
 
@@ -200,8 +200,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly. A concept-typed source is unaffected either way: having no storage form, it lowers into any statically fixed destination, coercion site or not.
-- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in. Where a concept-typed source lowers outside a coercion site, it is those same `core` constructors doing the work rather than a compiler special case.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould

@@ -90,7 +90,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int` and `"a"` a `String` at a coercion site — and, because a concept type has no storage form, at any other statically fixed destination too (§4.2) — and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int` and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
 Because `core` is an ordinary dependency, two of its versions may be linked side by side like any other package's ([`dependencies.md`](dependencies.md) §11), and a project that wants them collapsed opts into remapping (§15 there). No version of `Int` is forced on a program, and none is the language's.
 
@@ -198,9 +198,9 @@ type Weapon = #struct {
 }
 
 Weapon{
-    name String = "Pistol";
+    name String("Pistol");
     fireRate Float(1);
-    damage Float = 10;
+    damage Float(10);
 } {
     return init{name; fireRate; damage;}
 }
@@ -414,8 +414,6 @@ distance Meters = Feet(Float(10))           // ILLEGAL: a declaration is not a c
 distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
 ```
 
-`Feet` is an ordinary type here. A **concept-typed** source — a bare source literal — is not converted at a declaration but *lowered* into it, which §4.2 states separately; that is why `text String = ""` is legal while the line above is not.
-
 ### 4.2 Coercion sites
 A coercion site is a position that passes a value into a contract whose destination type is fixed by a callable or language construct. These are the only positions where the compiler inserts an implicit constructor:
 
@@ -427,7 +425,7 @@ A coercion site is a position that passes a value into a contract whose destinat
 
 Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 
-Apart from the concept-typed sources described further below, an implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
+An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
 - Symbol declarations with a type annotation: `name VarType = expr`
 - Assignments to already-declared symbols: `name = expr`
@@ -436,22 +434,6 @@ Apart from the concept-typed sources described further below, an implicit constr
 - Named field entries of an `init{ field = expr; }` initializer inside a constructor body
 
 At each of these positions the destination type is one you fix yourself — a local declaration, existing storage, the return type in the enclosing signature, or the fields the constructor builds through `init{ }` — rather than a contract supplied by a callee or language construct, so the conversion must be written explicitly.
-
-A source whose type is a **compiler concept type** is the one exception, and it is not a widening of the rule. A concept type has no storage form at all: [`syntax.md`](syntax.md) §2.8 forbids one in a local, a field, or any other storage position. A concept-typed expression therefore cannot come to rest anywhere, so it is lowered into its destination wherever that destination type is **statically fixed** — including every position listed above. The mechanism is unchanged: the same `core` implicit constructors resolve by the algorithm below, and only the set of positions differs. Nothing here is a compiler-only lowering path.
-
-```zane
-text String = ""      // legal: "" is concept-typed, and String is fixed by the annotation
-text = "hi"           // legal: the destination is the declared type of text
-count Int = 20        // legal: same rule
-```
-
-An ordinary type needs no such lowering, because it already has a storage form. The restriction above therefore stands unchanged for one: a `Feet` value at a declaration is still an error (§4.1); only a concept-typed source lowers.
-
-```zane
-distance Meters = Feet(Float(10))   // ILLEGAL: Feet is an ordinary type, not a concept type
-```
-
-Lowering needs a destination to lower *into*. Where no destination type is fixed — a generic parameter the literal would otherwise have to infer — the literal is wrapped in its destination type instead ([`generics.md`](generics.md) §5.4).
 
 Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [operators.md](operators.md) §2.2); each operand is a positional argument of that call.
 
@@ -599,7 +581,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body, except that a concept-typed source lowers at any statically fixed destination; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `Number` constructor parameter | Accepts a type or a compile-time number; inferred from inline introduction or passed explicitly as a value parameter |

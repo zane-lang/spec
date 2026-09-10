@@ -540,12 +540,12 @@ The shorthand expands to a symbol declaration whose type is the function type (Â
 
 ```zane
 callback Unit[this Player] mut = Unit(this Player) mut {
-    this.shooting = false
+    this.shooting = Bool(false)
     return Unit()
 }
 
 callback Unit(this Player) mut {        // shorthand for the line above
-    this.shooting = false
+    this.shooting = Bool(false)
     return Unit()
 }
 ```
