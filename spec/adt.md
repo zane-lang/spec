@@ -311,6 +311,7 @@ A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): th
 - Enum maps belong to enums specifically — uniform peers paired with uniform external data. A `variant` would never want one, because its data is intrinsic to each case.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#payloadless-peers-keep-their-data-outside) — "Payloadless peers keep their data outside".
+> **Story:** [`stories/types.md`](../stories/types.md#no-exception-for-the-bare-literal) — "No exception for the bare literal" tells why an entry here is a coercion site.
 
 ---
 

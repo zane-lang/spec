@@ -519,6 +519,7 @@ feet:logDistance()   // ILLEGAL: subject type is Feet, not Meters
 ```
 
 > **See also:** [`functions.md`](functions.md) §5 for how implicit constructors interact with overload resolution.
+> **Story:** [`stories/types.md`](../stories/types.md#no-exception-for-the-bare-literal) — "No exception for the bare literal".
 > **Story:** [`stories/types.md`](../stories/types.md#coercion-follows-the-call-not-the-store) — "Coercion follows the call, not the store".
 
 ---
