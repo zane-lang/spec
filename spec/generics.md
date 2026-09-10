@@ -270,7 +270,7 @@ vec Vector(Int(2), Int(3))   // legal: each argument is a concrete Int
 vec Vector(2, 3)             // ILLEGAL: literals cannot drive inference of T
 ```
 
-A `[ ]` literal is the case where the concept type does carry concrete parameters. Its `@concepts$Collection<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it. The wrap is therefore required of the **elements** rather than of the bracket:
+A `[ ]` literal is the case where the concept type does carry concrete parameters. Its `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it. The wrap is therefore required of the **elements** rather than of the bracket:
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])   // legal: elements are concrete, so T = Int and n = 3
@@ -288,14 +288,14 @@ This single explicit wrap at the call site is the deliberate cost that replaces 
 ### 6.1 Inferred from a literal
 
 ```zane
-Array<T, n>(values @concepts$Collection<T Type, n Number>) {
+Array<T, n>(values @concepts$Array<T Type, n Number>) {
     // T and n inferred from the literal
 }
 
 arr Array([Int(1), Int(2), Int(3)])         // T = Int and n = 3 inferred from the literal
 ```
 
-The value-parameter type `@concepts$Collection<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
+The value-parameter type `@concepts$Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
 
 ### 6.2 Explicit type and size
 
@@ -359,7 +359,7 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 The following are intentionally not specified in this version:
 
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
-- dynamic container types such as lists and maps
+- dynamic container types such as lists and maps — their **literal forms** are specified ([`syntax.md`](syntax.md) §2.8), but the container types themselves are not: their operations, whether a map preserves any order, and what a map requires of a key type are all open
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it

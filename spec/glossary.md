@@ -80,7 +80,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
-- **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. Having no storage form, a concept-typed value lowers into whatever destination type is statically fixed. `@concepts$Collection<T, n>` is the type of a `[ ]` literal, carrying its element type and length.
+- **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. Having no storage form, a concept-typed value lowers into whatever destination type is statically fixed. A `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8
 

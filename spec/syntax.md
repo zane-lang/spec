@@ -238,12 +238,13 @@ Every `@` namespace is reachable from every package without an import.
 ```zane
 @concepts$Number
 @concepts$Text
-@concepts$Collection<T, n>
+@concepts$Array<T, n>
+@concepts$Map<K, V>
 ```
 
 These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
-An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Collection<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
+An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
 
 A literal with no elements fixes no `T`, so an array literal **MUST** hold at least one element. An empty collection is built by naming its type, which supplies the element type the literal cannot:
 
@@ -252,6 +253,32 @@ nums Array([Int(1), Int(2), Int(3)])   // legal: T and n read from the literal
 empty Array(Int, 0)                    // legal: the type is named, not inferred
 empty []                               // ILLEGAL: an empty literal fixes no element type
 ```
+
+A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`lexical.md`](lexical.md)), each entry exactly two `,`-separated expressions — a key and a value. It carries `@concepts$Map<K, V>`, where `K` is the type of every key and `V` the type of every value. As with an array literal, every key **MUST** already have type `K` and every value type `V`; there is no search for a common type. A map literal **MUST** hold at least one entry, since an empty one fixes neither `K` nor `V`.
+
+```zane
+lookup Map({
+    String("first"), Int(1);
+    String("second"), Int(2);
+})
+```
+
+Entries are evaluated in written order. A key is an ordinary expression rather than a name, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
+
+```zane
+first String("y")
+
+pairs Map({
+    first, String("hello");    // key is the value of `first`, which is "y"
+    String("y"), String("b");  // same key: replaces the entry above
+})
+```
+
+`@concepts$Map` carries no entry count, unlike `@concepts$Array`. A count belongs in the concept type only because `Array<T, n>` puts its size in the type (see [`generics.md`](generics.md) §7); nothing a map literal lowers into needs one.
+
+An empty `{ }` is always a code block, never a map literal (§4.9), so the two never compete for the same text.
+
+`Map` in the examples above is illustrative. What this section fixes is the **literal** and the concept type it carries; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 

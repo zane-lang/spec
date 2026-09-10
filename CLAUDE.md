@@ -178,6 +178,9 @@ grep -RIn -E "\b[A-Z][A-Za-z0-9_]*(<[^>]*>)?\{[^}]*," spec/
 Unlike the greps above, a hit here is **not automatically a defect** — read it
 before fixing it. A `,` is still legal *inside* one entry, where it separates a
 nested list (`init{value = max(a, b);}` is correct, and the first grep flags it).
+A **map literal** is the common case of this: its entries are `key, value` pairs
+(`spec/syntax.md` §2.8), so one nested in an `init{ }` — `init{pairs = {a, b;};}`
+— trips the first grep while being correct.
 What is retired is a `,` between entries at the body's top level. The greps
 cannot tell the two apart, because that needs bracket-depth tracking a regex does
 not have; they narrow the file down to a handful of lines for a human or agent to
