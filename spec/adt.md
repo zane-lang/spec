@@ -305,6 +305,8 @@ Colors.red.colorName   // "Red" — a String value
 
 The form is `<Enum>.<property> <VarType> [ member = value, ... ]`. It uses `[ ]` brackets with `,` separators, names the property where it is read, and reserves **no keyword**, so `Map` and `Dict` stay free for a future dictionary type.
 
+A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): the header states the property's type and each entry fills it, so an applicable `implicit` constructor is inserted there.
+
 - An enum map is **not a passable value**. The mapping is static, so there is nothing to dispatch over; only its *result* is a value. A genuinely dynamic `Colors → String` transform is a lambda (`String[Colors]`), not a map.
 - Enum maps belong to enums specifically — uniform peers paired with uniform external data. A `variant` would never want one, because its data is intrinsic to each case.
 

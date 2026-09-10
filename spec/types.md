@@ -422,6 +422,9 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr; }`
+- Entries of an enum-map declaration ([`adt.md`](adt.md) §6)
+
+An enum-map entry belongs on this side for the same reason a field-constructor entry does: the declaration's header states the contract — the property and its type — and each entry fills that already-stated slot, rather than declaring a type and a value in one act the way a symbol declaration does.
 
 Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 

@@ -200,7 +200,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, or a named field entry of a field-constructor call. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
