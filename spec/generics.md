@@ -97,7 +97,7 @@ Inference is therefore not a separate mechanism. It is the same `T Type` binding
 
 Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
 
-A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the literal's length).
+A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the argument's length).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#the-parameter-model) — "The parameter model" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
@@ -263,11 +263,18 @@ A `Type` value parameter is usable as a type inside the body (for example, `T(0)
 
 ### 5.4 Concept-typed literals must be wrapped
 
-A bare source literal carries a compiler concept type (such as `@concepts$Number`), not a concrete storage type. A bare literal **MUST NOT** drive inference of a type parameter, because the compiler cannot choose between `Int`, `Float`, and other concrete types. Wrap the literal in its destination type:
+A bare source literal carries a compiler concept type, not a concrete storage type. Whether it may drive inference turns on whether that concept type fixes a concrete type. A `@concepts$Number` or `@concepts$Text` does not — the compiler cannot choose between `Int`, `Float`, and other concrete types — so such a literal **MUST NOT** drive inference of a type parameter. Wrap it in its destination type:
 
 ```zane
 vec Vector(Int(2), Int(3))   // legal: each argument is a concrete Int
 vec Vector(2, 3)             // ILLEGAL: literals cannot drive inference of T
+```
+
+A `[ ]` literal is the case where the concept type does carry concrete parameters. Its `@concepts$Collection<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it. The wrap is therefore required of the **elements** rather than of the bracket:
+
+```zane
+arr Array([Int(1), Int(2), Int(3)])   // legal: elements are concrete, so T = Int and n = 3
+arr Array([1, 2, 3])                  // ILLEGAL: bare elements fix no T, as in Vector(2, 3)
 ```
 
 This single explicit wrap at the call site is the deliberate cost that replaces a `<>` type-argument list at every call.
@@ -281,14 +288,14 @@ This single explicit wrap at the call site is the deliberate cost that replaces 
 ### 6.1 Inferred from a literal
 
 ```zane
-Array<T, n>(values Array<T Type, n Number>) {
+Array<T, n>(values @concepts$Collection<T Type, n Number>) {
     // T and n inferred from the literal
 }
 
 arr Array([Int(1), Int(2), Int(3)])         // T = Int and n = 3 inferred from the literal
 ```
 
-The value-parameter type `Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length.
+The value-parameter type `@concepts$Collection<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
 
 ### 6.2 Explicit type and size
 
