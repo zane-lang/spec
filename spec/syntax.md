@@ -274,7 +274,9 @@ pairs Map({
 })
 ```
 
-`@concepts$Map` carries no entry count, unlike `@concepts$Array`. A count belongs in the concept type only because `Array<T, n>` puts its size in the type (see [`generics.md`](generics.md) §7); nothing a map literal lowers into needs one.
+`@concepts$Map` carries no entry count, unlike `@concepts$Array`. The map literal is not a general-purpose container literal; it is a specialized form for key-value pairs, and `Array` is where generic containment lives. A keyed structure that needs its size in its type is therefore built from an **array of pair values** — an ordinary array literal, which supplies `n` in the ordinary way — rather than from a map literal.
+
+It could not carry a useful count in any case. Entries with equal keys collapse, and a key is an expression, so the number of entries written is only an upper bound on the number stored — where an array literal's `n` is exact.
 
 An empty `{ }` is always a code block, never a map literal (§4.9), so the two never compete for the same text.
 
