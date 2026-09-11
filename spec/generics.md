@@ -270,14 +270,14 @@ vec Vector(Int(2), Int(3))   // legal: each argument is a concrete Int
 vec Vector(2, 3)             // ILLEGAL: literals cannot drive inference of T
 ```
 
-A **container literal** is the case where the concept type does carry concrete parameters. A `[ ]` literal's `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it; a `{ }` map literal's `@concepts$Map<K, V>` fixes a key type and a value type on the same terms. The wrap is therefore required of the **entries** — a map literal's keys and values alike — rather than of the bracket:
+A **container literal** is the case where the concept type does carry concrete parameters. A `[ ]` literal's `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it; a `{ }` map literal's `@concepts$Map<K, V>` fixes a key type and a value type on the same terms. The wrap is therefore required of the **entries** — a map literal's keys and values alike — rather than of the bracket. The map literal below stands on its own, since the container types that consume one are not specified in this version (§9):
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])          // legal: elements are concrete, so T = Int and n = 3
 arr Array([1, 2, 3])                         // ILLEGAL: bare elements fix no T, as in Vector(2, 3)
 
-lookup Map({String("k"), Int(1);})           // legal: entries are concrete, so K = String and V = Int
-lookup Map({"k", 1;})                        // ILLEGAL: bare entries fix no K or V
+{String("k"), Int(1);}                       // entries are concrete, so K = String and V = Int
+{"k", 1;}                                    // bare entries fix neither K nor V, so this drives no inference
 ```
 
 This single explicit wrap at the call site is the deliberate cost that replaces a `<>` type-argument list at every call.
