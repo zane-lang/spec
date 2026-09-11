@@ -129,7 +129,7 @@ The **bracket picks the separator**. A `{ }` body terminates each entry with `;`
 
 ### 6.1 `;` terminates an entry inside `{ }`
 
-A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; the entries of a field-constructor header or call site; and the entries of a map literal (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
+A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; the entries of a field-constructor header or call site; the entries of an enum-map declaration ([`adt.md`](adt.md) §6); and the entries of a map literal (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
 
 ```zane
 type Node = #struct {
@@ -173,7 +173,7 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 
 | Bracket | Encloses | Separator |
 |---|---|---|
-| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; a map literal | `;`, always trailing |
+| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; an enum-map declaration; a map literal | `;`, always trailing |
 | `{ }` | a code block: a function body, a control-flow block, or a block argument | a newline (§6.3) |
 | `[ ]` | a flat list: an array, an `enum` body, a `match` case group, a function-type parameter list | `,`, never trailing |
 | `( )` | a parameter list or an argument list | `,`, never trailing |
@@ -202,7 +202,7 @@ A `{ }` is the one bracket with two readings, and the two are told apart by what
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a guest type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
-| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries); always trailing, inline or multiline; newlines are insignificant there |
+| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
 | Brackets | The bracket picks the separator: `{ }` takes `;` (or newlines, as a code block), `[ ]`/`( )`/`< >` take `,` |

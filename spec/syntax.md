@@ -127,13 +127,13 @@ type Name = enum [ memberA, memberB, memberC ]
 
 ### 1.9 Enum map declarations
 
-An enum map is a package-scope declaration. It names the enum, the property, the property's type, then a `[ ]` list of `,`-separated `member = value` entries.
+An enum map is a package-scope declaration. It names the enum, the property, the property's type, then a `{ }` body of `;`-terminated `member = value` entries.
 
 ```zane
-EnumName.property FieldType [
-    memberA = valueA,
-    memberB = valueB
-]
+EnumName.property FieldType {
+    memberA = valueA;
+    memberB = valueB;
+}
 ```
 
 > **See also:** [`adt.md`](adt.md) §6 for enum-map semantics.

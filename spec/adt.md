@@ -294,16 +294,16 @@ newState State = match state, event {
 An enum map attaches **uniform external data** to an enum's members. It is a package-scope, exhaustive, **access-only** declaration — there is no value form, like a method — and it is read field-style with `.`.
 
 ```zane
-Colors.colorName String [
-    red = "Red",
-    green = "Green",
-    blue = "Blue"
-]
+Colors.colorName String {
+    red = "Red";
+    green = "Green";
+    blue = "Blue";
+}
 
 Colors.red.colorName   // "Red" — a String value
 ```
 
-The form is `<Enum>.<property> <VarType> [ member = value, ... ]`. It uses `[ ]` brackets with `,` separators, names the property where it is read, and reserves **no keyword**, so `Map` and `Dict` stay free for a future dictionary type.
+The form is `<Enum>.<property> <VarType> { member = value; ... }`. Its body pairs a name with a value for each entry, so it is a `{ }` body with `;`-terminated entries like every other such form ([`lexical.md`](lexical.md) §6.1) — the `enum` body it ranges over is a flat list of bare members and keeps `[ ]`. It names the property where it is read, and reserves **no keyword**, so `Map` and `Dict` stay free for a future dictionary type.
 
 A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): the header states the property's type and each entry fills it, so an applicable `implicit` constructor is inserted there.
 
@@ -374,4 +374,4 @@ type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |
 | Multiple scrutinees | `match a, b { sel, sel => body; ... }`; bare comma list, never a tuple; one selector per position; cross-product exhaustiveness, no default |
 | Open operations | The variant is closed; any package may match it in its own function |
-| Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <VarType> [ member = value, ... ]`; read field-style; not a passable value |
+| Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <VarType> { member = value; ... }`; read field-style; not a passable value |

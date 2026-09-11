@@ -189,9 +189,11 @@ judge.
 They are also single-line only, so a body spread across lines — a multi-line
 `init{ }` or `Weapon{ ... }` header — slips past both. That gap is deliberate
 rather than an oversight: the obvious multi-line pattern (an indented entry line
-ending in `,`) matches enum-map entries and `enum` bodies, which are `[ ]` lists
-and keep their commas by the rule itself, so it would be a guard with standing
-legitimate hits — the thing the `&X = bareSymbol` guard was removed for being.
+ending in `,`) matches a multi-line `enum` body, which is a `[ ]` list and keeps
+its commas by the rule itself, so it would be a guard with standing legitimate
+hits — the thing the `&X = bareSymbol` guard was removed for being. (Enum maps
+used to be the other such pattern; they are `{ }` bodies with `;`-terminated
+entries now, so they no longer carry a top-level `,` at all.)
 When a change touches a multi-line `{ }` body, check it by reading.
 
 For the same reason nothing here sweeps `[ ]`: an array literal, an `enum` body,
