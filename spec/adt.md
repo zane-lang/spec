@@ -312,6 +312,7 @@ A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): th
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#payloadless-peers-keep-their-data-outside) — "Payloadless peers keep their data outside".
 > **Story:** [`stories/types.md`](../stories/types.md#no-exception-for-the-bare-literal) — "No exception for the bare literal" tells why an entry here is a coercion site.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-straggler-the-rule-had-already-caught) — "The straggler the rule had already caught" tells why this body moved from `[ ]` to `{ }`.
 
 ---
 
