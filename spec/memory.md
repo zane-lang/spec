@@ -347,9 +347,9 @@ text String   // ILLEGAL: symbols require direct initialization
 ```
 
 ```zane
-text String = ""   // LEGAL: directly initialized
+text String("")   // LEGAL: directly initialized
 if(runtimeBool()) {
-    text = "hi"
+    text = String("hi")
 }
 ```
 

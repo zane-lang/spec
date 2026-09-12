@@ -129,7 +129,7 @@ The **bracket picks the separator**. A `{ }` body terminates each entry with `;`
 
 ### 6.1 `;` terminates an entry inside `{ }`
 
-A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; and the entries of a field-constructor header or call site (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
+A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; the entries of a field-constructor header or call site; the entries of an enum-map declaration ([`adt.md`](adt.md) §6); and the entries of a map literal (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
 
 ```zane
 type Node = #struct {
@@ -143,11 +143,11 @@ type Color = struct { r Int; g Int; b Int; }   // inline body, every entry ends 
 Vec2(x Float, y Float) => init{x; y;}
 ```
 
-A `,` may still appear *inside* an entry, where it separates a nested list under §6.2 — a `match` arm's per-scrutinee selectors, or the arguments of a call in a field's initializer. The `;` terminates the entry; a `,` separates parts within one.
+A `,` may still appear *inside* an entry, where it separates a nested list under §6.2 — a map entry's `key, value` pair, a `match` arm's per-scrutinee selectors, or the arguments of a call in a field's initializer. The `;` terminates the entry; a `,` separates parts within one.
 
 ### 6.2 `,` separates an entry inside `[ ]`, `( )`, and `< >`
 
-A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all — a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.8) — separates with `,` on the same terms.
+A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.8), and the `key, value` pair of a map entry (§2.8 there).
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)])
@@ -173,15 +173,17 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 
 | Bracket | Encloses | Separator |
 |---|---|---|
-| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site | `;`, always trailing |
+| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; an enum-map declaration; a map literal | `;`, always trailing |
 | `{ }` | a code block: a function body, a control-flow block, or a block argument | a newline (§6.3) |
 | `[ ]` | a flat list: an array, an `enum` body, a `match` case group, a function-type parameter list | `,`, never trailing |
 | `( )` | a parameter list or an argument list | `,`, never trailing |
 | `< >` | a generic header or a generic argument list | `,`, never trailing |
 
-A `{ }` is the one bracket with two readings, and the two are told apart by what the entries are rather than by lookahead: a body holds `;`-terminated entries, a code block holds statements. Every `{ }` is introduced by a token that says which it is — a mould keyword, `match`, `init`, a type name, or a verb's signature — so the parser always knows both which separator applies and whether a newline is structural.
+A `{ }` is the one bracket with two readings, and the two are told apart by what the entries are rather than by lookahead: a body holds `;`-terminated entries, a code block holds statements. Most `{ }` are also introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** is the one that stands alone in a value position with no such token, and it is told apart by its own shape: its entries are `;`-terminated rather than statements, and it is never empty, so a bare `{}` is always a code block ([`syntax.md`](syntax.md) §2.8).
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-straggler-the-rule-had-already-caught) — "The straggler the rule had already caught" tells why the enum map changed brackets to match.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-brace-with-nothing-in-front-of-it) — "The brace with nothing in front of it" tells why a map literal carries no leading token and why no literal may be empty.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing" tells where the two marks and the trailing asymmetry came from.
 
@@ -201,7 +203,7 @@ A `{ }` is the one bracket with two readings, and the two are told apart by what
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a guest type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
-| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries); always trailing, inline or multiline; newlines are insignificant there |
+| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
 | Brackets | The bracket picks the separator: `{ }` takes `;` (or newlines, as a code block), `[ ]`/`( )`/`< >` take `,` |

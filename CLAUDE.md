@@ -168,7 +168,7 @@ A third guard covers the separator. **The bracket picks the separator**
 `,`, never trailing. `init{ }` and the field-constructor header and call site
 used `,` under the previous rule, so those are the two forms a session is most
 likely to write back — every other C-family language separates them with commas,
-and the pull is strong. Both greps should come back empty:
+and the pull is strong. Both greps come back empty on the current spec:
 
 ```sh
 grep -RIn "init{[^}]*," spec/
@@ -178,6 +178,9 @@ grep -RIn -E "\b[A-Z][A-Za-z0-9_]*(<[^>]*>)?\{[^}]*," spec/
 Unlike the greps above, a hit here is **not automatically a defect** — read it
 before fixing it. A `,` is still legal *inside* one entry, where it separates a
 nested list (`init{value = max(a, b);}` is correct, and the first grep flags it).
+A **map literal** is the common case of this: its entries are `key, value` pairs
+(`spec/syntax.md` §2.8), so one nested in an `init{ }` — `init{pairs = {a, b;};}`
+— trips the first grep while being correct.
 What is retired is a `,` between entries at the body's top level. The greps
 cannot tell the two apart, because that needs bracket-depth tracking a regex does
 not have; they narrow the file down to a handful of lines for a human or agent to
@@ -186,14 +189,16 @@ judge.
 They are also single-line only, so a body spread across lines — a multi-line
 `init{ }` or `Weapon{ ... }` header — slips past both. That gap is deliberate
 rather than an oversight: the obvious multi-line pattern (an indented entry line
-ending in `,`) matches enum-map entries and `enum` bodies, which are `[ ]` lists
-and keep their commas by the rule itself, so it would be a guard with standing
-legitimate hits — the thing the `&X = bareSymbol` guard was removed for being.
+ending in `,`) matches a multi-line `enum` body, which is a `[ ]` list and keeps
+its commas by the rule itself, so it would be a guard with standing legitimate
+hits — the thing the `&X = bareSymbol` guard was removed for being. (Enum maps
+used to be the other such pattern; they are `{ }` bodies with `;`-terminated
+entries now, so they no longer carry a top-level `,` at all.)
 When a change touches a multi-line `{ }` body, check it by reading.
 
 For the same reason nothing here sweeps `[ ]`: an array literal, an `enum` body,
-a `match` case group, and an enum map all keep `,` under the current rule. They
-are not exceptions to it — they are the other half of it.
+and a `match` case group all keep `,` under the current rule. They are not
+exceptions to it — they are the other half of it.
 
 If the grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc
