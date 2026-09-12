@@ -14,7 +14,8 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
-- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a newline separates.
+- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none.
+- **`Newlines are never structural`.** Every entry and every statement has its own end mark — a `;`, or for a statement ending in `}`, that brace — so line breaks are free everywhere.
 
 ---
 
@@ -48,8 +49,8 @@ Package names share lowercase-initial casing with value names but are syntactica
 A name used in a type position **MUST** be uppercase-initial. A lowercase name in a type position is a compile-time error.
 
 ```zane
-vec Vector(Int(2), Int(3))   // legal: Vector and Int are types
-vec vector(int(2))           // ILLEGAL: lowercase names are not types
+vec Vector(Int(2), Int(3));  // legal: Vector and Int are types
+vec vector(int(2));          // ILLEGAL: lowercase names are not types
 ```
 
 ### 3.2 Values must be lowercase
@@ -113,7 +114,7 @@ type Holder = struct {
     data Array<Int, 9>;   // type expression: Array is uppercase, so < opens a type argument list
 }
 
-ok Bool = a < b          // comparison: a is lowercase, so < is the comparison operator
+ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison operator
 ```
 
 A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The casing rule therefore tells the two apart by inspecting a single token's first letter.
@@ -150,20 +151,52 @@ A `,` may still appear *inside* an entry, where it separates a nested list under
 A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.8), and the `key, value` pair of a map entry (§2.8 there).
 
 ```zane
-arr Array([Int(1), Int(2), Int(3)])
+arr Array([Int(1), Int(2), Int(3)]);
 type Colors = enum [ red, green, blue ]
 Node(id Int, scale Float, label String)
 ```
 
-### 6.3 Newlines separate statements
+### 6.3 `;` terminates a statement
 
-A newline separates statements in a function body or a control-flow block. Zane has no statement separator, so two statements cannot share a line. This is the one place a newline is structural.
+A `;` **terminates** every statement in a code block — a function body, a lambda body, or a block argument. Newlines are insignificant here as they are inside a `{ }` body (§6.1), so two statements may share a line and one statement may span several.
 
 ```zane
 Unit main() {
-    x Int(5)
-    print(x)
-    return Unit()
+    x Int(5);
+    print(x);
+    return Unit();
+}
+```
+
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing, and nothing may continue the statement past it either — a call or a subscript written there has nothing left to attach to ([`syntax.md`](syntax.md) §4.9). Whatever comes after the brace is the next statement.
+
+```zane
+Unit main() {
+    if(ready) {
+        start();
+    }
+    print(done);
+}
+```
+
+This applies only to **statements**. An entry of a `{ }` body carries its `;` unconditionally (§6.1), including an entry whose value ends in a `}` — that uniformity is what makes newlines insignificant inside a body, and it does not bend for the last entry or for any particular value shape.
+
+```zane
+init{
+    handler = Unit() { fire(); };
+}
+```
+
+A **package-scope declaration** is not a statement and takes no terminator of its own; it ends where its own body or bracket ends.
+
+### 6.3.1 A `{ }` may not open a statement
+
+A code block is never written on its own. A `{ }` in statement position is a compile-time error, so the only braces a reader meets at the start of a statement are the ones belonging to a declaration. Scoping a run of work is an ordinary call taking a block argument — `core`'s `do(block @concepts$Block)` — which reads the same and needs no rule of its own.
+
+```zane
+do() {
+    tmp Int(9);
+    use(tmp);
 }
 ```
 
@@ -174,14 +207,22 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 | Bracket | Encloses | Separator |
 |---|---|---|
 | `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; an enum-map declaration; a map literal | `;`, always trailing |
-| `{ }` | a code block: a function body, a control-flow block, or a block argument | a newline (§6.3) |
+| `{ }` | a code block: a function body, a lambda body, or a block argument | `;`, terminating each statement (§6.3) |
 | `[ ]` | a flat list: an array, an `enum` body, a `match` case group, a function-type parameter list | `,`, never trailing |
 | `( )` | a parameter list or an argument list | `,`, never trailing |
 | `< >` | a generic header or a generic argument list | `,`, never trailing |
 
-A `{ }` is the one bracket with two readings, and the two are told apart by what the entries are rather than by lookahead: a body holds `;`-terminated entries, a code block holds statements. Most `{ }` are also introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** is the one that stands alone in a value position with no such token, and it is told apart by its own shape: its entries are `;`-terminated rather than statements, and it is never empty, so a bare `{}` is always a code block ([`syntax.md`](syntax.md) §2.8).
+A `{ }` is the one bracket with two readings. Most are introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, and both hold `;`-terminated things, so the terminator does not separate them. In **argument position**, where the two can meet, what separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.8).
+
+```zane
+f({ key, value; });  // a map literal: ',' follows the first expression
+f({ doWork(); });    // a block argument: ';' follows it
+```
+
+Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and those commas belong to the `match` expression itself, so they are consumed before the entry's own mark is read.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement" tells why statements gained a `;` and what it bought.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-straggler-the-rule-had-already-caught) — "The straggler the rule had already caught" tells why the enum map changed brackets to match.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-brace-with-nothing-in-front-of-it) — "The brace with nothing in front of it" tells why a map literal carries no leading token and why no literal may be empty.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
@@ -205,5 +246,6 @@ A `{ }` is the one bracket with two readings, and the two are told apart by what
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
-| Statement delimiter | A newline separates statements; there is no statement separator, so two statements cannot share a line |
-| Brackets | The bracket picks the separator: `{ }` takes `;` (or newlines, as a code block), `[ ]`/`( )`/`< >` take `,` |
+| Statement terminator | `;` terminates every statement in a code block, except a statement ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
+| Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
+| Statement blocks | A `{ }` may not open a statement; a scoped run of work is a call taking a block argument (`do(block)`) |

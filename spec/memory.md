@@ -40,8 +40,8 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 Any hosting storage position for a reference-type instance—a symbol, field, or container slot—**MUST** be directly initialized, and **MAY** later be overwritten.
 
 ```zane
-tank Tank(...)
-tank = Tank(...) // legal
+tank Tank(...);
+tank = Tank(...); // legal
 ```
 
 Overwriting a host does not invalidate existing guests. Guests follow the host/anchor path, so later reads observe the host's current value.
@@ -49,7 +49,7 @@ Overwriting a host does not invalidate existing guests. Guests follow the host/a
 Container overwrite therefore does not depend on whether the element slot stores a host or a guest. Both kinds of slots may be rewritten after initialization.
 
 ```zane
-hosts Array<Node, 2> = [Node(), Node()]
+hosts Array<Node, 2> = [Node(), Node()];
 ```
 
 Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. Guests to that slot observe the new value because guests follow the host/anchor path, not the original object.
@@ -59,16 +59,16 @@ Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. G
 Value types have no anchor and no heap identity. A value is mutated in place through a `mut` method whose `this` is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale. Neither operation goes through the anchor system, because a value has no identity to track.
 
 ```zane
-pos Vec2(1, 2)
-pos!setX(Float(3)) // in-place field write through a borrow of pos
-pos = Vec2(3, 4)   // whole-slot overwrite
+pos Vec2(1, 2);
+pos!setX(Float(3)); // in-place field write through a borrow of pos
+pos = Vec2(3, 4);  // whole-slot overwrite
 ```
 
 A value-producing expression initializes storage according to whether it denotes an existing value. A **place expression** (§2.8) denotes existing storage; binding its value into a different slot copies the whole value. A **non-place expression** produces a fresh value and **MUST** construct that value directly in its eventual destination rather than first materializing an independent temporary and then copying it. This rule passes the destination recursively through nested value-producing forms: product construction, value-variant case forms, function results, `match` arms, and other fresh results build their members directly in the storage that will own them.
 
 ```zane
-v Vector2 = Vector2(Int(3), Int(4)) // constructs v, v.x, and v.y directly
-w Vector2 = v                        // copies the existing value in v
+v Vector2 = Vector2(Int(3), Int(4)); // constructs v, v.x, and v.y directly
+w Vector2 = v;                       // copies the existing value in v
 ```
 
 A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns no boxed member (§2.10, §3.3), which is the overwhelmingly common case and the only case that existed before value types could own one. A value that does own a boxed member is copied **deeply**: the copy allocates a block for each boxed payload and copies that payload into it, recursively, so the original and the copy share no storage at all.
@@ -140,19 +140,19 @@ Two things are rejected:
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
 ```zane
-engine &Engine = Engine()   // ILLEGAL: Engine() is a temporary, not a place expression
+engine &Engine = Engine();  // ILLEGAL: Engine() is a temporary, not a place expression
 ```
 
 ```zane
-car Car()
-r &Engine = car.engine   // legal: field access on a place
-s &Car = car             // legal: a bare symbol naming a host
+car Car();
+r &Engine = car.engine;  // legal: field access on a place
+s &Car = car;            // legal: a bare symbol naming a host
 ```
 
 ```zane
-armory Armory()
-weapons List<&Weapon> = [armory.primary, armory.backup]
-current &Weapon = weapons[1]   // legal: reads an `&Weapon` already stored in the list
+armory Armory();
+weapons List<&Weapon> = [armory.primary, armory.backup];
+current &Weapon = weapons[1];  // legal: reads an `&Weapon` already stored in the list
 ```
 
 The last line works because `weapons[1]` reads an `&Weapon` value the list already holds. It does not mint a new `&` from a hosting element. Those stored guests are stable because the language does not let `[]` mint guests from host storage in the first place.
@@ -160,7 +160,7 @@ The last line works because `weapons[1]` reads an `&Weapon` value the list alrea
 Non-`&` host bindings may be initialized from any expression, including temporaries. The host materializes the value into stable storage.
 
 ```zane
-engine Engine()         // legal: plain host binding; Engine() temporary is materialized into engine
+engine Engine();        // legal: plain host binding; Engine() temporary is materialized into engine
 ```
 
 ### 2.8.1 A guest follows the object; an overwritten slot carries its guests forward
@@ -175,10 +175,10 @@ The two cases never compete, because an object cannot both leave and die in the 
 The case worth spelling out is a bare symbol, because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
 
 ```zane
-main Player()
-second Player()
-guest &Player = main   // legal: a bare symbol is a guest source
-second = main          // the object moves out of main's slot into second's
+main Player();
+second Player();
+guest &Player = main;  // legal: a bare symbol is a guest source
+second = main;         // the object moves out of main's slot into second's
 ```
 
 After the move, `guest` denotes the object, which now lives in `second`. So does `main` itself, which downgrades to a guest to that same object ([`lifetimes.md`](lifetimes.md) §1.6). The two names agree; there is nothing to choose between.
@@ -186,15 +186,15 @@ After the move, `guest` denotes the object, which now lives in `second`. So does
 They part company only if the emptied slot is put back to work:
 
 ```zane
-main = Player()        // main's slot hosts a new, unrelated object
+main = Player();       // main's slot hosts a new, unrelated object
 ```
 
 `main` now names the new object and `guest` still names the moved one, which is alive in `second`. That is the first bullet doing its job: the move carried the old object's identity away with it, so re-hosting the slot begins a fresh identity rather than capturing the guests of the old one. Contrast an overwrite, where nothing moves:
 
 ```zane
-car Car()
-r &Engine = car.engine
-car.engine = Engine()  // the old engine is destroyed in place; r observes the new one
+car Car();
+r &Engine = car.engine;
+car.engine = Engine(); // the old engine is destroyed in place; r observes the new one
 ```
 
 Here the occupant of `car.engine` died and the slot's identity continued, so `r` carries forward to the replacement. The question a reader has to answer is only ever *did the object leave, or did it die* — and a move and an overwrite are different statements.
@@ -219,8 +219,8 @@ A **reference type** parameter has two passing modes, one per surface form. The 
 ```zane
 Float topSpeed(engine &Engine) => engine.speed
 
-engine Engine()
-s Float = topSpeed(engine)   // legal: engine stays a full host
+engine Engine();
+s Float = topSpeed(engine);  // legal: engine stays a full host
 ```
 
 A **value type** parameter has no such choice, because there is nothing to host and no identity to guest. It is a **borrow**: non-hosting, non-escaping read-only access to the caller's slot for the duration of the call. A borrow is not storage — it has no anchor and cannot be stored in a field or returned — but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. A value-type `mut` subject is a **mutable** borrow on the same terms (see [`functions.md`](functions.md) §2.4). Neither `&` nor any other marker is written on a value-type parameter: the borrow is what such a parameter is.
@@ -236,38 +236,38 @@ type Car = #struct {
 
 // plain reference-type parameter: taken by hosting access, then moved into a hosting field of this
 Unit setSpare(this Car, engine Engine) mut {
-    this.spare = engine
-    return Unit()
+    this.spare = engine;
+    return Unit();
 }
 
 // `&` parameter used only to read: the caller keeps hosting and nothing is stored
 Int inspect(this Car, engine &Engine) {
-    return this._value + engine.speed
+    return this._value + engine.speed;
 }
 
 // `&` parameter stored into an `&` field: the signature records where it lands
 Unit setEngine(this Car, engine &Engine) mut {
-    this.engine = engine
-    return Unit()
+    this.engine = engine;
+    return Unit();
 }
 
 // taking the host instead: the object owns the engine and points at its own field
 Unit installEngine(this Car, engine Engine) mut {
-    this.spare = engine
-    this.engine = this.spare
-    return Unit()
+    this.spare = engine;
+    this.engine = this.spare;
+    return Unit();
 }
 ```
 
 `setEngine` stores a guest it was handed. The callee sees two parameters and cannot tell whether the caller's `engine` is hosted above or below the object `this` names, so it does not decide: its signature records that `engine` comes to rest at `this.engine` ([`lifetimes.md`](lifetimes.md) §1.11), and each call substitutes the argument paths it was given and compares owners ([`lifetimes.md`](lifetimes.md) §1.1).
 
 ```zane
-car Car(...)
-engine Engine()
-car!setEngine(engine)      // → car.engine = engine; one block owns both: legal
-{
-    spare Engine()
-    car!setEngine(spare)   // ILLEGAL: this block does not outlive car's
+car Car(...);
+engine Engine();
+car!setEngine(engine);     // → car.engine = engine; one block owns both: legal
+do() {
+    spare Engine();
+    car!setEngine(spare);  // ILLEGAL: this block does not outlive car's
 }
 ```
 
@@ -281,8 +281,8 @@ Binding a **swallowed** parameter into `&` storage is illegal, and the parameter
 
 ```zane
 Unit setEngineSwallowed(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL: a swallowed host may not be bound into `&` storage
-    return Unit()
+    this.engine = engine;  // ILLEGAL: a swallowed host may not be bound into `&` storage
+    return Unit();
 }
 ```
 
@@ -343,13 +343,13 @@ Downstream enforcement keeps hosting and guest bookkeeping confined to reference
 Every symbol declaration **MUST** provide its initial value in the declaration itself. Zane does not permit bare symbol declarations followed by conditional or delayed first assignment.
 
 ```zane
-text String   // ILLEGAL: symbols require direct initialization
+text String;  // ILLEGAL: symbols require direct initialization
 ```
 
 ```zane
-text String("")   // LEGAL: directly initialized
+text String("");  // LEGAL: directly initialized
 if(runtimeBool()) {
-    text = String("hi")
+    text = String("hi");
 }
 ```
 
@@ -529,7 +529,7 @@ Resolving a tether uses the chunk directory to locate its global anchor cell. If
 Consider reading a field through a tether, where `mainWeapon` is an `&Weapon`:
 
 ```zane
-dps Float = mainWeapon.dps
+dps Float = mainWeapon.dps;
 ```
 
 The terminal case is tether → global anchor cell → payload offset → payload address → field. An older tether may first cross one or more forwarding anchor cells:

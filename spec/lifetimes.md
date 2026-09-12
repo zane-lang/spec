@@ -18,7 +18,7 @@ Every place has an **owner**, and an owner is a lifetime:
 A path that steps *through* an `&` leaves the tree its root names. What lies beyond belongs to a different tree whose root the path does not mention, so no owner can be computed for it and it is not a place this rule can govern. Such a path may be **read** freely; it may not be the destination of a store:
 
 ```zane
-main.peer.io = someIO   // ILLEGAL: `peer` is an `&`, so `main` does not name
+main.peer.io = someIO;  // ILLEGAL: `peer` is an `&`, so `main` does not name
                         //   the tree this would write into
 ```
 
@@ -29,14 +29,14 @@ Two clauses complete it. A **block** outlives every block nested within it, and 
 A block is one lifetime, not a sequence of them. Everything it owns dies when it drains (§2.1), with no user code interleaved and no order among them to observe, so two things one block owns can never see each other's death. That is why the comparison is between owners rather than between declaration positions.
 
 ```zane
-node Node()
-r &Node = node                  // legal: one block owns both
+node Node();
+r &Node = node;                 // legal: one block owns both
 
-outerTree Tree()
-{
-    r2 &Node = outerTree.root   // legal: the outer block outlives this one
-    innerTree Tree()
-    r = innerTree.root          // ILLEGAL: this block does not outlive r's
+outerTree Tree();
+do() {
+    r2 &Node = outerTree.root;  // legal: the outer block outlives this one
+    innerTree Tree();
+    r = innerTree.root;         // ILLEGAL: this block does not outlive r's
 }
 ```
 
@@ -45,8 +45,8 @@ The source must also be a guest source ([`memory.md`](memory.md) §2.8). That co
 A field is **not** confined to its own tree. It inherits its root symbol's owner, so an object and what its `&` field names may be siblings in one block:
 
 ```zane
-io IO()
-terminal Terminal(io)   // legal: one block owns terminal and io
+io IO();
+terminal Terminal(io);  // legal: one block owns terminal and io
 ```
 
 That costs nothing while both sit there, and the moment `terminal` is stored anywhere the comparison runs again — now against the new destination, and against the guest `terminal` carries (§1.10). A store through a path that has **no** owner in this frame is the deferred case: `init{ }` fills an object whose destination the constructor cannot see, so the obligation is published in the signature and discharged by each caller (§1.11).
@@ -75,13 +75,13 @@ The following are **not** move-sources:
 - any other access path that projects into an existing host
 
 ```zane
-engine Engine()
-car Car(engine)             // legal: engine is a direct host symbol
-boat Boat(makeEngine())     // legal: makeEngine() returns a hosting Engine
+engine Engine();
+car Car(engine);            // legal: engine is a direct host symbol
+boat Boat(makeEngine());    // legal: makeEngine() returns a hosting Engine
 
-truck Truck(car.engine)     // ILLEGAL: field access is not a move-source
-truck2 Truck(makeCar().engine) // ILLEGAL: field access on temporary is not a move-source
-garage Garage(cars[1])      // ILLEGAL: container element is not a move-source
+truck Truck(car.engine);    // ILLEGAL: field access is not a move-source
+truck2 Truck(makeCar().engine); // ILLEGAL: field access on temporary is not a move-source
+garage Garage(cars[1]);     // ILLEGAL: container element is not a move-source
 ```
 
 This rule keeps containers stable hosting subtrees. Once a value is hosted by a field or stored in a container element, it cannot be individually moved out. The containing object may be moved as a whole if it is itself a move-source. A hosting verb result and a `#variant` case form are exempt from the access-path restriction because neither has a host until the move binds it.
@@ -92,28 +92,28 @@ This rule keeps containers stable hosting subtrees. Once a value is hosted by a 
 A direct host symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Host parameters may be used as move-sources at the top level of the function body. A parameter is not part of the body scope, though: it belongs to the **call-site scope** (§1.5). The caller that supplied a hosting argument has already downgraded to a guest (§1.8); moving the parameter within the body only decides where the value comes to rest.
 
 ```zane
-engine Engine()
-car Car(engine)          // legal: same block as engine's declaration
+engine Engine();
+car Car(engine);         // legal: same block as engine's declaration
 
-{
-    node Node()
-    innerOwner Node = node // legal: same block as node's declaration
+do() {
+    node Node();
+    innerOwner Node = node; // legal: same block as node's declaration
 }
 ```
 
 Moving an outer symbol from a nested block is illegal:
 
 ```zane
-car Car()
-{
-    garage Garage(car)   // ILLEGAL: car was declared in outer block
+car Car();
+do() {
+    garage Garage(car);  // ILLEGAL: car was declared in outer block
 }
 ```
 
 ```zane
 Unit loadCar(this Boat, car Car) mut {
-    this.cars!append(car) // legal: car is moved into this.cars at the top level of the body
-    return Unit()
+    this.cars!append(car); // legal: car is moved into this.cars at the top level of the body
+    return Unit();
 }
 ```
 
@@ -127,10 +127,10 @@ The restriction applies only to symbol move-sources. A hosting verb result or `#
 A move is a store, so §1.1 governs it. Read against the moved value's own host, the comparison says: a value may move into a new host only when the destination host is declared in the same or a higher lexical scope than the source host.
 
 ```zane
-node Node()
-{
-    nestedOwner Node()
-    nestedOwner = node // ILLEGAL: cannot move into a host declared in a nested scope
+node Node();
+do() {
+    nestedOwner Node();
+    nestedOwner = node; // ILLEGAL: cannot move into a host declared in a nested scope
 }
 ```
 
@@ -151,9 +151,9 @@ This is what makes the passing rule safe. Because the parameter is not part of t
 
 ```zane
 Unit enterMatch(player Player) {
-    island Island = makeIsland()
-    island!startMatch(player) // player is lent into the local island
-    return Unit()
+    island Island = makeIsland();
+    island!startMatch(player); // player is lent into the local island
+    return Unit();
 }
 ```
 
@@ -167,10 +167,10 @@ For `&` fields specifically, the callee must declare the corresponding parameter
 After a direct host symbol is moved, that symbol is downgraded to an `&` value through the anchor (see [`memory.md`](memory.md) §4.5). The symbol remains readable but cannot be moved again.
 
 ```zane
-engine Engine()
-car Car(engine)          // engine is moved; downgrades to `&`
-engine:inspect()         // legal: engine is now an `&`, still readable
-truck Truck(engine)      // ILLEGAL: engine is an `&`, not a move-source
+engine Engine();
+car Car(engine);         // engine is moved; downgrades to `&`
+engine:inspect();        // legal: engine is now an `&`, still readable
+truck Truck(engine);     // ILLEGAL: engine is an `&`, not a move-source
 ```
 
 This also applies across calls. Passing a hosting value to a plain `T` parameter downgrades the caller's symbol to an `&` (§1.8); the caller can still read the symbol afterward through that downgraded `&`. Zane has no user-visible use-after-move error class for reads.
@@ -192,8 +192,8 @@ A **local** is the case this rule excludes, and it is excluded by lifetime rathe
 
 ```zane
 &Node bad() {
-    value Node()
-    return value   // ILLEGAL: value is hosted by the body scope, which drains at the return
+    value Node();
+    return value;  // ILLEGAL: value is hosted by the body scope, which drains at the return
 }
 ```
 
@@ -207,10 +207,10 @@ This rule governs a return that **is** an `&T`. A return that *carries* one — 
 A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol downgrades to a guest (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` ([`memory.md`](memory.md) §2.9) means the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
 
 ```zane
-car Car()
-garage!store(car)     // store takes `Car`: car downgrades to a guest
-car:inspect()         // legal: car is still readable through the guest
-truck Truck(car)      // ILLEGAL: car is a guest, not a move-source
+car Car();
+garage!store(car);    // store takes `Car`: car downgrades to a guest
+car:inspect();        // legal: car is still readable through the guest
+truck Truck(car);     // ILLEGAL: car is a guest, not a move-source
 ```
 
 The value outlives the call (§1.5), so the downgraded guest always resolves to a live object. Where the value comes to rest — moved into another parameter's hosting storage, moved into the return, or held in the call-site scope — the guest follows through the anchor ([`memory.md`](memory.md) §4.5).
@@ -224,25 +224,25 @@ A verb treats a reference-type host argument in one of three ways, each fixed by
 Taking a guest leaves the caller as host; relaying and consuming both downgrade it, differing only in whether a hosting handle is handed back. So to keep or recover hosting, pass `&T` or bind a relayed return:
 
 ```zane
-weapon Weapon()
-weapon2 Weapon = reforge(weapon)   // reforge relays the host; weapon2 hosts the result
+weapon Weapon();
+weapon2 Weapon = reforge(weapon);  // reforge relays the host; weapon2 hosts the result
 ```
 
 A relay that swallows a value and hands it back uses the return path. Here `startMatch` consumes `player` into `island`, so `player` downgrades to a guest; `enterMatch` then recovers hosting from `returnPlayer`'s return. Reassigning `player` overwrites its hosting slot ([`memory.md`](memory.md) §2.2), so the moved-from symbol is a host again and `return player` is an ordinary move:
 
 ```zane
 Player enterMatch(player Player) {
-    island Island = makeIsland()
-    playerId Int = player.id
-    island!startMatch(player)              // startMatch consumes player; player is now a guest
-    player = island!returnPlayer(playerId) // recover hosting; player is a full host again
-    return player
+    island Island = makeIsland();
+    playerId Int = player.id;
+    island!startMatch(player);             // startMatch consumes player; player is now a guest
+    player = island!returnPlayer(playerId); // recover hosting; player is a full host again
+    return player;
 }
 
 Unit main() {
-    player Player = makePlayer()
-    player = enterMatch(player)            // bind to regain hosting privilege; unbound, the host floats (§1.9)
-    return Unit()
+    player Player = makePlayer();
+    player = enterMatch(player);           // bind to regain hosting privilege; unbound, the host floats (§1.9)
+    return Unit();
 }
 ```
 
@@ -257,8 +257,8 @@ A return value need not be bound. When a call's result is a reference-type host 
 Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through whatever guest it already holds (§1.8).
 
 ```zane
-car2 Car = repair(car)   // bind: car2 is a full host, and may be moved again
-repair(car)              // legal: the returned host floats to the enclosing scope
+car2 Car = repair(car);  // bind: car2 is a full host, and may be moved again
+repair(car);             // legal: the returned host floats to the enclosing scope
 ```
 
 Because a floated result is kept rather than dropped, no guest dangles and no hosted object is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable host or is merely reachable through a guest. This makes the caller's intent visible — a bound return is the signal that the caller wanted hosting back. A value-type result has no host or guest; ignoring one simply discards the value.
@@ -271,12 +271,12 @@ A value **carries a guest** when an `&` is reachable from its type by following 
 The hosts a value's carried guests name are what §1.1 compares alongside the value's own host. A guest naming a host **inside** the value is satisfied at every destination, because that host travels with it. A guest naming anything else keeps the owner it has, and every store of the value asks again whether that owner outlives the new destination:
 
 ```zane
-outerHolder Holder(Engine(Int(1)))
-parked Car(outerHolder.engine)     // Car holds an `&Engine`
-{
-    innerHolder Holder(Engine(Int(2)))
-    arriving Car(innerHolder.engine)
-    parked = arriving              // ILLEGAL: the guest names a host owned by this
+outerHolder Holder(Engine(Int(1)));
+parked Car(outerHolder.engine);    // Car holds an `&Engine`
+do() {
+    innerHolder Holder(Engine(Int(2)));
+    arriving Car(innerHolder.engine);
+    parked = arriving;             // ILLEGAL: the guest names a host owned by this
 }                                  //   block, and parked is owned above it
 ```
 
@@ -290,10 +290,10 @@ type Expr = #variant {
     ref &Node;      // an `&` payload, so this case form takes a guest source
 }
 
-result Expr = Expr.intLit("0")
-{
-    innerTree Tree()
-    result = Expr.ref(innerTree.root)   // ILLEGAL: the case form carries a guest to
+result Expr = Expr.intLit("0");
+do() {
+    innerTree Tree();
+    result = Expr.ref(innerTree.root);  // ILLEGAL: the case form carries a guest to
 }                                       //   this block, and result is owned above it
 ```
 
@@ -326,20 +326,20 @@ type Main = #struct {
 }
 
 Unit setIO(this Terminal, io &IO) mut {
-    this.io = io          // recorded: io comes to rest at this.io
-    return Unit()
+    this.io = io;         // recorded: io comes to rest at this.io
+    return Unit();
 }
 ```
 
 Both paths below resolve to `main`'s owner, because a field takes its root symbol's owner (§1.1) and both are reached from `main`:
 
 ```zane
-main Main()
-main.terminal!setIO(main.io)       // → main.terminal.io = main.io
+main Main();
+main.terminal!setIO(main.io);      // → main.terminal.io = main.io
                                     //   one block owns both: legal
-{
-    ioInner IO()
-    main.terminal!setIO(ioInner)   // → main.terminal.io = ioInner
+do() {
+    ioInner IO();
+    main.terminal!setIO(ioInner);  // → main.terminal.io = ioInner
 }                                   //   ILLEGAL: this block does not outlive main's
 ```
 
@@ -350,22 +350,22 @@ Terminal(io &IO) => init{io;}       // recorded: io comes to rest at the result'
 ```
 
 ```zane
-main Main()
-{
-    ioInner IO()
-    t Terminal(ioInner)   // → t.io = ioInner; one block owns both: legal
-    main.terminal = t     // ILLEGAL: t carries a guest owned by this block,
+main Main();
+do() {
+    ioInner IO();
+    t Terminal(ioInner);  // → t.io = ioInner; one block owns both: legal
+    main.terminal = t;    // ILLEGAL: t carries a guest owned by this block,
 }                         //   and main is owned above it
 ```
 
 A swallowed `T` parameter is recorded the same way, and that is what settles an argument carrying a guest. Neither frame sees the problem alone — the argument reaches a parameter in the call-site scope, and inside the callee both parameters share it:
 
 ```zane
-cars List(Car)
-{
-    innerHolder Holder(Engine(Int(2)))
-    arriving Car(innerHolder.engine)
-    cars!append(arriving)   // append records: car comes to rest in this's elements
+cars List(Car);
+do() {
+    innerHolder Holder(Engine(Int(2)));
+    arriving Car(innerHolder.engine);
+    cars!append(arriving);  // append records: car comes to rest in this's elements
 }                           //   → ILLEGAL: arriving carries a guest owned by this
                             //     block, and cars is owned above it
 ```
@@ -374,8 +374,8 @@ The summary is **transitive**, in the way the effect summaries of [`effects.md`]
 
 ```zane
 Unit relay(this Terminal, io &IO) mut {
-    this!setIO(io)        // recorded: io comes to rest at this.io, via setIO
-    return Unit()
+    this!setIO(io);       // recorded: io comes to rest at this.io, via setIO
+    return Unit();
 }
 ```
 
@@ -383,14 +383,14 @@ A recorded path begins at a **root** — a parameter, or the result — and cont
 
 ```zane
 Unit setNested(target &Terminal, io &IO) mut {
-    target.io = io          // recorded: io comes to rest at target.io
-    return Unit()
+    target.io = io;         // recorded: io comes to rest at target.io
+    return Unit();
 }
 
 Unit wire(this Main, io &IO) mut {
-    this.terminal.io = io   // recorded: `terminal` is a hosting field of `this`
-    this.peer.io = io       // ILLEGAL: `peer` is an `&` mid-path (§1.1)
-    return Unit()
+    this.terminal.io = io;  // recorded: `terminal` is a hosting field of `this`
+    this.peer.io = io;      // ILLEGAL: `peer` is an `&` mid-path (§1.1)
+    return Unit();
 }
 ```
 

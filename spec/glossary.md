@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §6
 
 ### 3.21 bracket-picked separator
-- **Meaning:** The bracket decides how the entries inside it are separated: a `{ }` body terminates each entry with `;`, always trailing; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing. A `{ }` holding statements rather than entries is a code block, where a newline separates.
+- **Meaning:** The bracket decides how the things inside it are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
 - **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states what does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
@@ -313,17 +313,22 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It is an argument like any other, and what it carries is a block rather than a value.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §2
 
-### 4.7 control-flow intrinsic
+### 4.7 trailing argument
+- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last thing in its statement.
+- **Why this name:** It trails the argument list rather than sitting in it.
+- **Canonical home:** [`syntax.md`](syntax.md) §4.9
+
+### 4.8 control-flow intrinsic
 - **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three compiler operations every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
 - **Why this name:** They are the intrinsic operations of control flow, owned by the compiler rather than by any package.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
-### 4.8 ordinary `core`
+### 4.9 ordinary `core`
 - **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.
 - **Why this name:** The label records the whole rule — what is notable about `core` is precisely that nothing about it is special.
 - **Canonical home:** [`types.md`](types.md) §2.6 and [`dependencies.md`](dependencies.md) §14
 
-### 4.9 spawn target
+### 4.10 spawn target
 - **Meaning:** Only a function or method call may be spawned, and never one whose verb declares a block parameter, since a block captures the frame that wrote it.
 - **Why this name:** The term names the position the restriction applies to — what a `spawn` may point at.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §3.1

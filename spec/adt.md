@@ -109,8 +109,8 @@ This is built-in syntax, **not** a call to a constructor verb. A `struct` is bui
 The form is an ordinary **expression** of the variant type, legal wherever a value is — an initializer, a `return`, a call argument, or the payload of another case form. It yields the whole variant, so a variable built this way holds the variant type, not a per-case type:
 
 ```zane
-e Expr = Expr.intLit("5")   // e is an Expr, intLit live
-e Expr.intLit("5")          // shorthand: the instantiation form (syntax.md §1.1), e is still an Expr
+e Expr = Expr.intLit("5");  // e is an Expr, intLit live
+e Expr.intLit("5");         // shorthand: the instantiation form (syntax.md §1.1), e is still an Expr
 ```
 
 The two lines declare the same thing. The trailing argument list is what marks construction: `Expr.intLit(...)` builds and yields an `Expr`, distinct from a bare `Expr.intLit` written as a projected case *type* (§3). The `.intLit` chooses which case is live; it does not narrow the variable, because the value it produces is the variant.
@@ -120,8 +120,8 @@ The payload argument sits at a positional **coercion site** (see [`types.md`](ty
 A payload that is itself a constructed value — a `struct` or another variant — is built on its own and passed in. Construction **nests**; it never dots through:
 
 ```zane
-e Expr.op(Operation.fromParts(a, b))          // build the Operation payload, then wrap it
-e Expr.qualifiedIdent(QualifiedIdent{ packageName; member; })
+e Expr.op(Operation.fromParts(a, b));         // build the Operation payload, then wrap it
+e Expr.qualifiedIdent(QualifiedIdent{ packageName; member; });
 ```
 
 Naming a case takes its payload whole; to reach a nested case, write another case form for the payload. There is no `Expr.op.fromParts(...)` reaching into a payload's own construction, and no `Outer.a.b(...)` chaining through one case into another — the mirror, on the construction side, of matching one level and going no deeper (§5.3).
@@ -131,7 +131,7 @@ An `enum` member is the payloadless degenerate of the same form: `Colors.red` se
 A recursive `#variant` case carries a **hosting** payload (§4), so it is constructed like any other host: `Expr.flip(inner)` takes an `Expr`, and its argument must be a move-source (see [`lifetimes.md`](lifetimes.md) §1.2). A constructor result is one, so a whole tree may be written as a single nested expression:
 
 ```zane
-program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.add))
+program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.add));
 ```
 
 No guest source is needed anywhere, because no guest is involved: each case takes hosting of the node it is given.
@@ -139,8 +139,8 @@ No guest source is needed anywhere, because no guest is involved: each case take
 A recursive **value** sum is built the same way on the surface and needs even less: its payload is copied, not moved, so any expression of the payload type will do and the move-source rule never comes up. `Countdown.more(n)` deep-copies `n` into the new node's boxed payload (see [`memory.md`](memory.md) §2.3), leaving `n` untouched and independently usable.
 
 ```zane
-two Countdown = Countdown.more(Countdown.more(Countdown.done(Unit())))
-three Countdown = Countdown.more(two)   // legal: `two` is copied, and is still a usable `Countdown` afterwards
+two Countdown = Countdown.more(Countdown.more(Countdown.done(Unit())));
+three Countdown = Countdown.more(two);  // legal: `two` is copied, and is still a usable `Countdown` afterwards
 ```
 
 **Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
@@ -167,7 +167,7 @@ A recursive member is therefore **boxed**: it stays an ordinary member of its de
 type Operation = #struct { left Expr; right Expr; op Operator; }
 type Expr = #variant { op Operation; intLit String; }
 
-program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.add))
+program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.add));
 ```
 
 - **A recursive member owns its child.** `left` and `right` own the `Expr` nodes they hold, and those nodes are destroyed when the `Operation` is. In a reference type that ownership is **hosting**: the structure is a hosting tree, rooted wherever its outermost node is hosted — a local, a field, or a container slot — and it is moved and destroyed whole, like any other hosting subtree (see [`lifetimes.md`](lifetimes.md) §1.2). In a value type it is ordinary value ownership: the tree is copied when the value is copied and freed when the value dies (see [`memory.md`](memory.md) §2.3).
@@ -200,7 +200,7 @@ print(match e {
     x strLit                   => x;
     [intLit, floatLit]         => "number";
     [boolLit, ident, qualifiedIdent, op, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
-})
+});
 ```
 
 > **See also:** [`syntax.md`](syntax.md) §4.8 for the surface grammar.
@@ -248,8 +248,8 @@ result Int = match token {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {
-    print(msg)
-    resolve Int(20)
+    print(msg);
+    resolve Int(20);
 }
 ```
 

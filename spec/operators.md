@@ -118,7 +118,7 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 A parenthesized expression `(expr)` groups `expr` explicitly. Parentheses bind the enclosed expression as a single unit before the precedence table below is applied to the surrounding syntax.
 
 ```zane
-number Int = (3 + 2) * 2
+number Int = (3 + 2) * 2;
 ```
 
 | Level (high → low) | Syntax / operators | Associativity |
@@ -139,8 +139,8 @@ Comparison operators group left. For example, `a < b < c` groups as `(a < b) < c
 Levels 6 through 8 are a **mirror** of levels 3 through 5: the same binary operators, in the same relative order, written with a leading `'`. A loose operator calls the same implementation as its unprefixed form and differs only in where it groups.
 
 ```zane
-ready Bool = age > Int(18) '* hasId       // (age > 18) * hasId
-band Bool = a == b '* c == d '+ e == f    // ((a == b) * (c == d)) + (e == f)
+ready Bool = age > Int(18) '* hasId;      // (age > 18) * hasId
+band Bool = a == b '* c == d '+ e == f;   // ((a == b) * (c == d)) + (e == f)
 ```
 
 The mirror is one tier deep. A second prefix is not a further shift:

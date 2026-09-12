@@ -34,7 +34,7 @@ A declaration with no `?AbortType` cannot abort.
 If failure carries no meaningful payload, the abort type is `Unit`. The abort path still carries a value explicitly:
 
 ```zane
-abort Unit()
+abort Unit();
 ```
 
 ### 2.3 Abortability is orthogonal to `mut`
@@ -67,7 +67,7 @@ Abortable calls are handled at the call site. One form is to attach a `?` handle
 
 ```zane
 value Int = parse("42") ? err {
-    resolve Int(0)
+    resolve Int(0);
 }
 ```
 
@@ -75,7 +75,7 @@ The binder is required even when the abort type is `Unit`:
 
 ```zane
 done Bool = tryFinish() ? ignored {
-    resolve false
+    resolve false;
 }
 ```
 
@@ -83,7 +83,7 @@ There is no propagation-without-a-handler form. To pass failure outward, the han
 
 ```zane
 value Int = parse(input) ? err {
-    abort err
+    abort err;
 }
 ```
 
@@ -104,7 +104,7 @@ Falling through a handler block is a compile-time error.
 `expr ?? fallback` desugars to a `?` block that only resolves a default value.
 
 ```zane
-count Int = parse("abc") ?? Int(0)
+count Int = parse("abc") ?? Int(0);
 ```
 
 ### 3.4 `Unit` primary returns are values
@@ -112,7 +112,7 @@ count Int = parse("abc") ?? Int(0)
 A call whose primary return type is `Unit` produces the `Unit` value returned by the callee. The result may be assigned or passed like any other value.
 
 ```zane
-completed Unit = performWork()
+completed Unit = performWork();
 ```
 
 When such a call is abortable, the handler attaches to the call expression exactly as for any other primary return type.
@@ -127,8 +127,8 @@ result Int = match token {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {
-    print(msg)
-    resolve Int(20)
+    print(msg);
+    resolve Int(20);
 }
 ```
 
@@ -201,7 +201,7 @@ if (f == NULL) {
 **Zane:**
 ```zane
 file File = fs:open("file.txt") ? err {
-    abort err
+    abort err;
 }
 ```
 
@@ -250,7 +250,7 @@ try {
 **Zane:**
 ```zane
 content String = fs:readFile("file.txt") ? err {
-    resolve "default"
+    resolve "default";
 }
 ```
 

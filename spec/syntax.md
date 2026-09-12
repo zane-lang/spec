@@ -249,9 +249,9 @@ An **array literal** — a `[ ]` list of values, not an `enum` body or a `match`
 A literal with no elements fixes no `T`, so an array literal **MUST** hold at least one element. An empty collection is built by naming its type, which supplies the element type the literal cannot:
 
 ```zane
-nums Array([Int(1), Int(2), Int(3)])   // legal: T and n read from the literal
-empty Array(Int, 0)                    // legal: the type is named, not inferred
-empty []                               // ILLEGAL: an empty literal fixes no element type
+nums Array([Int(1), Int(2), Int(3)]);  // legal: T and n read from the literal
+empty Array(Int, 0);                   // legal: the type is named, not inferred
+empty [];                              // ILLEGAL: an empty literal fixes no element type
 ```
 
 A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`lexical.md`](lexical.md)), each entry exactly two `,`-separated expressions — a key and a value. It carries `@concepts$Map<K, V>`, where `K` is the type of every key and `V` the type of every value. As with an array literal, every key **MUST** already have type `K` and every value type `V`; there is no search for a common type. A map literal **MUST** hold at least one entry, since an empty one fixes neither `K` nor `V`.
@@ -266,7 +266,7 @@ A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`l
 Entries are evaluated in written order. A key is an ordinary expression rather than a name, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
 
 ```zane
-first String("y")
+first String("y");
 
 {
     first, String("hello");    // key is the value of `first`, which is "y"
@@ -279,6 +279,8 @@ first String("y")
 It could not carry a useful count in any case. Entries with equal keys collapse, and a key is an expression, so the number of entries written is only an upper bound on the number stored — where an array literal's `n` is exact.
 
 An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.9), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
+
+A map literal is one of the two `{ }` arguments that may **trail** a call, the other being a block (§4.9). A literal large enough to want the position gets it for the same reason a block does.
 
 The examples above show the literal alone, with no consumer, because this section fixes the **literal** and the concept type it carries and nothing else; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 
@@ -518,13 +520,13 @@ Examples:
 ```zane
 element!onClick(Unit(eventData EventData) {
     ...
-    return Unit()
-})
+    return Unit();
+});
 
 element!onClick(Unit(this Element, data EventData) mut {
     ...
-    return Unit()
-})
+    return Unit();
+});
 ```
 
 A lambda-variable declaration binds a lambda literal to a symbol. The shorthand writes the symbol name in front of the lambda literal and drops the separate `= literal`, mirroring the constructor-call instantiation form `name VarType(args, ...)`:
@@ -540,13 +542,13 @@ The shorthand expands to a symbol declaration whose type is the function type (�
 
 ```zane
 callback Unit[this Player] mut = Unit(this Player) mut {
-    this.shooting = Bool(false)
-    return Unit()
+    this.shooting = Bool(false);
+    return Unit();
 }
 
 callback Unit(this Player) mut {        // shorthand for the line above
-    this.shooting = Bool(false)
-    return Unit()
+    this.shooting = Bool(false);
+    return Unit();
 }
 ```
 
@@ -598,7 +600,7 @@ Methods, functions, and operators have no value form. A package-scope callable n
 ```zane
 packageName$functionName(args...)   // legal: call position
 packageName$functionName            // ILLEGAL: callables cannot be referenced as values
-+                                   // ILLEGAL: operators cannot be referenced as values
++;                                  // ILLEGAL: operators cannot be referenced as values
 ```
 
 To obtain a function value, declare a lambda-variable (§3.8). A lambda-variable is an ordinary symbol with a single function type, so it carries no overload set.
@@ -647,9 +649,9 @@ placeExpr[argExpr, ...]
 Examples:
 
 ```zane
-list[i]
-matrix[row, col]
-tensor[x, y, z]
+list[i];
+matrix[row, col];
+tensor[x, y, z];
 ```
 
 `CustomList()[1]` is not a valid place expression because the base is a temporary.
@@ -665,7 +667,7 @@ Parentheses group an inner expression explicitly. See [`operators.md`](operators
 Example:
 
 ```zane
-number Int = (3 + 2) * 2
+number Int = (3 + 2) * 2;
 ```
 
 ### 4.8 `match` expressions
@@ -701,43 +703,72 @@ newState State = match state, event {
 
 > **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
 
-### 4.9 Block arguments
+### 4.9 Block arguments and trailing arguments
 
-A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. At most one of them may **trail** the argument list; the rest are written in ordinary argument position. A trailing block's `{` **MUST** open on the same line as the call, which is what distinguishes it from a statement block on the following line (§6.3 of [`lexical.md`](lexical.md)).
+A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. Each is an ordinary argument written in argument position.
+
+```zane
+repeatTwice({ print("hi"); });
+```
+
+A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.8) — because those are the two forms large enough for the position to pay for itself, and `{` is the one opening bracket that cannot be confused with a subscript. At most one argument trails per call.
 
 ```zane
 repeatTwice() {
-    print("hi")
+    print("hi");
 }
 
 ran Bool = if(ready) {
-    start()
+    start();
 }
 ```
 
-A trailing block fills the callee's last parameter, whose declared type is `@concepts$Block` or `@concepts$Block<T>`. A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
+A trailing argument **MUST** be the last thing in its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
+
+A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
 
 ```zane
-ran!elif({ expensive() }) {
-    handle()
+ran!elif({ expensive(); }) {
+    handle();
 }
+```
+
+The trailing and parenthesized forms are the same call. The `)` moves to where the statement ends:
+
+```zane
+if(true) {
+    print("hi");
+}
+
+if(true, { print("hi"); });   // the same call, written in full
 ```
 
 A block takes no parameters and is never named. A block that yields a value ends its yielding paths with `resolve` (§6.2 uses the same keyword at a handler):
 
 ```zane
 value Int = compute() {
-    resolve Int(3)
+    resolve Int(3);
 }
 ```
 
 ```zane
-f({ x }, { y })       // legal: two block arguments, neither trailing
-f({ x }) { y }        // legal: the same call with the last one trailing
-f { x } { y }         // ILLEGAL: only one block may trail
-g()
+f({ x; }, { y; });    // legal: two block arguments, neither trailing
+f({ x; }) { y; }      // legal: the same call with the last one trailing
+f({ x; }) { y; } ()   // ILLEGAL: the `}` already ended the statement
+g();
 {
-    print("plain block")   // a statement block, not an argument: `{` opens a new line
+    print("oops");    // ILLEGAL: a `{ }` may not open a statement (§6.3.1 of lexical.md)
+}
+```
+
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement".
+
+An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
+
+```zane
+do() {
+    tmp Int(9);
+    use(tmp);
 }
 ```
 
@@ -762,7 +793,7 @@ The first two take storage primitives rather than fundamental types and the thir
 `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, so an exit is written by *calling* a verb built on it — `core` supplies `guard`:
 
 ```zane
-guard(shouldStop)
+guard(shouldStop);
 ```
 
 The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it would end that verb's caller ([`control-flow.md`](control-flow.md) §4.2).

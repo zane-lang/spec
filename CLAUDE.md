@@ -28,16 +28,39 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    internal contradictions on this codebase before: re-read the *un-updated*
    spec files and `bench/zane_bench.c` against the new design before opening a
    PR, not just the file you changed.
-3. **A rule correction is not done until `glossary.md` carries it.** The
-   glossary summarizes rules it does not own, so fixing a rule in its canonical
-   home and leaving the entry paraphrasing the superseded version produces a
-   spec that contradicts itself — this has happened three times, every time
-   caught in review rather than by the author. After editing any normative rule,
-   grep `spec/glossary.md` for the concept and update the entry in the same
-   commit.
+3. **A rule lives in more than one place. Changing its canonical home leaves
+   every echo stale**, and an echo that still reads fluently is what ships a
+   self-contradicting spec. This is the single most common defect on this repo:
+   three glossary drifts, and on one PR three more outside the glossary — an
+   `adt.md` summary-table row, a restatement two paragraphs below the paragraph
+   being edited *in this file*, and a story chapter the same branch was adding.
+   Two of the three were caught by review rather than by the author.
 
-   Sweeping the entry is necessary and **not sufficient**. Two of those three
-   were subtler than a missed grep:
+   So after editing any normative rule, sweep for the **form**, not the concept.
+   Grep the old syntax itself — the retired bracket, the retired keyword, the
+   retired spelling — across `spec/`, `README.md`, `contributing/`, this file,
+   and any story chapters your own branch adds. The concept name will not find
+   these; the old form will. Then read these five places specifically, because
+   each has hosted a drift:
+
+   - `spec/glossary.md` — the entry for the term (see below).
+   - The edited doc's own **summary table** at the foot, and its **§1 overview
+     bullets** at the head. Both restate rules the body owns.
+   - Any **other doc's** summary row mentioning the construct.
+   - **This file**, when the rule is one of the guards.
+   - **Draft story chapters on your branch** — merged ones are append-only and
+     correctly keep the old form, but a chapter your branch is adding must not
+     ship displaying syntax the same branch retires.
+
+   The glossary half of this is the oldest and has its own rule: **a rule
+   correction is not done until `glossary.md` carries it.** The glossary
+   summarizes rules it does not own, so fixing a rule in its canonical home and
+   leaving the entry paraphrasing the superseded version produces a spec that
+   contradicts itself. Grep `spec/glossary.md` for the concept and update the
+   entry in the same commit.
+
+   Sweeping the entry is necessary and **not sufficient**. Two of the three
+   glossary drifts were subtler than a missed grep:
 
    - An entry rewritten in the *same commit* as the rule still shipped a false
      sentence, because the author checked that the new sentences were right
@@ -163,9 +186,12 @@ A session that "fixes" the stories has violated the append-only rule, not
 tidied up. Use `subject` in new prose on both sides.
 
 A third guard covers the separator. **The bracket picks the separator**
-(canonical home `spec/lexical.md` §6): a `{ }` body terminates each entry with
-`;`, always trailing; a `[ ]`, `( )` or `< >` list separates its entries with
-`,`, never trailing. `init{ }` and the field-constructor header and call site
+(canonical home `spec/lexical.md` §6): a `{ }` terminates each thing inside it
+with `;` — entries of a body, always trailing, and statements of a code block
+alike; a `[ ]`, `( )` or `< >` list separates its entries with `,`, never
+trailing. A statement ending in `}` is the one thing that takes no terminator,
+because that brace itself ends the statement (§6.3 there). `init{ }` and the
+field-constructor header and call site
 used `,` under the previous rule, so those are the two forms a session is most
 likely to write back — every other C-family language separates them with commas,
 and the pull is strong. Both greps come back empty on the current spec:
