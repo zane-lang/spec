@@ -168,7 +168,7 @@ Unit main() {
 }
 ```
 
-A statement that ends with a `}` is the exception, and it takes no terminator: **nothing may follow the `}` that closes a statement**, `;` included. The brace has already ended the statement, so a `;` there would mark nothing.
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing, and nothing may continue the statement past it either — a call or a subscript written there has nothing left to attach to ([`syntax.md`](syntax.md) §4.9). Whatever comes after the brace is the next statement.
 
 ```zane
 Unit main() {
@@ -246,6 +246,6 @@ Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and t
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
-| Statement terminator | `;` terminates every statement in a code block, except a statement ending in `}` — nothing may follow that brace, `;` included; newlines are insignificant |
+| Statement terminator | `;` terminates every statement in a code block, except a statement ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
 | Statement blocks | A `{ }` may not open a statement; a scoped run of work is a call taking a block argument (`do(block)`) |

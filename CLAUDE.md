@@ -190,7 +190,7 @@ A third guard covers the separator. **The bracket picks the separator**
 with `;` — entries of a body, always trailing, and statements of a code block
 alike; a `[ ]`, `( )` or `< >` list separates its entries with `,`, never
 trailing. A statement ending in `}` is the one thing that takes no terminator,
-because nothing may follow that brace (§6.3 there). `init{ }` and the
+because that brace itself ends the statement (§6.3 there). `init{ }` and the
 field-constructor header and call site
 used `,` under the previous rule, so those are the two forms a session is most
 likely to write back — every other C-family language separates them with commas,

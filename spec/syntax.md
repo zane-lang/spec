@@ -723,7 +723,7 @@ ran Bool = if(ready) {
 }
 ```
 
-A trailing argument **MUST** be the last thing in its statement: nothing may follow the `}` that closes it, `;` included (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
+A trailing argument **MUST** be the last thing in its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
 
 A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
 
@@ -754,7 +754,7 @@ value Int = compute() {
 ```zane
 f({ x; }, { y; });    // legal: two block arguments, neither trailing
 f({ x; }) { y; }      // legal: the same call with the last one trailing
-f({ x; }) { y; } ()   // ILLEGAL: nothing may follow a trailing argument
+f({ x; }) { y; } ()   // ILLEGAL: the `}` already ended the statement
 g();
 {
     print("oops");    // ILLEGAL: a `{ }` may not open a statement (§6.3.1 of lexical.md)
