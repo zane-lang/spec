@@ -761,6 +761,8 @@ g();
 }
 ```
 
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement".
+
 An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
 
 ```zane

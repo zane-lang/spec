@@ -222,6 +222,7 @@ f({ doWork(); });    // a block argument: ';' follows it
 Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and those commas belong to the `match` expression itself, so they are consumed before the entry's own mark is read.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement" tells why statements gained a `;` and what it bought.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-straggler-the-rule-had-already-caught) — "The straggler the rule had already caught" tells why the enum map changed brackets to match.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-brace-with-nothing-in-front-of-it) — "The brace with nothing in front of it" tells why a map literal carries no leading token and why no literal may be empty.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
