@@ -153,7 +153,7 @@ car!setEngine(engine);         // legal: one block owns car and engine
 car!setEngine(garage.spare);   // legal: a field access is a guest source, and
                                //   garage is owned by the same block
 car!setEngine(Engine());       // ILLEGAL: a temporary is not a place expression
-{
+do() {
     spare Engine();
     car!setEngine(spare);      // ILLEGAL: this block does not outlive car's
 }

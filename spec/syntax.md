@@ -16,8 +16,8 @@ New symbol declarations:
 name VarType(args, ...)
 name VarType{field = expr; ...}
 name VarType{fieldA; fieldB; ...}
-name VarType = expr;
-name &VarType = expr;
+name VarType = expr
+name &VarType = expr
 name ReturnType(param ParamType, ...) { body }
 name ReturnType(param ParamType, ...) => expr
 ```
@@ -31,19 +31,19 @@ The last two forms declare a lambda-valued symbol. They mirror the constructor-c
 Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
 
 ```zane
-name VarType;  // ILLEGAL: symbols require direct initialization
+name VarType   // ILLEGAL: symbols require direct initialization
 ```
 
 Once a symbol already exists, reassignment uses only:
 
 ```zane
-name = expr;
+name = expr
 ```
 
 ### 1.2 Package constants
 
 ```zane
-name VarType(value);
+name VarType(value)
 ```
 
 ### 1.3 Reference-type bodies (`#`)
@@ -411,8 +411,8 @@ TypeName.fromParts(param ParamType, ...) { return init{ field = expr; ... } }
 ```
 
 ```zane
-o TypeName.zeros();
-p TypeName.fromParts(arg);
+o TypeName.zeros()
+p TypeName.fromParts(arg)
 ```
 
 ### 3.4 Field constructors
@@ -568,7 +568,7 @@ Operator definitions are package-scope verb declarations whose names are operato
 ### 3.10 Return statements
 
 ```zane
-return expr;
+return expr
 ```
 
 See [`functions.md`](functions.md) §3.5 for return-path requirements.
@@ -783,7 +783,7 @@ Zane has no control-flow grammar. Branching, repetition, and exiting are all cal
 ```zane
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
 @controlflow$repeat(count @primitives$Int, body @concepts$Block)
-@controlflow$exitFromCall();
+@controlflow$exitFromCall()
 ```
 
 The first two take storage primitives rather than fundamental types and the third takes nothing, so none depends on any package. Any package may call them.
@@ -817,9 +817,9 @@ expr ? binder { ... }
 Every path inside the handler must end with one of:
 
 ```zane
-resolve expr;
-return expr;
-abort expr;
+resolve expr
+return expr
+abort expr
 ```
 
 ### 6.3 `??` shorthand

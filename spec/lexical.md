@@ -14,8 +14,8 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
-- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too.
-- **`Newlines are never structural`.** Every entry and every statement carries its own terminator, so line breaks are free everywhere.
+- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none.
+- **`Newlines are never structural`.** Every entry and every statement has its own end mark — a `;`, or for a statement ending in `}`, that brace — so line breaks are free everywhere.
 
 ---
 
@@ -212,7 +212,7 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 | `( )` | a parameter list or an argument list | `,`, never trailing |
 | `< >` | a generic header or a generic argument list | `,`, never trailing |
 
-A `{ }` is the one bracket with two readings. Most are introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, both in argument position, and both hold `;`-terminated things, so the terminator does not separate them. What separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.8).
+A `{ }` is the one bracket with two readings. Most are introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, and both hold `;`-terminated things, so the terminator does not separate them. In **argument position**, where the two can meet, what separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.8).
 
 ```zane
 f({ key, value; });  // a map literal: ',' follows the first expression

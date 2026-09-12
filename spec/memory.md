@@ -262,10 +262,10 @@ Unit installEngine(this Car, engine Engine) mut {
 `setEngine` stores a guest it was handed. The callee sees two parameters and cannot tell whether the caller's `engine` is hosted above or below the object `this` names, so it does not decide: its signature records that `engine` comes to rest at `this.engine` ([`lifetimes.md`](lifetimes.md) §1.11), and each call substitutes the argument paths it was given and compares owners ([`lifetimes.md`](lifetimes.md) §1.1).
 
 ```zane
-car Car(...)
+car Car(...);
 engine Engine();
 car!setEngine(engine);     // → car.engine = engine; one block owns both: legal
-{
+do() {
     spare Engine();
     car!setEngine(spare);  // ILLEGAL: this block does not outlive car's
 }

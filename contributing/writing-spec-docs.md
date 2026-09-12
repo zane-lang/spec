@@ -285,7 +285,7 @@ Pseudo-grammar forms also use the `zane` tag:
 ````markdown
 ```zane
 name Type(arg, ...)
-name = expr;
+name = expr
 ```
 ````
 

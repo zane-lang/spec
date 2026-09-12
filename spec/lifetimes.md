@@ -33,7 +33,7 @@ node Node();
 r &Node = node;                 // legal: one block owns both
 
 outerTree Tree();
-{
+do() {
     r2 &Node = outerTree.root;  // legal: the outer block outlives this one
     innerTree Tree();
     r = innerTree.root;         // ILLEGAL: this block does not outlive r's
@@ -95,7 +95,7 @@ A direct host symbol may only be used as a move-source in the exact lexical bloc
 engine Engine();
 car Car(engine);         // legal: same block as engine's declaration
 
-{
+do() {
     node Node();
     innerOwner Node = node; // legal: same block as node's declaration
 }
@@ -105,7 +105,7 @@ Moving an outer symbol from a nested block is illegal:
 
 ```zane
 car Car();
-{
+do() {
     garage Garage(car);  // ILLEGAL: car was declared in outer block
 }
 ```
@@ -128,7 +128,7 @@ A move is a store, so §1.1 governs it. Read against the moved value's own host,
 
 ```zane
 node Node();
-{
+do() {
     nestedOwner Node();
     nestedOwner = node; // ILLEGAL: cannot move into a host declared in a nested scope
 }
@@ -273,7 +273,7 @@ The hosts a value's carried guests name are what §1.1 compares alongside the va
 ```zane
 outerHolder Holder(Engine(Int(1)));
 parked Car(outerHolder.engine);    // Car holds an `&Engine`
-{
+do() {
     innerHolder Holder(Engine(Int(2)));
     arriving Car(innerHolder.engine);
     parked = arriving;             // ILLEGAL: the guest names a host owned by this
@@ -291,7 +291,7 @@ type Expr = #variant {
 }
 
 result Expr = Expr.intLit("0");
-{
+do() {
     innerTree Tree();
     result = Expr.ref(innerTree.root);  // ILLEGAL: the case form carries a guest to
 }                                       //   this block, and result is owned above it
@@ -337,7 +337,7 @@ Both paths below resolve to `main`'s owner, because a field takes its root symbo
 main Main();
 main.terminal!setIO(main.io);      // → main.terminal.io = main.io
                                     //   one block owns both: legal
-{
+do() {
     ioInner IO();
     main.terminal!setIO(ioInner);  // → main.terminal.io = ioInner
 }                                   //   ILLEGAL: this block does not outlive main's
@@ -351,7 +351,7 @@ Terminal(io &IO) => init{io;}       // recorded: io comes to rest at the result'
 
 ```zane
 main Main();
-{
+do() {
     ioInner IO();
     t Terminal(ioInner);  // → t.io = ioInner; one block owns both: legal
     main.terminal = t;    // ILLEGAL: t carries a guest owned by this block,
@@ -362,7 +362,7 @@ A swallowed `T` parameter is recorded the same way, and that is what settles an 
 
 ```zane
 cars List(Car);
-{
+do() {
     innerHolder Holder(Engine(Int(2)));
     arriving Car(innerHolder.engine);
     cars!append(arriving);  // append records: car comes to rest in this's elements

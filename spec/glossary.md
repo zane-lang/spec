@@ -165,7 +165,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`adt.md`](adt.md) §6
 
 ### 3.21 bracket-picked separator
-- **Meaning:** The bracket decides how the things inside it are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
+- **Meaning:** The bracket decides how the things inside it are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
 - **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states what does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
