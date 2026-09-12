@@ -197,8 +197,8 @@ entries now, so they no longer carry a top-level `,` at all.)
 When a change touches a multi-line `{ }` body, check it by reading.
 
 For the same reason nothing here sweeps `[ ]`: an array literal, an `enum` body,
-a `match` case group, and an enum map all keep `,` under the current rule. They
-are not exceptions to it — they are the other half of it.
+and a `match` case group all keep `,` under the current rule. They are not
+exceptions to it — they are the other half of it.
 
 If the grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc

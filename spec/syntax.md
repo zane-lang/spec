@@ -257,10 +257,10 @@ empty []                               // ILLEGAL: an empty literal fixes no ele
 A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`lexical.md`](lexical.md)), each entry exactly two `,`-separated expressions — a key and a value. It carries `@concepts$Map<K, V>`, where `K` is the type of every key and `V` the type of every value. As with an array literal, every key **MUST** already have type `K` and every value type `V`; there is no search for a common type. A map literal **MUST** hold at least one entry, since an empty one fixes neither `K` nor `V`.
 
 ```zane
-lookup Map({
+{
     String("first"), Int(1);
     String("second"), Int(2);
-})
+}
 ```
 
 Entries are evaluated in written order. A key is an ordinary expression rather than a name, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
@@ -268,10 +268,10 @@ Entries are evaluated in written order. A key is an ordinary expression rather t
 ```zane
 first String("y")
 
-pairs Map({
+{
     first, String("hello");    // key is the value of `first`, which is "y"
     String("y"), String("b");  // same key: replaces the entry above
-})
+}
 ```
 
 `@concepts$Map` carries no entry count, unlike `@concepts$Array`. The map literal is not a general-purpose container literal; it is a specialized form for key-value pairs, and `Array` is where generic containment lives. A keyed structure that needs its size in its type is therefore built from an **array of pair values** — an ordinary array literal, which supplies `n` in the ordinary way — rather than from a map literal.
@@ -280,7 +280,7 @@ It could not carry a useful count in any case. Entries with equal keys collapse,
 
 An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.9), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
 
-`Map` in the examples above is illustrative. What this section fixes is the **literal** and the concept type it carries; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
+The examples above show the literal alone, with no consumer, because this section fixes the **literal** and the concept type it carries and nothing else; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 
