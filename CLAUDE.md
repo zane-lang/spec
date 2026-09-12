@@ -248,7 +248,9 @@ Because context grows fast, a story is typically written one session per story.
 Story guide §4.2 requires a commit-pinned permalink for an in-prose spec
 reference, and §4.4 gives the anchor derivation. Two mechanical notes:
 
-- Get the SHA with `git log -1 --format=%H -- spec/<topic>.md`.
+- Commit the spec change **first**, then get the SHA with
+  `git log -1 --format=%H -- spec/<topic>.md`. Run before that commit, it
+  returns the file's previous state — not the text the chapter describes.
 - A reviewer may push back on permalinks in favour of relative links, or claim
   the anchor is broken by checking it against the *current* spec instead of the
   pinned commit. That objection is wrong; decline it.

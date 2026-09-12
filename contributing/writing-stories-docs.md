@@ -116,6 +116,8 @@ The href ends in the chapter's heading **anchor** so the link scrolls straight t
 
 GitHub derives the anchor from the heading mechanically: lowercase it, strip punctuation (commas, apostrophes, backticks, `&`, `#`), and turn each space into a hyphen. A stripped character that stood between spaces leaves a **doubled** hyphen — ``## Minting new `&` values`` gives `#minting-new--values` — which is correct; do not collapse it. Check every pointer against the heading it targets, in both directions.
 
+Two chapters in one file must not share a heading. GitHub disambiguates a repeated anchor by appending `-1`, `-2`, and so on, so a pointer derived from the heading text alone lands on the first of them. Chapter headings name distinct themes (§2.2), so honouring this costs nothing.
+
 ---
 
 ## 5. Updating a Story When the Spec Changes
