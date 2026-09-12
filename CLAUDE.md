@@ -1,22 +1,25 @@
 # Working on zane-lang/spec (agent notes)
 
 This repo is the canonical Markdown specification for the **Zane** programming
-language — documentation, not code (no compiler here). Two parallel doc trees
-with opposite update rules: `spec/` states *what the language is now* (rewritten
-to the present on every change) and `stories/` records *how it came to be*
-(accumulates; never rewritten to hide the past). One story mirrors each spec
-file (`spec/generics.md` ↔ `stories/generics.md`).
+language — documentation, not code (no compiler here). It holds two parallel doc
+trees with opposite update rules, `spec/` and `stories/`; each tree's rules live
+in its guide below.
 
 This file holds only what an **agent** needs that the human docs don't already
-cover. The actual rules live in the normative guides — **read the relevant one
-in full before editing**, they are detailed and win over anything summarized
-here:
+cover. Everything normative lives in those guides and in `spec/` itself, and they
+win over anything here — **read the relevant one in full before editing**:
 
-- `contributing/writing-spec-docs.md` — spec prose.
-- `contributing/writing-stories-docs.md` — story prose.
+- `contributing/writing-spec-docs.md` — spec prose, document shape, cross-references.
+- `contributing/writing-stories-docs.md` — story prose, the append-only rule (§5),
+  spec↔story linking (§4).
 - `contributing/naming-terms.md` — coining a term of art.
 - `README.md` — the real topic index (spec docs are **not** alphabetical); read
   it first when locating anything.
+
+If you find this file *explaining* a rule rather than pointing at its canonical
+home, that is a defect — delete the explanation and cite the home instead. A
+restatement here drifts exactly like a glossary entry does (below), and is
+harder to catch, because nothing in the repo greps this file.
 
 Each session starts cold with no memory of prior ones, so this file is how the
 next agent gets up to speed — keep it to durable, agent-facing facts.
@@ -53,11 +56,11 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
      ship displaying syntax the same branch retires.
 
    The glossary half of this is the oldest and has its own rule: **a rule
-   correction is not done until `glossary.md` carries it.** The glossary
-   summarizes rules it does not own, so fixing a rule in its canonical home and
-   leaving the entry paraphrasing the superseded version produces a spec that
-   contradicts itself. Grep `spec/glossary.md` for the concept and update the
-   entry in the same commit.
+   correction is not done until `glossary.md` carries it.** Grep
+   `spec/glossary.md` for the concept and update the entry in the same commit.
+   Entry style — including the length that keeps an entry from drifting — is
+   spec guide §2.6; what follows is only how the three drifts got past their
+   authors.
 
    Sweeping the entry is necessary and **not sufficient**. Two of the three
    glossary drifts were subtler than a missed grep:
@@ -69,16 +72,9 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
      set by the ones you did. A sentence scoped to a rule that has since been
      merged into another (`"never re-checked"`, true of one rule among several,
      false once that rule became the only one) reads unchanged and is now wrong.
-   - Length is the mechanism of **drift** specifically. A short entry can be
-     plain wrong, and still needs reading for sense; what it cannot do is go
-     stale, because it reproduces no structure to fall out of sync. An entry
-     that does reproduce its rule's structure — the enumeration, the exceptions,
-     the cross-cutting conditions — is the kind that silently stops matching.
-     Glossary §1 already says `Meaning` gives "only a short summary, not the full
-     rule", and the entries that drifted were the longest in the file. Keep new
-     entries near the median (~50 words); if you find yourself restating the
-     rule, cut back to what distinguishes the term and let **Canonical home**
-     carry the rest.
+   - The entries that drifted were the longest in the file, because length is the
+     mechanism: an entry reproducing its rule's structure is what silently stops
+     matching it.
 
    When trimming an entry, check *why* a clause is there before cutting it —
    `git log -S` on its wording will say. Shortening §3.42 reintroduced an
@@ -123,78 +119,57 @@ and set `provenance_note` on the test, which `runbench.py` prints on every
 render.
 
 ## Validate before committing (spec edits)
-The generics system was unified into a `<>`-header / `()`-call model (canonical
-home `spec/generics.md`, casing rules `spec/lexical.md`). Several pre-redesign
-forms are now illegal and must never reappear. Grep for them — none should hit:
+The greps below are guards, not rules: each one hunts a *form* the spec has
+retired, and the rule it guards is stated in the spec, not here. Read the
+canonical home before deciding what a hit means.
+
+**Retired generics forms.** The generics system was unified into a
+`<>`-header / `()`-call model (`spec/generics.md`, casing in `spec/lexical.md`).
+None of these should hit:
 
 ```sh
 grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]" spec/
 ```
 
-`'[A-Z]` is back on that list. A leading `'` was the **borrow** type marker
-(`'Node`) for one release of the design; the borrow mode for reference types has
-since been removed. A reference-type parameter has exactly two modes, `T` and
-`&T` (`spec/memory.md` §2.9), and `&` is the only marker a type may carry
-(`spec/syntax.md` §2.3).
-
-`'` itself is **no longer unused** — it now prefixes the **loose form** of a
-binary operator (`'*`, `'+`, …), which calls the same implementation one
-precedence tier lower (`spec/operators.md` §3.1, sigil table
-`spec/lexical.md` §4.3). The grep is unaffected and stays as written: a loose
-operator is always `'` followed by punctuation, never by an uppercase letter, so
-`'[A-Z]` still matches only the retired borrow marker. Do not widen it to a bare
-`'`.
+`'[A-Z]` catches the retired **borrow** type marker (`'Node`), which lived for
+one release; a reference-type parameter now has exactly the two modes of
+`spec/memory.md` §2.9. Do **not** widen it to a bare `'`: `'` now prefixes the
+loose form of a binary operator (`spec/operators.md` §3.1), which is always `'`
+followed by punctuation, so the uppercase class still separates the two.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.
 
-There used to be a second guard here, matching `&X = bareSymbol` to catch spec
-examples that mint an `&` from a bare symbol. It is **gone**, and must not be
-restored: a bare symbol is a guest source again (`spec/memory.md` §2.8), so a
-match no longer indicates a defect. It does not indicate a correct line either —
-what still governs an `&` assignment is the scope comparison in
-`spec/lifetimes.md` §1.1, and a bare-symbol assignment still fails it when the
-target's host is declared deeper than the `&`. No grep can decide that; it needs
-the declaration scopes of both sides. The pattern separated nothing worth
-separating, which is why it is gone rather than reworded.
+Run this one with `-R` on the directory, not a `spec/*.md` glob plus a bare
+directory argument: `grep` prints `bench/: Is a directory` and silently skips it
+otherwise.
 
-Run the retired-forms grep with `-R` on the directory, not a `spec/*.md` glob
-plus a bare directory argument: `grep` prints `bench/: Is a directory` and
-silently skips it otherwise.
+There used to be a guard here matching `&X = bareSymbol`. It is **gone** and
+must not be restored: a bare symbol is a guest source (`spec/memory.md` §2.8),
+so a match indicates nothing either way — what governs such an assignment is the
+scope comparison in `spec/lifetimes.md` §1.1, which needs the declaration scopes
+of both sides and so cannot be grepped at all.
 
-Stories are exempt from every grep here: `stories/` records the language as it
-was at each turn and is never rewritten to match the present spec.
-
-A second guard covers one term. The subject of a method — the object it is
-called on — is the **subject**, never the *receiver*; `receiver` was Smalltalk
-residue naming a message Zane does not have, and it was renamed throughout
-`spec/` (canonical home `functions.md` §2.1, glossary §3.38). The word survives
-in exactly one place under `spec/`:
+**`receiver`.** The object a method is called on is the **subject** (canonical
+home `spec/functions.md` §2.1, glossary §3.38); `receiver` was Smalltalk residue
+and was renamed throughout `spec/`.
 
 ```sh
 grep -RIn "receiver" spec/
 ```
 
 The single expected hit is the `> **Story:**` pointer in `functions.md` §2.1
-naming the chapter "What does a receiver receive?" — the chapter title keeps the
+naming the chapter "What does a receiver receive?" — a chapter heading keeps the
 old word because that is what the chapter is about. Any other hit is a
-reintroduction; fix it.
+reintroduction; fix it. Merged stories say "receiver" throughout and stay that
+way, so the two trees disagree on this word by design. Use `subject` in new
+prose on both sides.
 
-`stories/` is exempt and **must not be swept**. Merged chapters say "receiver"
-throughout and stay that way, so the two trees disagree on this word by design.
-A session that "fixes" the stories has violated the append-only rule, not
-tidied up. Use `subject` in new prose on both sides.
-
-A third guard covers the separator. **The bracket picks the separator**
-(canonical home `spec/lexical.md` §6): a `{ }` terminates each thing inside it
-with `;` — entries of a body, always trailing, and statements of a code block
-alike; a `[ ]`, `( )` or `< >` list separates its entries with `,`, never
-trailing. A statement ending in `}` is the one thing that takes no terminator,
-because that brace itself ends the statement (§6.3 there). `init{ }` and the
-field-constructor header and call site
-used `,` under the previous rule, so those are the two forms a session is most
-likely to write back — every other C-family language separates them with commas,
-and the pull is strong. Both greps come back empty on the current spec:
+**The separator.** The bracket picks the separator (canonical home
+`spec/lexical.md` §6). `init{ }` and the field-constructor header and call site
+took `,` under the previous rule, and every other C-family language still does,
+so those are the forms a session is most likely to write back. Both come back
+empty on the current spec:
 
 ```sh
 grep -RIn "init{[^}]*," spec/
@@ -202,31 +177,21 @@ grep -RIn -E "\b[A-Z][A-Za-z0-9_]*(<[^>]*>)?\{[^}]*," spec/
 ```
 
 Unlike the greps above, a hit here is **not automatically a defect** — read it
-before fixing it. A `,` is still legal *inside* one entry, where it separates a
-nested list (`init{value = max(a, b);}` is correct, and the first grep flags it).
-A **map literal** is the common case of this: its entries are `key, value` pairs
-(`spec/syntax.md` §2.8), so one nested in an `init{ }` — `init{pairs = {a, b;};}`
-— trips the first grep while being correct.
-What is retired is a `,` between entries at the body's top level. The greps
-cannot tell the two apart, because that needs bracket-depth tracking a regex does
-not have; they narrow the file down to a handful of lines for a human or agent to
-judge.
+against `lexical.md` §6.1 before fixing it, because a `,` inside a single entry
+is still legal there and the greps cannot see bracket depth. They are also
+single-line only. That gap is deliberate: the obvious multi-line pattern (an
+indented entry line ending in `,`) matches a multi-line `enum` body, which keeps
+its commas by §6.2, so the guard would carry standing legitimate hits — the
+thing the `&X = bareSymbol` guard was removed for being. When a change touches a
+multi-line `{ }` body, check it by reading. For the same reason nothing here
+sweeps `[ ]` at all.
 
-They are also single-line only, so a body spread across lines — a multi-line
-`init{ }` or `Weapon{ ... }` header — slips past both. That gap is deliberate
-rather than an oversight: the obvious multi-line pattern (an indented entry line
-ending in `,`) matches a multi-line `enum` body, which is a `[ ]` list and keeps
-its commas by the rule itself, so it would be a guard with standing legitimate
-hits — the thing the `&X = bareSymbol` guard was removed for being. (Enum maps
-used to be the other such pattern; they are `{ }` bodies with `;`-terminated
-entries now, so they no longer carry a top-level `,` at all.)
-When a change touches a multi-line `{ }` body, check it by reading.
+**Stories are exempt from every grep here.** `stories/` records the language as
+it was at each turn and is never rewritten to match the present spec, so a
+session that "fixes" a merged chapter has violated the append-only rule, not
+tidied up.
 
-For the same reason nothing here sweeps `[ ]`: an array literal, an `enum` body,
-and a `match` case group all keep `,` under the current rule. They are not
-exceptions to it — they are the other half of it.
-
-If the grep hits an old form, stop and rewrite it in the unified system. If a
+If a grep hits an old form, stop and rewrite it in the unified system. If a
 cross-reference target moved (renumbered `§`), fix the reference in every doc
 that uses it, then re-grep for the old numbers. If the change conflicts with
 another file's section, fix the conflicting section or escalate it to the user
@@ -239,25 +204,18 @@ written for wholly new topics only.
 
 Read both contributing guides first, and read **`stories/generics.md`** as the
 quality bar — dense, opinionated, long-form prose. Writing a story is two
-halves: write the narrative, then integrate it into the spec. Don't skip the
-second half.
+halves: write the narrative, then integrate it into the spec. Story guide §8
+lists the integration steps for a wholly new story and §4.4 gives the
+`> **Story:**` pointer format; for a chapter appended to an existing story, spec
+guide §8 carries the same obligation from the spec side. Don't skip the second
+half — it is the one sessions forget.
 
-### Append-only: run the check, and read the rule where it lives
-**Story guide §5 owns this rule** — what may be edited, what the PR-versus-commit
-distinction means, and the rare consolidation exception. Read it there; it is
-the source of truth for contributors and agents alike, and this section adds
-only what a session keeps getting wrong.
-
-Nothing enforces it automatically — no CI, no hook. Run the check yourself
-before every commit that touches `stories/`:
-
-```sh
-git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
-```
-
-Additions only is the passing result.
-
-Two failure modes, both from real sessions on this repo:
+### Append-only: the two ways a session gets it wrong
+**Story guide §5 owns this rule** — what may be edited, the PR-versus-commit
+distinction, the rare consolidation exception, and the `git diff origin/main`
+check to run before every commit touching `stories/`. Read it there and run the
+check it gives. This section adds only what sessions on this repo keep getting
+wrong, in both directions:
 
 - **Too loose.** Editing a merged chapter to fix a retired claim, or bolting a
   forward pointer onto one. Say what stopped being true from the *new* chapter
@@ -265,9 +223,9 @@ Two failure modes, both from real sessions on this repo:
 - **Too strict.** Refusing to touch chapters *your own branch* added, because
   they were already written. They are drafts until the PR merges — rewrite,
   reorder, and insert among them freely; a decision reached late in review often
-  belongs before them. The grep is quiet through all of that by design.
+  belongs before them. The check is quiet through all of that by design.
 
-If the grep is clean, you have not violated the rule, whatever your instinct
+If the check is clean, you have not violated the rule, whatever your instinct
 says.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
@@ -286,40 +244,22 @@ maintainer's head, and is frequently **not** what you'd guess from the spec. So:
 
 Because context grows fast, a story is typically written one session per story.
 
-### Integrating into the spec (the half that's easy to forget)
-In the same change as the story:
-1. Add a `> **Story:**` pointer at the end of each non-trivially-justified spec
-   section (living link; href ends in the chapter-heading anchor; quoted text is
-   the heading). Several sections may point at one chapter; trivial rules get
-   none.
-2. If the section still carries a `## N. Design Rationale` table, delete it and
-   renumber the sections after it — but first verify no reasoning is lost (each
-   row maps to a story chapter or keeps a brief in-place justification). Leave a
-   rationale table in place only if the story is deliberately still incomplete.
-3. Grep the repo for `<topic>.md §N` and internal `§N` mentions; update them.
-4. Add/confirm the row in the stories table in `README.md`.
+### Pinning an in-prose spec link
+Story guide §4.2 requires a commit-pinned permalink for an in-prose spec
+reference, and §4.4 gives the anchor derivation. Two mechanical notes:
 
-### In-prose spec links are commit-pinned permalinks
-A story accumulates and is never rewritten, so an in-prose reference to a
-specific spec rule must be a **commit-pinned permalink**
-(`.../blob/<sha>/spec/<topic>.md#<anchor>`), not a relative link that would
-silently re-point as the spec changes (story guide §4.2). Get the SHA with
-`git log -1 --format=%H -- spec/<topic>.md`. A reviewer may push back on
-permalinks in favour of relative links, or claim the anchor is broken by
-checking it against the *current* spec instead of the pinned commit — that
-objection is wrong; decline it. Companion (`> See also:`) and between-chapter
-links stay ordinary living relative links.
-
-GitHub heading anchors: lowercase, strip punctuation (commas, apostrophes,
-backticks, `&`, `#`), spaces→hyphens. A stripped `&`/`#` flanked by spaces
-leaves a **doubled** hyphen (``new `&` values`` → `#...-new--values`) — do not
-collapse it. Verify every story↔spec anchor resolves at its pinned commit.
+- Commit the spec change **first**, then get the SHA with
+  `git log -1 --format=%H -- spec/<topic>.md`. Run before that commit, it
+  returns the file's previous state — not the text the chapter describes.
+- A reviewer may push back on permalinks in favour of relative links, or claim
+  the anchor is broken by checking it against the *current* spec instead of the
+  pinned commit. That objection is wrong; decline it.
 
 ## Conventions
 - **Commit messages**: short lower-case prefix (`docs:`, `docs(meta):`), then a
   sentence or two. See `git log --oneline` for cadence.
 - **Branches**: one per topic, or as the harness assigns per session. Push there
   and update the existing PR; don't open a new PR unless asked.
-- Agent knowledge that is **not** repo-specific (how Gemini Code Assist behaves,
+- Agent knowledge that is **not** repo-specific (how the PR review bot behaves,
   general reference-doc prose principles) lives in the user's personal memory
   store, not here.
