@@ -95,8 +95,8 @@ An import states one spelling and that spelling is the only one available in the
 ```zane
 import math as m
 
-result Float = m$sqrt(value)      // legal
-result Float = math$sqrt(value)   // ILLEGAL: the file spells this package `m`
+result Float = m$sqrt(value);     // legal
+result Float = math$sqrt(value);  // ILLEGAL: the file spells this package `m`
 ```
 
 Two imports that would give one entity two spellings in the same file are a compile-time error, so `import math` and `import math$sqrt` cannot both appear.

@@ -51,9 +51,9 @@ type Vec2 = struct {       // value type: copied, transitively value, mutable in
     y Float;
 }
 
-pos Vec2(1, 2)
-pos!setX(Float(3))   // legal: mut method writes the field through a borrow of pos
-pos = Vec2(3, 4)     // legal: overwrites the whole value
+pos Vec2(1, 2);
+pos!setX(Float(3));  // legal: mut method writes the field through a borrow of pos
+pos = Vec2(3, 4);    // legal: overwrites the whole value
 ```
 
 ### 2.3 Field visibility is name-based
@@ -108,8 +108,8 @@ type Player<T Type> = #struct {
 
 Player<T>(name String, extraSettings T Type) => init{name; extraSettings;}
 
-player Player<Unit> = Player("Manuel", Unit())
-completed Unit = performWork()
+player Player<Unit> = Player("Manuel", Unit());
+completed Unit = performWork();
 ```
 
 An implementation may erase only the runtime storage of `Unit` values, including fields, array elements, and constructor results. It **MUST** still evaluate every expression that produces a `Unit` value at its original program point and in its original order. Storage erasure never removes side effects or otherwise changes observable evaluation.
@@ -160,8 +160,8 @@ A constructor body is an ordinary verb body: a sequence of statements that ends 
 package Graph
 
 Node(id Int, scale Float, label String) {
-    scaled Float = scale * scale       // ordinary statements run first
-    nextId Int = id + Int(1)
+    scaled Float = scale * scale;      // ordinary statements run first
+    nextId Int = id + Int(1);
     return init{
         _id = nextId;
         scale = scaled;
@@ -219,8 +219,8 @@ type Vector2 = struct { x Float; y Float; }
 Vector2.zeros() => init{ x = Float(0); y = Float(0); }
 Vector2.diagonal(n Float) => init{ x = n; y = n; }
 
-o Vector2.zeros()            // o : Vector2
-d Vector2.diagonal(Float(3)) // d : Vector2
+o Vector2.zeros();           // o : Vector2
+d Vector2.diagonal(Float(3)); // d : Vector2
 ```
 
 A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes it; it does not change what it returns. So a named constructor:
@@ -241,8 +241,8 @@ Because a named constructor builds through `init{ }`, it belongs to a type that 
 Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
 
 ```zane
-x Int(3)
-y Int(2)
+x Int(3);
+y Int(2);
 vec Vector{x; y;}
 ```
 
@@ -277,7 +277,7 @@ Vector{x Int; y Int;} {
         x = x;
         y = y;
     }
-    return temp
+    return temp;
 }
 ```
 
@@ -312,14 +312,14 @@ Car(engine Engine) {
 Call sites:
 
 ```zane
-garage Garage()
-car Car(garage.spare)   // legal: a field access is a guest source
+garage Garage();
+car Car(garage.spare);  // legal: a field access is a guest source
 ```
 
 ```zane
-engine Engine()
-car Car(engine)     // legal: a bare symbol is a guest source
-car Car(Engine())   // ILLEGAL: a temporary cannot initialize an `&` field
+engine Engine();
+car Car(engine);    // legal: a bare symbol is a guest source
+car Car(Engine());  // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
 What still constrains such a field is lifetime, not source: the object it points at must have an owner that outlives the owner of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's owner, so that comparison does not stop at construction — every later store of the containing value asks it again, over the guests that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no owner until the caller says where the object goes; it records which parameters land in `&` fields and each call settles it ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
@@ -337,7 +337,7 @@ Car(engine Engine) {
     return init{engine = engine;}
 }
 
-car Car(Engine())   // legal: plain host field accepts a temporary
+car Car(Engine());  // legal: plain host field accepts a temporary
 ```
 
 ### 3.10 Type and number parameters
@@ -384,14 +384,14 @@ implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048);}
 
 Unit printDistance(d Meters) {
     ...
-    return Unit()
+    return Unit();
 }
 ```
 
 At a **coercion site** — a position whose destination type is fixed by a callable or language construct (see §4.2) — if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
 
 ```zane
-printDistance(Feet(Float(10)))   // coercion site: parameter expects Meters, Feet provided
+printDistance(Feet(Float(10)));  // coercion site: parameter expects Meters, Feet provided
 // desugars to: printDistance(Meters(Feet(Float(10))))
 ```
 
@@ -410,8 +410,8 @@ The `init{ }` inside a constructor body is **not** a coercion site: there the co
 A declaration is **not** a coercion site, so the conversion must be written explicitly there:
 
 ```zane
-distance Meters = Feet(Float(10))           // ILLEGAL: a declaration is not a coercion site
-distance Meters = Meters(Feet(Float(10)))   // legal: explicit conversion
+distance Meters = Feet(Float(10));          // ILLEGAL: a declaration is not a coercion site
+distance Meters = Meters(Feet(Float(10)));  // legal: explicit conversion
 ```
 
 ### 4.2 Coercion sites
@@ -511,11 +511,11 @@ The subject expression (`this`) in a method call is never subject to implicit co
 ```zane
 Unit logDistance(this Meters) {
     ...
-    return Unit()
+    return Unit();
 }
 
-feet Feet(Float(10))
-feet:logDistance()   // ILLEGAL: subject type is Feet, not Meters
+feet Feet(Float(10));
+feet:logDistance();  // ILLEGAL: subject type is Feet, not Meters
 ```
 
 > **See also:** [`functions.md`](functions.md) §5 for how implicit constructors interact with overload resolution.

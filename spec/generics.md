@@ -149,7 +149,7 @@ A number parameter referenced in a body position (not a type position) resolves 
 
 ```zane
 Int size(this Buffer<T Type, n Number>) {
-    return n
+    return n;
 }
 ```
 
@@ -218,8 +218,8 @@ So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Typ
 A constructor call builds a value at run time; a function call runs a function. Both are invoked by bare name, and **MUST NOT** carry a `<>` list — type arguments belong to type expressions only.
 
 ```zane
-vec Vector(Int(2), Int(3))   // legal: bare-name constructor call
-vec Vector<Int>(Int(2))      // ILLEGAL: a call takes no <> list
+vec Vector(Int(2), Int(3));  // legal: bare-name constructor call
+vec Vector<Int>(Int(2));     // ILLEGAL: a call takes no <> list
 ```
 
 A type or number parameter reaches a callable in one of two ways: inferred (introduced inline on a parameter's type or in a nested type) or passed explicitly (declared as a `Type`/`Number` value parameter).
@@ -233,7 +233,7 @@ Vector<T>(x T Type, y T Type) {  // T introduced inline; x and y share it
     return init{ x; y; }
 }
 
-vec Vector(Int(2), Int(3))       // T inferred as Int from the arguments
+vec Vector(Int(2), Int(3));      // T inferred as Int from the arguments
 ```
 
 A constructor's name is its return type, so a constructor for a parameterized type names the **applied** type (`Vector<T>`), where the `<...>` holds bare *references* to the inline-introduced parameters — it carries `T`, not `T Type`, so it is a type expression, not a reintroduced header. The call is still by bare name (`Vector(Int(2), Int(3))`); only the declaration shows the applied return type.
@@ -253,8 +253,8 @@ Array<T, n>(T Type, n Number) {
     // zero-initialise n elements of type T
 }
 
-vec Vector(Int)              // Int passed as the type argument
-arr Array(Int, 10000)        // Int passed as the type, 10000 as the size
+vec Vector(Int);             // Int passed as the type argument
+arr Array(Int, 10000);       // Int passed as the type, 10000 as the size
 ```
 
 A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
@@ -266,15 +266,15 @@ A `Type` value parameter is usable as a type inside the body (for example, `T(0)
 A bare source literal carries a compiler concept type, not a concrete storage type. Whether it may drive inference turns on whether that concept type fixes a concrete type. A `@concepts$Number` or `@concepts$Text` does not — the compiler cannot choose between `Int`, `Float`, and other concrete types — so such a literal **MUST NOT** drive inference of a type parameter. Wrap it in its destination type:
 
 ```zane
-vec Vector(Int(2), Int(3))   // legal: each argument is a concrete Int
-vec Vector(2, 3)             // ILLEGAL: literals cannot drive inference of T
+vec Vector(Int(2), Int(3));  // legal: each argument is a concrete Int
+vec Vector(2, 3);            // ILLEGAL: literals cannot drive inference of T
 ```
 
 A **container literal** is the case where the concept type does carry concrete parameters. A `[ ]` literal's `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it; a `{ }` map literal's `@concepts$Map<K, V>` fixes a key type and a value type on the same terms. The wrap is therefore required of the **entries** — a map literal's keys and values alike — rather than of the bracket. The map literal below stands on its own, since the container types that consume one are not specified in this version (§9):
 
 ```zane
-arr Array([Int(1), Int(2), Int(3)])          // legal: elements are concrete, so T = Int and n = 3
-arr Array([1, 2, 3])                         // ILLEGAL: bare elements fix no T, as in Vector(2, 3)
+arr Array([Int(1), Int(2), Int(3)]);         // legal: elements are concrete, so T = Int and n = 3
+arr Array([1, 2, 3]);                        // ILLEGAL: bare elements fix no T, as in Vector(2, 3)
 
 {String("k"), Int(1);}                       // entries are concrete, so K = String and V = Int
 {"k", 1;}                                    // bare entries fix neither K nor V, so this drives no inference
@@ -295,7 +295,7 @@ Array<T, n>(values @concepts$Array<T Type, n Number>) {
     // T and n inferred from the literal
 }
 
-arr Array([Int(1), Int(2), Int(3)])         // T = Int and n = 3 inferred from the literal
+arr Array([Int(1), Int(2), Int(3)]);        // T = Int and n = 3 inferred from the literal
 ```
 
 The value-parameter type `@concepts$Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
@@ -307,7 +307,7 @@ Array<T, n>(T Type, n Number) {  // called as Array(Int, 10000)
     // zero-initialise n elements of type T
 }
 
-arr Array(Int, 10000)        // T = Int passed, n = 10000 passed
+arr Array(Int, 10000);       // T = Int passed, n = 10000 passed
 ```
 
 Used when no literal is available — for example, a zero-initialised array of known length.

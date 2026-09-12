@@ -61,9 +61,9 @@ The runtime uses a work-stealing thread pool configured by `@threads`:
 A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned. A block captures the frame that wrote it ([`control-flow.md`](control-flow.md) §2.2), and capture is safe there only because the block runs inside that call. Spawning one would put captured state in a parallel task, which is exactly what §5.2 forbids for values. Since branching and repetition are such verbs ([`control-flow.md`](control-flow.md) §3), this is also what makes `spawn` on a conditional or a repetition illegal.
 
 ```zane
-spawn runServer(8080)             // ok: function call
-spawn server:listen(8080)         // ok: read-only method call
-spawn server!refreshConnections() // ok: mutating method call
+spawn runServer(8080);            // ok: function call
+spawn server:listen(8080);        // ok: read-only method call
+spawn server!refreshConnections(); // ok: mutating method call
 spawn if(cond) { f() }            // ILLEGAL: `if` takes a block argument
 ```
 
@@ -71,8 +71,8 @@ spawn if(cond) { f() }            // ILLEGAL: `if` takes a block argument
 A spawned call that returns a value can bind to a symbol. Reading that symbol blocks until the spawned call returns.
 
 ```zane
-result String = spawn listen(8080)
-print(result) // blocks until listen returns
+result String = spawn listen(8080);
+print(result); // blocks until listen returns
 ```
 
 ### 3.3 Abortable spawned calls are handled at the spawn site
@@ -80,10 +80,10 @@ If a spawned call is abortable, it must still attach `?` or `??` directly to the
 
 ```zane
 port Int = spawn listen(8080) ? err {
-    resolve Int(404)
+    resolve Int(404);
 }
 
-fallback Int = spawn listen(8081) ?? Int(404)
+fallback Int = spawn listen(8081) ?? Int(404);
 ```
 
 The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.

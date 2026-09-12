@@ -26,7 +26,7 @@ A **block argument** is a braced run of statements written at a call site and ex
 
 ```zane
 ran Bool = if(ready) {
-    start()
+    start();
 }
 ```
 
@@ -54,12 +54,12 @@ It is **transparent** to control transfer. `return` and `abort` written inside a
 
 ```zane
 Unit reportUntilNegative(values IntList) {
-    i Int = Int(1)
+    i Int = Int(1);
     i!to(values:size()) {
-        guard(values[i] < Int(0))
-        print(values[i])
+        guard(values[i] < Int(0));
+        print(values[i]);
     }
-    return Unit()
+    return Unit();
 }
 ```
 
@@ -67,13 +67,13 @@ Unit reportUntilNegative(values IntList) {
 
 ```zane
 Int firstNegative(values IntList) {
-    i Int = Int(1)
+    i Int = Int(1);
     i!to(values:size()) {
         if(values[i] < Int(0)) {
-            return i
+            return i;
         }
     }
-    return Int(0)
+    return Int(0);
 }
 ```
 
@@ -90,7 +90,7 @@ A `Block<T>` yields a `T`. Each of its yielding paths ends with `resolve`, which
 
 ```zane
 ran!elif({ resolve cache:has(key) }) {
-    use(key)
+    use(key);
 }
 ```
 
@@ -107,7 +107,7 @@ The declarations in this section are `core` declarations, not language construct
 
 ```zane
 if(ready) {
-    start()
+    start();
 }
 ```
 
@@ -118,13 +118,13 @@ A chain names the `if` result and continues it. `elif` runs its block when no ea
 
 ```zane
 ran Bool = if(age > Int(18)) {
-    print("adult")
+    print("adult");
 }
 ran!elif(age > Int(13)) {
-    print("teenager")
+    print("teenager");
 }
 ran:else() {
-    print("junior")
+    print("junior");
 }
 ```
 
@@ -146,9 +146,9 @@ Deferral is therefore visible at the call site rather than implied by the name o
 Counted repetition is a `mut` method on `Int`. The induction variable is an ordinary local that the block captures; the method advances it through the inclusive range.
 
 ```zane
-i Int = Int(1)
+i Int = Int(1);
 i!to(Int(3)) {
-    print(i)
+    print(i);
 }
 ```
 
@@ -159,12 +159,12 @@ No `core` declaration repeats without a count, and none can be written (§4.3). 
 
 ```zane
 Unit connect(connection Connection, maxTries Int) {
-    attempt Int = Int(1)
+    attempt Int = Int(1);
     attempt!to(maxTries) {
-        guard(connection:up())
-        log(connection:ping())
+        guard(connection:up());
+        log(connection:ping());
     }
-    return Unit()
+    return Unit();
 }
 ```
 
@@ -177,9 +177,9 @@ The `guard` leaves `connect`, not the repetition (§2.3). Zane has no construct 
 
 ```zane
 Unit configure(settings Settings) {
-    guard(settings:isEmpty())
-    apply(settings)
-    return Unit()
+    guard(settings:isEmpty());
+    apply(settings);
+    return Unit();
 }
 ```
 
@@ -221,9 +221,9 @@ package core
 
 Unit guard(condition Bool) {
     if(condition) {
-        @controlflow$exitFromCall()
+        @controlflow$exitFromCall();
     }
-    return Unit()
+    return Unit();
 }
 ```
 
@@ -232,9 +232,9 @@ Which invocation is the caller follows from the lowering of §2.3 rather than fr
 ```zane
 Unit main() {
     if(true) {
-        guard(true)
+        guard(true);
     }
-    return Unit()
+    return Unit();
 }
 ```
 
@@ -258,12 +258,12 @@ A package that wants a repetition policy, a branching form, or a scoped resource
 
 ```zane
 Unit twice(body @concepts$Block) {
-    @controlflow$repeat(Int(2), body)
-    return Unit()
+    @controlflow$repeat(Int(2), body);
+    return Unit();
 }
 
 twice() {
-    print("again")
+    print("again");
 }
 ```
 
@@ -279,8 +279,8 @@ Exits are declarable on the same footing, and need no block at all. An `@control
 When an `Int` identifies an ordinal position in an ordered sequence, the first position is `1`. For a sequence with `n` elements, the positional index range is therefore `1` through `n`.
 
 ```zane
-lastPosition Int = list:size()
-element Int = list[lastPosition]
+lastPosition Int = list:size();
+element Int = list[lastPosition];
 ```
 
 The example above selects the last element by using the sequence size directly as the final valid position.

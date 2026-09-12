@@ -30,7 +30,7 @@ The **subject** is the object a method is called on. Two things are named after 
 
 ```zane
 Int scaledId(this Node, factor Int) {
-    return this._id * factor
+    return this._id * factor;
 }
 ```
 
@@ -42,11 +42,11 @@ Naming the first parameter `this` is the only thing that makes a declaration a m
 
 ```zane
 Int scaledId(this Node, factor Int) {
-    return this._id * factor
+    return this._id * factor;
 }
 
 Int scaledIdWrong(node Node, factor Int) {
-    return node._id * factor   // ILLEGAL: node is not `this`
+    return node._id * factor;  // ILLEGAL: node is not `this`
 }
 ```
 
@@ -67,8 +67,8 @@ A guest subject may be read, mutated, returned as `&T` ([`lifetimes.md`](lifetim
 
 ```zane
 Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit guest
-    this.scale = scale
-    return Unit()
+    this.scale = scale;
+    return Unit();
 }
 ```
 
@@ -78,19 +78,19 @@ Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit
 
 ```zane
 Unit setY(this Vec2, y Float) mut {           // value subject: in-place through the borrow
-    this.y = y
-    return Unit()
+    this.y = y;
+    return Unit();
 }
 
-pos!setY(Float(3))
+pos!setY(Float(3));
 ```
 
 ### 2.5 Call markers are part of the surface syntax
 Read-only methods are called with `:`. Mutating methods are called with `!`.
 
 ```zane
-node:scaledId(Int(2))
-node!setScale(Float(3))
+node:scaledId(Int(2));
+node!setScale(Float(3));
 ```
 
 Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
@@ -126,36 +126,36 @@ type Car = #struct {
 
 // `&` parameter used only to read
 Int calculate(this Car, engine &Engine) {
-    return this._value + engine.speed   // legal: reading through the guest
+    return this._value + engine.speed;  // legal: reading through the guest
 }
 
 // `&` parameter stored into an `&` field: recorded in the signature, checked per call
 Unit setEngine(this Car, engine &Engine) mut {
-    this.engine = engine   // legal here; each call compares the two argument paths
-    return Unit()
+    this.engine = engine;  // legal here; each call compares the two argument paths
+    return Unit();
 }
 
 // plain reference-type parameter swallows; the swallowed value is hosted at the call site
 Unit setEngineWrong(this Car, engine Engine) mut {
-    this.engine = engine   // ILLEGAL: cannot store a swallowed host into an `&` field
-    return Unit()
+    this.engine = engine;  // ILLEGAL: cannot store a swallowed host into an `&` field
+    return Unit();
 }
 ```
 
 Call syntax is uniform regardless of the parameter mode; only what the caller may supply differs:
 
 ```zane
-engine Engine()
-garage Garage()
+engine Engine();
+garage Garage();
 
-car:calculate(engine)          // legal: a bare symbol is a guest source
-car!setEngine(engine)          // legal: one block owns car and engine
-car!setEngine(garage.spare)    // legal: a field access is a guest source, and
+car:calculate(engine);         // legal: a bare symbol is a guest source
+car!setEngine(engine);         // legal: one block owns car and engine
+car!setEngine(garage.spare);   // legal: a field access is a guest source, and
                                //   garage is owned by the same block
-car!setEngine(Engine())        // ILLEGAL: a temporary is not a place expression
+car!setEngine(Engine());       // ILLEGAL: a temporary is not a place expression
 {
-    spare Engine()
-    car!setEngine(spare)       // ILLEGAL: this block does not outlive car's
+    spare Engine();
+    car!setEngine(spare);      // ILLEGAL: this block does not outlive car's
 }
 ```
 
@@ -193,7 +193,7 @@ A function is an ordinary identifier-named package-scope verb whose first parame
 
 ```zane
 Float getScale(node Node) {
-    return node.scale
+    return node.scale;
 }
 ```
 
@@ -220,7 +220,7 @@ Every block-bodied verb must return a value explicitly on every returning path, 
 
 ```zane
 Unit noOperation() {
-    return Unit()
+    return Unit();
 }
 ```
 
@@ -288,7 +288,7 @@ If no candidate matches, the call is a compile-time error. If multiple candidate
 Cross-package extension methods are written explicitly:
 
 ```zane
-vec:Physics$kineticEnergy()
+vec:Physics$kineticEnergy();
 ```
 
 ### 6.3 Extension methods may be declared in any package
@@ -320,12 +320,12 @@ A lambda literal is a function declaration with the name removed. It writes its 
 ```zane
 callee(Float(x Int) {
     small Bool = if(x < Int(10)) {
-        return Float(0)
+        return Float(0);
     }
     small:else() {
-        return Float(1) / Float(x)
+        return Float(1) / Float(x);
     }
-})
+});
 ```
 
 Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** callee without ambiguity: the lambda fixes its own type, so overload resolution on that callee proceeds with ordinary argument types and no circularity. Its complete written type also allows it to be defined and passed directly in the same expression without depending on surrounding context.
@@ -335,12 +335,12 @@ Because a lambda carries its complete type, it is a single value with one exact 
 ```zane
 onEventCallback Unit[this Node, EventData] mut = Unit(this Node, data EventData) {
     ...
-    return Unit()
+    return Unit();
 } // OK: non-`mut` lambda assigned to a `mut` function type
 
 readonlyCallback Unit[this Node, EventData] = Unit(this Node, data EventData) mut {
     ...
-    return Unit()
+    return Unit();
 } // ILLEGAL: expected a non-`mut` function value
 ```
 

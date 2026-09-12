@@ -275,8 +275,8 @@ Use the `zane` tag for all Zane source examples and pseudo-grammar forms:
 
 ````markdown
 ```zane
-maxHp Int(100)
-hp = computeHp()
+maxHp Int(100);
+hp = computeHp();
 ```
 ````
 
@@ -285,7 +285,7 @@ Pseudo-grammar forms also use the `zane` tag:
 ````markdown
 ```zane
 name Type(arg, ...)
-name = expr
+name = expr;
 ```
 ````
 
