@@ -118,6 +118,8 @@ Rules:
 - why that name was chosen
 - the canonical home document for the full rule
 
+Keep an entry short — near the file's median of roughly 50 words. `Meaning` is a summary, not the rule, and length is the mechanism of drift: an entry that reproduces its rule's structure — the enumeration, the exceptions, the cross-cutting conditions — is the kind that silently stops matching once the rule moves. If you find yourself restating the rule, cut back to what distinguishes the term and let the canonical home carry the rest.
+
 For how a coined term is chosen in the first place — what makes a good name and
 how to weigh candidates — see [`naming-terms.md`](naming-terms.md).
 

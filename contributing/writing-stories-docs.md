@@ -114,6 +114,8 @@ A spec section whose *why* is non-trivial ends with a pointer into the chapter t
 
 The href ends in the chapter's heading **anchor** so the link scrolls straight there, and the quoted text is the heading itself. Put it where the curious reader is — at the section whose rule it explains. Because a chapter is a theme rather than a single decision, several spec sections may point at the same chapter — that is expected. When a chapter heading changes, its anchor changes too, so fix every inbound `> **Story:**` pointer in the same change.
 
+GitHub derives the anchor from the heading mechanically: lowercase it, strip punctuation (commas, apostrophes, backticks, `&`, `#`), and turn each space into a hyphen. A stripped character that stood between spaces leaves a **doubled** hyphen — ``## Minting new `&` values`` gives `#minting-new--values` — which is correct; do not collapse it. Check every pointer against the heading it targets, in both directions.
+
 ---
 
 ## 5. Updating a Story When the Spec Changes
