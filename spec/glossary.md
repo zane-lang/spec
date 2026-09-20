@@ -240,7 +240,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.36 guest source
-- **Meaning:** A place expression a new `&` may be minted from: a **bare symbol**, a field access whose base is a place, or an `&T` parameter. Only a `[]` expression is a place excluded, and temporaries are not places at all. The guest names whatever is hosted at that source when it is minted.
+- **Meaning:** A stable place a new `&` may be minted from: a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter. Container elements and variant payloads remain readable places but cannot originate a new guest.
 - **Why this name:** The term names the *source* end — where a guest may come from — separately from what a guest survives once minted, which is the anchor system's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
