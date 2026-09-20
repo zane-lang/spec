@@ -108,7 +108,7 @@ Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 ### 2.5 Guests are repointable
 
-An `&` symbol or `&` field may be assigned a different target later, as long as the new target is a guest source (§2.8) and the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the owner that rule compares is the field's root symbol's, not the field's own.
+An `&` symbol or `&` field may be assigned a different guest later, either by copying an existing `&T` value or by minting one from a stable guest source (§2.8), as long as the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the owner that rule compares is the field's root symbol's, not the field's own.
 
 ### 2.6 Guests are independent
 
