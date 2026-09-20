@@ -57,6 +57,7 @@ The comparison the compiler makes is between two declaration blocks, after resol
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
 
 ### 1.2 Move-sources are host symbols, hosting verb results, or `#variant` case forms
 A move-source must denote a **hosting value the expression is entitled to consume**. Three forms qualify:
