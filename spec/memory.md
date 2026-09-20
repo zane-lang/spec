@@ -13,7 +13,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
-- **`A guest follows its object`.** A new guest may be minted from any place expression that names hosted storage — a bare symbol, a field access, or an `&T` parameter (§2.8). When that object is moved, its guests travel with it; when a slot's occupant is destroyed by an overwrite, guests to that slot observe the replacement (§2.8.1, §4.5).
+- **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; when a stable slot's occupant is destroyed by an overwrite, guests to that slot observe the replacement (§2.8.1, §4.5).
 - **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
 - **`Repointable guests`.** A guest is non-hosting storage that can point at different hosts over time.
 - **`Lexical lifetime enforcement`.** Guest assignment and rehosting are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
@@ -23,7 +23,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 
 The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object updates its terminal anchor or links an older anchor to the destination anchor, so existing tethers — and therefore guests — continue to reach it.
 
-These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare symbol, a field access, or an `&T` parameter — never from a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
+These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter — never from contingent storage or a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a stable host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
 
@@ -52,7 +52,7 @@ Container overwrite therefore does not depend on whether the element slot stores
 hosts Array<Node, 2> = [Node(), Node()];
 ```
 
-Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. Guests to that slot observe the new value because guests follow the host/anchor path, not the original object.
+Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. The element is still a place, but it is contingent storage and cannot originate a guest (§2.8); a container may remove or rearrange elements while the container itself remains alive.
 
 ### 2.3 Value types are copied whole, mutable in place, and freely overwritable
 
@@ -151,7 +151,6 @@ s &Car = car;            // legal: bare host symbol
 ```
 
 ```zane
-players List<Player>();
 weapon &Weapon = players[100].weapon;  // ILLEGAL: the path crosses []
 ```
 
@@ -650,8 +649,8 @@ A single global free stack and frontier require synchronization under concurrent
 | Value copy | Copies the whole existing value: inline bytes, plus a fresh allocation and recursive copy of every boxed payload the value owns, so two values never share storage |
 | `&` (guest) | Guest-only non-hosting storage; stores one tether, may be repointed, copied by value, and returned, but can never directly host a `T` |
 | Host-capable guest state | After rehosting, the old hosted bytes cease to be live and a slot declared as `T` stores the terminal tether as a guest while retaining enough storage to host another `T` later |
-| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
-| New `&` value | May be minted from a bare symbol, a field access of a place, or an `&` parameter; `[]` expressions and temporaries are rejected |
+| Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
+| New `&` value | May be minted only from a stable guest source: a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter; contingent paths and temporaries are rejected |
 | What a guest follows | The object hosted at the source when the guest was minted: it travels with that object when the object is moved, and carries forward to the replacement when the object is destroyed by an overwrite of its slot (§2.8.1) |
 | `&` parameter | Declares that the caller must supply a guest source; the parameter is place-like inside the callee and may be stored or returned |
 | Borrow | Non-hosting, non-escaping access to a caller's value storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
