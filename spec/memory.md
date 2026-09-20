@@ -13,7 +13,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
-- **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; when a stable slot's occupant is destroyed by an overwrite, guests to that slot observe the replacement (§2.8.1, §4.5).
+- **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; a stable-slot overwrite carries that slot's guests to the replacement, while a disappearing contingent host floats the old object within the same owner (§2.8.1, §4.5).
 - **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
 - **`Repointable guests`.** A guest is non-hosting storage that can point at different hosts over time.
 - **`Lexical lifetime enforcement`.** Guest assignment and rehosting are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
@@ -21,9 +21,9 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Regioned arena placement`.** Every scope owns separate fixed-size and dynamic regions. Statically sized storage is placed inline in the fixed-size region; resizable data and the payloads of boxed members use the dynamic region. Anchors live outside scope arenas in one runtime-global fixed-slot pool (see §3 and §4).
 - **`Segmented-offset tethers`.** Internally, each guest is represented by a `u32` tether — a chunk id plus an in-chunk offset — that points at an anchor cell in the host's identity path, not a raw pointer (see §4.2).
 
-The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object updates its terminal anchor or links an older anchor to the destination anchor, so existing tethers — and therefore guests — continue to reach it.
+The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object carries its terminal anchor with it; only a move into an anchored **stable** destination may merge identities by forwarding the older source anchor to the destination anchor. A contingent place never contributes a replacement-surviving identity of its own.
 
-These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter — never from contingent storage or a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a stable host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
+These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter — never from contingent storage or a temporary. Lexical scope checks ensure the owner outlives every guest derived from it. Moves, stable overwrites, and same-owner contingent floating all preserve guest validity. Internally, tethers follow anchor identities rather than fixed object addresses.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
 
@@ -645,7 +645,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Reference counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Guests remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Host overwrite keeps existing guests valid | ✅ via host/anchor indirection | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
+| Stable host overwrite keeps existing guests valid | ✅ via host/anchor indirection | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
 
 ### 5.2 Allocation
 
@@ -689,8 +689,8 @@ A single global free stack and frontier require synchronization under concurrent
 | Dynamic-block alignment | A growable backing store is cache-line aligned; a boxed payload takes its type's alignment; the frontier is rounded up before it is bumped (§3.6) |
 | Anchor cell | One global-pool 8-byte physical slot containing a `u32` target and a payload/forwarding kind; a forwarding cell targets another anchor |
 | Backpointer | Each hosted payload stores the terminal payload-anchor identity for move updates and tether minting; `0` means no cell has been allocated |
-| Anchor merging | Moving into an anchored destination preserves the destination anchor and converts a distinct source anchor into a forwarder; no guest is enumerated |
-| Anchor lifecycle | A payload anchor returns when its hosting identity ends; a forwarding anchor returns when its former source-host scope drains |
+| Anchor merging | Moving into an anchored **stable** destination preserves the destination anchor and converts a distinct source anchor into a forwarder; contingent destinations never merge replacement-surviving slot identities |
+| Anchor lifecycle | A stable-slot payload anchor returns when that hosting identity ends; an object anchor carried through contingent storage follows any same-owner float; a forwarding anchor returns when its former source-host scope drains |
 | Anchor reuse safety | Guest canonicalization and lexical scope rules ensure no live tether names a returned slot |
 | Tethered-instance cost | Minimum 16-byte direct footprint: one 4-byte tether, one 8-byte anchor slot, and one 4-byte backpointer; each retained historical identity uses one existing 8-byte forwarding slot until its retirement scope drains |
 
