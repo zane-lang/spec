@@ -415,6 +415,8 @@ A container element or variant-case payload is a **contingent** hosting place. I
 
 A **value** has death points that are equally static: its slot is overwritten, or the host, container, or scope holding it dies. Whatever storage that value owns out of line — the payload of a boxed member, and every payload beneath it — is returned at that point, recursively (see [`memory.md`](memory.md) §2.3 and §3.2). No tracking is needed to find the moment, because every one of these points is known from the program text.
 
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
+
 ### 2.2 Scopes drain before destruction
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
