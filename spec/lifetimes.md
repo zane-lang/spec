@@ -409,7 +409,9 @@ For an `&` field the callee must still declare the corresponding parameter `&T` 
 ## 2. Lifetime and Destruction
 
 ### 2.1 Destruction is deterministic
-Class instances are destroyed when their host dies, their hosting container dies, or their hosting scope drains under the concurrency rules.
+A reference-type object in a **stable** host is destroyed when that hosting identity ends without the object being moved elsewhere. A scope drain ends every hosting identity owned by that scope.
+
+A container element or variant-case payload is a **contingent** hosting place. If such a place disappears or is replaced *before its owner scope drains*, a reference-type occupant that is not explicitly moved elsewhere is not destroyed at that point: it **floats** into an anonymous host owned by the same scope and lives until that scope drains ([`memory.md`](memory.md) §2.8.1). This is unconditional on whether any guest exists, so guest storage does not decide lifetime. When the owner scope itself drains, no float occurs; the object is destroyed with the rest of that scope.
 
 A **value** has death points that are equally static: its slot is overwritten, or the host, container, or scope holding it dies. Whatever storage that value owns out of line — the payload of a boxed member, and every payload beneath it — is returned at that point, recursively (see [`memory.md`](memory.md) §2.3 and §3.2). No tracking is needed to find the moment, because every one of these points is known from the program text.
 
@@ -417,10 +419,10 @@ A **value** has death points that are equally static: its slot is overwritten, o
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
 ### 2.3 Guest storage never extends lifetime
-Guests do not participate in hosting and cannot prolong object lifetime. They only track a live object whose host is already guaranteed to outlive them.
+Guests do not participate in hosting and cannot prolong an object beyond the lifetime fixed by its owner. The contingent-place float in §2.1 is part of that hosting rule and happens whether or not a guest exists: the object moves to another host with the **same owner** rather than gaining a longer owner because it was referenced.
 
 ### 2.4 Null guests are not a user-facing state
-An `&` is never optional and is never tested for emptiness; the runtime exposes no “null guest” programming model to the user. One rule keeps a stored guest pointing at something live as values move: §1.1 compares owners at every store, over the value's own host and over the guests it carries (§1.10), deferring to the call site wherever a parameter stands in for a path it cannot see (§1.11). What that covers is **relocation** — a value travelling away from what its guests name. A host destroyed while its tree lives on is the separate question §2.1 and [`memory.md`](memory.md) §2.8.1 answer.
+An `&` is never optional and is never tested for emptiness; the runtime exposes no “null guest” programming model to the user. One rule keeps a stored guest pointing at something live as values move: §1.1 compares owners at every store, over the value's own host and over the guests it carries (§1.10), deferring to the call site wherever a parameter stands in for a path it cannot see (§1.11). What that covers is **relocation** — a value travelling away from what its guests name. A contingent hosting place disappearing while its owner lives on is the separate case §2.1 and [`memory.md`](memory.md) §2.8.1 answer by floating the occupant within the same owner.
 
 ---
 
@@ -444,7 +446,7 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Store | Legal only when every host the stored value names — its own, and every host reached through a guest it carries — has an owner that outlives the destination's owner; an assignment, a move, a return, and an argument are all stores |
 | Owner | A symbol is owned by its declaring block; a field or element reached by owning steps by its root symbol's owner; a parameter and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A path stepping *through* an `&` has left its root's tree, has no owner, and may be read but never stored into. A block outlives every block nested in it; hosts inside a stored value travel with it and take the destination's owner |
 | `&` return | Returned `&T` must be rooted in a parameter of either mode, `this` included, because a parameter belongs to the call-site scope; a local is not a root |
-| Guest assignment | Only from a stable guest source ([`memory.md`](memory.md) §2.8): a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter |
+| Guest assignment | Copies an existing `&T` value, or mints from a stable guest source ([`memory.md`](memory.md) §2.8): a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter |
 | Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a value-type borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
@@ -454,6 +456,6 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
 | Return value | A return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous host, while an ignored value-type result is discarded |
-| Destruction | Deterministic and delayed until the hosting scope drains |
+| Destruction | Deterministic: stable hosting identities die explicitly or at scope drain; a disappearing contingent reference host floats anonymously within the same owner scope until that scope drains |
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#no-rule-to-spare-the-specific-hole-each-restriction-plugs) — "No rule to spare: the specific hole each restriction plugs".
