@@ -44,15 +44,16 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a host does not invalidate existing guests. Guests follow the host/anchor path, so later reads observe the host's current value.
+Overwriting a **stable** host does not invalidate existing guests. The slot's hosting identity survives the overwrite, so guests minted from that stable slot observe its replacement through the same anchor path (§2.8.1).
 
-Container overwrite therefore does not depend on whether the element slot stores a host or a guest. Both kinds of slots may be rewritten after initialization.
+Container elements and variant-case payloads are **contingent** hosting places rather than stable slots. They may be rewritten, removed, or cease to be the live case while their owner remains alive. When such a place disappears before its owner scope drains, a hosted reference-type occupant that is not explicitly moved elsewhere **floats** into an anonymous host owned by that same scope (§2.8.1, [`lifetimes.md`](lifetimes.md) §2.1). Existing guests to the object therefore remain live; the contingent place itself never becomes a guest source (§2.8).
 
 ```zane
 hosts Array<Node, 2> = [Node(), Node()];
+hosts[1] = Node();  // the replaced Node has no continuing element-slot identity
 ```
 
-Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. The element is still a place, but it is contingent storage and cannot originate a guest (§2.8); a container may remove or rearrange elements while the container itself remains alive.
+An `&T` stored *as an element value* is different: rewriting that element merely replaces one guest value with another.
 
 ### 2.3 Value types are copied whole, mutable in place, and freely overwritable
 
@@ -174,16 +175,19 @@ engine Engine();        // legal: plain host binding; Engine() temporary is mate
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
-### 2.8.1 A guest follows the object; an overwritten slot carries its guests forward
+### 2.8.1 A guest follows the object; stable replacements carry forward; contingent hosts float
 
-Minting a guest from a place gives a guest to **the object hosted there at that moment**, and the guest tracks that object's identity rather than the storage it was read from (§4). Two things can subsequently happen to that object, and the program text says which:
+Minting a guest from a stable place gives a guest to **the object hosted there at that moment**, and the guest tracks that object's identity rather than the storage it was read from (§4). Before the object's owner scope drains, three things can happen:
 
 - The object is **moved** — some other host takes it (see [`lifetimes.md`](lifetimes.md) §1.2). The object is alive at its new home, and every guest to it follows it there through the anchor path (§4.5).
-- The object is **destroyed** by an overwrite of the slot it lived in (§2.2). The slot's hosting identity continues across the replacement, so guests minted from that slot observe the new occupant.
+- A **stable hosting slot is overwritten** (§2.2). The old occupant is destroyed, but the slot's hosting identity continues across the replacement, so guests minted from that stable slot observe the new occupant.
+- A **contingent hosting place disappears or is replaced** — for example, a container element is removed/replaced or a variant changes away from a hosting payload. Such a place has no stable slot identity to carry forward. Unless the operation explicitly moves the occupant elsewhere, the reference-type object is rehosted into an **anonymous host owned by the contingent place's owner scope** before the place disappears. Existing guests to the object follow it there. The anonymous host is not a move-source and lives until that owner scope drains.
 
-The two cases never compete, because an object cannot both leave and die in the same step. They are exhaustive while the guest is live because §2.8 does not let contingent storage originate a guest: a container element may disappear while its container survives, and a variant payload may disappear while its variant survives, but neither may be the source of a new `&`. A guest is therefore always reading something live, and which live thing it reads is decidable from the source.
+The third case is what keeps an alias that predates contingent storage safe. A host may be guested while it is still a bare symbol or stable struct field and then move into a container element or variant payload; the moved-from symbol itself also downgrades to a guest. The source restriction in §2.8 prevents *new* guests from being minted through the contingent path, while floating preserves any guests that already existed before the move.
 
-The case worth spelling out is a bare symbol, because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
+At the owner scope's drain there is no further float: the anonymous host and every guest that owner was required to outlive drain together under [`lifetimes.md`](lifetimes.md) §2. A guest therefore never forces an object beyond its lexical owner.
+
+The stable-symbol case is worth spelling out because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
 
 ```zane
 main Player();
@@ -200,18 +204,31 @@ They part company only if the emptied slot is put back to work:
 main = Player();       // main's slot hosts a new, unrelated object
 ```
 
-`main` now names the new object and `guest` still names the moved one, which is alive in `second`. That is the first bullet doing its job: the move carried the old object's identity away with it, so re-hosting the slot begins a fresh identity rather than capturing the guests of the old one. Contrast an overwrite, where nothing moves:
+`main` now names the new object and `guest` still names the moved one, which is alive in `second`. Re-hosting the emptied source begins a fresh identity rather than capturing the guests of the object that left.
+
+A stable field overwrite takes the second branch:
 
 ```zane
 car Car();
 r &Engine = car.engine;
-car.engine = Engine(); // the old engine is destroyed in place; r observes the new one
+car.engine = Engine(); // the stable field survives; r observes the replacement
 ```
 
-Here the occupant of `car.engine` died and the slot's identity continued, so `r` carries forward to the replacement. The question a reader has to answer is only ever *did the object leave, or did it die* — and a move and an overwrite are different statements.
+A variant payload demonstrates the third. The payload itself cannot originate a new guest (§2.8), but a guest may already exist before its object is moved there:
+
+```zane
+node Node();
+watch &Node = node;
+holder Holder.some(node);       // node moves into a contingent variant payload
+holder = Holder.none(Unit());   // the old Node floats to holder's owner scope
+watch:inspect();                 // still live
+```
+
+The durable pattern for code that starts from the variant itself remains to guest the whole reference variant and perform the abortable case read when needed, rather than guesting the contingent payload.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
 ### 2.9 Function parameters: swallow and guest
 
@@ -220,10 +237,10 @@ A **reference type** parameter has two passing modes, one per surface form. The 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
 | Swallow | `T` | a move-source ([`lifetimes.md`](lifetimes.md) §1.2) | take hosting access; the caller's symbol downgrades to a guest |
-| Guest | `&T` | a guest source (§2.8) | read it, mutate it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
+| Guest | `&T` | a stable guest source that mints a guest, or an existing `&T` value (§2.8) | read it, mutate it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
 
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright.
-- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly. Binding it into an `&` **field** is decided elsewhere: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so it does not try. It records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
+- A parameter declared as `&T` is a **guest**: the caller either supplies a stable place that may mint a new guest under §2.8 or passes an `&T` value that already exists (so `T` is a reference type, §2.4). Inside the callee body the parameter acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare host symbol can mint a guest directly; `weapons[1]` may also feed the parameter when `weapons` stores `&T`, because that expression copies an existing guest rather than minting one from the element slot. Binding the parameter into an `&` **field** is decided elsewhere: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so it does not try. It records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
 
 `&T` is the mode for a call that must not take hosting. A verb that reads or mutates a caller's object without consuming it declares that object `&T`, and the caller passes the symbol as it stands:
 
@@ -651,8 +668,8 @@ A single global free stack and frontier require synchronization under concurrent
 | Host-capable guest state | After rehosting, the old hosted bytes cease to be live and a slot declared as `T` stores the terminal tether as a guest while retaining enough storage to host another `T` later |
 | Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
 | New `&` value | May be minted only from a stable guest source: a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter; contingent paths and temporaries are rejected |
-| What a guest follows | The object hosted at the source when the guest was minted: it travels with that object when the object is moved, and carries forward to the replacement when the object is destroyed by an overwrite of its slot (§2.8.1) |
-| `&` parameter | Declares that the caller must supply a guest source; the parameter is place-like inside the callee and may be stored or returned |
+| What a guest follows | The object it names: it follows a move; a stable-slot overwrite carries the slot's guests to the replacement; a disappearing contingent host floats anonymously to that place's owner scope (§2.8.1) |
+| `&` parameter | Caller supplies either a stable guest source or an existing `&T` value; the parameter is place-like inside the callee and may be stored or returned |
 | Borrow | Non-hosting, non-escaping access to a caller's value storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when the parameter — an existing place — is itself bound into a fresh slot (assignment, declaration, field or return store), never merely by being passed |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, and leaves the caller a full host |
