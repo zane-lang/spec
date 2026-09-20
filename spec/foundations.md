@@ -97,7 +97,7 @@ Both kinds are mutated in place through a `mut` method, and the subject is writt
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
 - **A value copy is deep.** Copying a value copies every payload it owns out of line into fresh storage, which is what lets a value type recurse without ever aliasing. See [`memory.md`](memory.md) §2.3.
 - **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
-- **A guest follows its object.** A new `&` is minted from almost any place — a bare symbol, a field access, an `&T` parameter — and it names the object hosted there at that moment. That object may later move, and the guest travels with it. See [`memory.md`](memory.md) §2.8 and §2.8.1.
+- **A guest follows its object.** A new `&` is minted only from a stable guest source — a bare host symbol, a stable struct-field path, or an `&T` parameter — and it names the object hosted there at that moment. Subscripted paths and variant-case payloads remain readable but cannot originate a guest. That object may later move, and the guest travels with it. See [`memory.md`](memory.md) §2.8 and §2.8.1.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
