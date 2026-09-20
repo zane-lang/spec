@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Almost every place may mint an `&` — a bare symbol, a field access of a place, an `&T` parameter — and only a `[]` expression is a place excluded from doing so (§3.36).
+- **Meaning:** A place expression denotes an existing storage location. Guest-source eligibility is separate: not every place may mint a new `&` (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
