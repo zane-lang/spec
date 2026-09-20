@@ -83,7 +83,7 @@ type Expr = #variant {
 
 A member projected as a type is written `Expr.intLit`: `Expr` is the type (uppercase) and `.intLit` is member selection (lowercase), exactly like `vec.x`.
 
-Reading a member of a variant value is **partial**: the case may not be the live one. A member read is therefore an **abortable** access (`?` / `??`, see [`error-handling.md`](error-handling.md)). The primary consumer of a variant is the exhaustive `match` block (§5). A single-payload case, once bound, behaves as its payload, so a value of `Expr.intLit`'s payload type reaches that payload's members directly.
+Reading a member of a variant value is **partial**: the case may not be the live one. A member read is therefore an **abortable** access (`?` / `??`, see [`error-handling.md`](error-handling.md)). A variant member projection is not a guest source: the variant may stay alive while its live case changes and the old payload disappears. Code that needs durable access takes a guest to the whole reference variant and performs the case read through that guest when needed (see [`memory.md`](memory.md) §2.8). The primary consumer of a variant is the exhaustive `match` block (§5). A single-payload case, once bound, behaves as its payload, so a value of `Expr.intLit`'s payload type reaches that payload's members directly.
 
 ### 3.1 The struct/variant symmetry
 
