@@ -119,7 +119,7 @@ At use sites, a guest is used with the same surface syntax as a direct host. Met
 
 ### 2.8 Place expressions and new `&` values
 
-A **place expression** is an expression that denotes an existing, stable storage location.
+A **place expression** is an expression that denotes an existing storage location.
 
 The following are place expressions:
 
@@ -128,15 +128,16 @@ The following are place expressions:
 - a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that subject type
 - an `&T` guest parameter inside the callee body (§2.9)
 
-Almost every place expression may mint a new guest. A new `&` value may be minted from:
+Only **stable** places may mint a new guest. A new `&` value may be minted from:
 
 - a **bare symbol** naming hosted storage — a local, a parameter, or a package constant
-- a field access whose base is a place, such as `car.engine` or `this.engine`
+- a struct-field access whose path from its root contains no subscript or variant-case projection, such as `car.engine` or `this.engine`
 - an `&T` parameter
 
-Two things are rejected:
+Three things are rejected:
 
-- A `[]` expression is never a guest source, even though it is a place expression.
+- A path containing `[]` anywhere is never a guest source, even when the final expression is a field access. `players[100]` and `players[100].weapon` are both excluded.
+- A variant case payload is never a guest source, and neither is a path that continues through one. The variant may outlive its current case, so the payload is contingent storage rather than a stable host.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
 ```zane
@@ -145,9 +146,18 @@ engine &Engine = Engine();  // ILLEGAL: Engine() is a temporary, not a place exp
 
 ```zane
 car Car();
-r &Engine = car.engine;  // legal: field access on a place
-s &Car = car;            // legal: a bare symbol naming a host
+r &Engine = car.engine;  // legal: stable struct field
+s &Car = car;            // legal: bare host symbol
 ```
+
+```zane
+players List<Player>();
+weapon &Weapon = players[100].weapon;  // ILLEGAL: the path crosses []
+```
+
+For contingent storage, keep the guest at the stable containing host and perform the changing access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
+
+Reading an `&T` value that is already stored behind a contingent access remains legal:
 
 ```zane
 armory Armory();
@@ -155,13 +165,15 @@ weapons List<&Weapon> = [armory.primary, armory.backup];
 current &Weapon = weapons[1];  // legal: reads an `&Weapon` already stored in the list
 ```
 
-The last line works because `weapons[1]` reads an `&Weapon` value the list already holds. It does not mint a new `&` from a hosting element. Those stored guests are stable because the language does not let `[]` mint guests from host storage in the first place.
+The last line copies an existing guest value; it does not mint a new `&` from a hosting element.
 
 Non-`&` host bindings may be initialized from any expression, including temporaries. The host materializes the value into stable storage.
 
 ```zane
 engine Engine();        // legal: plain host binding; Engine() temporary is materialized into engine
 ```
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
 ### 2.8.1 A guest follows the object; an overwritten slot carries its guests forward
 
@@ -170,7 +182,7 @@ Minting a guest from a place gives a guest to **the object hosted there at that 
 - The object is **moved** — some other host takes it (see [`lifetimes.md`](lifetimes.md) §1.2). The object is alive at its new home, and every guest to it follows it there through the anchor path (§4.5).
 - The object is **destroyed** by an overwrite of the slot it lived in (§2.2). The slot's hosting identity continues across the replacement, so guests minted from that slot observe the new occupant.
 
-The two cases never compete, because an object cannot both leave and die in the same step. A guest is therefore always reading something live, and which live thing it reads is decidable from the source.
+The two cases never compete, because an object cannot both leave and die in the same step. They are exhaustive while the guest is live because §2.8 does not let contingent storage originate a guest: a container element may disappear while its container survives, and a variant payload may disappear while its variant survives, but neither may be the source of a new `&`. A guest is therefore always reading something live, and which live thing it reads is decidable from the source.
 
 The case worth spelling out is a bare symbol, because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
 
