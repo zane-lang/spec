@@ -40,7 +40,7 @@ do() {
 }
 ```
 
-The source must also be a guest source ([`memory.md`](memory.md) §2.8). That condition is independent of the comparison, and nearly every place expression satisfies it, so in practice this rule is the owner comparison.
+The source must also be a guest source ([`memory.md`](memory.md) §2.8). That condition is independent of the owner comparison: subscripted paths and variant-case payloads are readable places but are not stable enough to originate a guest.
 
 A field is **not** confined to its own tree. It inherits its root symbol's owner, so an object and what its `&` field names may be siblings in one block:
 
