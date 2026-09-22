@@ -128,7 +128,7 @@ This is what lets a bare `T` be read unambiguously. In a **type**, a name in the
 
 ### 3.3 `Type` and `Number` are concept types
 
-`Type` and `Number` are compiler-provided concept types. `Type` is the concept of a type; `Number` is the concept of a compile-time number. Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8). A value of concept type `Type` is a type; a value of concept type `Number` is a compile-time number. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, a `Number` value in a number position.
+`Type` and `Number` are compiler-provided concept types. `Type` is the concept of a type; `Number` is the concept of a compile-time number. Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `Number` is a compile-time number. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, a `Number` value in a number position.
 
 ### 3.4 References are bare; casing carries the kind
 
@@ -270,7 +270,7 @@ vec Vector(Int(2), Int(3));  // legal: each argument is a concrete Int
 vec Vector(2, 3);            // ILLEGAL: literals cannot drive inference of T
 ```
 
-A **container literal** is the case where the concept type does carry concrete parameters. A `[ ]` literal's `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.8) fixes an element type and a length, and §6.1 reads both from it; a `{ }` map literal's `@concepts$Map<K, V>` fixes a key type and a value type on the same terms. The wrap is therefore required of the **entries** — a map literal's keys and values alike — rather than of the bracket. The map literal below stands on its own, since the container types that consume one are not specified in this version (§9):
+A **container literal** is the case where the concept type does carry concrete parameters. A `[ ]` literal's `@concepts$Array<T, n>` (see [`syntax.md`](syntax.md) §2.9) fixes an element type and a length, and §6.1 reads both from it; a `{ }` map literal's `@concepts$Map<K, V>` ([`syntax.md`](syntax.md) §2.10) fixes a key type and a value type on the same terms. The wrap is therefore required of the **entries** — a map literal's keys and values alike — rather than of the bracket. The map literal below stands on its own, since the container types that consume one are not specified in this version (§9):
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)]);         // legal: elements are concrete, so T = Int and n = 3
@@ -298,7 +298,7 @@ Array<T, n>(values @concepts$Array<T Type, n Number>) {
 arr Array([Int(1), Int(2), Int(3)]);        // T = Int and n = 3 inferred from the literal
 ```
 
-The value-parameter type `@concepts$Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.8), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
+The value-parameter type `@concepts$Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.9), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
 
 ### 6.2 Explicit type and size
 
@@ -362,7 +362,7 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 The following are intentionally not specified in this version:
 
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
-- dynamic container types such as lists and maps — their **literal forms** are specified ([`syntax.md`](syntax.md) §2.8), but the container types themselves are not: their operations, whether a map preserves any order, and what a map requires of a key type are all open
+- dynamic container types such as lists and maps — their **literal forms** are specified ([`syntax.md`](syntax.md) §2.9 and §2.10), but the container types themselves are not: their operations, whether a map preserves any order, and what a map requires of a key type are all open
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it

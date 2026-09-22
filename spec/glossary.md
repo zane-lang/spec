@@ -94,7 +94,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 - **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. A `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
-- **Canonical home:** [`syntax.md`](syntax.md) §2.8
+- **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.10
 
 ### 3.5 field constructor
 

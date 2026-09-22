@@ -102,7 +102,7 @@ type Name = #variant { member FieldType; ... }
 type Name = enum [ memberA, memberB, ... ]
 ```
 
-`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `#struct`, `variant`, `#variant`, or `enum` body; a leading `#` marks a reference type (§2.10). A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
+`type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `#struct`, `variant`, `#variant`, or `enum` body; a leading `#` marks a reference type (§2.14). A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
 
 ### 1.7 Variant declarations
 
@@ -184,7 +184,7 @@ Matrix<Float, 3>
 
 A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n Number>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
-A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.10).
+A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.14).
 
 ```zane
 type Operation = #struct { left Expr; right Expr; op Operator; }
@@ -198,7 +198,7 @@ type Expr = #variant {
 
 ### 2.5 Type and number parameters
 
-A parameterized **type** declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.8).
+A parameterized **type** declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types, legal only in parameter positions (§2.11).
 
 ```zane
 type Vector<T Type> = struct {
@@ -235,7 +235,7 @@ The `@primitives$` namespace contains storage primitives such as machine-word sc
 
 Every `@` namespace is reachable from every package without an import.
 
-### 2.8 Compiler concept types for literals
+### 2.8 Compiler concept types
 
 ```zane
 @concepts$Number
@@ -244,7 +244,9 @@ Every `@` namespace is reachable from every package without an import.
 @concepts$Map<K, V>
 ```
 
-These compiler-provided concept types represent source literals before they are lowered into storage types. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
+These compiler-provided concept types represent source literals before they are lowered into storage types: numeric and text literals, array literals (§2.9), and map literals (§2.10). `Type` and `Number` in parameter declarations (§2.11) and `@concepts$Block` (§2.12) are concept types too. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
+
+### 2.9 Array literals
 
 An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
 
@@ -255,6 +257,8 @@ nums Array([Int(1), Int(2), Int(3)]);  // legal: T and n read from the literal
 empty Array(Int, 0);                   // legal: the type is named, not inferred
 empty [];                              // ILLEGAL: an empty literal fixes no element type
 ```
+
+### 2.10 Map literals
 
 A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`lexical.md`](lexical.md)), each entry exactly two `,`-separated expressions — a key and a value. It carries `@concepts$Map<K, V>`, where `K` is the type of every key and `V` the type of every value. As with an array literal, every key **MUST** already have type `K` and every value type `V`; there is no search for a common type. A map literal **MUST** hold at least one entry, since an empty one fixes neither `K` nor `V`.
 
@@ -286,9 +290,13 @@ A map literal is one of the two `{ }` arguments that may **trail** a call, the o
 
 The examples above show the literal alone, with no consumer, because this section fixes the **literal** and the concept type it carries and nothing else; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 
-The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
+### 2.11 Parameter concept types
 
-`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.8). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the same rule as the other concept types and may never be stored.
+The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the rule of §2.8: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
+
+### 2.12 The block-argument type
+
+`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.8). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the rule of §2.8 and may never be stored.
 
 ```zane
 @concepts$Block
@@ -297,7 +305,7 @@ The concept types `Type` and `Number` declare the type and number parameters of 
 
 > **See also:** [`control-flow.md`](control-flow.md) §2 for what a block argument does.
 
-### 2.9 Function types
+### 2.13 Function types
 
 A function type leads with its return type, then lists parameter types inside `[ ]`, then any trailing `mut`. There is no `->` arrow. This mirrors the order of function declarations (§3.1–§3.2) and lambda literals (§3.8): the return contract is written first.
 
@@ -330,7 +338,7 @@ Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
-### 2.10 The `#` reference modifier
+### 2.14 The `#` reference modifier
 
 A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
 
@@ -548,7 +556,7 @@ name ReturnType?AbortType(param ParamType, ...) { body }
 name ReturnType(this SubjectType, param ParamType, ...) mut { body }
 ```
 
-The shorthand expands to a symbol declaration whose type is the function type (§2.9) and whose value is the lambda literal:
+The shorthand expands to a symbol declaration whose type is the function type (§2.13) and whose value is the lambda literal:
 
 ```zane
 callback Unit[this Player] mut = Unit(this Player) mut {
@@ -707,7 +715,7 @@ A call may carry any number of **block arguments**, one for each `@concepts$Bloc
 repeatTwice({ print("hi"); });
 ```
 
-A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.8) — because those are the two forms large enough for the position to pay for itself, and `{` is the one opening bracket that cannot be confused with a subscript. At most one argument trails per call.
+A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.10) — because those are the two forms large enough for the position to pay for itself, and `{` is the one opening bracket that cannot be confused with a subscript. At most one argument trails per call.
 
 ```zane
 repeatTwice() {
