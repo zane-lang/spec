@@ -2,7 +2,7 @@
 
 This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls that take a **block argument**, declared by the `core` package over compiler intrinsics. What the language itself contributes is the block, the three intrinsics, and the 1-based ordinal convention.
 
-> **See also:** [`syntax.md`](syntax.md) §4.9 and §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for the `Bool` operators. [`types.md`](types.md) §2.6 for the fundamental types these calls are written in terms of.
+> **See also:** [`syntax.md`](syntax.md) §4.8 and §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for the `Bool` operators. [`types.md`](types.md) §2.6 for the fundamental types these calls are written in terms of.
 
 ---
 
@@ -33,7 +33,7 @@ ran Bool = if(ready) {
 
 A block takes no parameters and has no name. It is not a lambda: a lambda is a self-typed function *value* with a complete written type ([`functions.md`](functions.md) §7.2), while a block is a source construct that never becomes a value.
 
-> **See also:** [`syntax.md`](syntax.md) §4.9 for where a block may be written.
+> **See also:** [`syntax.md`](syntax.md) §4.8 for where a block may be written.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-block-is-not-a-lambda) — "A block is not a lambda".
 
 

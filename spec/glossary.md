@@ -374,7 +374,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 - **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last thing in its statement.
 - **Why this name:** It trails the argument list rather than sitting in it.
-- **Canonical home:** [`syntax.md`](syntax.md) §4.9
+- **Canonical home:** [`syntax.md`](syntax.md) §4.8
 
 ### 4.8 control-flow intrinsic
 

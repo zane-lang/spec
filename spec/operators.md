@@ -118,8 +118,6 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 
 ## 3. Precedence and Associativity
 
-`|` pipe syntax is not part of the operator set in §2, but it participates in expression grouping.
-
 A parenthesized expression `(expr)` groups `expr` explicitly. Parentheses bind the enclosed expression as a single unit before the precedence table below is applied to the surrounding syntax.
 
 ```zane
@@ -129,19 +127,18 @@ number Int = (3 + 2) * 2;
 | Level (high → low) | Syntax / operators | Associativity |
 |---|---|---|
 | 1 | `~` | — |
-| 2 | <code>|</code> pipe syntax | left |
-| 3 | `*` `/` | left |
-| 4 | `+` `-` | left |
-| 5 | `<` `>` `<=` `>=` `==` `~=` | left |
-| 6 | `'*` `'/` | left |
-| 7 | `'+` `'-` | left |
-| 8 | `'<` `'>` `'<=` `'>=` `'==` `'~=` | left |
+| 2 | `*` `/` | left |
+| 3 | `+` `-` | left |
+| 4 | `<` `>` `<=` `>=` `==` `~=` | left |
+| 5 | `'*` `'/` | left |
+| 6 | `'+` `'-` | left |
+| 7 | `'<` `'>` `'<=` `'>=` `'==` `'~=` | left |
 
 Comparison operators group left. For example, `a < b < c` groups as `(a < b) < c`. The expression is valid only when overload resolution finds an implementation for each grouped operation.
 
 ### 3.1 A `'` prefix selects the loose form of a binary operator
 
-Levels 6 through 8 are a **mirror** of levels 3 through 5: the same binary operators, in the same relative order, written with a leading `'`. A loose operator calls the same implementation as its unprefixed form and differs only in where it groups.
+Levels 5 through 7 are a **mirror** of levels 2 through 4: the same binary operators, in the same relative order, written with a leading `'`. A loose operator calls the same implementation as its unprefixed form and differs only in where it groups.
 
 ```zane
 ready Bool = age > Int(18) '* hasId;      // (age > 18) * hasId
@@ -154,11 +151,10 @@ The mirror is one tier deep. A second prefix is not a further shift:
 a ''* b    // ILLEGAL: there is no second loose tier
 ```
 
-Only binary operators have a loose form. Unary `~` binds tightest and has nothing to separate itself from, and `|` pipe syntax is not part of the operator set of §2, so neither has one:
+Only binary operators have a loose form. Unary `~` binds tightest and has nothing to separate itself from, so it has none:
 
 ```zane
 '~a        // ILLEGAL: unary operators have no loose form
-a '| f()   // ILLEGAL: pipe syntax has no loose form
 ```
 
 The loose forms are surface grammar like every other level. They add no token to the operator vocabulary (§5.1) and no way for a program to place an operator at a level of its choosing: which level a loose operator occupies is fixed by the mirror, exactly as the unprefixed level is fixed by the table.
@@ -169,7 +165,7 @@ The loose forms are surface grammar like every other level. They add no token to
 
 ### 3.2 Precedence is fixed syntax
 
-Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering, and the loose forms of §3.1 occupy fixed levels of their own beneath every unprefixed one.
+Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. The loose forms of §3.1 occupy fixed levels of their own beneath every unprefixed one.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
 
