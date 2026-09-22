@@ -91,3 +91,5 @@ Every heading in every Markdown file here — `spec/`, `stories/`, `contributing
 ```sh
 npx markdownlint-cli2 "**/*.md"
 ```
+
+A [workflow](.github/workflows/markdownlint.yml) runs that same command on every pull request. It names no rules itself — it finds the config the way the local run does.

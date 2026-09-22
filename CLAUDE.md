@@ -211,7 +211,8 @@ npx markdownlint-cli2 "**/*.md"
 Committed `.markdownlint.jsonc` is the canonical statement of which rules are
 on; `README.md` § "Markdown formatting" says why exactly one is. A fix here is
 whitespace only, so it does not touch what a merged chapter says and the
-append-only check stays quiet.
+append-only check stays quiet. CI runs the same command on every PR, so
+a miss here comes back as a red check rather than a review comment.
 
 ## Writing a design story
 
