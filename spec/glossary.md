@@ -65,7 +65,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ## 3. Types, Storage, and Binding
 
 ### 3.1 place expression
-- **Meaning:** A place expression denotes an existing, stable storage location. Almost every place may mint an `&` — a bare symbol, a field access of a place, an `&T` parameter — and only a `[]` expression is a place excluded from doing so (§3.36).
+- **Meaning:** A place expression denotes an existing storage location. Guest-source eligibility is separate: not every place may mint a new `&` (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -220,7 +220,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`types.md`](types.md) §2.5 (product, sum); [`adt.md`](adt.md) §2 (peer)
 
 ### 3.32 host
-- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. This is the role commonly called an **owner** in other languages. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
+- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. A container element or variant payload is the exception: its occupant floats to an anonymous same-owner host if the place goes first ([`memory.md`](memory.md) §2.8.1). This is the role commonly called an **owner** in other languages. Every reference-type object has exactly one host at a time. Moving the object transfers it to a new host.
 - **Why this name:** Zane says **host** because a real-life host provides both accommodation and the duration of a guest's stay; the term emphasizes where an object resides and how long it remains available.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
@@ -240,7 +240,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.36 guest source
-- **Meaning:** A place expression a new `&` may be minted from: a **bare symbol**, a field access whose base is a place, or an `&T` parameter. Only a `[]` expression is a place excluded, and temporaries are not places at all. The guest names whatever is hosted at that source when it is minted.
+- **Meaning:** A stable place a new `&` may be minted from: a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter. Container elements and variant payloads remain readable places but cannot originate a new guest.
 - **Why this name:** The term names the *source* end — where a guest may come from — separately from what a guest survives once minted, which is the anchor system's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 

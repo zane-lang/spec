@@ -13,7 +13,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
-- **`A guest follows its object`.** A new guest may be minted from any place expression that names hosted storage — a bare symbol, a field access, or an `&T` parameter (§2.8). When that object is moved, its guests travel with it; when a slot's occupant is destroyed by an overwrite, guests to that slot observe the replacement (§2.8.1, §4.5).
+- **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; a stable-slot overwrite carries that slot's guests to the replacement, while a disappearing contingent host floats the old object within the same owner (§2.8.1, §4.5).
 - **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
 - **`Repointable guests`.** A guest is non-hosting storage that can point at different hosts over time.
 - **`Lexical lifetime enforcement`.** Guest assignment and rehosting are checked using declaration scope alone (see [`lifetimes.md`](lifetimes.md) §1).
@@ -21,9 +21,9 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 - **`Regioned arena placement`.** Every scope owns separate fixed-size and dynamic regions. Statically sized storage is placed inline in the fixed-size region; resizable data and the payloads of boxed members use the dynamic region. Anchors live outside scope arenas in one runtime-global fixed-slot pool (see §3 and §4).
 - **`Segmented-offset tethers`.** Internally, each guest is represented by a `u32` tether — a chunk id plus an in-chunk offset — that points at an anchor cell in the host's identity path, not a raw pointer (see §4.2).
 
-The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object updates its terminal anchor or links an older anchor to the destination anchor, so existing tethers — and therefore guests — continue to reach it.
+The source language and runtime use separate terms: an object lives in a **host**, and a **guest** (`&T`) may access it without storing it or controlling its lifetime. Internally, each guest is represented by a **tether** that resolves through an **anchor**. Moving the object carries its terminal anchor with it; only a move into an anchored **stable** destination may merge identities by forwarding the older source anchor to the destination anchor. A contingent place never contributes a replacement-surviving identity of its own.
 
-These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare symbol, a field access, or an `&T` parameter — never from a temporary. Lexical scope checks ensure the host outlives every guest derived from it. When an object is rehosted or a host is overwritten, guests stay valid. Internally, their tethers follow the host's anchor rather than a fixed object address.
+These rules fit together mechanically. Hosts are the only storage that controls destruction. A guest may be minted from a stable place that reaches a hosted object — a bare host symbol, a struct-field path that crosses neither a subscript nor a variant-case payload, or an `&T` parameter — never from contingent storage or a temporary. Lexical scope checks ensure the owner outlives every guest derived from it. Moves, stable overwrites, and same-owner contingent floating all preserve guest validity. Internally, tethers follow anchor identities rather than fixed object addresses.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#safety-without-a-collector-and-without-lifetimes) — "Safety without a collector and without lifetimes".
 
@@ -44,15 +44,16 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a host does not invalidate existing guests. Guests follow the host/anchor path, so later reads observe the host's current value.
+Overwriting a **stable** host does not invalidate existing guests. The slot's hosting identity survives the overwrite, so guests minted from that stable slot observe its replacement through the same anchor path (§2.8.1).
 
-Container overwrite therefore does not depend on whether the element slot stores a host or a guest. Both kinds of slots may be rewritten after initialization.
+Container elements and variant-case payloads are **contingent** hosting places rather than stable slots. They may be rewritten, removed, or cease to be the live case while their owner remains alive. When such a place disappears before its owner scope drains, a hosted reference-type occupant that is not explicitly moved elsewhere **floats** into an anonymous host owned by that same scope (§2.8.1, [`lifetimes.md`](lifetimes.md) §2.1). Existing guests to the object therefore remain live; the contingent place itself never becomes a guest source (§2.8).
 
 ```zane
 hosts Array<Node, 2> = [Node(), Node()];
+hosts[1] = Node();  // the replaced Node has no continuing element-slot identity
 ```
 
-Rewriting `hosts[1]` replaces the hosted reference-type instance in that slot. Guests to that slot observe the new value because guests follow the host/anchor path, not the original object.
+An `&T` stored *as an element value* is different: rewriting that element merely replaces one guest value with another.
 
 ### 2.3 Value types are copied whole, mutable in place, and freely overwritable
 
@@ -107,7 +108,7 @@ Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 ### 2.5 Guests are repointable
 
-An `&` symbol or `&` field may be assigned a different target later, as long as the new target is a guest source (§2.8) and the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the owner that rule compares is the field's root symbol's, not the field's own.
+An `&` symbol or `&` field may be assigned a different guest later, either by copying an existing `&T` value or by minting one from a stable guest source (§2.8), as long as the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the owner that rule compares is the field's root symbol's, not the field's own.
 
 ### 2.6 Guests are independent
 
@@ -119,7 +120,7 @@ At use sites, a guest is used with the same surface syntax as a direct host. Met
 
 ### 2.8 Place expressions and new `&` values
 
-A **place expression** is an expression that denotes an existing, stable storage location.
+A **place expression** is an expression that denotes an existing storage location.
 
 The following are place expressions:
 
@@ -128,15 +129,16 @@ The following are place expressions:
 - a subscript expression `list[index]` when `list` is a place expression and `[]` is defined as a place projection for that subject type
 - an `&T` guest parameter inside the callee body (§2.9)
 
-Almost every place expression may mint a new guest. A new `&` value may be minted from:
+Only **stable** places may mint a new guest. A new `&` value may be minted from:
 
 - a **bare symbol** naming hosted storage — a local, a parameter, or a package constant
-- a field access whose base is a place, such as `car.engine` or `this.engine`
+- a struct-field access whose path from its root contains no subscript or variant-case projection, such as `car.engine` or `this.engine`
 - an `&T` parameter
 
-Two things are rejected:
+Three things are rejected:
 
-- A `[]` expression is never a guest source, even though it is a place expression.
+- A path containing `[]` anywhere is never a guest source, even when the final expression is a field access. `players[100]` and `players[100].weapon` are both excluded.
+- A variant case payload is never a guest source, and neither is a path that continues through one. The variant may outlive its current case, so the payload is contingent storage rather than a stable host.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
 ```zane
@@ -145,9 +147,17 @@ engine &Engine = Engine();  // ILLEGAL: Engine() is a temporary, not a place exp
 
 ```zane
 car Car();
-r &Engine = car.engine;  // legal: field access on a place
-s &Car = car;            // legal: a bare symbol naming a host
+r &Engine = car.engine;  // legal: stable struct field
+s &Car = car;            // legal: bare host symbol
 ```
+
+```zane
+weapon &Weapon = players[100].weapon;  // ILLEGAL: the path crosses []
+```
+
+For contingent storage, keep the guest at the stable containing host and perform the changing access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
+
+Reading an `&T` value that is already stored behind a contingent access remains legal:
 
 ```zane
 armory Armory();
@@ -155,7 +165,7 @@ weapons List<&Weapon> = [armory.primary, armory.backup];
 current &Weapon = weapons[1];  // legal: reads an `&Weapon` already stored in the list
 ```
 
-The last line works because `weapons[1]` reads an `&Weapon` value the list already holds. It does not mint a new `&` from a hosting element. Those stored guests are stable because the language does not let `[]` mint guests from host storage in the first place.
+The last line copies an existing guest value; it does not mint a new `&` from a hosting element.
 
 Non-`&` host bindings may be initialized from any expression, including temporaries. The host materializes the value into stable storage.
 
@@ -163,16 +173,21 @@ Non-`&` host bindings may be initialized from any expression, including temporar
 engine Engine();        // legal: plain host binding; Engine() temporary is materialized into engine
 ```
 
-### 2.8.1 A guest follows the object; an overwritten slot carries its guests forward
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
-Minting a guest from a place gives a guest to **the object hosted there at that moment**, and the guest tracks that object's identity rather than the storage it was read from (§4). Two things can subsequently happen to that object, and the program text says which:
+### 2.8.1 A guest follows the object; stable replacements carry forward; contingent hosts float
+
+Minting a guest from a stable place gives a guest to **the object hosted there at that moment**, and the guest tracks that object's identity rather than the storage it was read from (§4). Before the object's owner scope drains, three things can happen:
 
 - The object is **moved** — some other host takes it (see [`lifetimes.md`](lifetimes.md) §1.2). The object is alive at its new home, and every guest to it follows it there through the anchor path (§4.5).
-- The object is **destroyed** by an overwrite of the slot it lived in (§2.2). The slot's hosting identity continues across the replacement, so guests minted from that slot observe the new occupant.
+- A **stable hosting slot is overwritten** (§2.2). The old occupant is destroyed, but the slot's hosting identity continues across the replacement, so guests minted from that stable slot observe the new occupant.
+- A **contingent hosting place disappears or is replaced** — for example, a container element is removed/replaced or a variant changes away from a hosting payload. Such a place has no stable slot identity to carry forward. Unless the operation explicitly moves the occupant elsewhere, the reference-type object is rehosted (§3.5) into an **anonymous host owned by the contingent place's owner scope** before the place disappears. Existing guests to the object follow it there. The anonymous host is not a move-source and lives until that owner scope drains.
 
-The two cases never compete, because an object cannot both leave and die in the same step. A guest is therefore always reading something live, and which live thing it reads is decidable from the source.
+The third case is what keeps an alias that predates contingent storage safe. A host may be guested while it is still a bare symbol or stable struct field and then move into a container element or variant payload; the moved-from symbol itself also downgrades to a guest. The source restriction in §2.8 prevents *new* guests from being minted through the contingent path, while floating preserves any guests that already existed before the move.
 
-The case worth spelling out is a bare symbol, because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
+At the owner scope's drain there is no further float: the anonymous host and every guest that owner was required to outlive drain together under [`lifetimes.md`](lifetimes.md) §2. A guest therefore never forces an object beyond its lexical owner.
+
+The stable-symbol case is worth spelling out because a symbol's hosting slot is the storage the language lets you overwrite and move from most freely:
 
 ```zane
 main Player();
@@ -189,18 +204,31 @@ They part company only if the emptied slot is put back to work:
 main = Player();       // main's slot hosts a new, unrelated object
 ```
 
-`main` now names the new object and `guest` still names the moved one, which is alive in `second`. That is the first bullet doing its job: the move carried the old object's identity away with it, so re-hosting the slot begins a fresh identity rather than capturing the guests of the old one. Contrast an overwrite, where nothing moves:
+`main` now names the new object and `guest` still names the moved one, which is alive in `second`. Re-hosting the emptied source begins a fresh identity rather than capturing the guests of the object that left.
+
+A stable field overwrite takes the second branch:
 
 ```zane
 car Car();
 r &Engine = car.engine;
-car.engine = Engine(); // the old engine is destroyed in place; r observes the new one
+car.engine = Engine(); // the stable field survives; r observes the replacement
 ```
 
-Here the occupant of `car.engine` died and the slot's identity continued, so `r` carries forward to the replacement. The question a reader has to answer is only ever *did the object leave, or did it die* — and a move and an overwrite are different statements.
+A variant payload demonstrates the third. The payload itself cannot originate a new guest (§2.8), but a guest may already exist before its object is moved there:
+
+```zane
+node Node();
+watch &Node = node;
+holder Holder.some(node);       // node moves into a contingent variant payload
+holder = Holder.none(Unit());   // the old Node floats to holder's owner scope
+watch:inspect();                 // still live
+```
+
+The durable pattern for code that starts from the variant itself remains to guest the whole reference variant and perform the abortable case read when needed, rather than guesting the contingent payload.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
 ### 2.9 Function parameters: swallow and guest
 
@@ -209,10 +237,10 @@ A **reference type** parameter has two passing modes, one per surface form. The 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
 | Swallow | `T` | a move-source ([`lifetimes.md`](lifetimes.md) §1.2) | take hosting access; the caller's symbol downgrades to a guest |
-| Guest | `&T` | a guest source (§2.8) | read it, mutate it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
+| Guest | `&T` | a stable guest source that mints a guest, or an existing `&T` value (§2.8) | read it, mutate it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
 
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access. The value belongs to the call-site scope, not the callee body ([`lifetimes.md`](lifetimes.md) §1.5), so it outlives the call. Passing a hosting value to such a parameter downgrades the caller's symbol to a guest ([`lifetimes.md`](lifetimes.md) §1.8), whatever the callee does with it — whether the verb relays the host back through its return or consumes it outright.
-- A parameter declared as `&T` is a **guest**: the caller supplies a source that may mint a new guest under §2.8 (so `T` is a reference type, §2.4), and inside the callee body it acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare symbol is a guest source, so an ordinary local feeds an `&T` parameter directly. Binding it into an `&` **field** is decided elsewhere: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so it does not try. It records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
+- A parameter declared as `&T` is a **guest**: the caller either supplies a stable place that may mint a new guest under §2.8 or passes an `&T` value that already exists (so `T` is a reference type, §2.4). Inside the callee body the parameter acts as a place expression that may be read, mutated, or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. A bare host symbol can mint a guest directly; `weapons[1]` may also feed the parameter when `weapons` stores `&T`, because that expression copies an existing guest rather than minting one from the element slot. Binding the parameter into an `&` **field** is decided elsewhere: the callee cannot see where the caller's argument is hosted relative to the object it would be stored in, so it does not try. It records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
 
 `&T` is the mode for a call that must not take hosting. A verb that reads or mutates a caller's object without consuming it declares that object `&T`, and the caller passes the symbol as it stands:
 
@@ -487,9 +515,10 @@ Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a 
 A move transfers hosting into a destination host of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). Because both sides have identical, statically known size, a move is a fixed-size overwrite of the destination slot:
 
 - Moving into a fresh declaration or a return slot is in-place initialization.
-- Moving into an already-initialized host first destroys the current occupant, then overwrites the same-size slot.
+- Moving into an already-initialized **stable** host first destroys the current occupant, then overwrites the same-size slot.
+- Moving into an already-initialized **contingent** place — a container element or a variant-case payload — does not destroy the current occupant. §2.8.1 settles it first: the operation either moves it elsewhere explicitly, or it floats into an anonymous host with the same owner. The slot is then overwritten the same way.
 
-Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md) §1.4), so the destination always outlives the source and its slot already exists. Rehosting copies the complete hosted representation into destination-owned storage. The inline payload or handle is copied into the destination's fixed-size slot. Each dynamic block the host owns — a backing store or a boxed payload — is relocated into an equal-size destination-region block or oversized span as specified in §3.5, recursively through any blocks it owns in turn; after its live contents and any contained host identities have been updated, the old block is returned to the source scope's exact-size stack. The source payload bytes then cease to be live. Its host-capable slot is rewritten into guest state and stores a tether to the terminal anchor; the rest of that full-size slot is dead until the slot is overwritten or its scope drains. If both source and destination already have distinct anchor identities, the destination identity remains terminal and the source identity becomes a forwarding anchor (§4.5). Existing tethers are never enumerated or rewritten.
+Moves only ever target the same or a higher scope ([`lifetimes.md`](lifetimes.md) §1.4), so the destination always outlives the source and its slot already exists. Rehosting copies the complete hosted representation into destination-owned storage. The inline payload or handle is copied into the destination's fixed-size slot. Each dynamic block the host owns — a backing store or a boxed payload — is relocated into an equal-size destination-region block or oversized span as specified in §3.5, recursively through any blocks it owns in turn; after its live contents and any contained host identities have been updated, the old block is returned to the source scope's exact-size stack. The source payload bytes then cease to be live. Its host-capable slot is rewritten into guest state and stores a tether to the terminal anchor; the rest of that full-size slot is dead until the slot is overwritten or its scope drains. If a **stable** destination and the source already have distinct anchor identities, the destination identity remains terminal and the source identity becomes a forwarding anchor (§4.5); a contingent destination merges nothing, so the incoming object keeps its own terminal anchor. Existing tethers are never enumerated or rewritten.
 
 ---
 
@@ -562,31 +591,33 @@ Weapon payload
 Weapon.dps
 ```
 
-Ordinary overwrites and moves into untethered destinations update one payload anchor. When two anchored hosting identities merge, the destination anchor remains terminal and the source anchor forwards to it. Existing source guests therefore gain a forwarding hop, while destination guests and newly minted guests continue to use the terminal anchor directly. Assigning or passing a guest resolves its tether and stores the terminal identity in the new guest, so an obsolete identity cannot newly escape its former source-host scope.
+Stable overwrites and moves into stable destinations update or merge hosting identities. When two anchored **stable** hosting identities merge, the destination anchor remains terminal and the source anchor forwards to it. A contingent place has no replacement-surviving hosting identity of its own: an anchor carried into an element or variant payload remains the identity of that object, and if the place later disappears the same anchor follows the object into its anonymous same-owner host (§2.8.1). Assigning or passing a guest resolves its tether and stores the terminal identity in the new guest, so an obsolete forwarding identity cannot newly escape its former source-host scope.
 
 The added cost over direct host access is one dependent anchor-cell load for a terminal tether and one load per uncompressed forwarding hop for an older tether. Across repeated accesses through the same guest with no intervening move or overwrite, the compiler may resolve the host address once and reuse it; the runtime may also compress the anchor path.
 
-### 4.5 Moves and overwrites may merge anchor identities
+### 4.5 Stable hosts may merge anchor identities; contingent hosts do not
 
-An overwrite from a newly materialized value and a move from another host are distinct cases.
+A stable host has a hosting identity that survives replacement. A contingent element or variant payload does not: it may disappear before its owner scope drains, so an anchor present there belongs to the **object**, not to the contingent place.
 
-- **Ordinary overwrite:** if the destination hosting slot already has a payload anchor, the replacement payload inherits that backpointer and the cell is updated to the replacement's location. Existing destination guests therefore observe the new occupant. Destroying the old occupant does not return the cell, because the destination hosting identity continues.
-- **Move into a fresh or untethered destination:** if the source already has a payload anchor, that cell follows the value into the destination and remains terminal. If no anchor exists but the moved-from source slot must remain readable as a guest, the runtime allocates one for the value after relocation. The source host-capable slot stores a tether to the terminal anchor.
-- **Move into an anchored destination:** the destination payload anchor remains terminal, because the destination host identity survives replacement. If the source has a different payload anchor, the runtime changes that source cell into a forwarding anchor targeting the destination cell and records the forwarder on the former source scope's retirement stack. Existing source guests continue through the forwarding cell; existing destination guests continue directly through the destination cell. The moved payload stores the destination identity in its backpointer, and the moved-from source slot stores that same terminal tether. If resolving both identities already reaches the same terminal anchor, no new forwarding edge is installed.
-- **Consumed untethered temporaries:** a temporary with no source slot that must remain readable may materialize into an untethered destination with backpointer `0` and allocate no anchor.
+- **Stable overwrite:** if a stable destination slot already has a payload anchor, the replacement payload inherits that backpointer and the cell is updated to the replacement's location. Existing destination guests therefore observe the new occupant. Destroying the old occupant does not return the cell, because the stable destination hosting identity continues.
+- **Move into a fresh or untethered stable destination:** if the source already has a payload anchor, that cell follows the value into the destination and becomes the stable destination identity. If no anchor exists but the moved-from source slot must remain readable as a guest, the runtime allocates one for the value after relocation. The source host-capable slot stores a tether to the terminal anchor.
+- **Move into an anchored stable destination:** the destination payload anchor remains terminal, because the stable destination identity survives replacement. If the source has a different payload anchor, the runtime changes that source cell into a forwarding anchor targeting the destination cell and records the forwarder on the former source scope's retirement stack. Existing source guests continue through the forwarding cell; existing destination guests continue directly through the destination cell. The moved payload stores the destination identity in its backpointer, and the moved-from source slot stores that same terminal tether. If resolving both identities already reaches the same terminal anchor, no new forwarding edge is installed.
+- **Move into a contingent destination:** the destination contributes no lasting identity. Any old reference-type occupant is first handled by §2.8.1 — explicitly moved elsewhere or floated anonymously within the same owner. The incoming object's existing payload anchor, if any, follows the object and remains terminal. If a named source must downgrade and no anchor exists yet, one is allocated for that object; a consumed temporary with no readable source may remain untethered with backpointer `0`. No forwarding edge is created merely because the contingent place previously held another anchored object.
+- **Contingent disappearance or replacement:** an anchored reference object that takes the §2.8.1 float keeps its terminal anchor; only the anchor target changes to the anonymous host's payload location. An unanchored object floats without allocating an anchor.
 
-The same rules apply recursively to reference-type hosts contained in a relocated representation, including hosts inside dynamic backing stores. Their destination host identities survive replacement, and any distinct source identities forward to them. Anchor bookkeeping is O(1) for each merged host and never enumerates guests; physical rehosting remains proportional to the bytes, elements, and contained hosts relocated.
+The same distinction applies recursively to reference-type hosts inside relocated representations. A stable struct field or other stable destination may merge identities as above; a contingent element or variant payload never contributes a replacement-surviving identity. Anchor bookkeeping stays O(1) for each affected host and never enumerates guests; physical rehosting remains proportional to the bytes, elements, and contained hosts relocated.
 
 This is also how a moved-from symbol stays readable: after a move the host-capable symbol enters guest state and stores the terminal tether, so reads resolve through the anchor path to the value's new home (see [`lifetimes.md`](lifetimes.md) §1.6).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
 > **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
 
 ### 4.6 Payload and forwarding anchors retire at different events
 
-A terminal payload anchor is returned to the global free-address stack when its **hosting identity** ends. Overwriting only the current occupant does not end that identity, because the destination host remains and existing destination guests follow the replacement. Rehosting transfers teardown responsibility to the destination host.
+A terminal payload anchor is returned to the global free-address stack when the hosting identity it represents ends. For a **stable** host, overwriting only the current occupant does not end that identity, because the stable slot remains and its guests follow the replacement. For an object whose anchor is carried through a **contingent** place, disappearance of that place also does not end the object identity: §2.8.1 rehosts the object anonymously within the same owner and the terminal cell follows it. The identity ends when that anonymous host's owner scope drains, unless the object is explicitly moved elsewhere first.
 
-A source anchor converted into a forwarder may still be named by guests created before the move, so it is not returned when the source stops hosting. Instead, the runtime pushes it onto a retirement stack owned by the lexical scope of that former source host and returns it when that scope drains. Every guest that could already contain that obsolete identity is then dead by the ordinary scope rules. Assigning or passing such a guest stores the terminal identity (§2.6, §4.4), so the forwarding identity cannot newly escape its retirement scope.
+A source anchor converted into a forwarder may still be named by guests created before a stable-identity merge, so it is not returned when the source stops hosting. Instead, the runtime pushes it onto a retirement stack owned by the lexical scope of that former source host and returns it when that scope drains. Every guest that could already contain that obsolete identity is then dead by the ordinary scope rules. Assigning or passing such a guest stores the terminal identity (§2.6, §4.4), so the forwarding identity cannot newly escape its retirement scope.
 
 Forwarding edges always point from a former source identity toward a destination identity in the same or a higher lexical scope. A forwarder therefore never depends on an anchor retired before it; at a shared scope drain all identities from that scope may be returned together. These retirement rules require neither reference counting nor guest enumeration. When either kind of anchor is returned, no live guest can still name it, so immediate reuse needs no generation counter, delayed reuse, or ABA protection.
 
@@ -615,7 +646,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Lifetime annotations required | ❌ | ❌ | ❌ | ✅ |
 | Reference counting required | ❌ | ❌ | ✅ | ⚠️ `Rc`/`Arc` only |
 | Guests remain usable across moves | ✅ via anchors | ❌ | ❌ | ⚠️ only when borrow checking permits the move pattern |
-| Host overwrite keeps existing guests valid | ✅ via host/anchor indirection | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
+| Stable host overwrite keeps existing guests valid | ✅ via host/anchor indirection | ❌ | ❌ | ⚠️ heavily restricted by borrow checking |
 
 ### 5.2 Allocation
 
@@ -638,10 +669,10 @@ A single global free stack and frontier require synchronization under concurrent
 | Value copy | Copies the whole existing value: inline bytes, plus a fresh allocation and recursive copy of every boxed payload the value owns, so two values never share storage |
 | `&` (guest) | Guest-only non-hosting storage; stores one tether, may be repointed, copied by value, and returned, but can never directly host a `T` |
 | Host-capable guest state | After rehosting, the old hosted bytes cease to be live and a slot declared as `T` stores the terminal tether as a guest while retaining enough storage to host another `T` later |
-| Place expression | Existing stable storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
-| New `&` value | May be minted from a bare symbol, a field access of a place, or an `&` parameter; `[]` expressions and temporaries are rejected |
-| What a guest follows | The object hosted at the source when the guest was minted: it travels with that object when the object is moved, and carries forward to the replacement when the object is destroyed by an overwrite of its slot (§2.8.1) |
-| `&` parameter | Declares that the caller must supply a guest source; the parameter is place-like inside the callee and may be stored or returned |
+| Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
+| New `&` value | May be minted only from a stable guest source: a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter; contingent paths and temporaries are rejected |
+| What a guest follows | The object it names: it follows a move; a stable-slot overwrite carries the slot's guests to the replacement; a disappearing contingent host floats anonymously to that place's owner scope (§2.8.1) |
+| `&` parameter | Caller supplies either a stable guest source or an existing `&T` value; the parameter is place-like inside the callee and may be stored or returned |
 | Borrow | Non-hosting, non-escaping access to a caller's value storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when the parameter — an existing place — is itself bound into a fresh slot (assignment, declaration, field or return store), never merely by being passed |
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, and leaves the caller a full host |
@@ -659,8 +690,8 @@ A single global free stack and frontier require synchronization under concurrent
 | Dynamic-block alignment | A growable backing store is cache-line aligned; a boxed payload takes its type's alignment; the frontier is rounded up before it is bumped (§3.6) |
 | Anchor cell | One global-pool 8-byte physical slot containing a `u32` target and a payload/forwarding kind; a forwarding cell targets another anchor |
 | Backpointer | Each hosted payload stores the terminal payload-anchor identity for move updates and tether minting; `0` means no cell has been allocated |
-| Anchor merging | Moving into an anchored destination preserves the destination anchor and converts a distinct source anchor into a forwarder; no guest is enumerated |
-| Anchor lifecycle | A payload anchor returns when its hosting identity ends; a forwarding anchor returns when its former source-host scope drains |
+| Anchor merging | Moving into an anchored **stable** destination preserves the destination anchor and converts a distinct source anchor into a forwarder; contingent destinations never merge replacement-surviving slot identities |
+| Anchor lifecycle | A stable-slot payload anchor returns when that hosting identity ends; an object anchor carried through contingent storage follows any same-owner float; a forwarding anchor returns when its former source-host scope drains |
 | Anchor reuse safety | Guest canonicalization and lexical scope rules ensure no live tether names a returned slot |
 | Tethered-instance cost | Minimum 16-byte direct footprint: one 4-byte tether, one 8-byte anchor slot, and one 4-byte backpointer; each retained historical identity uses one existing 8-byte forwarding slot until its retirement scope drains |
 

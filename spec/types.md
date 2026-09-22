@@ -287,7 +287,7 @@ Every field of the target type **MUST** be assigned exactly once, either explici
 Constructors are not methods. They create new values rather than mutating an existing subject, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a **guest source** under [`memory.md`](memory.md) §2.8: a bare symbol, a field access on a place, or an `&T` parameter. A temporary and a `[]` expression are rejected.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a stable place that may mint one. A bare host symbol or stable struct-field path may mint a guest; a hosting path containing a subscript or variant-case projection, and any temporary, may not. A contingent read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
 
 ```zane
 package Vehicle

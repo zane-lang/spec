@@ -113,7 +113,7 @@ Explicit parameters other than `this` are read-only: they cannot be assigned or 
 ### 2.8 Swallow and guest method parameters
 A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as `&T` is a **guest**: the caller supplies a guest source under [`memory.md`](memory.md) §2.8, which a bare symbol satisfies, and the callee may read it, mutate it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
+- A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, mutate it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
 
 A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
@@ -426,7 +426,7 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
-| `&` method parameter | Caller must supply a guest source, which a bare symbol satisfies; callee may read, mutate, store it into `&` fields, or return it |
+| `&` method parameter | Caller supplies a stable guest source or an existing `&T` value; callee may read, mutate, store it into `&` fields, or return it |
 | Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which downgrades to a guest, or a temporary, which has no symbol to downgrade; callee **MUST NOT** bind it into `&` storage |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
