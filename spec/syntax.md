@@ -833,6 +833,7 @@ expr ?? fallbackExpr
 ## 7. Operators and Keywords
 
 ### 7.1 Operators
+
 `~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
 
 Every binary operator above also has a **loose form**, written with a leading `'`:
@@ -848,6 +849,7 @@ a ''* b               // ILLEGAL: there is no second loose tier
 > **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
 
 ### 7.2 Control-flow keywords
+
 Zane has none.
 
 `if`, `elif`, `else`, and `guard` are not keywords. They are `core` declarations called like any other verb (see [`control-flow.md`](control-flow.md) §3). `guard` in particular is an ordinary verb over the exit intrinsic (§5.2), not grammar. Counted repetition is a method call on the counter rather than a named construct — `i!to(end)` ([`control-flow.md`](control-flow.md) §3.4).

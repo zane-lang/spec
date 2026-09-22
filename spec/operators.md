@@ -23,6 +23,7 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 ## 2. Operator Set
 
 ### 2.1 Primitive operators
+
 Primitive operators are implementable and define the operator surface area:
 
 | Operator | Arity | Signature |
@@ -35,6 +36,7 @@ Primitive operators are implementable and define the operator surface area:
 | `<` | binary | `Bool <(left T, right T)` |
 
 ### 2.2 Where operators may be defined
+
 Operator implementations are package-scope verb declarations whose names are operator tokens. They are ordinary non-`mut` verbs with special names, not methods: an operator declaration never has a `this` subject parameter.
 
 A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. `core` is the home package of the fundamental types, and a package may no more add declarations to it than to any other package it does not own; a fundamental operand therefore does not by itself grant permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
@@ -52,6 +54,7 @@ Because `Int` is fundamental, the example above is legal only in the home packag
 > **Story:** [`stories/operators.md`](../stories/operators.md#imports-may-add-names-not-meanings) — "Imports may add names, not meanings".
 
 ### 2.3 Derived operators
+
 Derived operators are fixed desugarings and are **not** independently implementable:
 
 | Operator | Desugars to |
@@ -67,6 +70,7 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
 ### 2.4 Boolean operators
+
 `Bool` implements four of the primitive operators of §2.1 — the three of a Boolean algebra, plus equality — and declares nothing beyond them:
 
 | Expression | Meaning |
@@ -99,6 +103,7 @@ if((age > Int(18)) * hasId) { ... }
 > **Story:** [`stories/operators.md`](../stories/operators.md#the-keyword-that-was-neither) — "The keyword that was neither".
 
 ### 2.5 Reserved meanings for `!` and `~`
+
 `!` is reserved for mutating method calls and is not boolean NOT in Zane. `~` is the unary complement/flip operator instead:
 
 - `~Bool` is logical complement
@@ -163,6 +168,7 @@ The loose forms are surface grammar like every other level. They add no token to
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-tier-below-everything) — "A tier below everything".
 
 ### 3.2 Precedence is fixed syntax
+
 Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. Pipe syntax sits immediately below unary `~` in this fixed ordering, and the loose forms of §3.1 occupy fixed levels of their own beneath every unprefixed one.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
@@ -172,17 +178,21 @@ Operator precedence is part of the surface grammar. Programs **MUST NOT** declar
 ## 4. Derivation and Algebraic Laws
 
 ### 4.1 `~` is an involution
+
 For any concrete type the call site instantiates the unary `~` operator for, the implementation **SHOULD** satisfy `~~x == x`. `~` implementations **MUST** be pure and terminating.
 
 ### 4.2 Subtraction is definitional
+
 Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide independent `-` behavior.
 
 ### 4.3 Division is not derived
+
 `/` is a primitive operator. The compiler **MAY** apply algebraic expectations such as `a / b = a * (1/b)` only for types that explicitly opt into field-like semantics (e.g., `Float` under fast-math settings).
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
 ### 4.4 Conjunction and disjunction are interderivable
+
 For a type whose `~` is a complement, either binary operator derives the other:
 
 ```zane
@@ -199,9 +209,11 @@ a + b == ~(~a * ~b)
 ## 5. Restrictions
 
 ### 5.1 No user-defined operator tokens
+
 Programs **MUST NOT** define new operator symbols or precedence levels. Overloading is limited to the built-in operator set. The loose forms of §3.1 are part of that fixed set rather than an exception to it: `'` selects an existing operator at a fixed level, and no program can introduce a token or place one at a level of its own choosing.
 
 ### 5.2 Reserved symbols
+
 The following are not operators in Zane:
 
 - `!` (reserved for mutating calls; see [`functions.md`](functions.md) §2.5)
@@ -209,6 +221,7 @@ The following are not operators in Zane:
 - `!=` (`~=` is the derived inequality operator)
 
 ### 5.3 Operators are call-only
+
 An operator token may appear only in operator position; it has no value form. There is no syntax that references `+` or `<` as a value. This is the same rule that makes methods and functions call-only, and it is why an overloaded operator never has to be resolved without operands. To pass behavior as a value, use a lambda-variable.
 
 > **See also:** [`functions.md`](functions.md) §7.1 for the general call-only rule on callables.

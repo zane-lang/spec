@@ -78,6 +78,7 @@ The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the r
 This pair records a project's **direct** dependencies only; it is not a flattened lock of the whole graph. Transitive dependencies never appear in a project's own `zane-versions.coda` (which is exactly why the [`remaps` block names URLs rather than keys](#21-manifest-zanecoda) — a transitive-only package has no row here to key off). Reproducibility of the *entire* graph still holds, because every dependency commits its **own** `zane.coda` / `zane-versions.coda`, each pinning its own direct dependencies to exact commits, and the resolver walks those committed files recursively (build flow step 5). Since every edge is pinned to an immutable commit, the transitive closure of these per-package lock files reproduces the full graph exactly, with no need to flatten transitive entries into the top-level file. The strict sync rule above therefore governs each package's two files in isolation, at every level of the graph.
 
 ### 2.3 Files are recorded and updated by commands
+
 `zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-versions.coda`. The user does not type the commit hash manually in the normal workflow. Remap opt-in is recorded separately in the `remaps` block.
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-versions.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
@@ -131,6 +132,7 @@ If the required target artifact is missing from `build/`, the fetch fails for th
 ## 6. Symbol Versioning
 
 ### 6.1 Placeholder-prefix rewriting
+
 Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag followed by a `%` separator — and places the rewritten binaries into `build/`.
 
 Conceptually:
@@ -144,12 +146,15 @@ The `%` separates the version tag from the package name so the version boundary 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
+
 Versioned symbol names allow multiple versions of the same package to coexist in one program without collisions.
 
 ### 6.3 Transitive dependencies keep their resolved versions
+
 When a library already depends on another versioned library, the referenced transitive symbols are left as-is. Only the fetched library's own placeholder-prefixed exports are rewritten.
 
 ### 6.4 Optional compatibility-based remapping
+
 When a consumer opts in, version-prefixed symbols may additionally be remapped at link time to collapse interchangeable versions of a package onto a single copy. This is layered on the same rewrite step; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#shipping-compiled-objects-and-rewriting-their-symbols) — "Shipping compiled objects, and rewriting their symbols" tells why versioning lives in the linker's namespace, and the separator saga that landed on `%` over `@` and `__`.
@@ -221,6 +226,7 @@ If package `A` imports package `B`, then package `B` **MUST NOT** import package
 The compiler **MUST** detect and reject cyclic package dependencies at build time with an error message that identifies the cycle.
 
 ### 10.1 Single-package mutual references
+
 Within a single package, source files may freely reference each other's declarations. A package is compiled as one unit, so mutual references among declarations in the same package are legal and do not constitute a cycle.
 
 The acyclicity requirement applies only to the package-level dependency graph, not to intra-package references.
@@ -242,6 +248,7 @@ This side-by-side coexistence is the default. A consumer may opt into collapsing
 Packages may ship multiple prebuilt object files for different target triples under `build/`. A dependency is usable on a target only if the repository contains the matching prebuilt artifact for that target.
 
 ### 12.1 Source compilation is explicit opt-in
+
 The normal workflow consumes the repository's checked-in prebuilt artifact from `src/build/`. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
 
 ```sh
@@ -289,12 +296,14 @@ By default, when two parts of the dependency graph require different versions of
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#opt-in-remapping) — "Opt-in remapping" develops the author/consumer split, why `remaps` names URLs rather than keys, and the unchecked-ABI cost the whole design is built to contain.
 
 ### 15.1 Roles: author declares, consumer decides
+
 - **Author (`version-pattern`).** A package author publishes a `version-pattern` in the package's own `zane.coda`. It is **information, not permission**: it declares the range of the package's own versions that are interchangeable at the ABI level. It never forces remapping on or off.
 - **Consumer (`remaps`).** The top-level project decides which packages to remap via a `remaps` block listing canonical package URLs. This is the **only** place the remap decision is made. A listed URL may name a direct dependency or a package that appears only transitively — the URL is the canonical identity, so any package in the resolved graph can be named unambiguously even when it has no local key — and listing it needs no version pin, so opting in a transitive package adds no version-management burden. `remaps` blocks in transitively-fetched libraries' manifests are ignored; an intermediate library cannot force a package it depends on to be remapped or kept separate. There is no wildcard or global opt-in: each remapped package is named explicitly in the top-level manifest.
 
 Remapping of a package occurs only when the consumer enables it **and** the published patterns make it ABI-safe. Otherwise the versions coexist unchanged.
 
 ### 15.2 Pattern syntax
+
 A `version-pattern` mirrors the shape of the package's version tags, replacing each **numeric** component with a marker:
 
 - `*` — **fixed boundary.** This component must match exactly for two versions to be interchangeable. It carries no priority and does not participate in selection. (Typically the major component.)
@@ -309,12 +318,14 @@ Because components split strictly on `.`, a pre-release identifier joined by ano
 Example: `v*.+.++` reads as "same major; among interchangeable versions prefer the highest minor first (`+`, top priority), breaking ties by highest patch (`++`)."
 
 #### 15.2.1 Validation rules
+
 - Every `+`/`-` component **MUST** carry an explicit priority via its repetition count.
 - No two `+`/`-` components may share a priority level. A pattern with a duplicate level is **rejected at parse time**; this strict total order is what makes selection deterministic.
 - `*` components carry no priority and are excluded from the ordering.
 - A marker position that contains anything other than `*`, `+`, or `-` is malformed and **MUST** be rejected at parse time. Literal positions must contain only the characters of the tag shape they match.
 
 ### 15.3 Selection ("best of both")
+
 With remapping enabled for a package, the toolchain considers the set of versions required across the graph and groups them by their declared `version-pattern` string:
 
 1. Within a group sharing an identical pattern, a candidate **replacement** version may **substitute** for a **required** version (the replacement standing in for the required version's references) when every `*` component is equal and the directional components agree under a **hierarchical** comparison: the `+`/`-` components are examined in priority order (highest priority — fewest repeats — first), and at the first component where the two versions differ, the **replacement's** value must satisfy that component's declared direction relative to the **required's** — strictly greater for `+`, strictly smaller for `-`. Once a higher-priority component satisfies its direction, lower-priority components are unconstrained — so a minor bump that resets the patch to `0` still substitutes. Versions equal in every component substitute trivially.
@@ -322,12 +333,15 @@ With remapping enabled for a package, the toolchain considers the set of version
 3. References to the displaced versions are remapped onto the chosen version and the displaced copies are dropped from the link.
 
 ### 15.4 When versions are not interchangeable
+
 - **Same pattern, out of window** (for example, a `*` major component differs): the versions are kept side by side, as in the default model. This is expected and produces **no warning**.
 - **Different patterns**: versions of the same package that declare *different* `version-pattern` strings are never remapped onto each other. They are kept side by side and the toolchain emits a **one-time informational warning during dependency resolution** (not on every build, and not a security error) noting that divergent patterns prevented full deduplication. Other versions that do share a pattern still collapse normally.
 - **Tag shape mismatch**: a version tag whose structure does not match the package's `version-pattern` — a different number of numeric components, or extra parts such as pre-release identifiers that the pattern's literals do not match — is treated as non-interchangeable. It is never remapped and is kept side by side. This is an expected consequence of heterogeneous tags and produces **no warning**.
 
 ### 15.5 Safety: this is an ABI assertion on prebuilt objects
+
 Because libraries ship prebuilt object files (§3, §6), remapping rewrites a caller's symbol references to point at a different version's compiled objects. The author's `version-pattern` therefore asserts **ABI** compatibility across the window — identical signatures, type layouts, and calling conventions — which is a stronger promise than source/API compatibility. A wrong assertion produces silent undefined behavior at link time, with no recompilation to catch it. For this reason remapping is opt-in per consumer — a package is remapped only when listed in `remaps`, and the default is safe coexistence — and it always degrades to safe coexistence when a single common version cannot be shown interchangeable.
 
 ### 15.6 Mechanism reuses pull-time rewriting
+
 Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-versions.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%math$vec → v6.3.4%math$vec` — onto the chosen version.

@@ -49,11 +49,13 @@ reinforces the semantics instead of merely labelling them.
 Weigh a candidate against all of these, not just the first.
 
 ### 2.1 The analogy is true, not decorative
+
 The word's literal job should match the concept's job. A `mould` shapes; a `verb`
 acts; a `borrow` is returned. If the only link is a vague vibe, the name will not
 hold up as the concept is used in anger.
 
 ### 2.2 It is empty enough to refill
+
 A term is a word you are going to overwrite with a new meaning through use. That
 only works if the reader's prior claim on the word is weak enough to yield. `verb`
 works because "action word" *feeds* the new meaning; a word already carrying a
@@ -62,17 +64,20 @@ term's whole life pushing the old meaning out of the way. This is the usual
 reason to reject an otherwise-apt candidate — see the `matrix` case in §5.
 
 ### 2.3 It reads in dense prose
+
 A term appears many times per page, so it must be short, plain, and unremarkable
 in a sentence. Everyday words win here. A term that is a mouthful, or that a
 reader has to sound out, is a poor handle no matter how precise.
 
 ### 2.4 An oblique connection is fine
+
 The link between the word and the concept may be one hop away; it need not
 encapsulate the definition. A name is not a summary. `anchor` does not spell out
 "stable indirection through an anchor table" — it just points, and the meaning
 settles onto it with use. Aim for *connected but not descriptive*.
 
 ### 2.5 The meaning accrues through use
+
 Do not expect the name to carry the whole concept on day one. A good term is a
 little empty at first and fills up as the spec uses it. The best connections are
 the ones a reader discovers *after* the word already feels natural — the buried

@@ -24,6 +24,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 ## 2. Methods
 
 ### 2.1 Methods are verbs whose first parameter is `this`
+
 A method is any package-scope verb whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
 The **subject** is the object a method is called on. Two things are named after it and are not interchangeable: `this` is the **subject parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **subject expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the subject" means the object itself.
@@ -38,6 +39,7 @@ Int scaledId(this Node, factor Int) {
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 
 ### 2.2 `this` grants private-field access
+
 Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the subject type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
 
 ```zane
@@ -53,9 +55,11 @@ Int scaledIdWrong(node Node, factor Int) {
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 
 ### 2.3 Read-only methods are the default
+
 A method without `mut` may read `this`, its parameters, and reachable read-only state, but it may not write through `this`.
 
 ### 2.4 Mutating methods use `mut`
+
 A method marked `mut` may write to any state reachable through `this`, whether through a hosting field or a guest.
 
 A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
@@ -86,6 +90,7 @@ pos!setY(Float(3));
 ```
 
 ### 2.5 Call markers are part of the surface syntax
+
 Read-only methods are called with `:`. Mutating methods are called with `!`.
 
 ```zane
@@ -108,9 +113,11 @@ subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 ```
 
 ### 2.7 Parameters are read-only
+
 Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the subject. How each parameter is passed — the two reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
 ### 2.8 Swallow and guest method parameters
+
 A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
 
 - A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, mutate it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
@@ -162,6 +169,7 @@ do() {
 The last two fail for unrelated reasons. A temporary is refused at the source end, by [`memory.md`](memory.md) §2.8; `spare` is a perfectly good guest source and is refused at the destination end, by the store rule ([`lifetimes.md`](lifetimes.md) §1.1) applied to the paths this call supplied.
 
 ### 2.9 Subscripts are place projections
+
 Subscripts are package-scope declarations with the subject first:
 
 ```zane
@@ -189,6 +197,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 ## 3. Functions
 
 ### 3.1 Functions are package-scope verbs without `this`
+
 A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`. (Operators are symbol-named and constructors are named after their type, so neither is a function even though they also take no `this`.)
 
 ```zane
@@ -198,12 +207,15 @@ Float getScale(node Node) {
 ```
 
 ### 3.2 Functions cannot access private fields
+
 Functions may access only fields whose names do not begin with `_`. This rule is package-independent: a function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
 
 ### 3.3 Functions use ordinary call syntax
+
 Functions are called as `name(args...)` or `packageName$name(args...)`.
 
 ### 3.4 Expression-bodied verbs
+
 A verb may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
 
 ```zane
@@ -233,6 +245,7 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 ## 4. Overloading Rules
 
 ### 4.1 Overload identity is parameter types only
+
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
 Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T` or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
@@ -245,9 +258,11 @@ Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mo
 The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart.
 
 ### 4.2 Consequences of the overload identity rules
+
 Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
 
 ### 4.3 Valid overloads differ by arity or parameter type
+
 Legal overload sets must differ in the number of parameters or in at least one parameter type at the same position, ignoring the passing mode.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#overloading-on-shapes-and-only-shapes) — "Overloading on shapes, and only shapes".
@@ -277,6 +292,7 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 ## 6. Method Name Resolution and Extension Methods
 
 ### 6.1 Unqualified method lookup
+
 For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolves candidates in this order:
 
 1. the subject type's home package, which for a fundamental type is `core`
@@ -285,6 +301,7 @@ For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolve
 If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the subject type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
 ### 6.2 Qualified method calls
+
 Cross-package extension methods are written explicitly:
 
 ```zane
@@ -292,6 +309,7 @@ vec:Physics$kineticEnergy();
 ```
 
 ### 6.3 Extension methods may be declared in any package
+
 Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that subject type.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
@@ -301,6 +319,7 @@ Because methods are package-scope verbs, any package may define methods on impor
 ## 7. Function Values and Lambdas
 
 ### 7.1 Callables cannot be referenced as values
+
 Methods, functions, and operators are **call-only**. A package-scope callable name may appear only in call position; there is no syntax that turns it into a value. For example, `+` can be called, but `+` cannot be written as a value.
 
 ```zane
@@ -315,6 +334,7 @@ The reason is the same one that makes operators safe to overload. An overloaded 
 > **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
 
 ### 7.2 Lambdas are self-typed function values
+
 A lambda literal is a function declaration with the name removed. It writes its own parameter types, return type, abort type, and `mut` (see [`syntax.md`](syntax.md) §3.8). Nothing is inferred from context.
 
 ```zane
@@ -345,6 +365,7 @@ readonlyCallback Unit[this Node, EventData] = Unit(this Node, data EventData) mu
 ```
 
 ### 7.3 Lambda-variables hold function values
+
 To name a function value, declare a **lambda-variable**: a symbol bound to a lambda literal. The shorthand mirrors constructor-call instantiation, swapping the name and return type relative to a function declaration:
 
 ```zane
@@ -357,6 +378,7 @@ A lambda-variable is an ordinary symbol with a single function type. Because a s
 > **See also:** [`syntax.md`](syntax.md) §2.9 for function types and §3.8 for lambda literals and lambda-variable declarations.
 
 ### 7.4 Lambdas do not capture
+
 Lambdas **MUST NOT** capture outer variables. Every dependency must be passed as a parameter or supplied through surrounding storage explicitly. See [`concurrency.md`](concurrency.md) §5.2 ("Lambdas do not capture").
 
 A **block argument** is not a lambda and does capture. It is a source construct rather than a value: it has no written type, cannot be stored, and cannot outlive the call it is written at, so nothing can run it from a frame the compiler is not looking at. See [`control-flow.md`](control-flow.md) §2.
@@ -364,9 +386,11 @@ A **block argument** is not a lambda and does capture. It is a source construct 
 > **Story:** [`stories/functions.md`](../stories/functions.md#names-that-are-not-values) — "Names that are not values".
 
 ### 7.5 No bound method references
+
 Zane does not provide bound method references as a separate feature. Because lambdas do not capture, there is no syntax that implicitly stores a subject inside a function value. Code that needs a subject later must keep that subject in ordinary storage and pass it explicitly when the function value is invoked.
 
 ### 7.6 Generics are orthogonal to overloading for function values
+
 A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape. Passing a lambda to an overloaded callable is therefore an exact shape match at that parameter position, not a contest the lambda must win.
 
 The circularity that makes overloaded **names** unusable as values (§7.1) does not apply to a lambda. An overloaded name is a candidate *set* with nothing to collapse it in value position; a lambda is already a single value. That distinction — not genericity — is what lets a self-typed lambda be passed to an overloaded callable while a bare callable name cannot.
