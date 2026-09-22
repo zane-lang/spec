@@ -366,7 +366,7 @@ Do not frame a rule in terms of backward compatibility or migrating existing cod
 5. Create the matching `stories/<topic>.md` stories doc (see [`writing-stories-docs.md`](writing-stories-docs.md)) and add `> **Story:**` pointers from the non-trivial sections.
 6. If meaningful language comparisons exist, add a Language Comparisons section (§4 format).
 
-Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section. Reference documents (`syntax.md`, `glossary.md`) do not get a stories doc.
+Exception: if the document is `glossary.md`, follow the glossary-specific reference shape from §2.6 instead of the topic-document layout. Record each term's meaning, why the name fits, and the canonical home document. Do not add a Language Comparisons section, and do not create a stories doc: `glossary.md` is the one document without one, because a coined term's name is defended in the chapter that introduces the concept it names ([`writing-stories-docs.md`](writing-stories-docs.md) §3.1), leaving a glossary story nothing of its own to tell. `syntax.md` does have one — the decisions a surface form embodies, which no topic document owns, live in [`stories/syntax.md`](../stories/syntax.md).
 
 ---
 

@@ -40,6 +40,8 @@ Once a symbol already exists, reassignment uses only:
 name = expr
 ```
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-order-assignment-forced) — "The order assignment forced".
+
 ### 1.2 Package constants
 
 ```zane
@@ -326,6 +328,8 @@ Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
 Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+
 ### 2.10 The `#` reference modifier
 
 A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
@@ -359,6 +363,8 @@ ReturnType name(param Container<T Type, n Number>, ...) { body }
 A **reference-type** parameter independently selects one of the two passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so `&` is not written on one.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
 ### 3.2 Methods
 
@@ -445,6 +451,8 @@ name TypeName{fieldA; fieldB;}
 
 A field-constructor call may omit any field whose constructor entry includes an initializer.
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#one-shape-and-everywhere-it-turned-up) — "One shape, and everywhere it turned up".
+
 ### 3.5 Implicit constructors
 
 ```zane
@@ -481,6 +489,8 @@ ReturnType (this SubjectType)[index ParamType] => expr
 ```
 
 `[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the subject.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
 ### 3.7 `init{ }`
 
@@ -551,6 +561,8 @@ callback Unit(this Player) mut {        // shorthand for the line above
     return Unit();
 }
 ```
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
 ### 3.9 Operator definitions
 
@@ -846,6 +858,8 @@ Zane has none.
 ```
 
 Zane has no block-comment syntax. `//` starts a single-line comment. `///` starts a documentation comment line. Adjacent `///` lines are merged into one documentation block.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#every-line-admits-to-being-a-comment) — "Every line admits to being a comment".
 
 ---
 

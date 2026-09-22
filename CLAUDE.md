@@ -216,9 +216,9 @@ a miss here comes back as a red check rather than a review comment.
 
 ## Writing a design story
 
-Story coverage is **complete**: every topic spec has a story; the two reference
-docs `syntax.md` and `glossary.md` get none (spec guide §7). New stories are
-written for wholly new topics only.
+Story coverage is **complete**: every spec doc has a story except `glossary.md`,
+which gets none (spec guide §7). New stories are written for wholly new topics
+only.
 
 Read both contributing guides first, and read **`stories/generics.md`** as the
 quality bar — dense, opinionated, long-form prose. Writing a story is two
