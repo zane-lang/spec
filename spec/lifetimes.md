@@ -9,6 +9,7 @@ This document specifies Zane's lexical lifetime rules: the owner comparison ever
 ## 1. Scope Rules and Moves
 
 ### 1.1 A store may not raise a value above what it names
+
 Every place has an **owner**, and an owner is a lifetime:
 
 - a **symbol** — a local binding — is owned by the block that declares it
@@ -60,6 +61,7 @@ The comparison the compiler makes is between two declaration blocks, after resol
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
 
 ### 1.2 Move-sources are host symbols, hosting verb results, or `#variant` case forms
+
 A move-source must denote a **hosting value the expression is entitled to consume**. Three forms qualify:
 
 - a **direct host symbol**: a local binding or parameter that hosts the object and is named directly by an identifier expression
@@ -90,6 +92,7 @@ This rule keeps containers stable hosting subtrees. Once a value is hosted by a 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-may-be-moved-keeping-ownership-subtrees-whole) — "What may be moved: keeping ownership subtrees whole".
 
 ### 1.3 Moves are restricted to the declaration block
+
 A direct host symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Host parameters may be used as move-sources at the top level of the function body. A parameter is not part of the body scope, though: it belongs to the **call-site scope** (§1.5). The caller that supplied a hosting argument has already downgraded to a guest (§1.8); moving the parameter within the body only decides where the value comes to rest.
 
 ```zane
@@ -125,6 +128,7 @@ The restriction applies only to symbol move-sources. A hosting verb result or `#
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses) — "The declaration-block rule, and the flow analysis it refuses".
 
 ### 1.4 Destination scope must contain or match source scope
+
 A move is a store, so §1.1 governs it. Read against the moved value's own host, the comparison says: a value may move into a new host only when the destination host is declared in the same or a higher lexical scope than the source host.
 
 ```zane
@@ -142,6 +146,7 @@ A parameter's value is exempt. Because a parameter belongs to the call-site scop
 This reading concerns the moved value's own host. When the value **carries guests**, §1.1 compares their owners too, and §1.10 says which guests those are.
 
 ### 1.5 Parameters belong to the call site
+
 A reference-type parameter is **not part of the callee's body scope**. It behaves as a symbol in the **call-site scope**, one level above the body. Passing a hosting reference-type value to a plain `T` parameter lends it in with hosting access, but the value's lifetime stays with the call site.
 
 Its **owner** (§1.1) is therefore no block of the body. A parameter stands for the argument path the caller wrote, which is why a store that reaches a parameter is settled by the call site rather than by the body (§1.11).
@@ -165,6 +170,7 @@ For `&` fields specifically, the callee must declare the corresponding parameter
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
 ### 1.6 Moved symbols downgrade to `&` values and are no longer movable
+
 After a direct host symbol is moved, that symbol is downgraded to an `&` value through the anchor (see [`memory.md`](memory.md) §4.5). The symbol remains readable but cannot be moved again.
 
 ```zane
@@ -181,6 +187,7 @@ This also applies across calls. Passing a hosting value to a plain `T` parameter
 A hosting verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
 ### 1.7 Returned `&` values must be rooted in a parameter
+
 A return is a store into the call-site scope, so §1.1 governs it, and this is what the comparison comes to for a returned guest: a function may return an `&T` only when the returned guest is rooted in one of the function's **parameters** — the parameter used bare, or a field access whose base chain reaches it. `this` counts as a parameter for this rule.
 
 ```zane
@@ -205,6 +212,7 @@ This rule governs a return that **is** an `&T`. A return that *carries* one — 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
 
 ### 1.8 Passing a host to a `T` parameter downgrades it to a guest
+
 A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol downgrades to a guest (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` ([`memory.md`](memory.md) §2.9) means the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
 
 ```zane
@@ -253,6 +261,7 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 
 ### 1.9 An ignored hosting result floats to the enclosing scope
+
 A return value need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1). An ignored value-type result, including `Unit()`, is simply discarded.
 
 Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through whatever guest it already holds (§1.8).
@@ -267,6 +276,7 @@ Because a floated result is kept rather than dropped, no guest dangles and no ho
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
 ### 1.10 A value carries the guests reachable along owning edges
+
 A value **carries a guest** when an `&` is reachable from its type by following **owning** edges (see [`adt.md`](adt.md) §4). The walk finds an `&` member and stops at it: a type's own `&` field is the shortest case, reached after no edges at all, and an `&` nested inside a hosting field or container element is reached by following those edges to it. The walk does not continue *through* an `&` into what it names, because that object is hosted elsewhere and moves separately.
 
 The hosts a value's carried guests name are what §1.1 compares alongside the value's own host. A guest naming a host **inside** the value is satisfied at every destination, because that host travels with it. A guest naming anything else keeps the owner it has, and every store of the value asks again whether that owner outlives the new destination:
@@ -313,6 +323,7 @@ Everything reachable under one root symbol belongs to one hosting tree ([`memory
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-check-that-fired-once-and-the-move-that-outran-it) — "The check that fired once, and the move that outran it".
 
 ### 1.11 A signature records where its parameters come to rest
+
 A parameter has no owner in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where the value comes to rest**: when a verb stores a parameter into a place reachable from another parameter or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1.
 
 ```zane
@@ -409,6 +420,7 @@ For an `&` field the callee must still declare the corresponding parameter `&T` 
 ## 2. Lifetime and Destruction
 
 ### 2.1 Destruction is deterministic
+
 A reference-type object in a **stable** host is destroyed when that hosting identity ends without the object being moved elsewhere. A scope drain ends every hosting identity owned by that scope.
 
 A container element or variant-case payload is a **contingent** hosting place. If such a place disappears or is replaced *before its owner scope drains*, a reference-type occupant that is not explicitly moved elsewhere is not destroyed at that point: it **floats** into an anonymous host owned by the same scope and lives until that scope drains ([`memory.md`](memory.md) §2.8.1). This is unconditional on whether any guest exists, so guest storage does not decide lifetime. When the owner scope itself drains, no float occurs; the object is destroyed with the rest of that scope.
@@ -418,12 +430,15 @@ A **value** has death points that are equally static: its slot is overwritten, o
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
 
 ### 2.2 Scopes drain before destruction
+
 If a scope launches concurrent work, objects hosted by that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
 ### 2.3 Guest storage never extends lifetime
+
 Guests do not participate in hosting and cannot prolong an object beyond the lifetime fixed by its owner. The contingent-place float in §2.1 is part of that hosting rule and happens whether or not a guest exists: the object moves to another host with the **same owner** rather than gaining a longer owner because it was referenced.
 
 ### 2.4 Null guests are not a user-facing state
+
 An `&` is never optional and is never tested for emptiness; the runtime exposes no “null guest” programming model to the user. One rule keeps a stored guest pointing at something live as values move: §1.1 compares owners at every store, over the value's own host and over the guests it carries (§1.10), deferring to the call site wherever a parameter stands in for a path it cannot see (§1.11). What that covers is **relocation** — a value travelling away from what its guests name. A contingent hosting place disappearing while its owner lives on is the separate case §2.1 and [`memory.md`](memory.md) §2.8.1 answer by floating the occupant within the same owner.
 
 ---

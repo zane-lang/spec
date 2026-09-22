@@ -21,6 +21,7 @@ Zane keeps data layout and construction separate from behavior.
 ## 2. Value and Reference Types
 
 ### 2.1 The value/reference axis and the `#` modifier
+
 Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
@@ -39,6 +40,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, moved not 
 > **Story:** [`stories/types.md`](../stories/types.md#what--actually-changes-and-the-boxing-trap) — "What `#` actually changes, and the boxing trap".
 
 ### 2.2 Value types are transitive and mutable in place
+
 A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
 
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
@@ -57,6 +59,7 @@ pos = Vec2(3, 4);    // legal: overwrites the whole value
 ```
 
 ### 2.3 Field visibility is name-based
+
 Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
 
 The same subject type written under any other parameter name is a non-subject parameter and does not gain private-field access.
@@ -68,9 +71,11 @@ This is intentional: private-field access in Zane is method-based, not package-b
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
 ### 2.4 Type bodies contain no behavior
+
 Methods, constructors, overload rules, and function values live at package scope. A reader can inspect a type body to learn layout without scanning for behavior.
 
 ### 2.5 `struct` and `variant` share one body grammar
+
 A `struct` is a **product mould**: a value of the type it declares has all of its members at once. A `variant` is a **sum mould** with the same body grammar: a value has exactly one of its members at a time. The body of a `variant` is byte-for-byte the same shape as a `struct` body; the keyword alone flips product into sum.
 
 ```zane
@@ -121,6 +126,7 @@ An implementation may erase only the runtime storage of `Unit` values, including
 ## 3. Constructors and Initialization
 
 ### 3.1 Constructors are package-scope declarations
+
 A constructor is a package-scope verb named after the type. It has no `this` parameter because no object exists yet.
 
 Constructors use the same block-bodied or expression-bodied surface forms as other package-scope verbs, except that the written type name is the return type and the body constructs the result with `init{ ... }`.
@@ -128,6 +134,7 @@ Constructors use the same block-bodied or expression-bodied surface forms as oth
 > **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-what-it-is-not-how-it-is-built) — "Naming a type by what it is, not how it is built".
 
 ### 3.2 Positional constructors
+
 Positional constructors declare ordinary parameters and return `init{ ... }`.
 
 ```zane
@@ -171,6 +178,7 @@ Node(id Int, scale Float, label String) {
 ```
 
 ### 3.3 Field constructors
+
 A constructor may also declare fields directly in its parameter header:
 
 ```zane
@@ -209,6 +217,7 @@ starter Weapon{fireRate = Float(2);}
 ```
 
 ### 3.4 Named constructors
+
 The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
 
 ```zane
@@ -238,6 +247,7 @@ Because a named constructor builds through `init{ }`, it belongs to a type that 
 > **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
 
 ### 3.5 Implicit field access in constructor calls
+
 Field-constructor call sites may use implicit field access when the argument expression name matches the field name:
 
 ```zane
@@ -249,6 +259,7 @@ vec Vector{x; y;}
 `Vector{x; y;}` is shorthand for `Vector{x = x; y = y;}`.
 
 ### 3.6 Implicit field access in `init{ }`
+
 Inside `init{ }`, a bare field name is shorthand for `fieldName = fieldName` when a symbol of that name is in scope:
 
 ```zane
@@ -269,6 +280,7 @@ Vector{x Int; y Int;} {
 ```
 
 ### 3.7 `init{ }` is a constructor-only expression
+
 `init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
 
 ```zane
@@ -284,9 +296,11 @@ Vector{x Int; y Int;} {
 Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
 
 ### 3.8 Constructors do not use `mut`
+
 Constructors are not methods. They create new values rather than mutating an existing subject, so `mut` does not apply.
 
 ### 3.9 `&` fields require `&` constructor parameters
+
 An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a stable place that may mint one. A bare host symbol or stable struct-field path may mint a guest; a hosting path containing a subscript or variant-case projection, and any temporary, may not. A contingent read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
 
 ```zane
@@ -341,6 +355,7 @@ car Car(Engine());  // legal: plain host field accepts a temporary
 ```
 
 ### 3.10 Type and number parameters
+
 A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `Number` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
@@ -366,6 +381,7 @@ A `Type` value parameter is usable as a type inside the body (for example, `T(0)
 ## 4. Implicit Constructors
 
 ### 4.1 The `implicit` modifier
+
 A constructor marked with the `implicit` modifier declares a single-parameter conversion. Implicit constructors **MUST** declare exactly one parameter and **MUST NOT** use field-constructor form.
 
 ```zane
@@ -415,6 +431,7 @@ distance Meters = Meters(Feet(Float(10)));  // legal: explicit conversion
 ```
 
 ### 4.2 Coercion sites
+
 A coercion site is a position that passes a value into a contract whose destination type is fixed by a callable or language construct. These are the only positions where the compiler inserts an implicit constructor:
 
 - Positional arguments of a function call, including a call to a compiler intrinsic
@@ -449,9 +466,11 @@ At one coercion site requiring destination type `T`, given an argument with stat
 Candidate collection follows the home-package rule of §4.5 and needs no import: an implicit constructor is declared in the home package of one of its endpoints, and that is what makes it visible at a site whose destination is that type. `core`'s conversions from the compiler concept types are found this way like any other package's, so literal coercion is the same algorithm rather than a separate compiler-only lowering rule.
 
 ### 4.3 No chaining
+
 Implicit conversions are never chained. If no single-step implicit constructor exists from source type `U` to destination type `T`, the compiler does not search for a path `U → V → T`. The call is a type error.
 
 ### 4.4 Source and destination type constraints
+
 The **source type** (parameter type) of an implicit constructor **MUST** be a value type or a compiler concept type in the `@concepts$` namespace. It **MUST NOT** be a reference type or an `&`.
 
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type, a reference type, or a storage primitive in the `@primitives$` namespace.
@@ -484,6 +503,7 @@ implicit Destination(s Source) {   // ILLEGAL: source type is a reference type
 ```
 
 ### 4.5 Coherence and the orphan rule
+
 An implicit constructor from type `U` to type `T` **MUST** be declared in the home package of either type. A third-party package **MUST NOT** declare an implicit constructor between two imported types. `core` is the home package of the fundamental types, and a package may no more add declarations to it than to any other package it does not own; a fundamental endpoint therefore does not by itself grant permission to declare a conversion.
 
 This rule prevents conflicts when multiple packages independently define the same implicit conversion and ensures that the owner of at least one type controls the conversion behavior.
@@ -506,6 +526,7 @@ implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048
 ```
 
 ### 4.6 Method subjects are never implicitly converted
+
 The subject expression (`this`) in a method call is never subject to implicit conversion. This remains true even though method calls desugar to ordinary function calls. If the subject type does not match, the call is a type error.
 
 ```zane
@@ -529,6 +550,7 @@ feet:logDistance();  // ILLEGAL: subject type is Feet, not Meters
 Zane names types with two declaration keywords. `type` introduces a new distinct type; `alias` introduces an interchangeable name. Both use `=` as the delimiter, so the keyword alone carries the distinction.
 
 ### 5.1 `type` declares a distinct type
+
 A `type` declaration introduces a new, distinct named type. The new type is structurally equal to its right-hand side but is **not** interchangeable with it.
 
 ```zane
@@ -538,6 +560,7 @@ type VectorInt = Vector<Int>   // distinct type; NOT interchangeable with Vector
 A value of `VectorInt` and a value of `Vector<Int>` do not substitute for each other implicitly, even though their layouts match.
 
 ### 5.2 `alias` declares an interchangeable name
+
 An `alias` declaration introduces a true alias: the new name and its right-hand side are fully interchangeable everywhere.
 
 ```zane
@@ -545,6 +568,7 @@ alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression
+
 The right-hand side of a `type` or `alias` declaration is any type expression: an applied generic (`Vector<Int>`), an `Array<Int, 10000>`, or an inline mould — `struct { ... }`, `variant { ... }`, or `enum [ ... ]` — in either its value form or its `#` reference form.
 
 ```zane
@@ -562,6 +586,7 @@ These three forms — `struct`, `variant`, and `enum` — are the **moulds**: th
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
 
 ### 5.4 The keyword carries the distinction
+
 Intent lives entirely in the keyword — `type` versus `alias` — not in the punctuation. The `=` delimiter is identical in both forms, which keeps them visually parallel while making the distinct-vs-interchangeable choice explicit.
 
 > **See also:** [`generics.md`](generics.md) §4 for type expressions and [`syntax.md`](syntax.md) §1 for the declaration grammar.

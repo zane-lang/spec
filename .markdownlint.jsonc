@@ -1,0 +1,15 @@
+// Markdown rules for this repository, read by markdownlint-cli2, markdownlint-cli
+// and the markdownlint editor extensions.
+//
+// markdownlint enables roughly sixty rules by default. This repository has taken a
+// position on one of them, so everything starts off and each decided rule is turned
+// on by name. A rule switched on here is a house-style commitment that the whole
+// repository already satisfies; turning one on means fixing every existing hit in
+// the same change.
+{
+  "default": false,
+
+  // MD022 (blanks-around-headings): a heading carries a blank line above and below,
+  // at every level. Decided in https://github.com/zane-lang/spec/issues/173.
+  "MD022": true
+}

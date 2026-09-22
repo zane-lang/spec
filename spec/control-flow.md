@@ -22,6 +22,7 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 ## 2. Block Arguments
 
 ### 2.1 A block argument is a run of statements passed to a call
+
 A **block argument** is a braced run of statements written at a call site and executed by the callee. Its type is the compiler concept type `@concepts$Block`, or `@concepts$Block<T>` when it yields a `T`.
 
 ```zane
@@ -37,6 +38,7 @@ A block takes no parameters and has no name. It is not a lambda: a lambda is a s
 
 
 ### 2.2 A block captures, and does not escape
+
 A block reads and writes the bindings of the scope it is written in, exactly as any other braced block does. Nothing is passed to it.
 
 A block **MUST NOT** escape the call it is written at. It may not be stored, returned, bound to a symbol, placed in a field or element, or spawned. It may be handed on to another verb, because that call is still inside the original call's dynamic extent.
@@ -48,6 +50,7 @@ A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`co
 
 
 ### 2.3 A block is a scope for bindings, not for control transfer
+
 A block owns the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
 
 It is **transparent** to control transfer. `return` and `abort` written inside a block act on the invocation containing the *call*, not on the block, and a call to an exiting verb such as `core`'s `guard` (§3.6) ends that same invocation:
@@ -86,6 +89,7 @@ An exit therefore names no scope and unwinds to none, which Zane does not do ([`
 
 
 ### 2.4 A block may yield a value
+
 A `Block<T>` yields a `T`. Each of its yielding paths ends with `resolve`, which substitutes the value into the call that receives the block — the same keyword and the same meaning it carries in an abort handler ([`error-handling.md`](error-handling.md) §3.3).
 
 ```zane
@@ -103,6 +107,7 @@ ran!elif({ resolve cache:has(key) }) {
 The declarations in this section are `core` declarations, not language constructs. They are named here because every Zane program uses them, and because their shapes are what the intrinsics of §4 are built to support. Any package may declare others (§4.4).
 
 ### 3.1 `if` starts a chain and reports whether it ran
+
 `if(condition) { ... }` runs its block when the condition is `true`, and returns a `Bool` recording whether it did.
 
 ```zane
@@ -114,6 +119,7 @@ if(ready) {
 The result need not be bound. An unbound value-type result is discarded ([`lifetimes.md`](lifetimes.md) §4), so a conditional that has no continuation is written as a statement.
 
 ### 3.2 `elif` and `else` continue the chain
+
 A chain names the `if` result and continues it. `elif` runs its block when no earlier branch has run and its own condition holds, and it writes the chain value; it is therefore a `mut` method called with `!`. `else` runs its block when no earlier branch has run, and only reads the chain value, so it is called with `:`.
 
 ```zane
@@ -133,6 +139,7 @@ Because a chain is a sequence of ordinary calls rather than one construct, its p
 
 
 ### 3.3 A condition is evaluated unless it is written as a block
+
 The condition of an `elif` is an ordinary argument and is evaluated before the call, like any other (§2.4 of [`operators.md`](operators.md) states the same for the `Bool` operators). A condition that must not run when an earlier branch already matched is written as a block, selecting the `Block<Bool>` overload:
 
 ```zane
@@ -143,6 +150,7 @@ ran!elif({ resolve expensiveCheck() }) { ... }     // evaluated only if reached
 Deferral is therefore visible at the call site rather than implied by the name of the construct.
 
 ### 3.4 Counted repetition advances ordinary storage
+
 Counted repetition is a `mut` method on `Int`. The induction variable is an ordinary local that the block captures; the method advances it through the inclusive range.
 
 ```zane
@@ -155,6 +163,7 @@ i!to(Int(3)) {
 The block above sees `i = 1`, then `2`, then `3`. Nothing is passed to the block, and no binding is introduced by the call; `i` is the caller's storage throughout.
 
 ### 3.5 There is no unbounded repetition
+
 No `core` declaration repeats without a count, and none can be written (§4.3). A repetition whose real stopping condition is a test carries a bound anyway and ends the invocation when the test passes:
 
 ```zane
@@ -173,6 +182,7 @@ The `guard` leaves `connect`, not the repetition (§2.3). Zane has no construct 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#doing-without-while) — "Doing without `while`".
 
 ### 3.6 `guard` exits the verb that calls it
+
 `guard(condition)` ends its caller's invocation when the condition is `true`, and does nothing when it is `false`. It is a `core` declaration like the rest of this section, not grammar, and its body is the exit intrinsic inside a branch (§4.2).
 
 ```zane
@@ -193,6 +203,7 @@ Its condition is an ordinary argument, so it is `core`'s `Bool` and reaches it t
 ## 4. Control-Flow Intrinsics
 
 ### 4.1 Three intrinsics, stated over storage primitives or over nothing
+
 The language provides exactly three control-flow operations:
 
 ```zane
@@ -210,6 +221,7 @@ An intrinsic is called like a function, so its arguments are coercion sites ([`t
 
 
 ### 4.2 `exitFromCall` ends its caller's invocation
+
 `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it. Control does not resume after that call site; the caller's invocation is over.
 
 It reaches one level, not all of them. The verb holding the intrinsic ends too, because its frame sits inside the one being left, but the invocation that called *that* one is unaffected: in `outer` → `helper` → `guard`, the exit ends `helper` and `outer` runs on.
@@ -247,6 +259,7 @@ The exit carries no value, so the invocation it ends **MUST** have return type `
 
 
 ### 4.3 Repetition is bounded by the shape of `repeat`
+
 `repeat` takes a count, so a single invocation always terminates and every control-flow construct built on it carries a written bound, whoever declares it. The guarantee is a property of the intrinsic rather than of who may call it. It bounds one invocation, not a whole program: recursion can still re-enter `repeat` without limit, and it remains the language's only unbounded path.
 
 An indefinite repetition is expressed by giving a ceiling and stopping inside the body (§3.5), or by a scheduling facility that names the recurrence as such.
@@ -254,6 +267,7 @@ An indefinite repetition is expressed by giving a ceiling and stopping inside th
 
 
 ### 4.4 Any package may declare control flow
+
 A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and calls the intrinsics, exactly as `core` does for §3.
 
 ```zane
@@ -276,6 +290,7 @@ Exits are declarable on the same footing, and need no block at all. An `@control
 ## 5. 1-Based Ordinal Counting
 
 ### 5.1 Positional indexing is 1-based
+
 When an `Int` identifies an ordinal position in an ordered sequence, the first position is `1`. For a sequence with `n` elements, the positional index range is therefore `1` through `n`.
 
 ```zane
@@ -288,6 +303,7 @@ The example above selects the last element by using the sequence size directly a
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#counting-from-one) — "Counting from one".
 
 ### 5.2 Bounds behavior remains separate
+
 This document specifies the ordinal base only. The language-level behavior for out-of-range element access remains a separate question from whether indexing starts at `0` or `1`.
 
 ---

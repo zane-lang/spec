@@ -21,6 +21,7 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 ## 2. Core Concepts
 
 ### 2.1 Abort types are part of the signature
+
 An abortable function declares:
 
 ```zane
@@ -38,6 +39,7 @@ abort Unit();
 ```
 
 ### 2.3 Abortability is orthogonal to `mut`
+
 Abortability and mutation are independent. A method may be:
 
 - non-`mut`, non-aborting
@@ -48,6 +50,7 @@ Abortability and mutation are independent. A method may be:
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failing-is-not-an-effect) — "Failing is not an effect".
 
 ### 2.4 Abort type is structural, not behavioral
+
 Changing a function's abort type changes its function type. Abort types cannot be silently discarded when function values are passed around. Because callables are call-only, a function value is always a lambda-variable, and its declared function type must preserve the abort type of the lambda it holds.
 
 ```zane
@@ -63,6 +66,7 @@ parserBad Int[String] = Int?ParseError(text String) { ... } // ILLEGAL: abort ty
 ## 3. Call-Site Handling
 
 ### 3.1 `?` handler blocks
+
 Abortable calls are handled at the call site. One form is to attach a `?` handler block:
 
 ```zane
@@ -90,6 +94,7 @@ value Int = parse(input) ? err {
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#typed-doors-and-the-propagate-operator-we-dont-have) — "Typed doors, and the propagate operator we don't have".
 
 ### 3.2 Handler outcomes are exhaustive
+
 Every path through a handler block must end in one of:
 
 - `resolve ...`
@@ -101,6 +106,7 @@ Falling through a handler block is a compile-time error.
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#handling-a-fork-resolve-and-why-it-isnt-assignment) — "Handling a fork: `resolve`, and why it isn't assignment".
 
 ### 3.3 `??` is resolve-only shorthand
+
 `expr ?? fallback` desugars to a `?` block that only resolves a default value.
 
 ```zane
@@ -120,6 +126,7 @@ When such a call is abortable, the handler attaches to the call expression exact
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#the-empty-door-still-carries-a-value) — "The empty door still carries a value".
 
 ### 3.5 `match` is abort-transparent
+
 A `match` expression passes the output of its selected arm straight up. If the arms are abortable, the whole `match` is abortable and takes a `?` (or `??`) handler exactly like any other abortable expression. Abortability is not introduced or swallowed by `match`; it simply flows through.
 
 ```zane

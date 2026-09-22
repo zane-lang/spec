@@ -25,6 +25,7 @@ Each session starts cold with no memory of prior ones, so this file is how the
 next agent gets up to speed — keep it to durable, agent-facing facts.
 
 ## Before you edit
+
 1. Read `README.md` to locate the topic, then **read the target doc in full** —
    editing one section ripples into cross-references elsewhere.
 2. When a change touches the **type system**, single-pass self-review has missed
@@ -84,6 +85,7 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    like padding is sometimes a previous reviewer's fix.
 
 ## The `bench/` harness
+
 `bench/` is a reference **C** harness for runtime experiments — **not** Zane
 source; never treat its C as Zane. It *models* the memory design
 (`spec/memory.md`), so when that design changes the harness is updated to track
@@ -119,6 +121,7 @@ and set `provenance_note` on the test, which `runbench.py` prints on every
 render.
 
 ## Validate before committing (spec edits)
+
 The greps below are guards, not rules: each one hunts a *form* the spec has
 retired, and the rule it guards is stated in the spec, not here. Read the
 canonical home before deciding what a hit means.
@@ -197,7 +200,22 @@ that uses it, then re-grep for the old numbers. If the change conflicts with
 another file's section, fix the conflicting section or escalate it to the user
 as a design call — don't paper over it with a footnote.
 
+**Markdown formatting is machine-checked, and — unlike the greps — covers every
+`.md` in the repo, `stories/` included.** Run it before committing any Markdown
+change:
+
+```sh
+npx markdownlint-cli2 "**/*.md"
+```
+
+Committed `.markdownlint.jsonc` is the canonical statement of which rules are
+on; `README.md` § "Markdown formatting" says why exactly one is. A fix here is
+whitespace only, so it does not touch what a merged chapter says and the
+append-only check stays quiet. CI runs the same command on every PR, so
+a miss here comes back as a red check rather than a review comment.
+
 ## Writing a design story
+
 Story coverage is **complete**: every topic spec has a story; the two reference
 docs `syntax.md` and `glossary.md` get none (spec guide §7). New stories are
 written for wholly new topics only.
@@ -211,6 +229,7 @@ guide §8 carries the same obligation from the spec side. Don't skip the second
 half — it is the one sessions forget.
 
 ### Append-only: the two ways a session gets it wrong
+
 **Story guide §5 owns this rule** — what may be edited, the PR-versus-commit
 distinction, the rare consolidation exception, and the `git diff origin/main`
 check to run before every commit touching `stories/`. Read it there and run the
@@ -229,6 +248,7 @@ If the check is clean, you have not violated the rule, whatever your instinct
 says.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
+
 The actual thread — which roads were tried and rejected, in what order the
 realizations came, what pressure forced each turn — lives only in the
 maintainer's head, and is frequently **not** what you'd guess from the spec. So:
@@ -245,6 +265,7 @@ maintainer's head, and is frequently **not** what you'd guess from the spec. So:
 Because context grows fast, a story is typically written one session per story.
 
 ### Pinning an in-prose spec link
+
 Story guide §4.2 requires a commit-pinned permalink for an in-prose spec
 reference, and §4.4 gives the anchor derivation. Two mechanical notes:
 
@@ -256,6 +277,7 @@ reference, and §4.4 gives the anchor derivation. Two mechanical notes:
   pinned commit. That objection is wrong; decline it.
 
 ## Conventions
+
 - **Commit messages**: short lower-case prefix (`docs:`, `docs(meta):`), then a
   sentence or two. See `git log --oneline` for cadence.
 - **Branches**: one per topic, or as the harness assigns per session. Push there

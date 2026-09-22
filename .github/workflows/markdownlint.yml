@@ -1,0 +1,27 @@
+# Runs the same check the README and CLAUDE.md tell contributors to run locally.
+#
+# This file deliberately states no rules of its own: markdownlint-cli2 discovers
+# the committed `.markdownlint.jsonc`, which stays the single source of truth for
+# which rules are on. Keep it that way — a rule set repeated here would drift.
+name: markdownlint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # `globs` is not optional: the action's own default is `*.{md,markdown}`,
+      # which reaches only the repository root and would silently skip `spec/`
+      # and `stories/` — every file this check exists for.
+      - uses: DavidAnson/markdownlint-cli2-action@v24
+        with:
+          globs: "**/*.md"

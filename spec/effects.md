@@ -22,18 +22,22 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 ## 2. Core Definitions
 
 ### 2.1 Side effect
+
 A side effect is any observable interaction beyond returning a value, including:
 
 - writing through `this`
 - interacting with capability objects
 
 ### 2.2 Capability
+
 A capability is an object whose methods model access to external state, such as a filesystem, logger, socket, clock, or random source.
 
 ### 2.3 `mut`
+
 `mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: a value-type `this` is a **borrow** of the caller's slot, and a reference-type `this` is an implicit **guest** to the object (see [`functions.md`](functions.md) §2.4). Neither takes hosting, so a `mut` call leaves the caller exactly as it found it.
 
 ### 2.4 Parameters are not mutable by default
+
 Parameters other than `this` are read-only. Mutation of another object must be expressed by calling a `mut` method on that object as the subject. A number parameter that resolves to a number value in body positions (see [`generics.md`](generics.md) §3.5) is a value-like binding and is read-only by default; mutating it requires a `mut` declaration.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-mutation-is-allowed-to-reach) — "Where mutation is allowed to reach".
@@ -45,15 +49,19 @@ Parameters other than `this` are read-only. Mutation of another object must be e
 The compiler assigns a function to the strongest effect level required by any operation in its body or any function it calls transitively. Reading capability-backed state raises a function out of the pure levels; writes through a subject or to external state raise it to Write Impure.
 
 ### 3.1 Level 1 — Total Pure
+
 Total Pure functions depend only on explicit parameters and immutable package constants. They have no side effects and are guaranteed to terminate for all inputs.
 
 ### 3.2 Level 2 — Pure
+
 Pure functions have no side effects but are not proven total. They are still reorderable and parallelizable at runtime, but they are not compile-time evaluated automatically.
 
 ### 3.3 Level 3 — Read-Only Impure
+
 Read-Only Impure functions read capability-backed state but do not write.
 
 ### 3.4 Level 4 — Write Impure
+
 Write Impure functions mutate `this`, mutate capability-backed state, or otherwise perform externally observable writes.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#four-levels-and-the-line-between-terminating-and-merely-pure) — "Four levels, and the line between terminating and merely pure".
@@ -63,12 +71,15 @@ Write Impure functions mutate `this`, mutate capability-backed state, or otherwi
 ## 4. Effect Enforcement
 
 ### 4.1 Non-`mut` methods cannot write `this`
+
 A method without `mut` may not assign through `this` or call `mut` methods on state reached through `this`.
 
 ### 4.2 `mut` does not authorize arbitrary writes
+
 Even a `mut` method may write only through `this`. It does not gain permission to mutate unrelated parameters. This applies whether the subject is a value type or a reference type: a value subject is mutated in place through its borrow (see [`functions.md`](functions.md) §2.4), not by returning a replacement.
 
 ### 4.3 `&` use sites follow ordinary call rules
+
 Reading through a guest is not a side effect by itself. At use sites, guests follow the same field-access and method-call rules as hosts. Mutation of the hosted object's state must still be expressed through a `mut` method call with that object as the subject.
 
 ---
@@ -76,15 +87,19 @@ Reading through a guest is not a side effect by itself. At use sites, guests fol
 ## 5. Structural Inference
 
 ### 5.1 Subject reachability drives effects
+
 The compiler uses reachability from `this` to determine which state is writable in a `mut` method and readable in any method.
 
 ### 5.2 Call-graph propagation
+
 If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
 
 ### 5.3 Guests do not by themselves raise effect level
+
 A function does not leave the pure levels merely because it reads through an `&`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is hosting or non-hosting.
 
 ### 5.4 Unknown callees are conservatively classified
+
 If the compiler cannot prove the effect behavior of a callee, it must treat the call as requiring the strongest effect level needed to preserve safety.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
@@ -94,18 +109,23 @@ If the compiler cannot prove the effect behavior of a callee, it must treat the 
 ## 6. Capability Wiring and Explicit State Flow
 
 ### 6.1 Capabilities must be passed or stored explicitly
+
 There is no ambient global I/O capability. Code can affect external state only through capability objects it receives directly or via hosting.
 
 ### 6.2 Constructor injection is ordinary capability wiring
+
 Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit hosting path by which later methods can reach the capability.
 
 ### 6.3 `&` fields can also expose read access paths
+
 Storing an `&` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; the effect level still comes from what the reachable operations do.
 
 ### 6.4 Context objects are explicit, not magical
+
 A "context object" that groups several capabilities is just another ordinary object in the hosting graph. It may reduce parameter count, but it does not hide effects from the compiler because the reachable capabilities are still explicit in storage and call structure.
 
 ### 6.5 Prop drilling is intentional
+
 Passing capabilities through constructors and methods is part of the design. It keeps effects visible in object structure rather than hidden in ambient module state.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#no-ambient-io-effects-you-can-see-in-the-structure) — "No ambient I/O: effects you can see in the structure".
@@ -115,12 +135,15 @@ Passing capabilities through constructors and methods is part of the design. It 
 ## 7. Constructors, Allocation, and Abortability
 
 ### 7.1 Constructors may allocate but are not `mut`
+
 Constructors create values and therefore participate in allocation, but they do not mutate an existing subject.
 
 ### 7.2 Allocation and destruction do not by themselves raise effect level
+
 Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also mutates subject-reachable state or reads/writes through capabilities.
 
 ### 7.3 Abortability is orthogonal
+
 A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#what-deliberately-is-not-an-effect) — "What deliberately is not an effect".
@@ -130,12 +153,15 @@ A function's abort type and effect level are independent. An abortable function 
 ## 8. Concurrency Implications
 
 ### 8.1 Total Pure and Pure work are natural parallelization candidates
+
 Because they do not write mutable state, they can be reordered and parallelized subject to profitability heuristics.
 
 ### 8.2 Reads compose with concurrent mutation
+
 Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
 
 ### 8.3 Concurrent mutation is governed by the spawn rules
+
 Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, a verb that mutates a non-`this` parameter is unspawnable, and no two concurrent spawns may mutably borrow the same storage — including two iterations of one spawn site inside a loop. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
 
 ---
