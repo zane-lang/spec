@@ -37,6 +37,8 @@ when it discusses them (§4), and to sibling chapters by anchor (§4.3).>
 ...
 ```
 
+Leave a blank line above and below every `## ` chapter heading — a repository-wide rule that is machine-checked; see [Markdown formatting](../README.md#markdown-formatting).
+
 Do **not** open the file with a paragraph explaining what stories documents are or how they work — that is this guide's job, not the file's. A reader who opens `stories/generics.md` wants the generics story, not a preamble. Start with the title, the `> **See also:**` line pointing at the matching spec doc, and then the first chapter.
 
 ### 2.1 File name and location

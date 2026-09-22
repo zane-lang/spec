@@ -200,6 +200,19 @@ that uses it, then re-grep for the old numbers. If the change conflicts with
 another file's section, fix the conflicting section or escalate it to the user
 as a design call — don't paper over it with a footnote.
 
+**Markdown formatting is machine-checked, and — unlike the greps — covers every
+`.md` in the repo, `stories/` included.** Run it before committing any Markdown
+change:
+
+```sh
+npx markdownlint-cli2 "**/*.md"
+```
+
+Committed `.markdownlint.jsonc` is the canonical statement of which rules are
+on; `README.md` § "Markdown formatting" says why exactly one is. A fix here is
+whitespace only, so it does not touch what a merged chapter says and the
+append-only check stays quiet.
+
 ## Writing a design story
 
 Story coverage is **complete**: every topic spec has a story; the two reference
