@@ -148,7 +148,7 @@ A `,` may still appear *inside* an entry, where it separates a nested list under
 
 ### 6.2 `,` separates an entry inside `[ ]`, `( )`, and `< >`
 
-A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.8), and the `key, value` pair of a map entry (§2.8 there).
+A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.7), and the `key, value` pair of a map entry (§2.8 there).
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)]);
@@ -168,7 +168,7 @@ Unit main() {
 }
 ```
 
-A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing, and nothing may continue the statement past it either — a call or a subscript written there has nothing left to attach to ([`syntax.md`](syntax.md) §4.9). Whatever comes after the brace is the next statement.
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing, and nothing may continue the statement past it either — a call or a subscript written there has nothing left to attach to ([`syntax.md`](syntax.md) §4.8). Whatever comes after the brace is the next statement.
 
 ```zane
 Unit main() {

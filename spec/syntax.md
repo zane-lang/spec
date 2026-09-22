@@ -40,6 +40,8 @@ Once a symbol already exists, reassignment uses only:
 name = expr
 ```
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-order-assignment-forced) — "The order assignment forced".
+
 ### 1.2 Package constants
 
 ```zane
@@ -278,15 +280,15 @@ first String("y");
 
 It could not carry a useful count in any case. Entries with equal keys collapse, and a key is an expression, so the number of entries written is only an upper bound on the number stored — where an array literal's `n` is exact.
 
-An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.9), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
+An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.8), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
 
-A map literal is one of the two `{ }` arguments that may **trail** a call, the other being a block (§4.9). A literal large enough to want the position gets it for the same reason a block does.
+A map literal is one of the two `{ }` arguments that may **trail** a call, the other being a block (§4.8). A literal large enough to want the position gets it for the same reason a block does.
 
 The examples above show the literal alone, with no consumer, because this section fixes the **literal** and the concept type it carries and nothing else; the dynamic container types that consume such a literal — their operations, any ordering, and what they require of a key type — remain unspecified (see [`generics.md`](generics.md) §9).
 
 The concept types `Type` and `Number` declare the type and number parameters of a parameterized declaration (see [`generics.md`](generics.md) §3). They follow the same rule: legal in parameter positions, never as storage. A `Type` parameter accepts a type; a `Number` parameter accepts a compile-time number.
 
-`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.9). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the same rule as the other concept types and may never be stored.
+`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.8). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the same rule as the other concept types and may never be stored.
 
 ```zane
 @concepts$Block
@@ -326,6 +328,8 @@ Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
 Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+
 ### 2.10 The `#` reference modifier
 
 A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
@@ -359,6 +363,8 @@ ReturnType name(param Container<T Type, n Number>, ...) { body }
 A **reference-type** parameter independently selects one of the two passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so `&` is not written on one.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n Number>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `Number` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
 ### 3.2 Methods
 
@@ -445,6 +451,8 @@ name TypeName{fieldA; fieldB;}
 
 A field-constructor call may omit any field whose constructor entry includes an initializer.
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#one-shape-and-everywhere-it-turned-up) — "One shape, and everywhere it turned up".
+
 ### 3.5 Implicit constructors
 
 ```zane
@@ -481,6 +489,8 @@ ReturnType (this SubjectType)[index ParamType] => expr
 ```
 
 `[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the subject.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
 ### 3.7 `init{ }`
 
@@ -552,6 +562,8 @@ callback Unit(this Player) mut {        // shorthand for the line above
 }
 ```
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+
 ### 3.9 Operator definitions
 
 ```zane
@@ -605,23 +617,7 @@ packageName$functionName            // ILLEGAL: callables cannot be referenced a
 
 To obtain a function value, declare a lambda-variable (§3.8). A lambda-variable is an ordinary symbol with a single function type, so it carries no overload set.
 
-### 4.4 Pipe syntax
-
-```zane
-callableExpr|expr
-```
-
-The left-hand side of a pipe must be a callable expression, such as a function, constructor, or method target. The right-hand side may be any expression value. Pipe has lower precedence than unary `~` (binds less tightly) and higher precedence than `*`, `/`, `+`, `-`, and the comparison operators (binds more tightly).
-
-Examples of grouping:
-
-```zane
-someFunc|~3      // groups as someFunc|(~3)
-someFunc|3 + 3   // groups as (someFunc|3) + 3
-Vec2(2)|100      // groups as Vec2(2)|100
-```
-
-### 4.5 `spawn`
+### 4.4 `spawn`
 
 ```zane
 spawn functionName(args...)
@@ -638,7 +634,7 @@ name VarType = spawn functionName(args...) ?? fallbackExpr
 
 `spawn` is legal only on function-call and method-call expressions. Package-qualified function and method calls use their ordinary forms (§4.1–§4.2). An abortable call may carry a `?` or `??` handler, whether its result is bound or ignored.
 
-### 4.6 Subscript expressions
+### 4.5 Subscript expressions
 
 ```zane
 placeExpr[argExpr, ...]
@@ -656,7 +652,7 @@ tensor[x, y, z];
 
 `CustomList()[1]` is not a valid place expression because the base is a temporary.
 
-### 4.7 Parenthesized expressions
+### 4.6 Parenthesized expressions
 
 ```zane
 (expr)
@@ -670,7 +666,7 @@ Example:
 number Int = (3 + 2) * 2;
 ```
 
-### 4.8 `match` expressions
+### 4.7 `match` expressions
 
 A `match` expression names one or more scrutinees — a bare `,`-separated list, never parenthesised — then a `{ }` block of `;`-terminated arms. Each arm is an optional binder, a case selector, `=>`, and a body. A `match` may appear anywhere an expression is legal and may carry a trailing `?` (or `??`) handler when its arms are abortable.
 
@@ -703,7 +699,7 @@ newState State = match state, event {
 
 > **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
 
-### 4.9 Block arguments and trailing arguments
+### 4.8 Block arguments and trailing arguments
 
 A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. Each is an ordinary argument written in argument position.
 
@@ -776,7 +772,7 @@ do() {
 
 ## 5. Control Flow
 
-Zane has no control-flow grammar. Branching, repetition, and exiting are all calls, declared by the `core` package (see [`control-flow.md`](control-flow.md) §3); the first two are ordinary calls with block arguments (§4.9), and the exit is an ordinary call over the intrinsic below.
+Zane has no control-flow grammar. Branching, repetition, and exiting are all calls, declared by the `core` package (see [`control-flow.md`](control-flow.md) §3); the first two are ordinary calls with block arguments (§4.8), and the exit is an ordinary call over the intrinsic below.
 
 ### 5.1 Control-flow intrinsics
 
@@ -862,6 +858,8 @@ Zane has none.
 ```
 
 Zane has no block-comment syntax. `//` starts a single-line comment. `///` starts a documentation comment line. Adjacent `///` lines are merged into one documentation block.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#every-line-admits-to-being-a-comment) — "Every line admits to being a comment".
 
 ---
 

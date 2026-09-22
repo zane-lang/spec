@@ -2,7 +2,7 @@
 
 This document specifies Zane's algebraic data types: the `enum` of uniform peer members, the `variant` sum mould, the body symmetry that ties `variant` to `struct`, matching a variant through the central `match` block, and enum maps.
 
-> **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.8 for the surface forms. [`memory.md`](memory.md) §2.3 for the deep value copy that lets a value sum recurse, §2.10 for why a value type still cannot hold a reference-type or `&` payload, and §3.6 for the handle a boxed recursive member is represented by. [`lifetimes.md`](lifetimes.md) §1.2 for move-sources. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
+> **See also:** [`types.md`](types.md) for value and reference types and constructors. [`syntax.md`](syntax.md) §1 and §4.7 for the surface forms. [`memory.md`](memory.md) §2.3 for the deep value copy that lets a value sum recurse, §2.10 for why a value type still cannot hold a reference-type or `&` payload, and §3.6 for the handle a boxed recursive member is represented by. [`lifetimes.md`](lifetimes.md) §1.2 for move-sources. [`generics.md`](generics.md) §7 for the uniform-stride rule. [`error-handling.md`](error-handling.md) §3.5 for `?` handlers on `match`. [`lexical.md`](lexical.md) §3 and §6 for casing and delimiters.
 
 ---
 
@@ -205,7 +205,7 @@ print(match e {
 });
 ```
 
-> **See also:** [`syntax.md`](syntax.md) §4.8 for the surface grammar.
+> **See also:** [`syntax.md`](syntax.md) §4.7 for the surface grammar.
 
 ### 5.1 The block and its arms
 
