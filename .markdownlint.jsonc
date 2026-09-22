@@ -10,6 +10,6 @@
   "default": false,
 
   // MD022 (blanks-around-headings): a heading carries a blank line above and below,
-  // at every level. Decided in https://github.com/zane-lang/spec/issues/173.
+  // at every level, except at the start or end of a file. Decided in https://github.com/zane-lang/spec/issues/173.
   "MD022": true
 }

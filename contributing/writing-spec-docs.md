@@ -125,7 +125,7 @@ how to weigh candidates — see [`naming-terms.md`](naming-terms.md).
 
 ### 2.7 Blank lines around headings
 
-Leave a blank line above and below every heading, at every level — including a `###` subsection heading whose first line is a table or a bullet list. This is a repository-wide rule, not a spec-only one, and it is machine-checked: see [Markdown formatting](../README.md#markdown-formatting) for the committed config and the command.
+Leave a blank line above and below every heading, at every level — including a `###` subsection heading whose first line is a table or a bullet list. The document's own title is the exception: nothing precedes it. This is a repository-wide rule, not a spec-only one, and it is machine-checked: see [Markdown formatting](../README.md#markdown-formatting) for the committed config and the command.
 
 ---
 
