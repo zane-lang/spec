@@ -1,6 +1,6 @@
 # Zane Control Flow
 
-This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls that take a **block argument**, declared by the `core` package over compiler intrinsics. What the language itself contributes is the block, the three intrinsics, and the 1-based ordinal convention.
+This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls that take a **block argument**, declared by the `core` package over intrinsics. What the language itself contributes is the block, the three control-flow intrinsics, and the 1-based ordinal convention.
 
 > **See also:** [`syntax.md`](syntax.md) §4.8 and §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for the `Bool` operators. [`types.md`](types.md) §2.6 for the fundamental types these calls are written in terms of.
 
@@ -8,11 +8,11 @@ This document specifies how Zane branches and repeats. Neither is a language con
 
 ## 1. Overview
 
-Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, and three intrinsics that a verb can use to run one conditionally, run one repeatedly, or end the invocation that called it. Everything a reader recognizes as control flow is built from those.
+Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, and three control-flow intrinsics that a verb can use to run one conditionally, run one repeatedly, or end the invocation that called it. Everything a reader recognizes as control flow is built from those.
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
-- **`Three intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` are the only primitives. The first two are stated over storage primitives and the third takes nothing at all, so none depends on a package.
+- **`Three control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` are the whole of the control flow the language supplies. The first two are stated over storage primitives and the third takes nothing at all, so none depends on a package.
 - **`Repetition is bounded by construction`.** `repeat` takes a count, so no control flow built on it can repeat without a written bound.
 - **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
@@ -216,7 +216,7 @@ The language provides exactly three control-flow operations:
 
 The two that take arguments take **storage primitives** rather than the fundamental types, and the third takes no arguments at all. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
-An intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. A type that declares its own conversion is accepted on the same terms.
+A control-flow intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. A type that declares its own conversion is accepted on the same terms.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
@@ -268,7 +268,7 @@ An indefinite repetition is expressed by giving a ceiling and stopping inside th
 
 ### 4.4 Any package may declare control flow
 
-A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and calls the intrinsics, exactly as `core` does for §3.
+A package that wants a repetition policy, a branching form, or a scoped resource construct declares a verb taking a `@concepts$Block` parameter and calls the control-flow intrinsics, exactly as `core` does for §3.
 
 ```zane
 Unit twice(body @concepts$Block) {
@@ -281,7 +281,7 @@ twice() {
 }
 ```
 
-The `@` namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §4.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks. Being the fundamental types' home package gives `core` first place in unqualified method lookup, not exclusive rights: any package may declare methods on them, reached by a qualifier where lookup does not find them ([`functions.md`](functions.md) §6.1 and §6.3).
+The intrinsic namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §4.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks. Being the fundamental types' home package gives `core` first place in unqualified method lookup, not exclusive rights: any package may declare methods on them, reached by a qualifier where lookup does not find them ([`functions.md`](functions.md) §6.1 and §6.3).
 
 Exits are declarable on the same footing, and need no block at all. An `@controlflow$exitFromCall()` in any verb's body ends that verb's caller (§4.2), so a package may declare an exiting verb of its own exactly as `core` declares `guard`. That is what an exit spelled as grammar could never be: a keyword can only exit where it is written, so it cannot be handed to anyone.
 
@@ -321,7 +321,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
-| Intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
+| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit` |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

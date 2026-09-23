@@ -146,7 +146,7 @@ EnumName.property FieldType {
 
 ### 2.1 Fundamental types
 
-`Int`, `Float`, `Bool`, `String`, `Unit`
+`Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `List<T>`
 
 These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
@@ -215,15 +215,16 @@ Parameters are referenced by bare name. The casing of a name marks its kind: `T`
 
 A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n Number>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
-### 2.6 Array storage primitive
+### 2.6 Container storage primitives
 
 ```zane
-Array<T, n>
+@primitives$Array<T, n>
+@primitives$List<T>
 ```
 
-`Array<T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `T`. Both parameters may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
+`@primitives$Array<T, n>` is `n` contiguous elements of type `T`, a value type; `@primitives$List<T>` is its dynamically sized counterpart, a reference type. `core` declares `Array<T, n>` and `List<T>` over them (§2.1), and source writes those names. Both parameters of `Array` may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
 
-### 2.7 Reserved compiler namespaces
+### 2.7 Intrinsic namespaces
 
 ```zane
 @primitives$name
@@ -231,9 +232,17 @@ Array<T, n>
 @controlflow$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch, repeat, and exit.
+An **intrinsic** is anything reached through `@`: a type or operation the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-Every `@` namespace is reachable from every package without an import.
+- `@primitives$` holds **storage primitives**: machine-word scalar types, the container primitives of §2.6, and opaque runtime primitives used by fundamental types.
+- `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
+- `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
+
+A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
+
+Every intrinsic namespace is reachable from every package without an import.
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-word-every-namespace-shares) — "The word every namespace shares".
 
 ### 2.8 Compiler concept types
 
