@@ -51,7 +51,7 @@ The runtime uses a work-stealing thread pool. It starts sized to hardware concur
 @program$runtime!setThreadsAuto();
 ```
 
-`setThreads(count @primitives$Int)` sizes the pool to `count` threads, and `setThreadsAuto()` sizes it to hardware concurrency again. Either may be called at any time and any number of times: parallelism changes only timing (§2.2), so resizing the pool changes how fast a program runs and never what it computes. Each call writes to the runtime, so a verb that makes one is Write Impure.
+`setThreads(count @primitives$Int)` sizes the pool to `count` threads, and `setThreadsAuto()` sizes it to hardware concurrency again. Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.2), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so a verb that makes one is Write Impure.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
