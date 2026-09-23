@@ -14,7 +14,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
-- **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, and `Unit` belong to the language; `type` introduces a new distinct named type and `alias` an interchangeable name.
+- **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, `Unit`, `Array`, and `List` are declared by the `core` package over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
 
@@ -91,7 +91,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 ### 2.6 The fundamental types and the `core` package
 
-`Int`, `Float`, `Bool`, `String`, and `Unit` are the **fundamental types**: the types the `core` package declares and that nearly every Zane program is written in terms of. The name records what they are used for, not a standing in the language. `core` is an ordinary package — fetched, versioned, pinned, and remapped like any other dependency ([`dependencies.md`](dependencies.md) §14) — and its members are reached through an import on the same terms as any other package's ([`packages.md`](packages.md) §3).
+`Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, and `List<T>` are the **fundamental types**: the types the `core` package declares and that nearly every Zane program is written in terms of. The name records what they are used for, not a standing in the language. `core` is an ordinary package — fetched, versioned, pinned, and remapped like any other dependency ([`dependencies.md`](dependencies.md) §14) — and its members are reached through an import on the same terms as any other package's ([`packages.md`](packages.md) §3).
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
@@ -603,7 +603,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Use-site types | A field, parameter, or return type names a declared type or an instantiation (`Weapon`, `Vector<Int>`, `&Node`); a mould appears only as a `type`/`alias` right-hand side |
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
-| Fundamental type | `Int`, `Float`, `Bool`, `String`, or `Unit`; declared by `core`, which is an ordinary package with no standing in the language |
+| Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
