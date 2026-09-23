@@ -6,6 +6,9 @@
 
 Branching was never the hard part. `if`, `elif`, and `else` are what they are everywhere, and the only choice worth recording is the small one: a single continuation keyword, `elif`, so that a chain of conditions reads as one connected thing rather than a staircase of nested `else if`. The pressure that actually shaped this document came from somewhere less obvious. Zane leans on lexical scopes more heavily than most languages — they carry hosting, destruction, and lifetime — and a language that leans on scopes needs a clean way to *leave* one.
 
+> [!NOTE]
+> Superseded: `if`, `elif`, and `else` are no longer keywords; they are `core` verbs. See "[The last thing still tied to a package](#the-last-thing-still-tied-to-a-package)".
+
 The trouble surfaced the moment we tried to write a conditional early exit. Take the most ordinary intent there is — walk a loop, and bail out when some condition trips:
 
 ```zane
@@ -97,6 +100,9 @@ The first versions of these chapters could say a condition "is `Bool`" and a loo
 
 So control flow speaks in the semantic language types themselves. A condition supplies a slot whose expected type is `Bool`; loop bounds supply slots whose expected type is `Int`; the loop variable is exactly `Int`. The same one-step implicit-constructor mechanism used at calls adapts an expression to those slots. This is coercion, not truthiness: no integer, string, reference, or collection becomes true merely because a runtime convention says so. A type enters a condition only when it is already `Bool` or deliberately declares a single applicable conversion to `Bool`, and the corresponding rule holds for loop bounds and `Int`.
 
+> [!NOTE]
+> Superseded: `if` and `loop` are no longer language constructs whose slots the language types; branching and repetition are `core` verbs, and a condition is an ordinary argument. See "[The last thing still tied to a package](#the-last-thing-still-tied-to-a-package)".
+
 The alternative was to require exact types and give literals a separate compiler-only exception. That would make `if true` and `loop i to 20` work, but it would create two conversion mechanisms — ordinary implicit constructors at calls and special literal lowering in control flow — precisely where one contract-shaped mechanism covers both. Treating language-defined expected types as coercion sites keeps the model local and lets safe, deliberate conversions participate without adding broad truthiness. The cost is that adding an implicit conversion can change whether an expression is accepted by control flow, the same cost it already carries at a call; coherence and the no-chaining rule keep that reach bounded.
 
 ## The last thing still tied to a package
@@ -134,6 +140,9 @@ The rule we took instead is one line: a verb that declares a block parameter may
 A package cannot branch by writing `if`, because `if` is what it is implementing. Something under `core` has to actually choose and actually repeat, and the shape of that something is where the whole separation is won or lost.
 
 Two operations are enough. `@controlflow$branch` runs a block when its condition holds and does nothing otherwise; `@controlflow$repeat` runs a block a given number of times ([`control-flow.md` §4.1](https://github.com/zane-lang/spec/blob/e1745e4d479fd171aca9040f88061c60e0d1f0f1/spec/control-flow.md#41-three-intrinsics-stated-over-storage-primitives-or-over-nothing)). `branch` takes no fallback block, because the fallback is `branch` on the complement — an `else` is a branch on `~ran` — and a second parameter would have bought nothing but a second thing to specify. Nothing needs to be passed *into* a block, either, which is what lets a block have no parameters: a counted repetition advances the caller's own `Int` and the block sees it by capture, so no binding is introduced by the call at all.
+
+> [!NOTE]
+> Superseded: two intrinsics were not enough; a third, the exit, was added when `guard` stopped being grammar. See "[The exit that took no condition](#the-exit-that-took-no-condition)".
 
 The decision that matters, though, is what the intrinsics take. Stated over `Bool` and `Int` they would have depended on `core`, and the whole exercise would have been circular — control flow separated from the language only to be re-tied to a package one level down. So they are stated over storage primitives, which belong to no package. That is the hinge: an intrinsic names nothing that a dependency could rename or version, so `core` becomes an ordinary consumer of them rather than a privileged part of the compiler, and any package may declare control flow on exactly the same footing. A caller still writes ordinary values, because an intrinsic is called like a function and its arguments are coercion sites; the conversion from `Bool` to its primitive is an implicit constructor `core` declares, no different in kind from the one that turns `20` into an `Int`.
 

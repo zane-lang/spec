@@ -376,5 +376,5 @@ Exception: if the document is `glossary.md`, follow the glossary-specific refere
 - Do not add `---` between subsections.
 - Do not add semantics to `syntax.md`.
 - Do not duplicate content between files — add it in the canonical place and cross-reference from others.
-- When you add or change a rule whose reasoning is non-trivial, extend the matching chapter in (or add one to) `stories/<topic>.md` and add or update its `> **Story:**` pointer in the same change.
+- When you add or change a rule whose reasoning is non-trivial, extend the matching chapter in (or add one to) `stories/<topic>.md` and add or update its `> **Story:**` pointer in the same change; if the change retires a claim a published chapter makes, that chapter also gets a supersession note ([stories guide §5](writing-stories-docs.md#5-updating-a-story-when-the-spec-changes)).
 - When adding a new top-level section, insert it before Language Comparisons / Summary as required by §2, adjusting section numbers accordingly.

@@ -236,9 +236,12 @@ check to run before every commit touching `stories/`. Read it there and run the
 check it gives. This section adds only what sessions on this repo keep getting
 wrong, in both directions:
 
-- **Too loose.** Editing a merged chapter to fix a retired claim, or bolting a
-  forward pointer onto one. Say what stopped being true from the *new* chapter
-  instead, naming the older chapter's claim. Caught in review, not by the author.
+- **Too loose.** Editing a merged chapter's prose to fix a retired claim. Say
+  what stopped being true from the *new* chapter instead; the old chapter gains
+  only the supersession note §5 allows. Caught in review, not by the author.
+- **Forgetting the note.** A change that retires a merged chapter's claim owes
+  that chapter a supersession note in the same PR, and the additions-only check
+  cannot notice it is missing — grep the story for the retired claim yourself.
 - **Too strict.** Refusing to touch chapters *your own branch* added, because
   they were already written. They are drafts until the PR merges — rewrite,
   reorder, and insert among them freely; a decision reached late in review often
