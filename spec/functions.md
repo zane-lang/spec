@@ -191,6 +191,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-list-that-stayed-inside-the-parentheses) — "The list that stayed inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
 
 ---
 

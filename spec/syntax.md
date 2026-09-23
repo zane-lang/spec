@@ -730,7 +730,7 @@ A call may carry any number of **block arguments**, one for each `@concepts$Bloc
 repeatTwice({ console!print("hi"); });
 ```
 
-A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.10) — because those are the two forms large enough for the position to pay for itself, and `{` is the one opening bracket that cannot be confused with a subscript. At most one argument trails per call.
+A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.10). An array literal is always written inside the parentheses. At most one argument trails per call.
 
 ```zane
 repeatTwice() {
@@ -781,6 +781,7 @@ g();
 ```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-list-that-stayed-inside-the-parentheses) — "The list that stayed inside the parentheses" tells why a `[ ]` does not trail.
 
 An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
 
