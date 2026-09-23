@@ -130,18 +130,39 @@ This is the discipline that makes the folder a *history* rather than a stale sna
 
 "Append" is meant literally, and it has two teeth:
 
-- **Do not touch a published chapter — at all.** Not to correct a claim the design has since retired, and not to bolt a forward pointer onto the end of it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why. Naming the superseded claim explicitly *from the new chapter* — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…" — does the same job for the reader without editing history.
+- **Do not edit a published chapter's prose.** Not to correct a claim the design has since retired, not to soften it, not to reword it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why, naming the superseded claim explicitly — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…". The one thing a published chapter may gain is a supersession note, below.
 - **A new chapter goes after every published one**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
+
+**Mark a retired claim where it stands.** The new chapter tells the story of the retirement, but only to a reader who gets that far. Most readers arrive mid-file, through a spec section's `> **Story:**` pointer (§4.4), and read the chapter it lands on as the current word. So when a change retires a claim a published chapter makes, the same pull request adds a **supersession note** to that chapter, directly after the paragraph that makes the claim:
+
+```markdown
+> [!NOTE]
+> Superseded: <the claim, named in a few words, and what no longer holds>. See "[<later chapter heading>](#<anchor>)".
+```
+
+The note is a signpost, not a correction. It names the claim and links the chapter that retired it (§4.3); the reasoning, and whatever is true now, stay in that chapter, where they can be told in full. A note never replaces the new chapter — a claim with no chapter retiring it has nothing to point at, so write the chapter first. Keep to these limits:
+
+- **One note per paragraph**, after it, never inside it. A paragraph with two retired claims names both in one note.
+- **Only a retired claim earns one.** A later chapter that refines, sharpens, or finishes an earlier one without contradicting it needs no note; neither does an example written in syntax that has since changed, since every chapter shows the forms of its own time and a reader expects it to.
+- **A note stays editable.** Unlike the chapter it sits in, a note records no history — it is a signpost to where the present account lives — so it may be corrected, reworded, or removed at any time. When the chapter it points to is superseded in turn, re-point the note at the newest chapter instead of adding a second one, so the reader takes one hop rather than following a chain.
 
 **The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What must not move is anything that was already merged.
 
 **Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
 
 ```sh
-git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
+git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)|^-> (\[!NOTE\]|Superseded:)|^-$"
 ```
 
-Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+The second `grep` drops three kinds of line: the file header, a supersession note's lines (a note may be edited), and removed blank lines (which change no text). A deleted line that itself began with `-`, such as a list item, still shows. Any other output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only, apart from note edits — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+
+Additions only is necessary and not sufficient, because a line added *inside* a published chapter is silent too, and the only such line the rule allows is a supersession note. So also look at where the additions land:
+
+```sh
+git diff -U0 origin/main -- stories/<topic>.md | grep -E "^(@@|\+)"
+```
+
+Every hunk that lands before the file's former end must be a supersession note — its `> ` lines and the blank line that sets it apart — and nothing else. New chapters land at the tail, after all of them.
 
 Nothing runs this for you. There is no CI job and no hook; the rule is enforced by the author running the diff before committing and by the reviewer running it again on the branch. That is deliberate — the "consolidate dead threads" exception below is a judgement call no check could make, so a green check would have to be overridable anyway — but it does mean a violation reaches `main` if both people skip it. Treat the command as part of the commit, not as an optional audit.
 
