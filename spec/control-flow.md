@@ -12,7 +12,7 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
-- **`Three control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` are the only primitives. The first two are stated over storage primitives and the third takes nothing at all, so none depends on a package.
+- **`Three control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` are the whole of the control flow the language supplies. The first two are stated over storage primitives and the third takes nothing at all, so none depends on a package.
 - **`Repetition is bounded by construction`.** `repeat` takes a count, so no control flow built on it can repeat without a written bound.
 - **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.

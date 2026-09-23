@@ -368,7 +368,7 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 The following are intentionally not specified in this version:
 
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
-- dynamic container types such as lists and maps — their **literal forms** are specified ([`syntax.md`](syntax.md) §2.9 and §2.10), but the container types themselves are not: their operations, whether a map preserves any order, and what a map requires of a key type are all open
+- dynamic container operations and map types — `List<T>` and its storage primitive are specified (§8.3), and so are the array and map **literal forms** ([`syntax.md`](syntax.md) §2.9 and §2.10), but `List`'s operations, a map type, whether a map preserves any order, and what a map requires of a key type are all open
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
