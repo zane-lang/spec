@@ -141,7 +141,7 @@ Conceptually:
 !math$vec  →  v1.0.1%3f9a1c02b7e4d6a8%math$vec
 ```
 
-The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
+The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the UTF-8 encoding of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
 
 The name after the second `%` is the **library's own** package name — the basename of its source directory ([`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
 
@@ -274,7 +274,7 @@ At a high level, dependency resolution proceeds in this order:
 2. resolve each tag to its current commit hash
 3. verify commit hashes against `zane-versions.coda`
 4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
-5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle, or if two different URLs in it share an identity hash (§6.1)
+5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle, or if two different normalized URLs in it share an identity hash (§6.1)
 6. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
 7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and the package's identity hash and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
 8. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
