@@ -342,7 +342,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.2 placeholder-prefix rewriting
 
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
 - **Why this name:** The committed `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
@@ -405,3 +405,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The package at the root of the dependency graph being built — the application, or a library built on its own. Only it reaches `@program$`, and it holds `main`.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
+
+### 4.13 identity hash
+
+- **Meaning:** A fixed-length hash of a package's normalized URL, written into every rewritten symbol after the version tag. It keeps two packages that share a name distinct at link time.
+- **Why this name:** It is a hash of the package's identity — its URL — and stands in for that identity inside a symbol name.
+- **Canonical home:** [`dependencies.md`](dependencies.md) §6.1

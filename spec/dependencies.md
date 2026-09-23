@@ -133,21 +133,27 @@ If the required target artifact is missing from `build/`, the fetch fails for th
 
 ### 6.1 Placeholder-prefix rewriting
 
-Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag followed by a `%` separator — and places the rewritten binaries into `build/`.
+Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag, a `%` separator, the package's identity hash, and a second `%` — and places the rewritten binaries into `build/`.
 
 Conceptually:
 
 ```zane
-!math$vec  →  v1.0.1%math$vec
+!math$vec  →  v1.0.1%3f9a1c02b7e4d6a8%math$vec
 ```
 
-The `%` separates the version tag from the package name so the version boundary is unambiguous and two different packages can never collide on a shared prefix. The name after `%` is the **library's own** package name — the basename of its source directory ([`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7), so the first `%` always delimits the version from the name during the remap rewrite. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
+The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
+
+The name after the second `%` is the **library's own** package name — the basename of its source directory ([`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
+
+The first `%` delimits the version, because `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7). The identity hash contains only hexadecimal digits, so the second `%` always follows the first after exactly 16 characters. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
+
+Distinct packages in one resolved dependency graph **MUST** have distinct identity hashes. The toolchain checks this during dependency resolution and **MUST** abort with an error naming both URLs if two different normalized URLs produce the same identity hash.
 
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files are those committed to the repository's own `build/` directory; the rewritten, version-stamped object files are written to the cache's top-level `build/` directory. Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
 
-Versioned symbol names allow multiple versions of the same package to coexist in one program without collisions.
+Rewritten symbol names allow multiple versions of the same package, and different packages that share a name, to coexist in one program without collisions.
 
 ### 6.3 Transitive dependencies keep their resolved versions
 
@@ -158,6 +164,7 @@ When a library already depends on another versioned library, the referenced tran
 When a consumer opts in, version-prefixed symbols may additionally be remapped at link time to collapse interchangeable versions of a package onto a single copy. This is layered on the same rewrite step; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#shipping-compiled-objects-and-rewriting-their-symbols) — "Shipping compiled objects, and rewriting their symbols" tells why versioning lives in the linker's namespace, and the separator saga that landed on `%` over `@` and `__`.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#two-packages-called-math) — "Two packages called `math`" tells why the symbol carries a hash of the URL rather than the URL, the manifest key, or a globally unique name.
 
 ---
 
@@ -177,7 +184,7 @@ The URL and version are mangled into safe path components using Go-style path ma
 2. Any **SSH user prefix** (such as `git@`) is stripped.
 3. Any **SCP-style host/path separator** `:` (as in `git@github.com:zane-lang/math`) is normalized to `/`.
 
-Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the version/name boundary unambiguous.)
+Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the boundary after the version unambiguous.) The normalized host-and-path string that names the cache directory is also the input to the identity hash of §6.1, so one cache entry and one symbol identity always correspond.
 
 The `src/` subdirectory holds the full cloned repository, including the repository's own `src/` and `build/` directories; the original `!`-prefixed object files committed by the library author are therefore found at `src/build/`. The top-level `build/` subdirectory holds the rewritten, version-stamped object files produced during `zane add`. Re-adding the same package version in another project reuses the existing cached `build/` artifact rather than downloading and rewriting it again.
 
@@ -237,7 +244,7 @@ The acyclicity requirement applies only to the package-level dependency graph, n
 
 ## 11. Multiple-Version Coexistence
 
-Two packages may depend on different versions of the same upstream library. Because symbol names are version-prefixed at fetch time, both versions may coexist in one final link as long as all references are internally consistent.
+Two packages may depend on different versions of the same upstream library. Because symbol names carry the version tag and identity hash from fetch time (§6.1), both versions may coexist in one final link as long as all references are internally consistent. The same holds for two different upstream libraries that share a package name: their identity hashes differ, so their symbols do too.
 
 This side-by-side coexistence is the default. A consumer may opt into collapsing interchangeable versions onto a single copy via compatibility-based remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -267,9 +274,9 @@ At a high level, dependency resolution proceeds in this order:
 2. resolve each tag to its current commit hash
 3. verify commit hashes against `zane-versions.coda`
 4. validate that the URL and version tag contain only path-safe characters; abort with an error if not
-5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle
+5. read transitive manifests and reject the dependency if the package graph contains a cycle, with an error that identifies the cycle, or if two different URLs in it share an identity hash (§6.1)
 6. clone the repository into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
+7. rewrite the `!`-prefixed exports found in `src/build/` with the resolved version tag and the package's identity hash and write the results to `~/.zane/packages/<mangled_url>/<mangled_version>/build/`
 8. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
 9. link the locally compiled program against the cached artifacts in `build/`
 
@@ -344,4 +351,4 @@ Because libraries ship prebuilt object files (§3, §6), remapping rewrites a ca
 
 ### 15.6 Mechanism reuses pull-time rewriting
 
-Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-versions.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%math$vec → v6.3.4%math$vec` — onto the chosen version.
+Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-versions.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%3f9a1c02b7e4d6a8%math$vec → v6.3.4%3f9a1c02b7e4d6a8%math$vec` — onto the chosen version. Only the version tag changes: every version of one package shares its identity hash, so the rewrite never moves a reference from one package to another.
