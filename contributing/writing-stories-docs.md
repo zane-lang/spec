@@ -151,10 +151,10 @@ The note is a signpost, not a correction. It names the claim and links the chapt
 **Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
 
 ```sh
-git diff origin/main -- stories/<topic>.md | grep -E "^-[^-]"
+git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)"
 ```
 
-Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+The second `grep` drops only the file header, so a deleted line that itself began with `-`, such as a list item, still shows. Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
 
 Additions only is necessary and not sufficient, because a line added *inside* a published chapter is silent too, and the only such line the rule allows is a supersession note. So also look at where the additions land:
 
