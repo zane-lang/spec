@@ -236,7 +236,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: machine-word scalar types, the container primitives of §2.6, and opaque runtime primitives used by fundamental types.
+- `@primitives$` holds **storage primitives**: machine-word scalar types, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
