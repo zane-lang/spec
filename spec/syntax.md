@@ -241,6 +241,8 @@ A namespace is named for what its members are or what they are for. Every member
 
 Every intrinsic namespace is reachable from every package without an import.
 
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-word-every-namespace-shares) — "The word every namespace shares".
+
 ### 2.8 Compiler concept types
 
 ```zane
