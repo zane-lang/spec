@@ -434,7 +434,7 @@ distance Meters = Meters(Feet(Float(10)));  // legal: explicit conversion
 
 A coercion site is a position that passes a value into a contract whose destination type is fixed by a callable or language construct. These are the only positions where the compiler inserts an implicit constructor:
 
-- Positional arguments of a function call, including a call to a compiler intrinsic
+- Positional arguments of a function call, including a call to an intrinsic
 - Positional arguments of a method call (the subject is excluded; see §4.6)
 - Positional arguments of a positional constructor call `Type(...)`
 - Positional arguments of a named-constructor call `Type.name(...)`
@@ -475,7 +475,7 @@ The **source type** (parameter type) of an implicit constructor **MUST** be a va
 
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type, a reference type, or a storage primitive in the `@primitives$` namespace.
 
-A primitive destination is what lets a compiler intrinsic state its contract without naming any package's type. `@controlflow$branch` takes a `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
+A primitive destination is what lets an intrinsic state its contract without naming any package's type. `@controlflow$branch` takes a `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
 
 ```zane
 type Celsius = struct { value Float; }

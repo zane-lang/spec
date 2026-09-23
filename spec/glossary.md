@@ -236,7 +236,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.28 coercion site
 
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of a compiler intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of an intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
@@ -376,19 +376,25 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It trails the argument list rather than sitting in it.
 - **Canonical home:** [`syntax.md`](syntax.md) §4.8
 
-### 4.8 control-flow intrinsic
+### 4.8 intrinsic
 
-- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three compiler operations every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
-- **Why this name:** They are the intrinsic operations of control flow, owned by the compiler rather than by any package.
+- **Meaning:** Anything reached through `@` — a storage primitive, a compiler concept type, or a control-flow intrinsic — supplied by the compiler rather than declared by a package. Each `@` namespace is an intrinsic namespace holding one of those kinds.
+- **Why this name:** The everyday word already means "built into the thing itself", which is what sets these apart from every package declaration; since it covers the whole `@` space, no single namespace is named for it.
+- **Canonical home:** [`syntax.md`](syntax.md) §2.7
+
+### 4.9 control-flow intrinsic
+
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three intrinsics every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
+- **Why this name:** They are the intrinsics (§4.8) that are operations of control flow.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
-### 4.9 ordinary `core`
+### 4.10 ordinary `core`
 
 - **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.
 - **Why this name:** The label records the whole rule — what is notable about `core` is precisely that nothing about it is special.
 - **Canonical home:** [`types.md`](types.md) §2.6 and [`dependencies.md`](dependencies.md) §14
 
-### 4.10 spawn target
+### 4.11 spawn target
 
 - **Meaning:** Only a function or method call may be spawned, and never one whose verb declares a block parameter, since a block captures the frame that wrote it.
 - **Why this name:** The term names the position the restriction applies to — what a `spawn` may point at.

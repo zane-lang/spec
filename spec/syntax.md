@@ -223,7 +223,7 @@ Array<T, n>
 
 `Array<T, n>` is a compiler-provided storage primitive: `n` contiguous elements of type `T`. Both parameters may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
 
-### 2.7 Reserved compiler namespaces
+### 2.7 Intrinsic namespaces
 
 ```zane
 @primitives$name
@@ -231,9 +231,15 @@ Array<T, n>
 @controlflow$name
 ```
 
-The `@primitives$` namespace contains storage primitives such as machine-word scalar types and opaque runtime primitives used by fundamental types. The `@concepts$` namespace contains compiler concept types used for source literals and for source constructs that are not storage. The `@controlflow$` namespace contains the intrinsic operations that branch, repeat, and exit.
+An **intrinsic** is anything reached through `@`: a type or operation the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-Every `@` namespace is reachable from every package without an import.
+- `@primitives$` holds **storage primitives**, such as machine-word scalar types and opaque runtime primitives used by fundamental types.
+- `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
+- `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
+
+A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
+
+Every intrinsic namespace is reachable from every package without an import.
 
 ### 2.8 Compiler concept types
 
