@@ -44,14 +44,25 @@ This distinction matters for compile-time reduction, not for the legality of run
 
 ### 2.4 Thread configuration
 
-The runtime uses a work-stealing thread pool configured by `@threads`:
+The runtime uses a work-stealing thread pool. It starts sized to hardware concurrency, and the program's runtime ([`effects.md`](effects.md) §6.6) resizes it:
 
 ```zane
-@threads(8)
-@threads(auto)
+@primitives$Unit?@primitives$Unit setThreads(this @runtime$Runtime, count @primitives$Int) mut
+@primitives$Unit setThreadsAuto(this @runtime$Runtime) mut
 ```
 
-`auto` maps to hardware concurrency at startup. The thread count is fixed for a program’s lifetime unless the standard library exposes a dedicated, explicitly documented runtime override.
+`setThreads` sizes the pool to `count` threads. A `count` below `1` aborts the call and leaves the pool as it was, so every call carries a handler ([`error-handling.md`](error-handling.md) §3.1). `setThreadsAuto` sizes the pool to hardware concurrency again, and cannot abort.
+
+```zane
+@program$runtime!setThreads(Int(8)) ? ignored {
+    resolve @primitives$Unit();
+}
+@program$runtime!setThreadsAuto();
+```
+
+Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.2), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so a verb that makes one is Write Impure.
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
@@ -78,7 +89,7 @@ A spawned call that returns a value can bind to a symbol. Reading that symbol bl
 
 ```zane
 result String = spawn listen(8080);
-print(result); // blocks until listen returns
+console!print(result); // blocks until listen returns
 ```
 
 ### 3.3 Abortable spawned calls are handled at the spawn site

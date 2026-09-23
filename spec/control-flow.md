@@ -60,7 +60,7 @@ Unit reportUntilNegative(values IntList) {
     i Int = Int(1);
     i!to(values:size()) {
         guard(values[i] < Int(0));
-        print(values[i]);
+        console!print(values[i]);
     }
     return Unit();
 }
@@ -124,13 +124,13 @@ A chain names the `if` result and continues it. `elif` runs its block when no ea
 
 ```zane
 ran Bool = if(age > Int(18)) {
-    print("adult");
+    console!print("adult");
 }
 ran!elif(age > Int(13)) {
-    print("teenager");
+    console!print("teenager");
 }
 ran:else() {
-    print("junior");
+    console!print("junior");
 }
 ```
 
@@ -156,7 +156,7 @@ Counted repetition is a `mut` method on `Int`. The induction variable is an ordi
 ```zane
 i Int = Int(1);
 i!to(Int(3)) {
-    print(i);
+    console!print(i);
 }
 ```
 
@@ -277,7 +277,7 @@ Unit twice(body @concepts$Block) {
 }
 
 twice() {
-    print("again");
+    console!print("again");
 }
 ```
 

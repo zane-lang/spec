@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.7 capability wiring
 
-- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph.
+- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in `@program$`, which only the root package reaches.
 - **Why this name:** The design treats capabilities like explicit wiring between components rather than ambient globals.
 - **Canonical home:** [`effects.md`](effects.md) §6
 
@@ -378,7 +378,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.8 intrinsic
 
-- **Meaning:** Anything reached through `@` — a storage primitive, a compiler concept type, or a control-flow intrinsic — supplied by the compiler rather than declared by a package. Each `@` namespace is an intrinsic namespace holding one of those kinds.
+- **Meaning:** Anything reached through `@` — a type, operation, or instance supplied by the compiler rather than declared by a package. Each `@` namespace is an intrinsic namespace holding one kind of intrinsic.
 - **Why this name:** The everyday word already means "built into the thing itself", which is what sets these apart from every package declaration; since it covers the whole `@` space, no single namespace is named for it.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7
 
@@ -399,3 +399,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** Only a function or method call may be spawned, and never one whose verb declares a block parameter, since a block captures the frame that wrote it.
 - **Why this name:** The term names the position the restriction applies to — what a `spawn` may point at.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §3.1
+
+### 4.12 root package
+
+- **Meaning:** The package at the root of the dependency graph being built — the application, or a library built on its own. Only it reaches `@program$`, and it holds `main`.
+- **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
+- **Canonical home:** [`packages.md`](packages.md) §6.1
