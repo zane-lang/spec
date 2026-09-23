@@ -19,7 +19,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`Number` value parameters).
-- **`Two container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T`, the single fixed-size container primitive; `@primitives$List<T>` is its dynamically sized counterpart. `core` declares `Array` and `List` over them.
+- **`Two container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T`, the single fixed-size container primitive and a value type; `@primitives$List<T>` is its dynamically sized counterpart and a reference type. `core` declares `Array` and `List` over them.
 
 ---
 
@@ -349,7 +349,7 @@ Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees e
 
 ### 8.1 Compiler-provided layout
 
-`@primitives$Array<T, n>` is a storage primitive: `n` contiguous elements of type `T`. Its byte size is `n * sizeof(T)`. It has no header. `core` declares `Array<T, n>` over it, as it declares each of the fundamental types over a storage primitive ([`types.md`](types.md) §2.6), and source writes that name. Both parameters may be supplied as concrete arguments (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`).
+`@primitives$Array<T, n>` is a value-type storage primitive: `n` contiguous elements of type `T`. Its byte size is `n * sizeof(T)`. It has no header. `core` declares `Array<T, n>` over it, as it declares each of the fundamental types over a storage primitive ([`types.md`](types.md) §2.6), and source writes that name. Both parameters may be supplied as concrete arguments (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`).
 
 ### 8.2 Array is the fixed-size storage base case
 
@@ -357,7 +357,7 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 
 ### 8.3 List is the dynamically sized primitive
 
-`@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. `core` declares `List<T>` over it.
+`@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. It is a reference type, so no value type may contain one ([`memory.md`](memory.md) §2.10). Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. `core` declares `List<T>` over it.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-container-whose-size-the-type-cannot-carry) — "A container whose size the type cannot carry".
 
@@ -392,6 +392,6 @@ The following are intentionally not specified in this version:
 | Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
 | Explicit parameter | Declared as a `Type`/`Number` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
-| `@primitives$Array<T, n>` | Fixed-size storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
-| `@primitives$List<T>` | Dynamically sized storage primitive: elements in the dynamic region behind a fixed-size handle; `core` declares `List` over it |
+| `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
+| `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; `core` declares `List` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |

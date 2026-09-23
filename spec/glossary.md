@@ -80,7 +80,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.2 value-downstream enforcement
 
-- **Meaning:** A value type may contain only primitives and other value types, never a reference (`#`) or `&` field anywhere downstream in nested value-type fields. The rule turns on copying — a value is copied, and a reference type exists in order not to be. It does **not** bar recursion: a value type may lead back to itself through a boxed member (§3.39).
+- **Meaning:** A value type may contain only value types, value-type primitives among them, never a reference-type or `&` field anywhere downstream in nested value-type fields. The rule turns on copying — a value is copied, and a reference type exists in order not to be. It does **not** bar recursion: a value type may lead back to itself through a boxed member (§3.39).
 - **Why this name:** The rule is checked recursively through fields downstream from the outer value type, not just at the first field layer.
 - **Canonical home:** [`memory.md`](memory.md) §2.10
 

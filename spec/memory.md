@@ -11,7 +11,7 @@ This document specifies Zane's memory model: hosting, guests, anchors, and arena
 Zane eliminates dangling guests by combining single hosting, lexical lifetime rules, and anchor-based tracking.
 
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
-- **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
+- **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type, or `@primitives$List<T>`); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
 - **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; a stable-slot overwrite carries that slot's guests to the replacement, while a disappearing contingent host floats the old object within the same owner (§2.8.1, §4.5).
 - **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
@@ -88,7 +88,7 @@ Destruction is the mirror. When a value dies — its host dies, its container di
 
 ### 2.4 `&` is a guest: non-hosting storage
 
-`&` creates a **guest**: non-hosting storage that points at a **reference type** only. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving guest needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored guest. Writing `&Node` names a guest to a reference type; a bare `&Int` over a value type is ill-formed.
+`&` creates a **guest**: non-hosting storage that points at a **reference type** only. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, or the storage primitive `@primitives$List<T>` — because only a reference type carries the identity (the anchor, §4) that a stable, move-surviving guest needs. A value type is shared by copying it or by a scoped borrow (see [`functions.md`](functions.md) §2.4), never by a stored guest. Writing `&Node` names a guest to a reference type; a bare `&Int` over a value type is ill-formed.
 
 An explicitly declared `&T` slot is **guest-only**: it stores only a tether and can never directly host a `T`. A slot declared as `T` is **host-capable**. After its value is rehosted, that same full-size slot may remain readable in guest state, but it retains the storage needed to host another `T` later. Guest-only and host-capable guest states use the same access semantics, but only the latter can become a host again.
 
@@ -323,7 +323,7 @@ This rule preserves uniform call syntax. The call site writes `consume(e)`, `ins
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 
-Value types form a closed world of plain value storage. A value-type field may contain primitives (see [`syntax.md`](syntax.md) §2.1) and other value types, but it **MUST NOT** contain a reference type (a `#`-marked type) or an `&`. This rule applies transitively: a value type containing another value type that eventually contains a reference-type or `&` field is also illegal.
+Value types form a closed world of plain value storage. A value-type field may contain only value types, value-type storage primitives among them (see [`syntax.md`](syntax.md) §2.6), and it **MUST NOT** contain a reference type (a `#`-marked type or `@primitives$List<T>`) or an `&`. This rule applies transitively: a value type containing another value type that eventually contains a reference-type or `&` field is also illegal.
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
@@ -678,7 +678,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Reference-type parameter | `T` swallows (hosting access; passing a host downgrades the caller's symbol to a guest whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, and leaves the caller a full host |
 | Swallowed parameter into `&` storage | Illegal — not for want of a guest source but because the swallowed value is hosted at the call site while an `&` field may outlive the call; returning it as `&T` is legal |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
-| Value-downstream enforcement | Value types may contain only primitives and other value types, transitively — never a reference (`#`) or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
+| Value-downstream enforcement | Value types may contain only value types, value-type primitives among them, transitively — never a reference-type or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
 | Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; rehosting copies inline bytes and every owned dynamic block into destination-owned regions, recursively, before source storage is retired |

@@ -222,7 +222,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 @primitives$List<T>
 ```
 
-`@primitives$Array<T, n>` is `n` contiguous elements of type `T`; `@primitives$List<T>` is its dynamically sized counterpart. `core` declares `Array<T, n>` and `List<T>` over them (§2.1), and source writes those names. Both parameters of `Array` may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
+`@primitives$Array<T, n>` is `n` contiguous elements of type `T`, a value type; `@primitives$List<T>` is its dynamically sized counterpart, a reference type. `core` declares `Array<T, n>` and `List<T>` over them (§2.1), and source writes those names. Both parameters of `Array` may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
 
 ### 2.7 Intrinsic namespaces
 
