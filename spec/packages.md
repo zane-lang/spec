@@ -191,6 +191,8 @@ The **root package** is the package at the root of the dependency graph being bu
 
 Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6). Any other package reaches them only through an instance passed to it.
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
+
 ### 6.2 `main` is the entry point
 
 A program starts at `Unit main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly.

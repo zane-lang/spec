@@ -145,6 +145,8 @@ console!print("hello world");
 
 Writing to the console and changing the runtime's configuration are writes to capability-backed state, so a verb that does either is Write Impure (§3.4).
 
+> **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
+
 ---
 
 ## 7. Constructors, Allocation, and Abortability

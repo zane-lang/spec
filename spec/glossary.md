@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.7 capability wiring
 
-- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph.
+- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in `@program$`, which only the root package reaches.
 - **Why this name:** The design treats capabilities like explicit wiring between components rather than ambient globals.
 - **Canonical home:** [`effects.md`](effects.md) §6
 
