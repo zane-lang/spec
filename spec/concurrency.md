@@ -44,14 +44,14 @@ This distinction matters for compile-time reduction, not for the legality of run
 
 ### 2.4 Thread configuration
 
-The runtime uses a work-stealing thread pool configured by `@threads`:
+The runtime uses a work-stealing thread pool. It starts sized to hardware concurrency, and the program's runtime ([`effects.md`](effects.md) §6.6) resizes it:
 
 ```zane
-@threads(8)
-@threads(auto)
+@program$runtime!setThreads(Int(8));
+@program$runtime!setThreadsAuto();
 ```
 
-`auto` maps to hardware concurrency at startup. The thread count is fixed for a program’s lifetime unless the standard library exposes a dedicated, explicitly documented runtime override.
+`setThreads(count @primitives$Int)` sizes the pool to `count` threads, and `setThreadsAuto()` sizes it to hardware concurrency again. Either may be called at any time and any number of times: parallelism changes only timing (§2.2), so resizing the pool changes how fast a program runs and never what it computes. Each call writes to the runtime, so a verb that makes one is Write Impure.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
@@ -78,7 +78,7 @@ A spawned call that returns a value can bind to a symbol. Reading that symbol bl
 
 ```zane
 result String = spawn listen(8080);
-print(result); // blocks until listen returns
+console!print(result); // blocks until listen returns
 ```
 
 ### 3.3 Abortable spawned calls are handled at the spawn site

@@ -198,7 +198,7 @@ result String = match e {
     [boolLit, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
 }
 
-print(match e {
+console!print(match e {
     x strLit                   => x;
     [intLit, floatLit]         => "number";
     [boolLit, ident, qualifiedIdent, op, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
@@ -250,7 +250,7 @@ result Int = match token {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {
-    print(msg);
+    console!print(msg);
     resolve Int(20);
 }
 ```

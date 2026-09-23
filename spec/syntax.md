@@ -230,17 +230,23 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 @primitives$name
 @concepts$name
 @controlflow$name
+@runtime$name
+@program$name
 ```
 
-An **intrinsic** is anything reached through `@`: a type or operation the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
+An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
 - `@primitives$` holds **storage primitives**: machine-word scalar types, the container primitives of §2.6, and opaque runtime primitives used by fundamental types.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
+- `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
+- `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
+
+Each intrinsic operation and method has exactly one signature; intrinsics are never overloaded.
 
 A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
 
-Every intrinsic namespace is reachable from every package without an import.
+Every intrinsic namespace except `@program$` is reachable from every package without an import. `@program$` is reachable only from the root package ([`packages.md`](packages.md) §6.1), which passes its instances to any other package that needs one.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#the-word-every-namespace-shares) — "The word every namespace shares".
 
@@ -721,14 +727,14 @@ newState State = match state, event {
 A call may carry any number of **block arguments**, one for each `@concepts$Block` parameter the callee declares. Each is an ordinary argument written in argument position.
 
 ```zane
-repeatTwice({ print("hi"); });
+repeatTwice({ console!print("hi"); });
 ```
 
 A call's **last** argument may instead **trail**: it is written after the closing `)` rather than inside it, and the `)` is elided. Only a `{ }` argument may trail — a block or a map literal (§2.10) — because those are the two forms large enough for the position to pay for itself, and `{` is the one opening bracket that cannot be confused with a subscript. At most one argument trails per call.
 
 ```zane
 repeatTwice() {
-    print("hi");
+    console!print("hi");
 }
 
 ran Bool = if(ready) {
@@ -750,10 +756,10 @@ The trailing and parenthesized forms are the same call. The `)` moves to where t
 
 ```zane
 if(true) {
-    print("hi");
+    console!print("hi");
 }
 
-if(true, { print("hi"); });   // the same call, written in full
+if(true, { console!print("hi"); });   // the same call, written in full
 ```
 
 A block takes no parameters and is never named. A block that yields a value ends its yielding paths with `resolve` (§6.2 uses the same keyword at a handler):
@@ -770,7 +776,7 @@ f({ x; }) { y; }      // legal: the same call with the last one trailing
 f({ x; }) { y; } ()   // ILLEGAL: the `}` already ended the statement
 g();
 {
-    print("oops");    // ILLEGAL: a `{ }` may not open a statement (§6.3.1 of lexical.md)
+    console!print("oops");    // ILLEGAL: a `{ }` may not open a statement (§6.3.1 of lexical.md)
 }
 ```
 

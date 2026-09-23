@@ -13,7 +13,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
 - **`Compiler-inferred effect levels`.** The compiler classifies code by what state it can read or write.
-- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored.
+- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -110,7 +110,7 @@ If the compiler cannot prove the effect behavior of a callee, it must treat the 
 
 ### 6.1 Capabilities must be passed or stored explicitly
 
-There is no ambient global I/O capability. Code can affect external state only through capability objects it receives directly or via hosting.
+There is no ambient global I/O capability. Code can affect external state only through capability objects it receives directly or via hosting. The one source of capabilities is `@program$`, which only the root package reaches (§6.6); everything else receives them from there.
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
@@ -129,6 +129,21 @@ A "context object" that groups several capabilities is just another ordinary obj
 Passing capabilities through constructors and methods is part of the design. It keeps effects visible in object structure rather than hidden in ambient module state.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#no-ambient-io-effects-you-can-see-in-the-structure) — "No ambient I/O: effects you can see in the structure".
+
+### 6.6 The program's console and runtime
+
+The console and the runtime are capabilities the compiler supplies. Their types, `@runtime$Console` and `@runtime$Runtime`, are reference types: a program has one console and one runtime, and every part of it that uses either uses the same one. Neither type can be constructed. The only instances are `@program$console` and `@program$runtime`, created when the program starts.
+
+Only the root package reaches `@program$` ([`packages.md`](packages.md) §6.1). It passes the instances on like any other capability — as an argument, or stored into an object at construction — so a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
+
+Their methods are stated over storage primitives, like every intrinsic, and are found through the type's home, `@runtime$` ([`functions.md`](functions.md) §6.1). `std` wraps the console in its own `Console`, whose methods take `String`:
+
+```zane
+console Console(@program$console);
+console!print("hello world");
+```
+
+Writing to the console and changing the runtime's configuration are writes to capability-backed state, so a verb that does either is Write Impure (§3.4).
 
 ---
 

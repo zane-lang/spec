@@ -17,6 +17,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`One spelling per entity`.** Whatever an import states is the only way that entity may be written in the file.
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
+- **`The root package starts the program`.** The package at the root of the build declares `main` and alone reaches the program's console and runtime.
 
 ---
 
@@ -182,7 +183,33 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 ---
 
-## 6. Summary
+## 6. The Root Package
+
+### 6.1 The root package is the root of the build
+
+The **root package** is the package at the root of the dependency graph being built: the package whose source files lie directly under the built project's `src/` ([`dependencies.md`](dependencies.md) §3). Every other package in the build is a dependency reached from it. Whether a package is the root depends on the build rather than on the package: a library built or tested on its own is the root of that build, and the same library consumed by another project is not.
+
+Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6). Any other package reaches them only through an instance passed to it.
+
+### 6.2 `main` is the entry point
+
+A program starts at `Unit main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly.
+
+```zane
+package app
+
+import std$
+
+Unit main() {
+    console Console(@program$console);
+    console!print("hello world");
+    return Unit();
+}
+```
+
+---
+
+## 7. Summary
 
 | Concept | Rule |
 |---|---|
@@ -198,6 +225,8 @@ State that changes over time must live in a value, such as a `struct` or referen
 | Import reach | Plain-name resolution only; never operator candidates, method lookup, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
+| Root package | The package at the root of the dependency graph being built; the only package that reaches `@program$` |
+| Entry point | `Unit main()`, declared in any source file of the root package, with no parameters |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
 | Operators | Always public |

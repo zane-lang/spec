@@ -134,7 +134,7 @@ result Int = match token {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {
-    print(msg);
+    console!print(msg);
     resolve Int(20);
 }
 ```
