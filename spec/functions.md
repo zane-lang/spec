@@ -375,7 +375,7 @@ callback Float(x Int) { ... }   // lambda-variable declaration
 
 A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This is what makes `callee(callback)` well-defined where referencing an overloaded callable would not be.
 
-> **See also:** [`syntax.md`](syntax.md) §2.9 for function types and §3.8 for lambda literals and lambda-variable declarations.
+> **See also:** [`syntax.md`](syntax.md) §2.13 for function types and §3.8 for lambda literals and lambda-variable declarations.
 
 ### 7.4 Lambdas do not capture
 
