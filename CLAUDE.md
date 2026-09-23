@@ -238,7 +238,7 @@ wrong, in both directions:
 
 - **Too loose.** Editing a merged chapter's prose to fix a retired claim. Say
   what stopped being true from the *new* chapter instead; the old chapter gains
-  only the supersession note §5 allows. Caught in review, not by the author.
+  only the supersession note §5 allows, which unlike the prose stays editable. Caught in review, not by the author.
 - **Forgetting the note.** A change that retires a merged chapter's claim owes
   that chapter a supersession note in the same PR, and the additions-only check
   cannot notice it is missing — grep the story for the retired claim yourself.

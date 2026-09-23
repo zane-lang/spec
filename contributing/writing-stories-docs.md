@@ -144,17 +144,17 @@ The note is a signpost, not a correction. It names the claim and links the chapt
 
 - **One note per paragraph**, after it, never inside it. A paragraph with two retired claims names both in one note.
 - **Only a retired claim earns one.** A later chapter that refines, sharpens, or finishes an earlier one without contradicting it needs no note; neither does an example written in syntax that has since changed, since every chapter shows the forms of its own time and a reader expects it to.
-- **A note is itself published once merged.** If the chapter it points to is later superseded in turn, that chapter gets its own note; the old note is left pointing where it points, and the reader follows the chain.
+- **A note stays editable.** Unlike the chapter it sits in, a note records no history — it is a signpost to where the present account lives — so it may be corrected, reworded, or removed at any time. When the chapter it points to is superseded in turn, re-point the note at the newest chapter instead of adding a second one, so the reader takes one hop rather than following a chain.
 
 **The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What must not move is anything that was already merged.
 
 **Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
 
 ```sh
-git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)"
+git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)|^-> (\[!NOTE\]|Superseded:)|^-$"
 ```
 
-The second `grep` drops only the file header, so a deleted line that itself began with `-`, such as a list item, still shows. Any output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+The second `grep` drops three kinds of line: the file header, a supersession note's lines (a note may be edited), and removed blank lines (which change no text). A deleted line that itself began with `-`, such as a list item, still shows. Any other output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only, apart from note edits — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
 
 Additions only is necessary and not sufficient, because a line added *inside* a published chapter is silent too, and the only such line the rule allows is a supersession note. So also look at where the additions land:
 
