@@ -242,7 +242,7 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
-Each intrinsic operation and method has exactly one signature; intrinsics are never overloaded.
+Each intrinsic operation has exactly one signature, so intrinsics are not overloaded. Methods are the exception: a method's subject is one of its parameters, so intrinsic methods that share a name on different types are overloads, told apart by the subject's type like any other overload ([`functions.md`](functions.md) §4.1).
 
 A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
 
