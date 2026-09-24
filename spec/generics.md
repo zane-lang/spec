@@ -1,6 +1,6 @@
 # Zane Generics and Type Parameters
 
-This document specifies Zane's type-parameter system. A type in Zane is a *templated function*: it takes parameters and is executed to produce a concrete layout. A **type definition** declares its parameters in a `<>` header placed after the name (`Vector<T Type>`), because a type is applied positionally (`Vector<Int>`) and that ordered header is its architecture. A **verb** — a function, method, or constructor — has no header: it *introduces* its type and number parameters inline, at their first marked occurrence in its signature (`x T Type`, `this Buffer<T Type, n Number>`), and references them by bare name thereafter. Type arguments are written in `<>` type expressions; they are never written at a constructor or function call.
+This document specifies Zane's type-parameter system. A type in Zane is a *templated function*: it takes parameters and is executed to produce a concrete layout. A **type definition** declares its parameters in a `<>` header placed after the name (`Vector<T Type>`), because a type is applied positionally (`Vector<Int>`) and that ordered header is its architecture. A **verb** — a function, method, or constructor — has no header: it *introduces* its type and number parameters inline, at their first marked occurrence in its signature (`x T Type`, `this Buffer<T Type, n @concepts$Integer>`), and references them by bare name thereafter. Type arguments are written in `<>` type expressions; they are never written at a constructor or function call.
 
 > **See also:** [`syntax.md`](syntax.md) §2 for the surface syntax of type expressions. [`types.md`](types.md) §5 for `type` and `alias` declarations and §3 for constructors. [`lexical.md`](lexical.md) §3 for the casing rule that distinguishes types from values. [`functions.md`](functions.md) §5 for the generic-match phase of overload resolution.
 
@@ -13,12 +13,12 @@ This document specifies Zane's type-parameter system. A type in Zane is a *templ
 Zane treats a type as something that is *executed*. A type definition takes parameters and produces a concrete layout, the same way a function takes parameters and produces a value. Templating is therefore not a bolt-on feature; it falls directly out of types being executable, and out of types themselves being ordinary compile-time values.
 
 - **`Types are templated functions`.** A parameterized *type* lists its parameters in a `<>` header and produces a result. Applying arguments to those parameters (`Vector<Int>`) evaluates the template into a concrete type.
-- **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n Number>`) and references it bare elsewhere.
+- **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n @concepts$Integer>`) and references it bare elsewhere.
 - **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
-- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name Number` (a number parameter). `Type` and `Number` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
+- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Integer` (a number parameter). `Type` and `@concepts$Integer` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
-- **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`Number` value parameters).
+- **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Integer` value parameters).
 - **`Two container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T`, the single fixed-size container primitive and a value type; `@primitives$List<T>` is its dynamically sized counterpart and a reference type. `core` declares `Array` and `List` over them.
 
 ---
@@ -47,17 +47,17 @@ Each distinct application is a distinct concrete type with a known, fixed layout
 
 ### 2.2 Parameters may be types or numbers
 
-A header may mix type parameters and number parameters. A type parameter is declared with the `Type` concept; a number parameter with the `Number` concept.
+A header may mix type parameters and number parameters. A type parameter is declared with the `Type` concept; a number parameter with `@concepts$Integer`, the concept type an integer literal carries ([`lexical.md`](lexical.md) §7).
 
 ```zane
-type Buffer<T Type, n Number> = struct {
+type Buffer<T Type, n @concepts$Integer> = struct {
     data Array<T, n>;
 }
 
 Buffer<Int, 64>   // T = Int, n = 64
 ```
 
-`T` ranges over types; `n` ranges over compile-time numbers. Inside the body, `n` may also be read as a number value — for example, to compute a length — exactly as `data Array<T, n>` uses it to fix the storage size.
+`T` ranges over types; `n` ranges over compile-time integers. The argument `64` is an integer literal, so it fills an `@concepts$Integer` slot the way any argument fills a slot of its own type. Inside the body, `n` may also be read as a number value — for example, to compute a length — exactly as `data Array<T, n>` uses it to fix the storage size.
 
 ### 2.3 Concrete (non-parameterized) types
 
@@ -97,7 +97,7 @@ Inference is therefore not a separate mechanism. It is the same `T Type` binding
 
 Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
 
-A `Number` parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n Number` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n Number>`, where `n` comes from the argument's length).
+A number parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n @concepts$Integer` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n @concepts$Integer>`, where `n` comes from the argument's length).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#the-parameter-model) — "The parameter model" develops this, including why dropping the leading name is a legible edit rather than an arbitrary mode flip.
 
@@ -109,26 +109,30 @@ A **type definition** declares its parameters in a `<>` header placed immediatel
 
 ```zane
 type Vector<T Type> = struct { ... }             // header: one type parameter
-type Buffer<T Type, n Number> = struct { ... }   // header: a type then a number
+type Buffer<T Type, n @concepts$Integer> = struct { ... }   // header: a type then a number
 ```
 
-A **verb** — a function, method, or constructor — has no header. It *introduces* each type or number parameter inline, at the parameter's first **marked** occurrence — the first place the name carries its concept (`Type` / `Number`):
+A **verb** — a function, method, or constructor — has no header. It *introduces* each type or number parameter inline, at the parameter's first **marked** occurrence — the first place the name carries its concept (`Type` / `@concepts$Integer`):
 
 ```zane
 Vector<T>(x T Type, y T Type) { ... }             // T introduced on a value parameter
-T head(arr Array<T Type, n Number>) { ... }       // T, n introduced inside a nested type
-Int size(this Buffer<T Type, n Number>) { ... }   // T, n introduced on the subject
+T head(arr Array<T Type, n @concepts$Integer>) { ... }       // T, n introduced inside a nested type
+Int size(this Buffer<T Type, n @concepts$Integer>) { ... }   // T, n introduced on the subject
 ```
 
 A verb has no header because it never needs one: its parameters are always inferred (§5) and never applied positionally, so there is no order to fix and nothing for a header to declare.
 
-A name is introduced by its first **marked** occurrence and referenced bare everywhere else in the signature. A bare reference may appear *before* the introduction: in `T head(arr Array<T Type, n Number>)` the return type `T` is a bare reference even though it is written first, because the introduction is the marked `T Type` in the parameter list. Within one verb signature every occurrence of a name is the **same** parameter, so `T add(x T Type, y T Type)` constrains `x` and `y` to a single type `T`; a non-introducing occurrence may be written bare (`T`) or may repeat the concept (`T Type`), and both denote the same parameter.
+A name is introduced by its first **marked** occurrence and referenced bare everywhere else in the signature. A bare reference may appear *before* the introduction: in `T head(arr Array<T Type, n @concepts$Integer>)` the return type `T` is a bare reference even though it is written first, because the introduction is the marked `T Type` in the parameter list. Within one verb signature every occurrence of a name is the **same** parameter, so `T add(x T Type, y T Type)` constrains `x` and `y` to a single type `T`; a non-introducing occurrence may be written bare (`T`) or may repeat the concept (`T Type`), and both denote the same parameter.
 
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
-### 3.3 `Type` and `Number` are concept types
+### 3.3 `Type` and `@concepts$Integer` are concept types
 
-`Type` and `Number` are compiler-provided concept types. `Type` is the concept of a type; `Number` is the concept of a compile-time number. Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `Number` is a compile-time number. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, a `Number` value in a number position.
+`Type` and `@concepts$Integer` are compiler-provided concept types. `Type` is the concept of a type; `@concepts$Integer` is the concept of a compile-time integer, and is the same concept type an integer literal carries ([`syntax.md`](syntax.md) §2.8). Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `@concepts$Integer` is a compile-time integer, whether it arrives as a number argument in a type expression or as an integer literal passed to a verb. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, an `@concepts$Integer` value in a number position.
+
+These are the only two parameter kinds. A parameter's value is substituted into the body it parameterizes, so every parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and a parameter's concept is the concept of what such a slot accepts. A package cannot declare a parameter of any other concept type. A new parameter kind comes into being only with a compiler-provided type whose slot accepts it.
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
 
 ### 3.4 References are bare; casing carries the kind
 
@@ -148,12 +152,12 @@ type Pair<T Type, U Type> = struct {
 A number parameter referenced in a body position (not a type position) resolves to its number value. This is how a method on a parameterized type can read a size as an ordinary number.
 
 ```zane
-Int size(this Buffer<T Type, n Number>) {
+Int size(this Buffer<T Type, n @concepts$Integer>) {
     return n;
 }
 ```
 
-Here `n` in the return position is the number the use site supplied for that parameter. The subject type `Buffer<T Type, n Number>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
+Here `n` in the return position is the number the use site supplied for that parameter. The subject type `Buffer<T Type, n @concepts$Integer>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
 
@@ -178,7 +182,7 @@ Struct fields, function and method signatures, return types, aliases, and nested
 
 ### 4.2 Arguments are positional
 
-Arguments fill the header's parameters left to right. A type argument fills a `Type` slot; a number argument fills a `Number` slot.
+Arguments fill the header's parameters left to right. A type argument fills a `Type` slot; a number argument fills an `@concepts$Integer` slot.
 
 ```zane
 Array<Int, 10000>     // T = Int, n = 10000
@@ -188,7 +192,7 @@ Matrix<Float, 3>      // type then number
 A type argument may itself reference a parameter that the surrounding scope has in scope. Inside a declaration whose header binds `T` and `n`, the expression `Array<T, n>` forwards both:
 
 ```zane
-type Buffer<T Type, n Number> = struct {
+type Buffer<T Type, n @concepts$Integer> = struct {
     data Array<T, n>;
 }
 ```
@@ -199,10 +203,10 @@ The token before `<` in a type expression is always a type, which is always uppe
 
 ### 4.4 Inside a verb, a `<>` entry may introduce a parameter
 
-A type expression normally *applies* arguments. Inside a verb signature — where there is no header — the same `<>` brackets are also where a nested type or number parameter is introduced: an entry that carries its concept (`T Type`, `n Number`) introduces a parameter; a bare or concrete entry references or applies as usual.
+A type expression normally *applies* arguments. Inside a verb signature — where there is no header — the same `<>` brackets are also where a nested type or number parameter is introduced: an entry that carries its concept (`T Type`, `n @concepts$Integer`) introduces a parameter; a bare or concrete entry references or applies as usual.
 
 ```zane
-Int size(this Buffer<T Type, n Number>) => n   // legal: T and n introduced here
+Int size(this Buffer<T Type, n @concepts$Integer>) => n   // legal: T and n introduced here
 T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing introduces T or n,
                                                // so the bare names are undefined
 ```
@@ -222,7 +226,7 @@ vec Vector(Int(2), Int(3));  // legal: bare-name constructor call
 vec Vector<Int>(Int(2));     // ILLEGAL: a call takes no <> list
 ```
 
-A type or number parameter reaches a callable in one of two ways: inferred (introduced inline on a parameter's type or in a nested type) or passed explicitly (declared as a `Type`/`Number` value parameter).
+A type or number parameter reaches a callable in one of two ways: inferred (introduced inline on a parameter's type or in a nested type) or passed explicitly (declared as a `Type`/`@concepts$Integer` value parameter).
 
 ### 5.2 Inferred parameters (inline)
 
@@ -238,9 +242,9 @@ vec Vector(Int(2), Int(3));      // T inferred as Int from the arguments
 
 A constructor's name is its return type, so a constructor for a parameterized type names the **applied** type (`Vector<T>`), where the `<...>` holds bare *references* to the inline-introduced parameters — it carries `T`, not `T Type`, so it is a type expression, not a reintroduced header. The call is still by bare name (`Vector(Int(2), Int(3))`); only the declaration shows the applied return type.
 
-### 5.3 Explicit parameters (`Type` / `Number` value parameters)
+### 5.3 Explicit parameters (`Type` / `@concepts$Integer` value parameters)
 
-A type or number can instead be passed as an ordinary argument by declaring a value parameter of concept type `Type` or `Number`. The argument is then written positionally in `()`, like any other value.
+A type or number can instead be passed as an ordinary argument by declaring a value parameter of concept type `Type` or `@concepts$Integer`. The argument is then written positionally in `()`, like any other value.
 
 The distinction from §5.2 is purely structural, read off the parameter's shape. An *inferred* parameter rides on a value parameter's **type** (`x T Type` — a value `x` whose type is the fresh parameter `T`) or in a nested type, so a value argument fixes it. An *explicit* parameter **is** the value parameter (`T Type` — a value parameter named `T` of concept `Type`), so the caller passes it directly. The first carries a value name before the concept-typed type; the second does not.
 
@@ -249,7 +253,7 @@ Vector<T>(T Type) {
     return init{ x = T(0); y = T(0); }
 }
 
-Array<T, n>(T Type, n Number) {
+Array<T, n>(T Type, n @concepts$Integer) {
     // zero-initialise n elements of type T
 }
 
@@ -257,13 +261,13 @@ vec Vector(Int);             // Int passed as the type argument
 arr Array(Int, 10000);       // Int passed as the type, 10000 as the size
 ```
 
-A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); a `Number` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
+A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); an `@concepts$Integer` value parameter is usable as a number. This is the practical payoff of types being compile-time values: a type handed to a constructor is just an argument the body can execute.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#no-turbofish-passing-types-as-values) — "No turbofish: passing types as values" tells why passing a type directly exists: it is what makes the no-turbofish decision affordable rather than crippling.
 
 ### 5.4 Concept-typed literals must be wrapped
 
-A bare source literal carries a compiler concept type, not a concrete storage type. Whether it may drive inference turns on whether that concept type fixes a concrete type. A `@concepts$Number` or `@concepts$Text` does not — the compiler cannot choose between `Int`, `Float`, and other concrete types — so such a literal **MUST NOT** drive inference of a type parameter. Wrap it in its destination type:
+A bare source literal carries a compiler concept type, not a concrete storage type. Whether it may drive inference turns on whether that concept type fixes a concrete type. An `@concepts$Integer`, `@concepts$Decimal`, or `@concepts$Text` does not — an integer literal may become an `Int`, a `Float`, or any other type that accepts one, and the compiler does not choose — so such a literal **MUST NOT** drive inference of a type parameter. Wrap it in its destination type:
 
 ```zane
 vec Vector(Int(2), Int(3));  // legal: each argument is a concrete Int
@@ -282,6 +286,21 @@ arr Array([1, 2, 3]);                        // ILLEGAL: bare elements fix no T,
 
 This single explicit wrap at the call site is the deliberate cost that replaces a `<>` type-argument list at every call.
 
+A verb may take that cost on itself instead, by declaring a parameter of the literal's own concept type and doing the wrapping in its body. `@concepts$Integer` and `@concepts$Decimal` are distinct types, so a verb may overload on them ([`functions.md`](functions.md) §4.3), and a call with bare literals selects its overload in the direct phase of resolution ([`functions.md`](functions.md) §5):
+
+```zane
+Vector<Int> vec(x @concepts$Integer, y @concepts$Integer) => Vector(Int(x), Int(y));
+Vector<Float> vec(x @concepts$Decimal, y @concepts$Decimal) => Vector(Float(x), Float(y));
+
+a Vector<Int> = vec(2, 3);         // legal: selects the @concepts$Integer overload
+b Vector<Float> = vec(2.5, 3.5);   // legal: selects the @concepts$Decimal overload
+c Vector<Float> = vec(2, 3.5);     // ILLEGAL: no overload takes an integer and then a decimal
+```
+
+No implicit constructor has a concept type as its destination ([`types.md`](types.md) §4.4), so an integer literal never selects a `@concepts$Decimal` overload and a decimal literal never selects a `@concepts$Integer` one.
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
+
 ---
 
 ## 6. Array Construction
@@ -291,19 +310,19 @@ This single explicit wrap at the call site is the deliberate cost that replaces 
 ### 6.1 Inferred from a literal
 
 ```zane
-Array<T, n>(values @concepts$Array<T Type, n Number>) {
+Array<T, n>(values @concepts$Array<T Type, n @concepts$Integer>) {
     // T and n inferred from the literal
 }
 
 arr Array([Int(1), Int(2), Int(3)]);        // T = Int and n = 3 inferred from the literal
 ```
 
-The value-parameter type `@concepts$Array<T Type, n Number>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.9), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
+The value-parameter type `@concepts$Array<T Type, n @concepts$Integer>` introduces `T` and `n` inline and lets the compiler read both from the literal's element type and length. The parameter names the **concept** type an array literal actually carries ([`syntax.md`](syntax.md) §2.9), which is what lets the constructor accept the literal directly and lower it. Declaring the parameter as `Array<T, n>` instead would demand a conversion into the very type being constructed; no implicit constructor is involved here, and §4.3's no-chaining rule is never engaged.
 
 ### 6.2 Explicit type and size
 
 ```zane
-Array<T, n>(T Type, n Number) {  // called as Array(Int, 10000)
+Array<T, n>(T Type, n @concepts$Integer) {  // called as Array(Int, 10000)
     // zero-initialise n elements of type T
 }
 
@@ -384,13 +403,13 @@ The following are intentionally not specified in this version:
 |---|---|
 | Type as template | A type definition lists parameters in a `<>` header and produces a result; applying arguments evaluates a type into a concrete type |
 | Type parameter | Declared `name Type` with an uppercase name (`T`); ranges over types |
-| Number parameter | Declared `name Number` with a lowercase name (`n`); ranges over compile-time numbers and resolves to a number value in body positions |
-| `Type` / `Number` | Compiler concept types; legal only in parameter positions, never as storage |
+| Number parameter | Declared `name @concepts$Integer` with a lowercase name (`n`); ranges over compile-time integers and resolves to a number value in body positions |
+| `Type` / `@concepts$Integer` | Compiler concept types; legal only in parameter positions, never as storage; the only two parameter kinds |
 | Reference | A parameter is referenced by bare name; casing carries the kind. A type's header or a verb's inline concept marks a name as a parameter |
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
 | Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
-| Explicit parameter | Declared as a `Type`/`Number` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
+| Explicit parameter | Declared as a `Type`/`@concepts$Integer` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
 | `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; `core` declares `List` over it |
