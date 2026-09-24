@@ -39,7 +39,7 @@ Three consequences that other documents depend on:
 
 - **Parameterization is not a separate feature.** It is what you get once a type is an executable value. A parameterized type lists its parameters and produces a result; applying arguments evaluates it. See [`generics.md`](generics.md) §2.
 - **`<>` and `()` are different mechanisms, not two call syntaxes.** `<>` is a type expression, resolved in the earlier (type) stage; `()` is a construction or call, resolved in the later (value) stage. They live in different stages, which is why a call never carries a `<>` list. See [`generics.md`](generics.md) §4–§5.
-- **A value passed at compile time is just an argument.** A type or compile-time number handed to a constructor is an ordinary value the body can use, because the stage that runs the type has those values in hand. See [`generics.md`](generics.md) §5.3.
+- **A value passed at compile time is just an argument.** A type or compile-time integer handed to a constructor is an ordinary value the body can use, because the stage that runs the type has those values in hand. See [`generics.md`](generics.md) §5.3.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#types-are-templated-functions) — "Types are templated functions" records why staging was chosen over a bolt-on generics sublanguage, and where the model promises more than it currently delivers.
 
@@ -47,7 +47,7 @@ Three consequences that other documents depend on:
 
 ## 4. Casing Determines Kind
 
-A name's initial case is semantic. An uppercase-initial name is a type; a lowercase-initial name is a value (including a compile-time number). The full rule, and its effect on parsing, are specified by [`lexical.md`](lexical.md) §3 and §5.
+A name's initial case is semantic. An uppercase-initial name is a type; a lowercase-initial name is a value (including a compile-time integer). The full rule, and its effect on parsing, are specified by [`lexical.md`](lexical.md) §3 and §5.
 
 This is a foundation, not a style convention, because the whole surface grammar leans on it:
 

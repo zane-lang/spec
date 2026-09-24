@@ -86,7 +86,7 @@ Unit setY(this Vec2, y Float) mut {           // value subject: in-place through
     return Unit();
 }
 
-pos!setY(Float(3));
+pos!setY(Float(3.0));
 ```
 
 ### 2.5 Call markers are part of the surface syntax
@@ -95,7 +95,7 @@ Read-only methods are called with `:`. Mutating methods are called with `!`.
 
 ```zane
 node:scaledId(Int(2));
-node!setScale(Float(3));
+node!setScale(Float(3.0));
 ```
 
 Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
@@ -275,7 +275,7 @@ Legal overload sets must differ in the number of parameters or in at least one p
 For function calls, constructor calls, and desugared method calls, overload resolution proceeds in three phases:
 
 1. **Direct match.** A candidate is viable only if the call type-checks with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
-2. **Generic match.** If the direct phase finds no viable candidate, the called declaration's inline-introduced type and number parameters are inferred from the static types of the call arguments: a type parameter from an argument's type, a number parameter from the number part of an argument's type. A call never carries a `<>` type-argument list; a type or number may instead be passed as an ordinary argument to a `Type` or `Number` value parameter (see [`generics.md`](generics.md) §5). Inference proceeds under the rules of [`generics.md`](generics.md) §3 and §5, still with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
+2. **Generic match.** If the direct phase finds no viable candidate, the called declaration's inline-introduced type and number parameters are inferred from the static types of the call arguments: a type parameter from an argument's type, a number parameter from the number part of an argument's type. A call never carries a `<>` type-argument list; a type or number may instead be passed as an ordinary argument to a `Type` or `@concepts$Integer` value parameter (see [`generics.md`](generics.md) §5). Inference proceeds under the rules of [`generics.md`](generics.md) §3 and §5, still with no implicit constructor insertions. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
 3. **Implicit match.** If the direct and generic phases find no viable candidate, implicit constructors may be inserted at coercion sites. If exactly one candidate is viable, it is selected. If more than one candidate is viable, the call is an ambiguity error.
 
 If no phase yields a viable candidate, the call is a normal no-match type error.
@@ -341,10 +341,10 @@ A lambda literal is a function declaration with the name removed. It writes its 
 ```zane
 callee(Float(x Int) {
     small Bool = if(x < Int(10)) {
-        return Float(0);
+        return Float(0.0);
     }
     small:else() {
-        return Float(1) / Float(x);
+        return Float(1.0) / Float(x);
     }
 });
 ```

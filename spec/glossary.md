@@ -86,13 +86,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.3 unified type parameters
 
-- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name Number`, lowercase, ranging over compile-time numbers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
-- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`Number` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Integer`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
+- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Integer` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
 
-- **Meaning:** Compiler-provided types such as `@concepts$Number` may appear in parameter positions for literals but not in storage. A `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
+- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Integer` and a decimal literal (`3.0`) `@concepts$Decimal`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12
 
@@ -150,10 +150,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
-### 3.14 `Type` and `Number` parameter concepts
+### 3.14 `Type` and `@concepts$Integer` parameter concepts
 
-- **Meaning:** `Type` and `Number` are compiler concept types used to declare type and number parameters (`T Type`, `n Number`). Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
-- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other rather than a bespoke parameter-kind keyword.
+- **Meaning:** `Type` and `@concepts$Integer` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Integer`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the one an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
 ### 3.15 variant (sum mould)
