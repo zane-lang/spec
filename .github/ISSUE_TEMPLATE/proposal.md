@@ -6,5 +6,5 @@ labels: proposal
 
 <!--
 Write it however suits the idea. Past decisions, in case this one came up before:
-https://github.com/zane-lang/spec/issues?q=is%3Aissue+label%3A%22proposal%3A+rejected%22
+https://github.com/zane-lang/spec/issues?q=is%3Aissue+label%3Aproposal+is%3Aclosed
 -->
