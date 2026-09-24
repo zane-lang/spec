@@ -69,6 +69,10 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
+The operands of every operator are evaluated left to right, in written order, and are then passed to the primitive in the positions the desugaring gives them: `f() > g()` evaluates `f()`, then `g()`, and calls `<` with the result of `g()` first.
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#written-order-survives-the-swap) — "Written order survives the swap".
+
 ### 2.4 Boolean operators
 
 `Bool` implements four of the primitive operators of §2.1 — the three of a Boolean algebra, plus equality — and declares nothing beyond them:
@@ -233,6 +237,7 @@ An operator token may appear only in operator position; it has no value form. Th
 | Operator vocabulary | Only the fixed built-in operator set may be overloaded; programs cannot declare new tokens or precedence. |
 | Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
+| Operand order | The operands of every operator are evaluated left to right, in written order, whatever position the desugaring passes them in. |
 | Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement, and `==` as equality; `~=` is exclusive or and `-` is implication by derivation. It declares no `/` and no `<`, so those and the operators derived from `<` are no-match errors. Both operands are evaluated. |
