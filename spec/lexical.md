@@ -238,7 +238,7 @@ A numeric literal is written in decimal digits, in one of two forms, and the for
 - An **integer literal** is one or more digits. It carries `@concepts$Integer`.
 - A **decimal literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Decimal`.
 
-A numeric literal consists of digits and at most one `.`, with at least one digit on each side of the `.`.
+A numeric literal consists of digits and at most one `.`, which has at least one digit on each side.
 
 ```zane
 3      // integer literal: @concepts$Integer
