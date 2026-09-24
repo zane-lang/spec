@@ -69,7 +69,7 @@ If a type provides `<` for an operand pair, users automatically get `>`, `<=`, a
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
-The operands of every operator are evaluated left to right, in written order, and are then passed to the primitive in the positions the desugaring gives them: `f() > g()` evaluates `f()`, then `g()`, and calls `<` with the result of `g()` first.
+The operands of every operator are evaluated left to right, in written order, and are then passed to the primitive in the positions the desugaring gives them: `f() > g()` evaluates `f()`, then `g()`, and calls `<` with the result of `g()` as its first argument.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#written-order-survives-the-swap) — "Written order survives the swap".
 
