@@ -53,9 +53,9 @@ type Vec2 = struct {       // value type: copied, transitively value, mutable in
     y Float;
 }
 
-pos Vec2(1, 2);
-pos!setX(Float(3));  // legal: mut method writes the field through a borrow of pos
-pos = Vec2(3, 4);    // legal: overwrites the whole value
+pos Vec2(1.0, 2.0);
+pos!setX(Float(3.0));  // legal: mut method writes the field through a borrow of pos
+pos = Vec2(3.0, 4.0);    // legal: overwrites the whole value
 ```
 
 ### 2.3 Field visibility is name-based
@@ -97,7 +97,7 @@ The language names none of them. The control-flow intrinsics take storage primit
 
 What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
-`Int` converts only from `@concepts$Integer`, so a decimal literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts from both `@concepts$Integer` and `@concepts$Decimal`, one implicit constructor each, so `Float(2)` and `Float(2.5)` are both legal. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
+`Int` converts only from `@concepts$Integer`, so a decimal literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Decimal`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
 
 Because `core` is an ordinary dependency, two of its versions may be linked side by side like any other package's ([`dependencies.md`](dependencies.md) §11), and a project that wants them collapsed opts into remapping (§15 there). No version of `Int` is forced on a program, and none is the language's.
 
@@ -209,13 +209,13 @@ type Weapon = #struct {
 
 Weapon{
     name String("Pistol");
-    fireRate Float(1);
-    damage Float(10);
+    fireRate Float(1.0);
+    damage Float(10.0);
 } {
     return init{name; fireRate; damage;}
 }
 
-starter Weapon{fireRate = Float(2);}
+starter Weapon{fireRate = Float(2.0);}
 ```
 
 ### 3.4 Named constructors
@@ -227,11 +227,11 @@ package Math
 
 type Vector2 = struct { x Float; y Float; }
 
-Vector2.zeros() => init{ x = Float(0); y = Float(0); }
+Vector2.zeros() => init{ x = Float(0.0); y = Float(0.0); }
 Vector2.diagonal(n Float) => init{ x = n; y = n; }
 
 o Vector2.zeros();           // o : Vector2
-d Vector2.diagonal(Float(3)); // d : Vector2
+d Vector2.diagonal(Float(3.0)); // d : Vector2
 ```
 
 A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes it; it does not change what it returns. So a named constructor:
@@ -409,8 +409,8 @@ Unit printDistance(d Meters) {
 At a **coercion site** — a position whose destination type is fixed by a callable or language construct (see §4.2) — if the source expression has a different type and exactly one applicable implicit constructor exists, the compiler inserts that constructor call automatically.
 
 ```zane
-printDistance(Feet(Float(10)));  // coercion site: parameter expects Meters, Feet provided
-// desugars to: printDistance(Meters(Feet(Float(10))))
+printDistance(Feet(Float(10.0)));  // coercion site: parameter expects Meters, Feet provided
+// desugars to: printDistance(Meters(Feet(Float(10.0))))
 ```
 
 A named field entry of a field-constructor call is a coercion site too, so the conversion fires inside the braces:
@@ -419,8 +419,8 @@ A named field entry of a field-constructor call is a coercion site too, so the c
 type Trip = struct { distance Meters; label String; }
 Trip{distance Meters; label String;} => init{distance; label;}
 
-Trip{distance = Feet(Float(10)); label = "hike";}   // field entry expects Meters, Feet provided
-// desugars to: Trip{distance = Meters(Feet(Float(10))); label = "hike";}
+Trip{distance = Feet(Float(10.0)); label = "hike";}   // field entry expects Meters, Feet provided
+// desugars to: Trip{distance = Meters(Feet(Float(10.0))); label = "hike";}
 ```
 
 The `init{ }` inside a constructor body is **not** a coercion site: there the constructor writes its own value's fields, so like a `return` the conversion is written explicitly (see §4.2).
@@ -428,8 +428,8 @@ The `init{ }` inside a constructor body is **not** a coercion site: there the co
 A declaration is **not** a coercion site, so the conversion must be written explicitly there:
 
 ```zane
-distance Meters = Feet(Float(10));          // ILLEGAL: a declaration is not a coercion site
-distance Meters = Meters(Feet(Float(10)));  // legal: explicit conversion
+distance Meters = Feet(Float(10.0));          // ILLEGAL: a declaration is not a coercion site
+distance Meters = Meters(Feet(Float(10.0)));  // legal: explicit conversion
 ```
 
 ### 4.2 Coercion sites
@@ -483,7 +483,7 @@ A primitive destination is what lets an intrinsic state its contract without nam
 type Celsius = struct { value Float; }
 type Fahrenheit = struct { value Float; }
 
-implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32)) * Float(5) / Float(9);}   // legal: value → value
+implicit Celsius(f Fahrenheit) => init{value = (f.value - Float(32.0)) * Float(5.0) / Float(9.0);}   // legal: value → value
 ```
 
 ```zane
@@ -537,7 +537,7 @@ Unit logDistance(this Meters) {
     return Unit();
 }
 
-feet Feet(Float(10));
+feet Feet(Float(10.0));
 feet:logDistance();  // ILLEGAL: subject type is Feet, not Meters
 ```
 

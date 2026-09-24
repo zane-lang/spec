@@ -24,7 +24,7 @@ name ReturnType(param ParamType, ...) => expr
 
 `VarType{fieldA; fieldB;}` is shorthand for `VarType{fieldA = fieldA; fieldB = fieldB;}`.
 
-The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.diagonal(Float(3))` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.diagonal` or a per-case type.
+The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.diagonal(Float(3.0))` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.diagonal` or a per-case type.
 
 The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
@@ -261,6 +261,8 @@ Every intrinsic namespace except `@program$` is reachable from every package wit
 ```
 
 These compiler-provided concept types represent source literals before they are lowered into storage types: integer and decimal literals ([`lexical.md`](lexical.md) §7), text literals, array literals (§2.9), and map literals (§2.10). `Type` in parameter declarations (§2.11) and `@concepts$Block` (§2.12) are concept types too. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
+
+A concept type that takes no parameters — `Type`, `@concepts$Integer`, `@concepts$Decimal`, and `@concepts$Text` — is a **leaf** concept type. A value of a leaf concept type is a compile-time value wherever it appears, including as an argument to a verb. The entries of an array or map literal are ordinary expressions and may be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no such guarantee; a block argument (§2.12) is not a value at all.
 
 ### 2.9 Array literals
 

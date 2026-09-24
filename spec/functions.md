@@ -86,7 +86,7 @@ Unit setY(this Vec2, y Float) mut {           // value subject: in-place through
     return Unit();
 }
 
-pos!setY(Float(3));
+pos!setY(Float(3.0));
 ```
 
 ### 2.5 Call markers are part of the surface syntax
@@ -95,7 +95,7 @@ Read-only methods are called with `:`. Mutating methods are called with `!`.
 
 ```zane
 node:scaledId(Int(2));
-node!setScale(Float(3));
+node!setScale(Float(3.0));
 ```
 
 Calling a `mut` method with `:` is illegal. Calling a non-`mut` method with `!` is also illegal.
@@ -341,10 +341,10 @@ A lambda literal is a function declaration with the name removed. It writes its 
 ```zane
 callee(Float(x Int) {
     small Bool = if(x < Int(10)) {
-        return Float(0);
+        return Float(0.0);
     }
     small:else() {
-        return Float(1) / Float(x);
+        return Float(1.0) / Float(x);
     }
 });
 ```

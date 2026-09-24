@@ -60,9 +60,9 @@ An `&T` stored *as an element value* is different: rewriting that element merely
 Value types have no anchor and no heap identity. A value is mutated in place through a `mut` method whose `this` is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale. Neither operation goes through the anchor system, because a value has no identity to track.
 
 ```zane
-pos Vec2(1, 2);
-pos!setX(Float(3)); // in-place field write through a borrow of pos
-pos = Vec2(3, 4);  // whole-slot overwrite
+pos Vec2(1.0, 2.0);
+pos!setX(Float(3.0)); // in-place field write through a borrow of pos
+pos = Vec2(3.0, 4.0);  // whole-slot overwrite
 ```
 
 A value-producing expression initializes storage according to whether it denotes an existing value. A **place expression** (§2.8) denotes existing storage; binding its value into a different slot copies the whole value. A **non-place expression** produces a fresh value and **MUST** construct that value directly in its eventual destination rather than first materializing an independent temporary and then copying it. This rule passes the destination recursively through nested value-producing forms: product construction, value-variant case forms, function results, `match` arms, and other fresh results build their members directly in the storage that will own them.

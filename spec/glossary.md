@@ -92,7 +92,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.4 compiler concept types
 
-- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Integer` and a decimal literal (`3.0`) `@concepts$Decimal`, by spelling; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
+- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Integer` and a decimal literal (`3.0`) `@concepts$Decimal`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12
 
