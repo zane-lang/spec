@@ -131,8 +131,13 @@ canonical home before deciding what a hit means.
 None of these should hit:
 
 ```sh
-grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]" spec/
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]|@concepts\$Number|[a-z] Number\b" spec/
 ```
+
+`@concepts\$Number` and `[a-z] Number\b` catch the single numeric-literal
+concept and the `Number` parameter concept, both retired when integer and
+decimal literals split (`spec/lexical.md` §7, `spec/generics.md` §3.3). A
+session writing `n Number` from memory is the likely reintroduction.
 
 `'[A-Z]` catches the retired **borrow** type marker (`'Node`), which lived for
 one release; a reference-type parameter now has exactly the two modes of

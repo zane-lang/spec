@@ -130,7 +130,7 @@ This is what lets a bare `T` be read unambiguously. In a **type**, a name in the
 
 `Type` and `@concepts$Integer` are compiler-provided concept types. `Type` is the concept of a type; `@concepts$Integer` is the concept of a compile-time integer, and is the same concept type an integer literal carries ([`syntax.md`](syntax.md) §2.8). Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `@concepts$Integer` is a compile-time integer, whether it arrives as a number argument in a type expression or as an integer literal passed to a verb. Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, an `@concepts$Integer` value in a number position.
 
-These are the only two parameter kinds. A parameter's value is substituted into the body it parameterizes, so every parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and a parameter's concept is the concept of what such a slot accepts. A package cannot declare a parameter of any other concept type. A new parameter kind comes into being only with a compiler-provided type whose slot accepts it.
+These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of what that slot accepts. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Decimal` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
 
@@ -404,7 +404,7 @@ The following are intentionally not specified in this version:
 | Type as template | A type definition lists parameters in a `<>` header and produces a result; applying arguments evaluates a type into a concrete type |
 | Type parameter | Declared `name Type` with an uppercase name (`T`); ranges over types |
 | Number parameter | Declared `name @concepts$Integer` with a lowercase name (`n`); ranges over compile-time integers and resolves to a number value in body positions |
-| `Type` / `@concepts$Integer` | Compiler concept types; legal only in parameter positions, never as storage; the only two parameter kinds |
+| `Type` / `@concepts$Integer` | Compiler concept types; legal only in parameter positions, never as storage; the only two kinds a type's `<>` header holds |
 | Reference | A parameter is referenced by bare name; casing carries the kind. A type's header or a verb's inline concept marks a name as a parameter |
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |

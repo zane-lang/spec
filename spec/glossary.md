@@ -152,7 +152,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.14 `Type` and `@concepts$Integer` parameter concepts
 
-- **Meaning:** `Type` and `@concepts$Integer` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Integer`) — the only two parameter kinds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Meaning:** `Type` and `@concepts$Integer` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Integer`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the one an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
