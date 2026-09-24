@@ -9,7 +9,7 @@ This repository is a **prior art publication** for the Zane programming language
 ```
 spec/             ← the specification itself (start here): what the language does
 stories/          ← design stories: how each part of the spec came to be
-contributing/     ← style guides for spec docs and stories docs, and issue conventions
+contributing/     ← style guides for writing spec docs and stories docs
 bench/            ← reference C harness used for runtime experiments
 ```
 
@@ -79,12 +79,11 @@ The spec states *what* the language does; the **why** lives in a parallel set of
 
 ## Contributing
 
-Conventions live in these guides; read the relevant one before editing or adding a document or filing an issue:
+Style and structural conventions live in two sibling guides; read the relevant one before editing or adding a document:
 
 - [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
 - [`contributing/writing-stories-docs.md`](contributing/writing-stories-docs.md) — stories docs in [`stories/`](stories/).
 - [`contributing/naming-terms.md`](contributing/naming-terms.md) — how the coined terms of art in [`glossary.md`](spec/glossary.md) are chosen.
-- [`contributing/issues.md`](contributing/issues.md) — how proposals and other issues are labelled and closed, and where to find past decisions.
 
 ### Markdown formatting
 
