@@ -245,7 +245,7 @@ The value outlives the call (§1.5), so every guest the caller minted before the
 
 A verb treats a reference-type host argument in one of three ways, each fixed by its signature:
 
-- it takes a **guest** — declares the parameter `&T`; the caller stays a full host, and the callee may read it, mutate it, return it, or store it. Where a stored guest comes to rest is part of the signature (§1.11), and the caller's argument paths settle whether that store is legal (§1.1).
+- it takes a **guest** — declares the parameter `&T`; the caller stays a full host, and the callee may read it, return it, or store it. Where a stored guest comes to rest is part of the signature (§1.11), and the caller's argument paths settle whether that store is legal (§1.1).
 - it **relays** the host — declares a swallowing `T` and returns a hosting handle; the caller's symbol is spent, and binding the return hosts the object again (§1.9).
 - it **consumes** the host — declares a swallowing `T` and returns no host; the caller's symbol is spent, and the value stays wherever the verb placed it.
 

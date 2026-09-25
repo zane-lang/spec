@@ -41,7 +41,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array` and `List` container primitives |
 | [`spec/memory.md`](spec/memory.md) | Hosting, guests, anchors, and arena layout |
 | [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, rehosting, scope rules, and deterministic destruction |
-| [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, inferred effect levels, and capability wiring |
+| [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, effect levels, and capability wiring |
 | [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
 
 ### Programs and program structure

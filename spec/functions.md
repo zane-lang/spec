@@ -114,13 +114,13 @@ subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 
 ### 2.7 Parameters are read-only
 
-Explicit parameters other than `this` are read-only: they cannot be assigned or marked `mut`. Mutation of another object must be expressed as a `mut` method call on that object as the subject. How each parameter is passed — the two reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
+Explicit parameters other than `this` are read-only. A read-only binding admits no write, and a `!` call is a write: it runs a `mut` method that writes its subject. So a parameter can be neither assigned nor the subject of a `!` call, and neither can anything reached through it or any guest derived from it ([`effects.md`](effects.md) §4.1, §4.4). How each parameter is passed — the two reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
 ### 2.8 Swallow and guest method parameters
 
 A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, mutate it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
+- A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
 
 A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
@@ -434,7 +434,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 ## 9. Connection to the Effect Model
 
-Read-only methods and functions are effect-free with respect to their subject unless they touch guests or capabilities. `mut` marks the path for writing state reachable through `this`. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
+`mut` marks the one path by which a verb writes state its caller can see: the state reachable through `this`. A read-only method or a function writes none of it, and reads capability-backed state only through `:` calls on a capability. This is why overload identity ignores `mut`: the call contract is structurally the same even though the behavioral permissions differ.
 
 > **See also:** [`effects.md`](effects.md) for the complete effect model and concurrency implications.
 
@@ -451,7 +451,8 @@ Read-only methods and functions are effect-free with respect to their subject un
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
-| `&` method parameter | Caller supplies a stable guest source or an existing `&T` value; callee may read, mutate, store it into `&` fields, or return it |
+| `&` method parameter | Caller supplies a stable guest source or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
+| Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any guest derived from one |
 | Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which is spent, or a temporary, which has no symbol to spend; callee **MUST NOT** bind it into `&` storage |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
