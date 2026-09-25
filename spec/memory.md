@@ -618,6 +618,7 @@ This is also how a moved-from symbol stays readable: after a move the host-capab
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-move-problem-and-the-anchor-that-never-moves) — "The move problem, and the anchor that never moves".
 > **Story:** [`stories/memory.md`](../stories/memory.md#two-payload-streams-and-the-anchor-that-leaves-the-scope) — "Two payload streams, and the anchor that leaves the scope".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-field-that-keeps-its-own-anchor) — "The field that keeps its own anchor".
 
 ### 4.6 Payload and forwarding anchors retire at different events
 
