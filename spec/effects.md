@@ -1,6 +1,6 @@
 # Zane Effect Model
 
-This document specifies Zane's effect model: `mut`, read-only bindings, effect levels, capability access, structural inference, and the compiler guarantees built on top of those rules.
+This document specifies Zane's effect model: `mut`, read-only bindings, what each kind of verb may write, capability access, and the compiler guarantees built on top of those rules.
 
 > **See also:** [`functions.md`](functions.md) §2 for method declarations. [`concurrency.md`](concurrency.md) §2 and §4 for parallelism and conflict rules. [`error-handling.md`](error-handling.md) §5 for the connection between effects and abortability.
 
@@ -13,7 +13,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every guest derived from one. A `!` call is a write, exactly as an assignment is.
-- **`Four effect levels`.** Whether a verb writes is declared by `mut`. Whether it reads capability-backed state, and whether it is proven to terminate, are derived from its body and the verbs it calls.
+- **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature says which.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
@@ -45,33 +45,23 @@ Parameters other than `this` are read-only (§4.1). A number parameter read in a
 
 ---
 
-## 3. Effect Levels
+## 3. What Each Kind of Verb May Write
 
-Every verb has one of four effect levels: the strongest one required by any operation in its body or by any verb it calls transitively (§5.2). Three facts place it:
+A verb's signature says what it may write. There are three kinds:
 
-- **Writes.** A verb writes state its caller can observe only through `this` in a `mut` method (§4), or, in the root package, through the program's own capabilities (§6.6). Every other verb sits in one of the three levels that write nothing.
-- **Reads.** A verb reads capability-backed state when it makes a `:` call on a capability, however the capability is reached, or calls a verb that does.
-- **Termination.** Every repetition carries a count ([`control-flow.md`](control-flow.md) §3.5), so recursion is the only unbounded path. A verb terminates when no call path from it leads back to it and every callee is known (§5.4).
+| Verb | Called with | May write |
+|---|---|---|
+| `mut` method | `!` | `this` and everything reached through it (§4.2) |
+| Method without `mut` | `:` | nothing its caller can see |
+| Function | a plain call | nothing its caller can see |
 
-### 3.1 Level 1 — Total Pure
+Every verb may also write storage it hosts itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-Total Pure functions depend only on explicit parameters and immutable package constants. They have no side effects and are guaranteed to terminate for all inputs.
+The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
 
-### 3.2 Level 2 — Pure
-
-Pure functions have no side effects but are not proven total. They are still reorderable and parallelizable at runtime, but they are not compile-time evaluated automatically.
-
-### 3.3 Level 3 — Read-Only Impure
-
-Read-Only Impure functions read capability-backed state but do not write.
-
-### 3.4 Level 4 — Write Impure
-
-Write Impure functions write through `this` in a `mut` method, or write capability-backed state.
+Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.2).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
-
-> **Story:** [`stories/effects.md`](../stories/effects.md#four-levels-and-the-line-between-terminating-and-merely-pure) — "Four levels, and the line between terminating and merely pure".
 
 ---
 
@@ -123,23 +113,28 @@ Each verb judges this against its own bindings. Inside a verb, its parameters ar
 
 ---
 
-## 5. Structural Inference
+## 5. What the Compiler Derives
 
 ### 5.1 Subject reachability drives effects
 
 The compiler uses reachability from `this` to determine which state is writable in a `mut` method and readable in any method.
 
-### 5.2 Call-graph propagation
+### 5.2 Capability access and termination
 
-If a function calls another function, its effect classification must be at least as strong as the called function's relevant effects.
+Two facts about a call are not in the signature. The compiler derives them from the verb's body and from every verb it calls:
 
-### 5.3 Guests do not by themselves raise effect level
+- whether the call touches capability-backed state: reads it anywhere, or writes it in the root package (§3)
+- whether the call terminates. Every repetition carries a count ([`control-flow.md`](control-flow.md) §3.5), so recursion is the only unbounded path, and a verb terminates when no call path from it leads back to it.
 
-A function does not leave the pure levels merely because it reads through an `&`. Effect level is determined by the operations performed on the reachable object, not by whether the storage path is hosting or non-hosting.
+The compiler uses these facts only to decide what it may evaluate at compile time or run in parallel ([`concurrency.md`](concurrency.md) §2).
 
-### 5.4 Unknown callees are conservatively classified
+### 5.3 Reading through a guest is a read
 
-If the compiler cannot prove the effect behavior of a callee, it must treat the call as requiring the strongest effect level needed to preserve safety.
+Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through a host or a guest.
+
+### 5.4 Unknown callees are assumed to touch capabilities and not terminate
+
+When the compiler cannot see a callee's body, as with a call through a function value, it assumes the call touches capability-backed state and may not terminate.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -157,7 +152,7 @@ Capabilities may be stored into objects at construction time. This does not crea
 
 ### 6.3 `&` fields can also expose read access paths
 
-Storing an `&` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; the effect level still comes from what the reachable operations do.
+Storing an `&` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; what a verb may write through it still follows from the verb's kind (§3).
 
 ### 6.4 Context objects are explicit, not magical
 
@@ -182,7 +177,7 @@ console Console(@program$console);
 console!print("hello world");
 ```
 
-Writing to the console and changing the runtime's configuration are writes to capability-backed state, so a verb that does either is Write Impure (§3.4).
+Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
@@ -194,13 +189,13 @@ Writing to the console and changing the runtime's configuration are writes to ca
 
 Constructors create values and therefore participate in allocation, but they do not mutate an existing subject.
 
-### 7.2 Allocation and destruction do not by themselves raise effect level
+### 7.2 Allocation and destruction are not writes
 
-Heap allocation and destruction are runtime implementation events, but they are not side effects by themselves for effect classification. A function stays in the pure levels unless it also mutates subject-reachable state or reads/writes through capabilities.
+Heap allocation and destruction are runtime implementation events, not writes in the sense of §4.1. A verb that allocates and destroys only its own storage writes nothing its caller can see.
 
 ### 7.3 Abortability is orthogonal
 
-A function's abort type and effect level are independent. An abortable function may be Total Pure, Read-Only Impure, or Write Impure depending on what else it does.
+A verb's abort type and its kind (§3) are independent: a verb of any kind may be abortable.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#what-deliberately-is-not-an-effect) — "What deliberately is not an effect".
 
@@ -208,9 +203,9 @@ A function's abort type and effect level are independent. An abortable function 
 
 ## 8. Concurrency Implications
 
-### 8.1 Total Pure and Pure work are natural parallelization candidates
+### 8.1 Work that writes nothing is a natural parallelization candidate
 
-Because they do not write mutable state, they can be reordered and parallelized subject to profitability heuristics.
+A call to a method without `mut` or to a function writes nothing its caller can see (§3). Unless it touches capability-backed state (§5.2), the compiler may reorder it and run it in parallel, subject to profitability heuristics.
 
 ### 8.2 Reads compose with concurrent mutation
 
@@ -222,11 +217,14 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 
 ---
 
-## 9. Effect Level Matrix
+## 9. Summary
 
-| Level | Reads capability-backed state | Writes subject-reachable state | May write external state | Compile-time evaluation |
-|---|---|---|---|---|
-| Total Pure | ❌ | ❌ | ❌ | ✅ |
-| Pure | ❌ | ❌ | ❌ | ❌ |
-| Read-Only Impure | ✅ | ❌ | ❌ | ❌ |
-| Write Impure | ⚠️ may | ✅ possible | ⚠️ may | ❌ |
+| Concept | Rule |
+|---|---|
+| `mut` method | Called with `!`; writes `this` and everything reached through it |
+| Method without `mut`, function | Write nothing their caller can see |
+| Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
+| Derived guest | A guest derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
+| Root package | Any verb may write the program's console and runtime |
+| Derived facts | Capability access and termination come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |

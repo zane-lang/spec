@@ -73,7 +73,7 @@ It is the foundation under a large part of the runtime model:
 
 ## 6. Strictness Is the Performance Model
 
-Zane is strict — single hosting, fixed layout, enforced effect levels, mandatory error handling — and the strictness is not a separate concern from its performance. It *is* the performance story.
+Zane is strict — single hosting, fixed layout, read-only parameters, mandatory error handling — and the strictness is not a separate concern from its performance. It *is* the performance story.
 
 High-level expression, on its own, usually costs speed. What buys it back is that the rules preserve enough invariants for the compiler to generate good code without guessing: hosting is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
 

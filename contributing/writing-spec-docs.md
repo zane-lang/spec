@@ -327,7 +327,7 @@ Bad: *The lifetime associated with a guest is prevented from extending beyond th
 
 Use `**bold**` for the first occurrence of a term being defined or for a key constraint.
 Use `` `backtick` `` for all code identifiers, keywords, operators, and type names.
-Do not use *italics* for emphasis. Italics are reserved for the names of other documents or for semantic categories the user is not expected to write (e.g., *Total Pure*).
+Do not use *italics* for emphasis. Italics are reserved for the names of other documents or for semantic categories the user is not expected to write (e.g., *read-only binding*).
 
 ### 6.3 Neutral register
 

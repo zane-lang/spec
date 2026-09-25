@@ -52,7 +52,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.6 structural effect model
 
-- **Meaning:** Effect level follows from `mut`, call structure, and reachable capabilities: `mut` declares writes, and the rest is derived rather than written as effect annotations.
+- **Meaning:** What a verb may write follows from its kind — a `mut` method writes `this`, a method without `mut` or a function writes nothing its caller can see — and capability access follows from call structure, with no effect annotations.
 - **Why this name:** The model is "structural" because effects follow from program structure and reachable state, not from separate effect declarations.
 - **Canonical home:** [`effects.md`](effects.md) §1, §3, and §5
 
