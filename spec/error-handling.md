@@ -163,7 +163,7 @@ When the primary return type is `Unit`, the handler writes `resolve Unit()`. `re
 
 ## 5. Connection to the Effect Model
 
-Abortability is not itself a side effect. A function can be pure and abortable, impure and non-aborting, or both. The effect system and the abort system are analyzed independently and combined by the compiler at the call site.
+Abortability is not itself a side effect. A verb of any kind may be abortable or not, whatever it may write ([`effects.md`](effects.md) §3). The effect system and the abort system are analyzed independently and combined by the compiler at the call site.
 
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failing-is-not-an-effect) — "Failing is not an effect".
 

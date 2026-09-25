@@ -2,7 +2,7 @@
 
 This document specifies Zane's concurrency model: compiler-managed parallelism, the `spawn` keyword, and the safety rules that govern concurrent execution.
 
-> **See also:** [`effects.md`](effects.md) §3 for effect levels. [`lifetimes.md`](lifetimes.md) §2 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
+> **See also:** [`effects.md`](effects.md) §3 for what each kind of verb may write. [`lifetimes.md`](lifetimes.md) §2 for lifetime rules. [`syntax.md`](syntax.md) §4 for `spawn` syntax.
 
 ---
 
@@ -22,7 +22,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 
 ### 2.1 Compile-time reduction
 
-All **Total Pure** functions with statically known inputs are evaluated at compile time. This removes them from the runtime graph entirely.
+A call whose inputs are statically known is evaluated at compile time when it writes nothing its caller can see, touches no capability-backed state, and terminates ([`effects.md`](effects.md) §3, §5.2). This removes it from the runtime graph entirely.
 
 ### 2.2 Parallelization of the residual graph
 
@@ -33,14 +33,9 @@ After compile-time reduction, the compiler analyzes the remaining work for indep
 
 This parallelism is **unobservable**: it must not change output, only timing.
 
-### 2.3 Total Pure and Pure are distinct
+### 2.3 Termination matters only for compile-time reduction
 
-The compiler distinguishes:
-
-- **Total Pure**: no side effects and guaranteed termination, so compile-time evaluation is legal when inputs are known
-- **Pure**: no side effects, but termination is not proven, so the call remains runtime work even though it is still parallelizable
-
-This distinction matters for compile-time reduction, not for the legality of runtime parallelism. See [`effects.md`](effects.md) §3 and §9 for the effect-level definitions and matrix.
+A call that writes nothing and touches no capability-backed state may be parallelized whether or not it is proven to terminate. Only compile-time reduction needs termination: a call that is not proven to terminate stays runtime work. See [`effects.md`](effects.md) §5.2 for how the compiler derives both facts.
 
 ### 2.4 Thread configuration
 
@@ -60,7 +55,7 @@ The runtime uses a work-stealing thread pool. It starts sized to hardware concur
 @program$runtime!setThreadsAuto();
 ```
 
-Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.2), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so a verb that makes one is Write Impure.
+Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.2), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so outside the root package only a `mut` method whose `this` reaches the runtime can make one ([`effects.md`](effects.md) §3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
@@ -142,11 +137,13 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 
 ### 4.2 Concurrent mutation requires a value-typed subject
 
-A spawned call may **mutate** state only through a value-typed subject. Two declarations are therefore unspawnable. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. A verb that mutates any parameter other than `this` is marked **unspawnable** when its body is compiled, and a `spawn` targeting it is a compile-time error; ordinary synchronous calls to it stay legal. Such a parameter is always `&T` ([`functions.md`](functions.md) §2.8), so mutating it is mutation through a reference type, reached by a path the spawn site's subject does not name. The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
+A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every guest derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#two-rules-that-said-less-than-they-meant) — "Two rules that said less than they meant".
 
-A direct consequence is that reference types are never mutated by spawned work, so every concurrent **read** of the reference-typed object graph is safe by construction.
+> **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
+
+A direct consequence is that spawned work never mutates a reference-typed object, so every concurrent **read** of the reference-typed object graph is safe by construction. The program's console and runtime are the one exception: a spawned verb in the root package may write them, and those writes are serialized like any access to capability-backed state (§4.5).
 
 ### 4.3 Single writer per storage location
 
@@ -231,5 +228,5 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 | `spawn` | Starts a concurrent function or method call; blocks only when results are read; illegal on a verb taking a block argument |
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
 | Water tower | A scope exits only after all spawned work completes |
-| Mutation | A spawned mutating call requires a value-typed subject, and a verb that mutates a non-`this` parameter is unspawnable; at most one mutable borrow per storage location, so a spawn in a loop body must take its subject from storage declared in that body; concurrent reads take a coherent snapshot |
+| Mutation | A spawned mutating call requires a value-typed subject, which is the only path by which a call writes caller-visible state, except that a root-package verb may write the program's console and runtime; at most one mutable borrow per storage location, so a spawn in a loop body must take its subject from storage declared in that body; concurrent reads take a coherent snapshot |
 | Snapshot of a boxed value | A value owning boxed members is snapshotted by a walk bounded at the scope's live block count — a depth no correct walk can reach, so exhaustion always means recycled bytes and stays retryable — that validates structure-directing metadata before typed interpretation and validates each handle's complete payload span — offset, size, and alignment, inside a live region; the copy allocates in its destination binding's scope, rejected attempts return all provisional blocks before retrying, and a retry costs O(structure) |
