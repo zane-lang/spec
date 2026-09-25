@@ -272,8 +272,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.34 swallowed parameter
 
-- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter downgrades the caller's symbol to a guest (§3.33), regardless of what the callee does with the value.
-- **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and is left holding only a guest.
+- **Meaning:** A plain reference-type (`T`) parameter, which takes its argument by **hosting access** at the call-site scope. Passing a hosting value to a swallowing parameter spends the caller's symbol (§3.44), regardless of what the callee does with the value.
+- **Why this name:** "Swallow" says the parameter takes the hosting value in; the caller's host goes in and the caller is left with a spent symbol.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.35 relay / consume
@@ -329,6 +329,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** The lifetime a place belongs to, and the only thing the store rule compares. A **symbol** is owned by its declaring block; a **field or element** takes its root symbol's owner rather than having one of its own; a **parameter** (`this` included) and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
 - **Why this name:** It names what a place's lifetime *is owed to* rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's owner tells you everything.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
+
+### 3.44 spent symbol
+
+- **Meaning:** A host symbol after its object has been moved out, whether by a direct move or by passing it to a swallowing parameter. It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new host. A symbol changes between hosting and spent only in its declaration block.
+- **Why this name:** A spent casing has done its job and is empty, and it can be reloaded; the symbol has handed its object on and holds nothing, but keeps the storage for another.
+- **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.6
 
 ---
 

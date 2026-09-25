@@ -93,7 +93,7 @@ This rule keeps containers stable hosting subtrees. Once a value is hosted by a 
 
 ### 1.3 Moves are restricted to the declaration block
 
-A direct host symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Host parameters may be used as move-sources at the top level of the function body. A parameter is not part of the body scope, though: it belongs to the **call-site scope** (§1.5). The caller that supplied a hosting argument has already downgraded to a guest (§1.8); moving the parameter within the body only decides where the value comes to rest.
+A direct host symbol may only be used as a move-source in the exact lexical block where that symbol was declared. Host parameters may be used as move-sources at the top level of the function body. A parameter is not part of the body scope, though: it belongs to the **call-site scope** (§1.5). The caller's symbol that supplied a hosting argument is already spent (§1.8); moving the parameter within the body only decides where the value comes to rest.
 
 ```zane
 engine Engine();
@@ -121,7 +121,7 @@ Unit loadCar(this Boat, car Car) mut {
 }
 ```
 
-This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or the deciding condition first, then perform a single move in the symbol's declaration block.
+This restriction prevents conditional moves and flow-dependent host changes. If control flow is needed, compute the destination or the deciding condition first, then perform a single move in the symbol's declaration block. A store that refills a spent symbol is confined to the same block (§1.6).
 
 The restriction applies only to symbol move-sources. A hosting verb result or `#variant` case form (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
 
@@ -153,7 +153,7 @@ Its **owner** (§1.1) is therefore no block of the body. A parameter stands for 
 
 This is stated for the swallowing mode because that is the only mode where hosting crosses the call boundary at all. An `&T` guest parameter never takes hosting ([`memory.md`](memory.md) §2.9), so nothing about the argument's lifetime changes when one is used; the call-site scope keeps hosting throughout.
 
-This is what makes the passing rule safe. Because the parameter is not part of the body scope, the body draining never destroys the value. The body may read it, move it into a local, or pass it to a nested call; when a local that received it exits, the value is not dropped — the compiler moves it back up to the call site, and the chain repeats outward until the scope that first hosted the value drains. A value passed by hosting access therefore always outlives the call, which is what lets the caller's symbol downgrade to a live guest (§1.8) rather than a dangling one.
+This is what makes the passing rule safe. Because the parameter is not part of the body scope, the body draining never destroys the value. The body may read it, move it into a local, or pass it to a nested call; when a local that received it exits, the value is not dropped — the compiler moves it back up to the call site, and the chain repeats outward until the scope that first hosted the value drains. A value passed by hosting access therefore always outlives the call, so every guest the caller minted before the call stays live (§1.8).
 
 ```zane
 Unit enterMatch(player Player) {
@@ -163,28 +163,47 @@ Unit enterMatch(player Player) {
 }
 ```
 
-`startMatch` puts `player` into the local `island`. Because `player` belongs to the call site, `island` draining does not destroy it; the value lives until `enterMatch`'s own scope drains. Inside `enterMatch`, `player` was passed to `startMatch` by hosting access, so `enterMatch`'s `player` symbol is now a guest to it (§1.8) — and so is the argument symbol in whatever called `enterMatch`.
+`startMatch` puts `player` into the local `island`. Because `player` belongs to the call site, `island` draining does not destroy it; the value lives until `enterMatch`'s own scope drains. Inside `enterMatch`, `player` was passed to `startMatch` by hosting access, so `enterMatch`'s `player` symbol is now spent (§1.8), as is the argument symbol in whatever called `enterMatch`.
 
 For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Binding a plain `T` parameter into `&` storage is a compile-time error, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it, which may outlive the call. The callee's signature therefore signals which mode applies, and so what the caller gives up.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
-### 1.6 Moved symbols downgrade to `&` values and are no longer movable
+### 1.6 A moved symbol is spent until a store refills it
 
-After a direct host symbol is moved, that symbol is downgraded to an `&` value through the anchor (see [`memory.md`](memory.md) §4.5). The symbol remains readable but cannot be moved again.
+After a direct host symbol is moved, it is **spent**: it denotes no object. Reading it, calling a method on it, passing it, minting a guest from it, or moving it again is a compile-time error. A spent symbol keeps its full storage, and a store into it **refills** it: the symbol then hosts the stored object.
 
 ```zane
 engine Engine();
-car Car(engine);         // engine is moved; downgrades to `&`
-engine:inspect();        // legal: engine is now an `&`, still readable
-truck Truck(engine);     // ILLEGAL: engine is an `&`, not a move-source
+car Car(engine);         // engine is moved; engine is spent
+engine:inspect();        // ILLEGAL: engine is spent
+engine = Engine();       // refills engine with a new object
+engine:inspect();        // legal: engine hosts the new object
 ```
 
-This also applies across calls. Passing a hosting value to a plain `T` parameter downgrades the caller's symbol to an `&` (§1.8); the caller can still read the symbol afterward through that downgraded `&`. Zane has no user-visible use-after-move error class for reads.
+Passing a host to a plain `T` parameter is a move, so it spends the caller's symbol too (§1.8). A program that needs to reach a moved object afterwards mints a guest before the move; the guest follows the object to its new host ([`memory.md`](memory.md) §2.8.1):
+
+```zane
+engine Engine();
+view &Engine = engine;
+car Car(engine);         // engine is spent; view follows the object into car
+view:inspect();          // legal
+```
+
+A symbol changes between hosting and spent only in the block where it is declared. A move out of it is confined there by §1.3, and a store that refills it is confined there too, so whether a symbol is spent never depends on which path ran. Overwriting a symbol that still hosts leaves it hosting, so that store is not confined.
+
+```zane
+engine Engine();
+car Car(engine);         // engine is spent
+if(ready()) {
+    engine = Engine();   // ILLEGAL: refills a spent symbol outside its declaration block
+}
+```
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#downgrade-not-poison-why-there-is-no-use-after-move-read) — "Downgrade, not poison: why there is no use-after-move-read".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#a-moved-host-is-spent-not-a-guest) — "A moved host is spent, not a guest".
 
-A hosting verb result (§1.2) has no symbol to downgrade. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
+A hosting verb result (§1.2) has no symbol to spend. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
 ### 1.7 Returned `&` values must be rooted in a parameter
 
@@ -194,7 +213,7 @@ A return is a store into the call-site scope, so §1.1 governs it, and this is w
 &Weapon getWeapon(this Player) => this.weapon
 ```
 
-Both parameter modes are roots, and for the same reason: a parameter belongs to the **call-site scope** (§1.5), never to the body, so it has no owner the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two owners are finally both in view. A swallowing `T` parameter qualifies on exactly these terms — the value it took outlives the call (§1.5) — even though passing to it downgrades the caller (§1.8).
+Both parameter modes are roots, and for the same reason: a parameter belongs to the **call-site scope** (§1.5), never to the body, so it has no owner the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two owners are finally both in view. A swallowing `T` parameter qualifies on exactly these terms — the value it took outlives the call (§1.5) — even though passing to it spends the caller's symbol (§1.8).
 
 A **local** is the case this rule excludes, and it is excluded by lifetime rather than by what may mint a guest. A body block does not outlive the call-site scope, so §1.1 rejects the store outright:
 
@@ -211,40 +230,40 @@ This rule governs a return that **is** an `&T`. A return that *carries* one — 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
 
-### 1.8 Passing a host to a `T` parameter downgrades it to a guest
+### 1.8 Passing a host to a `T` parameter spends it
 
-A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol downgrades to a guest (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` ([`memory.md`](memory.md) §2.9) means the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
+A plain reference-type parameter `T` takes its argument by **hosting access**. Passing a hosting value to such a parameter uses that value as a move-source (§1.2), so the caller's symbol is spent (§1.6) — **whatever the callee does with the value**. The parameter's declared type is the whole contract: `T` means the caller gives up hosting; `&T` ([`memory.md`](memory.md) §2.9) means the caller stays a full host. Nothing in the callee's body changes the outcome the signature already states.
 
 ```zane
 car Car();
-garage!store(car);    // store takes `Car`: car downgrades to a guest
-car:inspect();        // legal: car is still readable through the guest
-truck Truck(car);     // ILLEGAL: car is a guest, not a move-source
+garage!store(car);    // store takes `Car`: car is spent
+car:inspect();        // ILLEGAL: car is spent
+truck Truck(car);     // ILLEGAL: car is spent
 ```
 
-The value outlives the call (§1.5), so the downgraded guest always resolves to a live object. Where the value comes to rest — moved into another parameter's hosting storage, moved into the return, or held in the call-site scope — the guest follows through the anchor ([`memory.md`](memory.md) §4.5).
+The value outlives the call (§1.5), so every guest the caller minted before the call still resolves to a live object. Wherever the value comes to rest — moved into another parameter's hosting storage, moved into the return, or held in the call-site scope — those guests follow it through the anchor ([`memory.md`](memory.md) §4.5).
 
 A verb treats a reference-type host argument in one of three ways, each fixed by its signature:
 
 - it takes a **guest** — declares the parameter `&T`; the caller stays a full host, and the callee may read it, mutate it, return it, or store it. Where a stored guest comes to rest is part of the signature (§1.11), and the caller's argument paths settle whether that store is legal (§1.1).
-- it **relays** the host — declares a swallowing `T` and returns a hosting handle; the caller downgrades to a guest but may bind the return to host the object again (§1.9).
-- it **consumes** the host — declares a swallowing `T` and returns no host; the caller downgrades to a guest, and the value stays wherever the verb placed it.
+- it **relays** the host — declares a swallowing `T` and returns a hosting handle; the caller's symbol is spent, and binding the return hosts the object again (§1.9).
+- it **consumes** the host — declares a swallowing `T` and returns no host; the caller's symbol is spent, and the value stays wherever the verb placed it.
 
-Taking a guest leaves the caller as host; relaying and consuming both downgrade it, differing only in whether a hosting handle is handed back. So to keep or recover hosting, pass `&T` or bind a relayed return:
+Taking a guest leaves the caller as host; relaying and consuming both spend it, differing only in whether a hosting handle is handed back. So to keep or recover hosting, pass `&T` or bind a relayed return:
 
 ```zane
 weapon Weapon();
 weapon2 Weapon = reforge(weapon);  // reforge relays the host; weapon2 hosts the result
 ```
 
-A relay that swallows a value and hands it back uses the return path. Here `startMatch` consumes `player` into `island`, so `player` downgrades to a guest; `enterMatch` then recovers hosting from `returnPlayer`'s return. Reassigning `player` overwrites its hosting slot ([`memory.md`](memory.md) §2.2), so the moved-from symbol is a host again and `return player` is an ordinary move:
+A relay that swallows a value and hands it back uses the return path. Here `startMatch` consumes `player` into `island`, so `player` is spent; `enterMatch` then refills it from `returnPlayer`'s return. The refill is at the top level of the body, the parameter's declaration block (§1.3, §1.6), so `player` hosts again and `return player` is an ordinary move:
 
 ```zane
 Player enterMatch(player Player) {
     island Island = makeIsland();
     playerId Int = player.id;
-    island!startMatch(player);             // startMatch consumes player; player is now a guest
-    player = island!returnPlayer(playerId); // recover hosting; player is a full host again
+    island!startMatch(player);             // startMatch consumes player; player is now spent
+    player = island!returnPlayer(playerId); // refill: player is a full host again
     return player;
 }
 
@@ -255,7 +274,7 @@ Unit main() {
 }
 ```
 
-A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for hosting access, so the caller downgrades all the same. Declaring the parameter `&T` is what keeps the caller as host. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether a passed host downgrades never depends on the callee's body or on the build. The resting-place summary of §1.11 does not reopen this. It records **where** a parameter's value comes to rest, which the caller needs in order to compare owners; it never changes **whether** passing one downgrades the caller, which the declared mode fixes on its own. Using hosting access only to read a value is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it hosts a value or not.
+A verb that only reads its reference argument may still declare it plain `T`: reading does not change the fact that the signature asked for hosting access, so the caller's symbol is spent all the same. Declaring the parameter `&T` is what keeps the caller as host. Because the signature alone decides the caller's state, there is no interprocedural consumption inference: whether passing a host spends the caller's symbol never depends on the callee's body or on the build. The resting-place summary of §1.11 does not reopen this. It records **where** a parameter's value comes to rest, which the caller needs in order to compare owners; it never changes **whether** passing one spends the caller's symbol, which the declared mode fixes on its own. Using hosting access only to read a value is legal. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whether it hosts a value or not.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
@@ -264,14 +283,14 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 
 A return value need not be bound. When a call's result is a reference-type host and the call stands as a bare statement, that host is not destroyed at the end of the statement — it **floats**: it becomes an anonymous host in the enclosing scope and lives until that scope drains, like any object hosted by that scope (§2.1). An ignored value-type result, including `Unit()`, is simply discarded.
 
-Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through whatever guest it already holds (§1.8).
+Binding the return is how the caller takes **hosting privilege**. A bound host may be moved again; a floated one may not — the caller reaches it only through a guest it minted before the call (§1.6).
 
 ```zane
 car2 Car = repair(car);  // bind: car2 is a full host, and may be moved again
 repair(car);             // legal: the returned host floats to the enclosing scope
 ```
 
-Because a floated result is kept rather than dropped, no guest dangles and no hosted object is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable host or is merely reachable through a guest. This makes the caller's intent visible — a bound return is the signal that the caller wanted hosting back. A value-type result has no host or guest; ignoring one simply discards the value.
+Because a floated result is kept rather than dropped, no guest dangles and no hosted object is silently destroyed. What binding controls is not safety but privilege: whether the result returns as a movable host or is reachable only through a guest the caller already held. This makes the caller's intent visible — a bound return is the signal that the caller wanted hosting back. A value-type result has no host or guest; ignoring one simply discards the value.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 
@@ -468,10 +487,10 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
 | Carried guest | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. One naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store. Carrying none skips this comparison only, never the value's own host |
-| Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one downgrades the caller |
-| Post-move downgrade | After a move, the source symbol downgrades to an `&` and remains readable but is no longer a move-source |
+| Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one spends the caller's symbol |
+| Spent symbol | After a move, the source symbol is spent: any use is a compile-time error until a store refills it, and it changes between hosting and spent only in its declaration block |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
-| Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned, caller keeps a guest); passing to a plain `T` downgrades the caller to a guest whatever the body does |
+| Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned); passing to a plain `T` spends the caller's symbol whatever the body does |
 | Return value | A return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous host, while an ignored value-type result is discarded |
 | Destruction | Deterministic: stable hosting identities die explicitly or at scope drain; a disappearing contingent reference host floats anonymously within the same owner scope until that scope drains |
 
