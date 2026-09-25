@@ -13,7 +13,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every guest derived from one. A `!` call is a write, exactly as an assignment is.
-- **`Four effect levels`.** Whether a verb writes is declared by `mut`. Whether it reads capability-backed state, and whether it is proven to terminate, is derived from its body and the verbs it calls.
+- **`Four effect levels`.** Whether a verb writes is declared by `mut`. Whether it reads capability-backed state, and whether it is proven to terminate, are derived from its body and the verbs it calls.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
@@ -117,7 +117,7 @@ Unit f(console &Console) {
 }
 ```
 
-Each verb judges this against its own bindings. Inside a verb, its parameters are read-only. At a call site, a guest the verb stores or returns takes the writability of the argument it came from, the same substitution [`lifetimes.md`](lifetimes.md) §1.11 makes for owners. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only guest when `engine` is a parameter of the caller.
+Each verb judges this against its own bindings. Inside a verb, its parameters are read-only. At a call site, a guest the verb stores or returns takes the writability of the argument it came from, the same substitution that [`lifetimes.md`](lifetimes.md) §1.11 makes for owners. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only guest when `engine` is a parameter of the caller.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
