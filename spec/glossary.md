@@ -93,7 +93,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.4 compiler concept types
 
 - **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Int` and a float literal (`3.0`) `@concepts$Float`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose constructor lowers it.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose implicit constructor it converts through.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor
@@ -338,8 +338,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.45 string view
 
-- **Meaning:** `@primitives$String`: a pointer to a string's first byte in the dynamic region and its length in bytes. The bytes carry no terminator; a consumer that needs one adds it.
-- **Why this name:** It names bytes it does not hold, which is what "view" means in C++'s `string_view` and the slices of other languages.
+- **Meaning:** `@primitives$String`, a reference type whose handle holds a pointer to a string's first byte in the dynamic region and its length in bytes. The bytes carry no terminator; a consumer that needs one adds it.
+- **Why this name:** A pointer and a length, with no terminator, is the shape C++'s `string_view` and other languages' string slices have.
 - **Canonical home:** [`types.md`](types.md) §2.7
 
 ---
