@@ -127,32 +127,34 @@ An implementation may erase only the runtime storage of `Unit` values, including
 
 A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Three storage primitives take a literal directly: `@primitives$Int` and `@primitives$Float`, which are machine-word scalars, and `@primitives$String`, the string view described below. `@primitives$Bool` is a machine-word scalar as well.
 
-Each of the three has exactly one constructor. It is `implicit` and takes the concept type of the matching literal:
+Each of the three has exactly one constructor, and it takes the concept type of the matching literal:
 
 ```zane
-implicit @primitives$Int(value @concepts$Int)
-implicit @primitives$Float(value @concepts$Float)
-implicit @primitives$String(value @concepts$String)
+@primitives$Int(value @concepts$Int)
+@primitives$Float(value @concepts$Float)
+@primitives$String(value @concepts$String)
 ```
 
-The compiler supplies these constructors in `@primitives$`, the home of their destination, so the home-package rule of §4.5 finds them at every coercion site whose destination is the primitive, with no import. A literal passed where a primitive is expected becomes that primitive:
-
-```zane
-@controlflow$repeat(3, { console!print("hi"); });   // 3 becomes @primitives$Int(3)
-```
-
-The argument is a value of a leaf concept type, so it is known at compile time, and the constructor embeds it in the primitive. A literal the primitive cannot represent is a compile-time error: an integer literal greater than the largest `@primitives$Int`, or a float literal whose magnitude exceeds the largest finite `@primitives$Float`.
-
-```zane
-@controlflow$repeat(99999999999999999999, { ... });   // ILLEGAL: out of range for @primitives$Int
-```
-
-A declared type that stores a primitive calls the constructor explicitly in its own body, because the `init{ }` there is not a coercion site (§4.2):
+These constructors are not `implicit`, so a literal never becomes a primitive by itself. A literal is accepted where the parameter's type is the literal's own concept type, or a type with an implicit constructor from that concept type (§4.2). Such a type calls the primitive's constructor inside its own conversion:
 
 ```zane
 type Count = struct { value @primitives$Int; }
 
 implicit Count(literal @concepts$Int) => init{value = @primitives$Int(literal);}
+```
+
+A parameter of a primitive type therefore takes a primitive, or a type with an implicit constructor to it, and never a bare literal. Implicit constructors do not chain (§4.3), so a literal does not pass through such a type on its way to the primitive either:
+
+```zane
+@controlflow$repeat(@primitives$Int(3), { console!print("hi"); });   // legal: the primitive constructed explicitly
+@controlflow$repeat(Int(3), { console!print("hi"); });               // legal: Int converts implicitly to @primitives$Int
+@controlflow$repeat(3, { console!print("hi"); });                    // ILLEGAL: no implicit constructor from @concepts$Int to @primitives$Int
+```
+
+The argument is a value of a leaf concept type, so it is known at compile time, and the constructor embeds it in the primitive. A literal the primitive cannot represent is a compile-time error: an integer literal greater than the largest `@primitives$Int`, or a float literal whose magnitude exceeds the largest finite `@primitives$Float`.
+
+```zane
+big @primitives$Int(99999999999999999999);   // ILLEGAL: out of range for @primitives$Int
 ```
 
 `@primitives$String` is a **string view**: a reference type (§2.1), like `@primitives$List<T>`, whose fixed-size handle holds a pointer to the string's first byte in the dynamic region ([`memory.md`](memory.md) §3.6) and the string's length in bytes. The bytes carry no terminator. The length alone marks where the string ends, and a consumer that needs a terminator adds one itself. `@runtime$Console` takes a view as it is ([`effects.md`](effects.md) §6.6).
@@ -642,7 +644,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
-| Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one `implicit` constructor, from its literal's concept type, which fires at any coercion site whose destination is the primitive; a literal the primitive cannot represent is a compile-time error |
+| Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one constructor, not `implicit`, taking its literal's concept type; a literal the primitive cannot represent is a compile-time error |
 | String view | `@primitives$String`: a reference type whose handle holds a pointer into the dynamic region and a byte length, with no terminator |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |

@@ -93,7 +93,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.4 compiler concept types
 
 - **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Int` and a float literal (`3.0`) `@concepts$Float`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose implicit constructor it converts through.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose constructor takes it.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor

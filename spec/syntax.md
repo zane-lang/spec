@@ -264,12 +264,12 @@ These compiler-provided concept types represent source literals before they are 
 
 A concept type that takes no parameters — `Type`, `@concepts$Int`, `@concepts$Float`, and `@concepts$String` — is a **leaf** concept type. A value of a leaf concept type is a compile-time value wherever it appears, including as an argument to a verb. The entries of an array or map literal are ordinary expressions and may be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no such guarantee; a block argument (§2.12) is not a value at all.
 
-A number or string literal becomes storage through the one constructor of the matching storage primitive, which is `implicit` (see [`types.md`](types.md) §2.7):
+A number or string literal becomes storage through the one constructor of the matching storage primitive (see [`types.md`](types.md) §2.7):
 
 ```zane
-implicit @primitives$Int(value @concepts$Int)
-implicit @primitives$Float(value @concepts$Float)
-implicit @primitives$String(value @concepts$String)
+@primitives$Int(value @concepts$Int)
+@primitives$Float(value @concepts$Float)
+@primitives$String(value @concepts$String)
 ```
 
 > **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
