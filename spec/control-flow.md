@@ -216,7 +216,7 @@ The language provides exactly three control-flow operations:
 
 The two that take arguments take **storage primitives** rather than the fundamental types, and the third takes no arguments at all. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
-A control-flow intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. A type that declares its own conversion is accepted on the same terms.
+A control-flow intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. A literal is not accepted bare, because a primitive has no implicit constructor from a concept type ([`types.md`](types.md) §2.7). A type that declares its own conversion is accepted on the same terms.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
@@ -321,7 +321,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
-| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors `core` declares |
+| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit` |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

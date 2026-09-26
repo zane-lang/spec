@@ -16,7 +16,7 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none.
 - **`Newlines are never structural`.** Every entry and every statement has its own end mark — a `;`, or for a statement ending in `}`, that brace — so line breaks are free everywhere.
-- **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a decimal literal. The two carry different concept types.
+- **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a float literal. The two carry different concept types.
 
 ---
 
@@ -59,7 +59,7 @@ vec vector(int(2));          // ILLEGAL: lowercase names are not types
 A binding, parameter, or field name is lowercase-initial. This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
 
 ```zane
-type Buffer<T Type, n @concepts$Integer> = struct {   // T is a type parameter, n is a number parameter
+type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is a number parameter
     data Array<T, n>;
 }
 ```
@@ -235,15 +235,15 @@ Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and t
 
 A numeric literal is written in decimal digits, in one of two forms, and the form decides its concept type ([`syntax.md`](syntax.md) §2.8):
 
-- An **integer literal** is one or more digits. It carries `@concepts$Integer`.
-- A **decimal literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Decimal`.
+- An **integer literal** is one or more digits. It carries `@concepts$Int`.
+- A **float literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Float`.
 
 A numeric literal consists of digits and at most one `.`, which has at least one digit on each side.
 
 ```zane
-3      // integer literal: @concepts$Integer
-3.1    // decimal literal: @concepts$Decimal
-3.0    // decimal literal: the spelling decides, not the value
+3      // integer literal: @concepts$Int
+3.1    // float literal: @concepts$Float
+3.0    // float literal: the spelling decides, not the value
 3.     // ILLEGAL: a digit must follow the `.`
 .5     // ILLEGAL: a digit must precede the `.`
 ```
@@ -251,6 +251,7 @@ A numeric literal consists of digits and at most one `.`, which has at least one
 Because the spelling decides the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
+> **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage" tells how the concepts took their names.
 
 ---
 
@@ -262,7 +263,7 @@ Because the spelling decides the concept type, `3` and `3.0` are different argum
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
 | Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, after the `as` of a whole-package import alias, or as the left operand of `$` |
-| Number parameter | A lowercase name (`n`) declared `n @concepts$Integer` (in a type's `<>` header or inline in a verb); a compile-time integer, not a type |
+| Number parameter | A lowercase name (`n`) declared `n @concepts$Int` (in a type's `<>` header or inline in a verb); a compile-time integer, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
@@ -272,6 +273,6 @@ Because the spelling decides the concept type, `3` and `3.0` are different argum
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement terminator | `;` terminates every statement in a code block, except a statement ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
-| Integer literal | One or more digits; carries `@concepts$Integer` |
-| Decimal literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Decimal`, whatever its value |
+| Integer literal | One or more digits; carries `@concepts$Int` |
+| Float literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Float`, whatever its value |
 | Statement blocks | A `{ }` may not open a statement; a scoped run of work is a call taking a block argument (`do(block)`) |

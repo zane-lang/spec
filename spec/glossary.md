@@ -86,15 +86,15 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.3 unified type parameters
 
-- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Integer`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
-- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Integer` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
+- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
 
-- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Integer` and a decimal literal (`3.0`) `@concepts$Decimal`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types.
-- **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12
+- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Int` and a float literal (`3.0`) `@concepts$Float`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose constructor takes it.
+- **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor
 
@@ -150,9 +150,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
-### 3.14 `Type` and `@concepts$Integer` parameter concepts
+### 3.14 `Type` and `@concepts$Int` parameter concepts
 
-- **Meaning:** `Type` and `@concepts$Integer` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Integer`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the one an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
@@ -335,6 +335,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A host symbol after its object has been moved out, whether by a direct move or by passing it to a swallowing parameter. It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new host. A symbol changes between hosting and spent only in its declaration block.
 - **Why this name:** A spent casing has done its job and is empty, and it can be reloaded; the symbol has handed its object on and holds nothing, but keeps the storage for another.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.6
+
+### 3.45 string view
+
+- **Meaning:** `@primitives$String`, a reference type whose handle holds a pointer to a string's first byte in the dynamic region and its length in bytes. The bytes carry no terminator; a consumer that needs one adds it.
+- **Why this name:** A pointer and a length, with no terminator, is the shape C++'s `string_view` and other languages' string slices have.
+- **Canonical home:** [`types.md`](types.md) §2.7
 
 ---
 

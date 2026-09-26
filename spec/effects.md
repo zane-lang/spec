@@ -177,6 +177,12 @@ console Console(@program$console);
 console!print("hello world");
 ```
 
+The console's own method writes a string view ([`types.md`](types.md) §2.7). It writes exactly the view's length in bytes, so the bytes need no terminator:
+
+```zane
+@primitives$Unit print(this @runtime$Console, text @primitives$String) mut
+```
+
 Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
