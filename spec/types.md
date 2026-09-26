@@ -22,7 +22,7 @@ Zane keeps data layout and construction separate from behavior.
 
 ### 2.1 The value/reference axis and the `#` modifier
 
-Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: `@primitives$Array<T, n>` is a value type, and `@primitives$List<T>` ([`generics.md`](generics.md) §8) and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: the scalar storage primitives (§2.7) and `@primitives$Array<T, n>` are value types, and `@primitives$List<T>` ([`generics.md`](generics.md) §8) and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -95,9 +95,9 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, built on the primitives' own constructors (§2.7), so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
-`Int` converts only from `@concepts$Integer`, so a decimal literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Decimal`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
+`Int` converts only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Float`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
 
 Because `core` is an ordinary dependency, two of its versions may be linked side by side like any other package's ([`dependencies.md`](dependencies.md) §11), and a project that wants them collapsed opts into remapping (§15 there). No version of `Int` is forced on a program, and none is the language's.
 
@@ -122,6 +122,32 @@ completed Unit = performWork();
 An implementation may erase only the runtime storage of `Unit` values, including fields, array elements, and constructor results. It **MUST** still evaluate every expression that produces a `Unit` value at its original program point and in its original order. Storage erasure never removes side effects or otherwise changes observable evaluation.
 
 > **Story:** [`stories/types.md`](../stories/types.md#unit-exposes-the-package-that-wasnt-one) — "Unit exposes the package that wasn't one".
+
+### 2.7 Scalar storage primitives and literal lowering
+
+The **scalar storage primitives** are `@primitives$Int`, `@primitives$Float`, and `@primitives$Bool`, which are machine-word scalars, and `@primitives$String`, a string view. Every declared type that holds a number, a truth value, or text is built over one of them ([`syntax.md`](syntax.md) §2.7).
+
+A literal reaches storage only through a primitive's own constructor. `@primitives$Int`, `@primitives$Float`, and `@primitives$String` each have exactly one constructor, and it takes the concept type of the matching literal ([`syntax.md`](syntax.md) §2.8):
+
+```zane
+@primitives$Int(value @concepts$Int)
+@primitives$Float(value @concepts$Float)
+@primitives$String(value @concepts$String)
+```
+
+The argument is a value of a leaf concept type, so it is known at compile time, and the constructor embeds it in the primitive. These constructors are not `implicit`. A package that declares a type over a primitive calls the constructor inside its own conversion from the literal's concept type:
+
+```zane
+type Count = struct { value @primitives$Int; }
+
+implicit Count(literal @concepts$Int) => init{value = @primitives$Int(literal);}
+```
+
+`core` declares its conversions into `Int`, `Float`, and `String` this way (§2.6).
+
+`@primitives$String` is a **string view**: a value holding a pointer to the first byte of a string in the dynamic region ([`memory.md`](memory.md) §3.6) and the string's length in bytes. The bytes carry no terminator. The length alone marks where the string ends, so a view may name any contiguous run of bytes, and a consumer that needs a terminator adds one itself. `@runtime$Console` takes a view as it is ([`effects.md`](effects.md) §6.6).
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
 
 ---
 
@@ -358,7 +384,7 @@ car Car(Engine());  // legal: plain host field accepts a temporary
 
 ### 3.10 Type and number parameters
 
-A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `@concepts$Integer` value parameter is passed explicitly as an ordinary argument.
+A constructor for a parameterized type receives its type and number parameters in one of two ways, because a constructor call never carries a `<>` type-argument list. A constructor has no `<>` header: a parameter introduced inline — on a value parameter's type or in a nested type — is inferred from the value arguments; a parameter declared as a `Type` or `@concepts$Int` value parameter is passed explicitly as an ordinary argument.
 
 ```zane
 // inferred: T is introduced inline and deduced from the value arguments
@@ -367,14 +393,14 @@ Vector<T>(x T Type, y T Type) {
 }
 
 // explicit: the type and size are passed as arguments
-Array<T, n>(T Type, n @concepts$Integer) {
+Array<T, n>(T Type, n @concepts$Int) {
     // zero-initialise n elements of type T
 }
 ```
 
 The constructor's name is its return type, so a constructor for a parameterized type names the applied type (`Vector<T>`, `Array<T, n>`); the `<...>` holds bare references to the inline-introduced or explicitly passed parameters (it carries `T`, not `T Type`, so it is not a reintroduced header). The call is always by bare name.
 
-A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); an `@concepts$Integer` value parameter is usable as a number. A constructor is always called by its bare name: `Vector(Int(2), Int(3))` infers `T`, while `Array(Int, 10000)` passes the type and size explicitly.
+A `Type` value parameter is usable as a type inside the body (for example, `T(0)`); an `@concepts$Int` value parameter is usable as a number. A constructor is always called by its bare name: `Vector(Int(2), Int(3))` infers `T`, while `Array(Int, 10000)` passes the type and size explicitly.
 
 > **See also:** [`generics.md`](generics.md) §5 for the complete rules on how types and numbers reach a constructor, and §3 for the unified parameter system.
 
@@ -606,6 +632,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
+| Scalar storage primitive | `@primitives$Int`, `@primitives$Float`, `@primitives$Bool`, or the string view `@primitives$String`; a value type; the first, second, and fourth each have one constructor, taking the matching literal's concept type — the only way a literal reaches storage |
+| String view | `@primitives$String`: a pointer into the dynamic region and a byte length, with no terminator |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
@@ -613,6 +641,6 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
-| `Type` / `@concepts$Integer` constructor parameter | Accepts a type or a compile-time integer; inferred from inline introduction or passed explicitly as a value parameter |
+| `Type` / `@concepts$Int` constructor parameter | Accepts a type or a compile-time integer; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

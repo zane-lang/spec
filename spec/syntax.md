@@ -94,7 +94,7 @@ import math$ as m              // ILLEGAL: nothing is qualified to rename
 ```zane
 type Name = TypeExpr
 alias Name = TypeExpr
-type Name<T Type, n @concepts$Integer> = TypeExpr
+type Name<T Type, n @concepts$Int> = TypeExpr
 type Name = struct { field FieldType; ... }
 type Name = #struct { field FieldType; ... }
 type Name = variant { member FieldType; ... }
@@ -182,7 +182,7 @@ Array<Int, 10000>
 Matrix<Float, 3>
 ```
 
-A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n @concepts$Integer>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
+A type argument fills a type-parameter slot; a number argument fills a number-parameter slot. A type expression is legal in any type position: fields, parameter and return types, aliases, and nested arguments. A constructor call **MUST NOT** carry a `<>` list. Inside a verb's value parameter, a `<>` entry may also *introduce* a type or number parameter by carrying its concept (`param Array<T Type, n @concepts$Int>`); see [`generics.md`](generics.md) §4.4. See [`generics.md`](generics.md) §4 and §5.
 
 A **mould** — a `struct { ... }`, `#struct { ... }`, `variant { ... }`, `#variant { ... }`, `enum [ ... ]`, or `#enum [ ... ]` — **MUST** appear only as the right-hand side of a `type` or `alias` declaration (§1.6); every other type position names a declared type or an instantiation (see [`types.md`](types.md) §5.3). A leading `#` marks a reference type (§2.14).
 
@@ -198,7 +198,7 @@ type Expr = #variant {
 
 ### 2.5 Type and number parameters
 
-A parameterized **type** declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name @concepts$Integer` (a number parameter). `Type` and `@concepts$Integer` are compiler concept types, legal only in parameter positions (§2.11).
+A parameterized **type** declares its parameters in a `<>` header. Each entry is `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types, legal only in parameter positions (§2.11).
 
 ```zane
 type Vector<T Type> = struct {
@@ -206,14 +206,14 @@ type Vector<T Type> = struct {
     y T;
 }
 
-type Buffer<T Type, n @concepts$Integer> = struct {
+type Buffer<T Type, n @concepts$Int> = struct {
     data Array<T, n>;
 }
 ```
 
 Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
 
-A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n @concepts$Integer>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
+A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n @concepts$Int>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
 ### 2.6 Container storage primitives
 
@@ -236,7 +236,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: machine-word scalar types, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the machine-word scalars `@primitives$Int`, `@primitives$Float`, and `@primitives$Bool`, the string view `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
@@ -253,16 +253,26 @@ Every intrinsic namespace except `@program$` is reachable from every package wit
 ### 2.8 Compiler concept types
 
 ```zane
-@concepts$Integer
-@concepts$Decimal
-@concepts$Text
+@concepts$Int
+@concepts$Float
+@concepts$String
 @concepts$Array<T, n>
 @concepts$Map<K, V>
 ```
 
-These compiler-provided concept types represent source literals before they are lowered into storage types: integer and decimal literals ([`lexical.md`](lexical.md) §7), text literals, array literals (§2.9), and map literals (§2.10). `Type` in parameter declarations (§2.11) and `@concepts$Block` (§2.12) are concept types too. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
+These compiler-provided concept types represent source literals before they are lowered into storage types: integer and float literals ([`lexical.md`](lexical.md) §7), string literals, array literals (§2.9), and map literals (§2.10). `Type` in parameter declarations (§2.11) and `@concepts$Block` (§2.12) are concept types too. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
-A concept type that takes no parameters — `Type`, `@concepts$Integer`, `@concepts$Decimal`, and `@concepts$Text` — is a **leaf** concept type. A value of a leaf concept type is a compile-time value wherever it appears, including as an argument to a verb. The entries of an array or map literal are ordinary expressions and may be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no such guarantee; a block argument (§2.12) is not a value at all.
+A concept type that takes no parameters — `Type`, `@concepts$Int`, `@concepts$Float`, and `@concepts$String` — is a **leaf** concept type. A value of a leaf concept type is a compile-time value wherever it appears, including as an argument to a verb. The entries of an array or map literal are ordinary expressions and may be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no such guarantee; a block argument (§2.12) is not a value at all.
+
+A number or string literal becomes storage through the one constructor of the matching storage primitive (see [`types.md`](types.md) §2.7):
+
+```zane
+@primitives$Int(value @concepts$Int)
+@primitives$Float(value @concepts$Float)
+@primitives$String(value @concepts$String)
+```
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
 
 ### 2.9 Array literals
 
@@ -310,7 +320,7 @@ The examples above show the literal alone, with no consumer, because this sectio
 
 ### 2.11 Parameter concept types
 
-The concept type `Type` declares a type parameter, and `@concepts$Integer` — the concept type of an integer literal (§2.8) — declares a number parameter (see [`generics.md`](generics.md) §3). They follow the rule of §2.8: legal in parameter positions, never as storage. A `Type` parameter accepts a type; an `@concepts$Integer` parameter accepts a compile-time integer.
+The concept type `Type` declares a type parameter, and `@concepts$Int` — the concept type of an integer literal (§2.8) — declares a number parameter (see [`generics.md`](generics.md) §3). They follow the rule of §2.8: legal in parameter positions, never as storage. A `Type` parameter accepts a type; an `@concepts$Int` parameter accepts a compile-time integer.
 
 ### 2.12 The block-argument type
 
@@ -383,12 +393,12 @@ ReturnType name(param ParamType, ...) => expr
 ReturnType name(param &ParamType, ...) => expr
 ReturnType?AbortType name(param ParamType, ...) => expr
 ReturnType name(param T Type, ...) { body }
-ReturnType name(param Container<T Type, n @concepts$Integer>, ...) { body }
+ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 ```
 
 A **reference-type** parameter independently selects one of the two passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so `&` is not written on one.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Integer>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Integer` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
@@ -407,7 +417,7 @@ ReturnType name(this SubjectType, param ParamType, ...) mut => expr
 ReturnType name(this SubjectType, param &ParamType, ...) mut => expr
 ReturnType?AbortType name(this SubjectType, param ParamType, ...) => expr
 ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut => expr
-ReturnType name(this SubjectType<T Type, n @concepts$Integer>, param ParamType, ...) { body }
+ReturnType name(this SubjectType<T Type, n @concepts$Int>, param ParamType, ...) { body }
 ```
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
@@ -428,12 +438,12 @@ TypeName(param &ParamType, ...) {
 TypeName(param ParamType, ...) => init{ field = expr; ... }
 TypeName(param &ParamType, ...) => init{ field = expr; ... }
 TypeName<T>(param T Type, ...) { return init{ field = expr; ... } }
-TypeName<T, n>(param Container<T Type, n @concepts$Integer>, ...) { return init{ field = expr; ... } }
+TypeName<T, n>(param Container<T Type, n @concepts$Int>, ...) { return init{ field = expr; ... } }
 ```
 
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
-A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Integer>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Integer` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
+A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
 
 A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
 

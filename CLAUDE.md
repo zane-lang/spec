@@ -131,13 +131,16 @@ canonical home before deciding what a hit means.
 None of these should hit:
 
 ```sh
-grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]|@concepts[$]Number|[a-z] Number\b" spec/
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]|@concepts[$](Number|Integer|Decimal|Text)\b|[a-z] Number\b" spec/
 ```
 
 `@concepts[$]Number` and `[a-z] Number\b` catch the single numeric-literal
 concept and the `Number` parameter concept, both retired when integer and
-decimal literals split (`spec/lexical.md` §7, `spec/generics.md` §3.3). A
-session writing `n Number` from memory is the likely reintroduction. The `$` sits in a
+float literals split (`spec/lexical.md` §7, `spec/generics.md` §3.3). A
+session writing `n Number` from memory is the likely reintroduction.
+`Integer`, `Decimal`, and `Text` are the literal concepts' names before they
+were renamed (`spec/syntax.md` §2.8), so `n @concepts$Integer` is the same
+mistake one release later. The `$` sits in a
 bracket because inside double quotes the shell strips a backslash from `\$`,
 and `grep -E` then reads a bare `$` as an end-of-line anchor.
 
