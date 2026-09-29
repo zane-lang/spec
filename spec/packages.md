@@ -195,7 +195,7 @@ Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`]
 
 ### 6.2 `main` is the entry point
 
-A program starts at `Unit main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly.
+A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly. Its return type may be any type, and the value it returns is discarded. It declares no abort type, because no caller exists to handle an abort.
 
 ```zane
 package app
@@ -228,7 +228,7 @@ Unit main() {
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
 | Root package | The package at the root of the dependency graph being built; the only package that reaches `@program$` |
-| Entry point | `Unit main()`, declared in any source file of the root package, with no parameters |
+| Entry point | `main()`, declared in any source file of the root package, with no parameters and no abort type; any return type, whose value is discarded |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
 | Operators | Always public |
