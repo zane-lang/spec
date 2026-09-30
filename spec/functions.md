@@ -258,7 +258,7 @@ Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mo
 
 The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart.
 
-Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter at the same position either. A function value that does not declare `mut` may be passed where a `mut` function type is expected (§7.2), so it would match both.
+Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter at the same parameter position either. A function value that does not declare `mut` may be passed where a `mut` function type is expected (§7.2), so it would match both.
 
 ```zane
 Unit tune(f Unit[this Engine])

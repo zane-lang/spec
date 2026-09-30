@@ -256,7 +256,7 @@ Writing the intrinsic directly in a verb's own body is therefore not a way to le
 
 The exit carries no value, so the invocation it ends **MUST** have return type `Unit`. Because the caller is decided at the call site, an exiting verb is legal in a `Unit` caller and rejected in a caller that must produce a value; the check belongs to the call, not to the exiting verb's declaration. An invocation with any other return type leaves early with `return`, which carries the value out through blocks the same way (§2.3).
 
-The intrinsic **MUST NOT** appear in a lambda's body, including a block argument written there. A call through a function value names the value, not a body, so the invocation an exit in the lambda would end could not be checked against the rule above. A lambda leaves early with `return`. An exiting verb it calls, such as `guard`, ends the lambda itself, since the lambda is that verb's caller.
+The intrinsic **MUST NOT** appear in a lambda's body, including a block argument written there. A call through a function value names the value, not a body, so the invocation that an exit in the lambda would end could not be checked against the rule above. A lambda leaves early with `return`. An exiting verb it calls, such as `guard`, ends the lambda itself, since the lambda is that verb's caller.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-no-function-type-could-carry) — "An exit no function type could carry".
 
