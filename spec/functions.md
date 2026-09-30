@@ -258,9 +258,17 @@ Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mo
 
 The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart.
 
+Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter at the same position either. A function value that does not declare `mut` may be passed where a `mut` function type is expected (§7.2), so it would match both.
+
+```zane
+Unit tune(f Unit[this Engine])
+Unit tune(f Unit[this Engine] mut)  // ERROR: differs only by `mut` on a function type
+```
+> **Story:** [`stories/functions.md`](../stories/functions.md#a-permission-the-overload-set-cannot-see) — "A permission the overload set cannot see".
+
 ### 4.2 Consequences of the overload identity rules
 
-Declarations that differ only by return type, parameter names, `this`, or `mut` are compile-time conflicts.
+Declarations that differ only by return type, parameter names, `this`, `mut`, or the `mut` of a function-type parameter are compile-time conflicts.
 
 ### 4.3 Valid overloads differ by arity or parameter type
 
@@ -351,7 +359,7 @@ callee(Float(x Int) {
 
 Because a lambda carries its complete type, it is a single value with one exact type. It can therefore be passed to an **overloaded** callee without ambiguity: the lambda fixes its own type, so overload resolution on that callee proceeds with ordinary argument types and no circularity. Its complete written type also allows it to be defined and passed directly in the same expression without depending on surrounding context.
 
-`mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned to a non-`mut` function type:
+`mut` is part of the lambda's written type. A lambda that does not declare `mut` may still be assigned or passed to a `mut` function type — it simply does not use the mutation permission — but a `mut` lambda may not be assigned or passed to a non-`mut` function type:
 
 ```zane
 onEventCallback Unit[this Node, EventData] mut = Unit(this Node, data EventData) {
@@ -392,7 +400,7 @@ Zane does not provide bound method references as a separate feature. Because lam
 
 ### 7.6 Generics are orthogonal to overloading for function values
 
-A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape. Passing a lambda to an overloaded callable is therefore an exact shape match at that parameter position, not a contest the lambda must win.
+A lambda is a single value with one exact type, even when that type is a function type (§7.2). Overload identity is parameter types only (§4.1), so a function type is a single, unique parameter shape. Passing a lambda to an overloaded callable is therefore a shape match at that parameter position, exact up to the `mut` permission of §7.2, not a contest the lambda must win.
 
 The circularity that makes overloaded **names** unusable as values (§7.1) does not apply to a lambda. An overloaded name is a candidate *set* with nothing to collapse it in value position; a lambda is already a single value. That distinction — not genericity — is what lets a self-typed lambda be passed to an overloaded callable while a bare callable name cannot.
 
@@ -456,7 +464,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which is spent, or a temporary, which has no symbol to spend; callee **MUST NOT** bind it into `&` storage |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`) at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |
