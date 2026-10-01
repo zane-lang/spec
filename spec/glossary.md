@@ -355,7 +355,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.2 placeholder-prefix rewriting
 
 - **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
-- **Why this name:** The committed `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
+- **Why this name:** The shipped `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
 ### 4.3 URL identity
