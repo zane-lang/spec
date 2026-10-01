@@ -27,6 +27,7 @@ Each project records dependencies across two committed files: an intent manifest
 
 ```zane
 name app
+kind application
 zane-version v0.4.1
 version-pattern v*.+.++
 
@@ -45,6 +46,7 @@ remaps [
 Top-level fields:
 
 - **`name`** (required): the package's name, in camelCase under [`lexical.md`](lexical.md) §3. Every source file of the project declares it ([`packages.md`](packages.md) §2.2), and compiled symbols carry it (§6.1).
+- **`kind`** (required): `library` or `application`. An application's root package declares `main` ([`packages.md`](packages.md) §6.2). Only a library may be a dependency: a dependency whose manifest says `application` fails dependency resolution with an error naming it (§9).
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -65,7 +67,7 @@ The optional top-level **`remaps`** block is a bare list of the canonical packag
 ```zane
 resolutions [
     key  url                                commit
-    zane https://github.com/zane-lang/zane  9f1c0aa
+    zane https://github.com/zane-lang/compiler  9f1c0aa
     core https://github.com/zane-lang/core  4b7e91c
     math https://github.com/zane-lang/math  a3f8c2d
 ]
@@ -282,6 +284,10 @@ math$vec(...)
 
 When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
 
+Every package in the dependency graph other than the root **MUST** declare `kind library` in its manifest (§2.1). Resolution aborts with an error naming any dependency whose manifest says `application`.
+
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-project-says-what-it-is) — "A project says what it is".
+
 ---
 
 ## 10. Package Dependency Graph
@@ -351,7 +357,7 @@ At a high level, dependency resolution proceeds in this order:
 2. validate the package URLs and version tags for path safety (§7)
 3. resolve each recorded tag and verify its commit against the corresponding lock file (§4), for every dependency whose `from` is not a path
 4. fetch and check out each verified commit into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles or identity-hash collisions (§6.1, §9, §10)
+5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, or a dependency whose `kind` is `application` (§6.1, §9, §10)
 6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for a `source` dependency, use §12.1 instead, and for a path dependency, use §12.2 instead
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
@@ -368,9 +374,11 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
 - This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
+- The `zane` command that reads the manifest is not part of the toolchain the tag pins. It installs the compiler the tag names and runs it, so one installed `zane` command builds projects pinned to any toolchain tag.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-command-outside-the-pin) — "The command outside the pin".
 
 ---
 
