@@ -16,6 +16,7 @@ Zane is case-sensitive, and casing is load-bearing rather than stylistic. The fi
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none.
 - **`Newlines are never structural`.** Every entry and every statement has its own end mark — a `;`, or for a statement ending in `}`, that brace — so line breaks are free everywhere.
+- **`String structure is language-defined`.** Double quotes delimit a string; quote and backslash escapes and interpolation are recognized by the compiler. Other backslash sequences remain text for the consumer (§7.1).
 - **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a float literal. The two carry different concept types.
 
 ---
@@ -231,7 +232,7 @@ Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and t
 
 ---
 
-## 7. Numeric Literals
+## 7. Literals
 
 A numeric literal is written in decimal digits, in one of two forms, and the form decides its concept type ([`syntax.md`](syntax.md) §2.8):
 
@@ -252,6 +253,32 @@ Because the spelling decides the concept type, `3` and `3.0` are different argum
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
 > **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage" tells how the concepts took their names.
+
+### 7.1 String literals and structural escapes
+
+A string literal is enclosed in double quotes and may be empty. Only an unescaped double quote closes it. Inside the delimiters the compiler scans left to right:
+
+| Source form | Literal structure |
+|---|---|
+| `\"` | One literal double quote; it does not close the string |
+| `\\` | One literal backslash; the character following the pair is scanned normally |
+| `\%name` | An interpolation site naming one value identifier |
+| Any other backslash sequence | Literal text, with the backslash preserved |
+
+After `\%`, the scanner consumes the longest value identifier allowed by §4, including a leading private underscore where legal. A missing identifier or a type identifier is a compile-time error. Identifier punctuation is not consumed: `"\%name.txt"` interpolates `name` and then contains the literal text `.txt`. A field or call result must first be bound to a value symbol to use it in interpolation. An unclosed string is a lexical error.
+
+```zane
+"say \"hello\""  // literal fragment: say "hello"
+"\\%name"        // literal fragment: \%name; no interpolation
+"\w+"           // literal fragment: \w+; compiler preserves the backslash
+"\n"            // two literal characters; consumer decides their interpretation
+"\%name!"       // interpolation of name, followed by !
+```
+
+Structural escapes are recognized once. Neither a backslash produced by `\\` nor bytes inserted by interpolation are rescanned for another language escape. The consumer may interpret the remaining text according to its own rules; the compiler does not apply a general text-escape language.
+
+> **See also:** [`syntax.md`](syntax.md) §2.15 for surface forms. [`types.md`](types.md) §2.8 for interpolation resolution, copying, and concept typing.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#literal-structure-and-consumer-interpretation) — "Literal structure and consumer interpretation".
 
 ---
 
@@ -275,4 +302,5 @@ Because the spelling decides the concept type, `3` and `3.0` are different argum
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
 | Integer literal | One or more digits; carries `@concepts$Int` |
 | Float literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Float`, whatever its value |
+| String literal | Double-quoted; `\"` inserts a quote, `\\` inserts a backslash, `\%name` interpolates; other backslash sequences remain consumer-interpreted text |
 | Statement blocks | A `{ }` may not open a statement; a scoped run of work is a call taking a block argument (`do(block)`) |

@@ -12,7 +12,7 @@ Zane eliminates dangling guests by combining single hosting, lexical lifetime ru
 
 - **`Overwritable hosts`.** A reference-type host is directly initialized and may later be overwritten.
 - **`Guests ride on reference types`.** An `&` — a **guest** — is a non-hosting handle to a **reference type** (a `#`-marked type, or a reference-type intrinsic such as `@primitives$List<T>`); a value type has no identity to anchor, so it is shared by copy or scoped borrow, never by a stored guest.
-- **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
+- **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its backing stores and boxed payloads into fresh storage instead of sharing them. That is what lets a value type recurse without ever aliasing (§2.3, §2.10).
 - **`A guest follows its object`.** A new guest may be minted only from a stable place — a bare host symbol, a stable struct-field path, or an `&T` parameter (§2.8). Subscripted paths and variant-case payloads are readable but cannot originate a guest. When the hosted object moves, its guests travel with it; a stable-slot overwrite carries that slot's guests to the replacement, while a disappearing contingent host floats the old object within the same owner (§2.8.1, §4.5).
 - **`Two passing modes`.** A reference-type parameter is written `T` to **swallow** it or `&T` to take a **guest** (§2.9).
 - **`Repointable guests`.** A guest is non-hosting storage that can point at different hosts over time.
@@ -72,11 +72,11 @@ v Vector2 = Vector2(Int(3), Int(4)); // constructs v, v.x, and v.y directly
 w Vector2 = v;                       // copies the existing value in v
 ```
 
-A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns no boxed member (§2.10, §3.3), which is the overwhelmingly common case and the only case that existed before value types could own one. A value that does own a boxed member is copied **deeply**: the copy allocates a block for each boxed payload and copies that payload into it, recursively, so the original and the copy share no storage at all.
+A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns neither a backing store nor a boxed member (§2.10, §3.3). A value that owns out-of-line storage is copied **deeply**: the copy allocates a block for each backing store or boxed payload and copies its live contents into it, recursively, so the original and the copy share no storage at all. This includes `String` and `@primitives$String` ([`types.md`](types.md) §2.7).
 
 Depth is not an extra feature bolted onto the copy; it is what the ordinary meaning of "copied" requires once a value may own out-of-line storage. A value's central promise is that nothing reachable from it is reachable from anywhere else, and a shallow copy would break exactly that by leaving two values naming one payload.
 
-The cost is real and is accepted: copying such a value allocates and takes time proportional to its structure, where copying a flat value is one fixed-size write. Fresh construction does not pay that copy cost merely because its result is nested: `Countdown.more(Countdown.more(Countdown.done(Unit())))` constructs each node once in its final owning payload rather than repeatedly copying each completed prefix.
+The cost is real and is accepted: copying such a value allocates and takes time proportional to its owned bytes and structure, where copying a flat value is one fixed-size write. Fresh construction does not pay that copy cost merely because its result is nested: `Countdown.more(Countdown.more(Countdown.done(Unit())))` constructs each node once in its final owning payload rather than repeatedly copying each completed prefix.
 
 An overwrite evaluates its right-hand side against the destination's **pre-overwrite** state. If the source is the destination itself or any place reached through it, the replacement value **MUST** be completely copied or otherwise materialized before the old occupant is destroyed and its owned blocks are returned. This makes `x = x`, `x = x.child`, and equivalent overlapping forms safe. An implementation may construct a non-place replacement directly in the destination slot when it proves that doing so preserves this order; the semantic rule does not require an observable temporary.
 
@@ -330,7 +330,7 @@ The rule is about **copying**, and both banned field kinds fail it the same way.
 - **Duplicate the object**, minting a second instance with its own identity. Guests tethered to the original would not follow the copy, and "exactly one host" would describe nothing.
 - **Share the object**, so two values reach one host. Hosting would no longer be single, and a value would have become a way to alias.
 
-An `&` field fails on the second directly: copying it would duplicate a tether without passing through the anchor system, putting aliasing inside the one world that is defined by having none. `List`, `String`, and every other dynamically-sized type are reference types, so the same rule and the same reason cover them.
+An `&` field fails on the second directly: copying it would duplicate a tether without passing through the anchor system, putting aliasing inside the one world that is defined by having none. `List` is a reference type and is covered by this restriction. `String` and `@primitives$String` are value types with owned backing stores; variable payload size does not itself imply reference semantics ([`types.md`](types.md) §2.7).
 
 What this closure does **not** bar is **recursion**, and the reason is that a **boxed member** (§3.3) is not a reference-type field: it is out-of-line placement of the member's own declared type, and placement is not language-visible (§3.5). Nothing this rule forbids has entered the value. The recursion rule itself lives in [`adt.md`](adt.md) §4, and the copy that keeps such a value alias-free in §2.3.
 
@@ -359,7 +359,7 @@ type BadRef = struct {
 }
 ```
 
-Downstream enforcement keeps hosting and guest bookkeeping confined to reference types, and — because nothing reachable from a value can be aliased, whether it is stored inline or behind a box — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
+Downstream enforcement keeps hosting and guest bookkeeping confined to reference types, and — because nothing reachable from a value can be aliased, whether it is stored inline, in a backing store, or behind a box — is what lets a value be shared by snapshot and mutated concurrently under [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 > **Story:** [`stories/memory.md`](../stories/memory.md#what-a-copy-is-for-and-the-ban-that-survived-it) — "What a copy is for, and the ban that survived it".
@@ -387,7 +387,7 @@ if(runtimeBool()) {
 
 Each lexical scope owns an **arena** made from two independent allocation regions:
 
-- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles — of dynamically-sized reference types and of boxed members alike — that are materialized in **scope-level** slots.
+- The **fixed-size region** stores materialized value-type slots, statically sized reference-type hosts, and the fixed-size handles — of dynamically-sized types of either kind and of boxed members alike — that are materialized in **scope-level** slots.
 - The **dynamic region** stores the payloads behind those handles: the resizable backing stores of types such as `List` and `String`, and the payloads of boxed members (§3.6). A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed.
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
@@ -443,7 +443,7 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 ### 3.3 Value and reference layout follow declaration order
 
-Fields are laid out in declaration order. A value-type instance is stored inline, except for any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size host slot, so value-type slots and reference-type host slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and hosting semantics, not by requiring a separate indirect allocation.
+Fields are laid out in declaration order. A value-type instance is stored inline, except for owned backing stores (§3.6) and any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size host slot, so value-type slots and reference-type host slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and hosting semantics, not by requiring a separate indirect allocation.
 
 A reference-type instance carries one `u32` backpointer field of anchor metadata (a segmented offset, §4.2) that remains `0` until the instance is first tethered. A dynamically-sized reference type such as `List` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
 
@@ -468,7 +468,7 @@ When a reference-type instance is rehosted, all storage owned by that host is re
 
 Relocation is **recursive**, because a relocated block may itself own dynamic blocks: a boxed payload holds its own boxed members, and a backing store holds its elements' owned storage. Rehosting the root of a recursive structure therefore relocates the whole structure, at a cost proportional to the number of boxed nodes it contains rather than to the root alone. This is the ordinary consequence of the children being owned; a `List` already pays it for its backing store.
 
-When a **value itself** is copied into a slot owned by another scope, it reaches that scope by copying rather than rehosting, and the same recursion applies to its blocks: the copy allocates each boxed payload afresh in the destination scope's dynamic region and copies into it, so the copy owns storage in the scope that holds it and the source keeps its own (§2.3). Nothing forwards and no anchor is involved, because there is no identity to preserve. This governs the value being copied, not every value-typed payload in sight: one that a reference host owns through a boxed member travels with that host under the relocation rule above, because what becomes of a boxed payload follows the enclosing type's kind (§3.3).
+When a **value itself** is copied into a slot owned by another scope, it reaches that scope by copying rather than rehosting, and the same recursion applies to its blocks: the copy allocates each backing store and boxed payload afresh in the destination scope's dynamic region and copies into it, so the copy owns storage in the scope that holds it and the source keeps its own (§2.3). Nothing forwards and no anchor is involved, because there is no identity to preserve. This governs the value being copied, not every value-typed payload in sight: one that a reference host owns through a boxed member travels with that host under the relocation rule above, because what becomes of a boxed payload follows the enclosing type's kind (§3.3).
 
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and tethers resolve identically regardless of physical placement (§4), because a tether follows the host's anchor rather than a fixed address.
 
@@ -477,7 +477,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
-Dynamically-sized reference types such as `List`, `String`, and similar types are represented as fixed-size **handles**. A handle records the payload's segmented offset and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized types such as the reference type `List` and the value type `String` are represented as fixed-size **handles**. A handle records the payload's segmented offset and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -488,7 +488,7 @@ type Inventory = #struct {
 }
 ```
 
-Dynamic block sizes are byte-based rather than element-type-based. A new list starts with a **128-byte block** — equivalent to sixteen 64-bit words — regardless of `T`. Its element capacity is `floor(block_bytes / stride(T))`. If one element does not fit in 128 bytes, the initial block is the smallest power-of-two block that can hold one element. Keeping list sizes to common byte values allows blocks to be reused across lists with different element types and across other dynamically-sized reference types; a boxed payload joins that reuse whenever its exact size and alignment happen to match a freed block.
+Dynamic block sizes are byte-based rather than element-type-based. A new list starts with a **128-byte block** — equivalent to sixteen 64-bit words — regardless of `T`. Its element capacity is `floor(block_bytes / stride(T))`. If one element does not fit in 128 bytes, the initial block is the smallest power-of-two block that can hold one element. Keeping list sizes to common byte values allows blocks to be reused across lists with different element types and across other dynamically-sized types; a boxed payload joins that reuse whenever its exact size and alignment happen to match a freed block.
 
 A list grows according to the following rules:
 
@@ -669,7 +669,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Value type | Mutable in place through a borrowed `mut` subject; storage may also be overwritten freely |
 | Value construction | A non-place value expression constructs directly in its eventual destination, recursively through nested fresh results; only an existing place is copied |
 | Value overwrite | The right-hand side observes the pre-overwrite value; an overlapping replacement is completed before the old value and its owned blocks are destroyed |
-| Value copy | Copies the whole existing value: inline bytes, plus a fresh allocation and recursive copy of every boxed payload the value owns, so two values never share storage |
+| Value copy | Copies the whole existing value: inline bytes, plus a fresh allocation and recursive copy of every backing store and boxed payload the value owns, so two values never share storage |
 | `&` (guest) | Guest-only non-hosting storage; stores one tether, may be repointed, copied by value, and returned, but can never directly host a `T` |
 | Spent host slot | After rehosting, the old hosted bytes cease to be live; a slot declared as `T` is spent and keeps enough storage for a store to refill it |
 | Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
