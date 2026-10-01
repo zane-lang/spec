@@ -284,7 +284,7 @@ math$vec(...)
 
 When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
 
-Every package in the dependency graph other than the root **MUST** have the `kind` `library` (§2.1). Resolution aborts with an error naming any dependency whose manifest says `application`.
+Every package in the dependency graph other than the root **MUST** declare `kind library` in its manifest (§2.1). Resolution aborts with an error naming any dependency whose manifest says `application`.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-project-says-what-it-is) — "A project says what it is".
 
