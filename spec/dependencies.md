@@ -328,7 +328,7 @@ The choice is part of the committed manifest, so every build of the project comp
 
 ### 12.2 Local path dependencies
 
-A `from` value that is a path names a local project directory, relative to the root of the project being built unless it begins with `/`. The toolchain compiles that project's package from its `src/` directory on every build instead of fetching the pinned commit. The path project's own `zane.coda` and `zane-lock.coda` supply its dependencies, which follow the normal pinned fetch rules.
+A `from` value that is a path names a local project directory. A path that begins with `/` is absolute, and any other path is relative to the root of the project being built. The toolchain compiles that project's package from its `src/` directory on every build instead of fetching the pinned commit. The path project's own `zane.coda` and `zane-lock.coda` supply its dependencies, which follow the normal pinned fetch rules.
 
 ```sh
 zane dev geometry ../geometry
