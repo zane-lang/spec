@@ -19,20 +19,22 @@ Zane treats a package's full source URL as its identity and pins every dependenc
 
 ## 2. Manifest and Resolution File
 
-Each project records dependencies across two committed files: an intent manifest, `zane.coda`, and a resolution file, `zane-versions.coda`.
+Each project records dependencies across two committed files: an intent manifest, `zane.coda`, and a lock file, `zane-lock.coda`.
 
 ### 2.1 Manifest (`zane.coda`)
 
 `zane.coda` records what the project wants, by package key:
 
 ```zane
+name app
 zane-version v0.4.1
 version-pattern v*.+.++
 
 deps [
-    key  version
-    core v1.4.0
-    math v6.2.9
+    key      version  from
+    core     v1.4.0   release
+    math     v6.2.9   source
+    geometry v0.3.0   ../geometry
 ]
 
 remaps [
@@ -42,19 +44,23 @@ remaps [
 
 Top-level fields:
 
+- **`name`** (required): the package's name, in camelCase under [`lexical.md`](lexical.md) §3. Every source file of the project declares it ([`packages.md`](packages.md) §2.2), and compiled symbols carry it (§6.1).
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 Each `deps` row records:
 
-- **key**: the local camelCase package name used in source code and as the lookup key into `zane-versions.coda`
+- **key**: the local camelCase package name used in source code and as the lookup key into `zane-lock.coda`
 - **version**: the exact tag requested by the user
+- **from**: where the dependency's code comes from — `release` for the verified prebuilt archive (§5), `source` for local compilation of the verified checkout (§12.1), or a local project path beginning with `./`, `../`, or `/` (§12.2)
+
+The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
 
 The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). A URL listed in `remaps` that matches no package in the resolved dependency graph is a likely stale entry or typo; the toolchain emits an informational warning during dependency resolution (not an error) so the manifest can be kept clean. `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
-### 2.2 Resolution file (`zane-versions.coda`)
+### 2.2 Lock file (`zane-lock.coda`)
 
-`zane-versions.coda` records how each key resolves to a concrete source and commit:
+`zane-lock.coda` records how each key resolves to a concrete source and commit:
 
 ```zane
 resolutions [
@@ -73,15 +79,17 @@ Each row records:
 
 The repository URL is the canonical identity; the key is only a local convenience for naming the package in source and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
-The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-versions.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
+The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
-This pair records a project's **direct** dependencies only; it is not a flattened lock of the whole graph. Transitive dependencies never appear in a project's own `zane-versions.coda` (which is exactly why the [`remaps` block names URLs rather than keys](#21-manifest-zanecoda) — a transitive-only package has no row here to key off). Reproducibility of the *entire* graph still holds, because every dependency commits its **own** `zane.coda` / `zane-versions.coda`, each pinning its own direct dependencies to exact commits, and the resolver walks those committed files recursively (build flow step 5). Since every edge is pinned to an immutable commit, the transitive closure of these per-package lock files reproduces the full graph exactly, with no need to flatten transitive entries into the top-level file. The strict sync rule above therefore governs each package's two files in isolation, at every level of the graph.
+A dependency's `from` value leaves its pinned tag and its `resolutions` row unchanged. A `source` or path dependency keeps both, so setting `from` back to `release` returns to the pinned version.
+
+This pair records a project's **direct** dependencies only; it is not a flattened lock of the whole graph. Transitive dependencies never appear in a project's own `zane-lock.coda` (which is exactly why the [`remaps` block names URLs rather than keys](#21-manifest-zanecoda) — a transitive-only package has no row here to key off). Reproducibility of the *entire* graph still holds, because every dependency commits its **own** `zane.coda` / `zane-lock.coda`, each pinning its own direct dependencies to exact commits, and the resolver walks those committed files recursively (build flow step 5). Since every edge is pinned to an immutable commit, the transitive closure of these per-package lock files reproduces the full graph exactly, with no need to flatten transitive entries into the top-level file. The strict sync rule above therefore governs each package's two files in isolation, at every level of the graph.
 
 ### 2.3 Files are recorded and updated by commands
 
-`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-versions.coda`. The user does not type the commit hash manually in the normal workflow. Remap opt-in is recorded separately in the `remaps` block.
+`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-lock.coda`. The user does not type the commit hash manually in the normal workflow. `zane add` records `release` in the `from` column unless asked for `source` (§12.1). `zane dev key path` sets a dependency's `from` to a local path (§12.2), and `zane dev off key` sets it back to `release`. Remap opt-in is recorded separately in the `remaps` block.
 
-`zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-versions.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
+`zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-lock.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
 If a tag has moved and the user intentionally wants to trust the new commit, the update flow requires an explicit override flag rather than silently refreshing the hash, for example:
 
@@ -90,6 +98,7 @@ zane update math v6.2.9 --accept-tag-move
 ```
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#url-identity-and-the-two-file-manifest) — "URL identity and the two-file manifest" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from" explains why `from` is a manifest column rather than a command flag or a lock-file entry, and why the lock file is named `zane-lock.coda`.
 
 ---
 
@@ -101,11 +110,11 @@ Library repositories contain source and committed metadata:
 math/
   src/
   zane.coda
-  zane-versions.coda
+  zane-lock.coda
   zane-artifacts.coda
 ```
 
-Source files live in the `src/` directory. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
+Source files live in the `src/` directory, and `zane.coda` names the package they form ([`packages.md`](packages.md) §2.1). Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
 
 ### 3.1 Artifact manifest (`zane-artifacts.coda`)
 
@@ -125,13 +134,15 @@ The hashes above illustrate the field format, not actual published archives. Eac
 - **`url`**: an absolute HTTPS download URL chosen by the package author. GitHub Releases is the initial publishing host. The fetcher accepts an ordinary HTTPS file URL and does not infer a host, asset name, or release from the source repository URL.
 - **`sha256`**: exactly 64 lowercase hexadecimal digits containing the SHA-256 digest of the complete compressed archive bytes.
 
-The toolchain **MUST** reject malformed rows, non-HTTPS URLs, invalid hashes, and duplicate target triples. It reads this file only from the verified source commit (§4), including for transitive packages. Consumers do not duplicate the artifact hashes in their own resolution files: their pinned commits already pin each dependency's artifact manifest.
+The toolchain **MUST** reject malformed rows, non-HTTPS URLs, invalid hashes, and duplicate target triples. It reads this file only from the verified source commit (§4), including for transitive packages. Consumers do not duplicate the artifact hashes in their own lock files: their pinned commits already pin each dependency's artifact manifest.
 
 Each asset is a gzip-compressed tar archive containing a `build/` directory with the library's original object files and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
 
 ### 3.2 Publishing a release
 
 The author builds the objects for each supported target from the release's source and dependency pins, packages them, and computes each archive's SHA-256. The author then commits the URLs and hashes in `zane-artifacts.coda`, tags that commit, and uploads the exact archives at the recorded GitHub Release URLs. The release is usable only after its assets are available. Archives contain the objects, not the artifact manifest, so recording their hashes creates no circular hash dependency.
+
+A release **MUST NOT** be published while any `deps` row of the package's manifest has a path `from` (§12.2), because no other machine can fetch the code such a row names.
 
 Changing an archive requires publishing a new package version with a new committed hash. Replacing an asset at an existing URL with different bytes does not update consumers' pins; verification fails (§5).
 
@@ -141,7 +152,7 @@ Changing an archive requires publishing a new package version with a new committ
 
 ## 4. Tag and Commit Verification
 
-When the toolchain fetches a dependency, it resolves the recorded tag to a current commit hash and compares it to the commit recorded in `zane-versions.coda`.
+When the toolchain fetches a dependency, it resolves the recorded tag to a current commit hash and compares it to the commit recorded in `zane-lock.coda`.
 
 - If the hashes match, fetch proceeds.
 - If the hashes differ, the fetch **MUST** abort with a security error.
@@ -180,7 +191,7 @@ Conceptually:
 
 The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the UTF-8 encoding of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
 
-The name after the second `%` is the **library's own** package name — the basename of its source directory ([`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
+The name after the second `%` is the **library's own** package name — the `name` field of its manifest (§2.1, [`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
 
 The first `%` delimits the version, because `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7). The identity hash contains only hexadecimal digits, so the second `%` always follows the first after exactly 16 characters. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
 
@@ -263,7 +274,7 @@ And uses package members through that key:
 math$vec(...)
 ```
 
-`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). Whichever form it takes, the key is what names the dependency: source code never writes version-prefixed package names directly, and the compiler resolves keys through `zane.coda` and `zane-versions.coda`.
+`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). Whichever form it takes, the key is what names the dependency: source code never writes version-prefixed package names directly, and the compiler resolves keys through `zane.coda` and `zane-lock.coda`.
 
 ---
 
@@ -305,13 +316,30 @@ Packages publish a release archive for each supported target triple and record i
 
 ### 12.1 Source compilation is explicit opt-in
 
-The normal workflow consumes the verified release artifact from the `artifacts/<target>/build/` directory. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
+The normal workflow consumes the verified release artifact from the `artifacts/<target>/build/` directory. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead, by recording `source` in the dependency's `from` column (§2.1):
 
 ```sh
 zane add math https://github.com/zane-lang/math v1.0.1 --from-source
 ```
 
-This option skips artifact-manifest lookup and release downloads for the selected package. It can therefore build a target with no published artifact. Its transitive dependencies still follow their normal pinned fetch rules. Locally compiled objects undergo the same symbol rewriting (§6), but their results are cached separately under `build-from-source/<target>/`, with the source commit and compilation toolchain tag and verified commit recorded. A source-build request **MUST NOT** be satisfied by a downloaded prebuilt cache entry. This is an explicit trust/debugging escape hatch, not the default package-distribution model.
+The choice is part of the committed manifest, so every build of the project compiles that dependency from source. A `source` dependency skips artifact-manifest lookup and release downloads for the selected package. It can therefore build a target with no published artifact. Its transitive dependencies still follow their normal pinned fetch rules. Locally compiled objects undergo the same symbol rewriting (§6), but their results are cached separately under `build-from-source/<target>/`, with the source commit and compilation toolchain tag and verified commit recorded. A source-build request **MUST NOT** be satisfied by a downloaded prebuilt cache entry. This is an explicit trust/debugging escape hatch, not the default package-distribution model.
+
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from".
+
+### 12.2 Local path dependencies
+
+A `from` value that is a path names a local project directory, relative to the root of the project being built unless it begins with `/`. The toolchain compiles that project's package from its `src/` directory on every build instead of fetching the pinned commit. The path project's own `zane.coda` and `zane-lock.coda` supply its dependencies, which follow the normal pinned fetch rules.
+
+```sh
+zane dev geometry ../geometry
+```
+
+- The compiled objects undergo the symbol rewriting of §6.1 with the dependency's pinned version tag and the identity hash of its locked URL, so they link exactly where the pinned release would.
+- Path builds never enter the global package cache (§7).
+- A path that does not exist, or holds no `zane.coda`, fails the build with an error naming the key and the path.
+- A package whose manifest has a path `from` cannot be released (§3.2).
+
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from".
 
 ---
 
@@ -319,25 +347,25 @@ This option skips artifact-manifest lookup and release downloads for the selecte
 
 At a high level, dependency resolution proceeds in this order:
 
-1. read local `zane.coda` and `zane-versions.coda`, and abort if their keys are out of sync (§2.2)
+1. read local `zane.coda` and `zane-lock.coda`, and abort if their keys are out of sync (§2.2)
 2. validate the package URLs and version tags for path safety (§7)
-3. resolve each recorded tag and verify its commit against the corresponding resolution file (§4)
+3. resolve each recorded tag and verify its commit against the corresponding lock file (§4), for every dependency whose `from` is not a path
 4. fetch and check out each verified commit into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. recursively read each verified checkout's dependency manifests, apply the same pin checks, and reject cycles or identity-hash collisions (§6.1, §9, §10)
-6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for explicit source compilation, use §12.1 instead
+5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles or identity-hash collisions (§6.1, §9, §10)
+6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for a `source` dependency, use §12.1 instead, and for a path dependency, §12.2
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
 9. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
-10. link the locally compiled program against the selected target's cached objects, using the separate source-built entry where explicitly requested
+10. link the locally compiled program against the selected target's cached objects, using the separate source-built entry for a `source` dependency and the path build for a path dependency
 
 ---
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-versions.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-lock.coda` records the commit that tag must resolve to.
 
 - The tag covers the compiler alone. What the compiler supplies is the grammar and the intrinsics — none of which name a declaration in any package ([`syntax.md`](syntax.md) §2.7, [`control-flow.md`](control-flow.md) §4.1) — so pinning it fixes the language without fixing any library.
-- **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-versions.coda`.
+- **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
 - This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 
@@ -401,4 +429,4 @@ Because libraries ship prebuilt object files (§3, §6), remapping rewrites a ca
 
 ### 15.6 Mechanism reuses pull-time rewriting
 
-Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-versions.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%3f9a1c02b7e4d6a8%math$vec → v6.3.4%3f9a1c02b7e4d6a8%math$vec` — onto the chosen version. Only the version tag changes: every version of one package shares its identity hash, so the rewrite never moves a reference from one package to another.
+Remapping is a link-time pass layered on the symbol rewriting of §6.1. Exact pins are untouched: every required version — direct or transitive — remains recorded in the `zane.coda` / `zane-lock.coda` of the package that depends on it (§2.2) and is fetched. The pass only chooses which cached objects to link and rewrites the displaced references — conceptually `v6.2.9%3f9a1c02b7e4d6a8%math$vec → v6.3.4%3f9a1c02b7e4d6a8%math$vec` — onto the chosen version. Only the version tag changes: every version of one package shares its identity hash, so the rewrite never moves a reference from one package to another.

@@ -1,6 +1,6 @@
 # Zane Packages
 
-This document specifies Zane's package model: directory-defined namespaces and compilation units, package declarations, imports, member access, visibility, and package-scope state. Manifests, fetching, and version pinning live in [`dependencies.md`](dependencies.md).
+This document specifies Zane's package model: project-defined namespaces and compilation units, package declarations, imports, member access, visibility, and package-scope state. Manifests, fetching, and version pinning live in [`dependencies.md`](dependencies.md).
 
 > **See also:** [`lexical.md`](lexical.md) for identifier formation and leading-`_` privacy. [`functions.md`](functions.md) for methods and functions. [`dependencies.md`](dependencies.md) for package identity, manifests, and the dependency graph. [`syntax.md`](syntax.md) §1.5 and §8 for `import`, `package`, and `$` syntax.
 
@@ -8,10 +8,10 @@ This document specifies Zane's package model: directory-defined namespaces and c
 
 ## 1. Overview
 
-Zane packages are directory-defined namespaces and compilation units that contain every type, function, constant, and other package-scope declaration in the language.
+Zane packages are project-defined namespaces and compilation units that contain every type, function, constant, and other package-scope declaration in the language.
 
-- **`Directory identity`.** A package's name is the basename of its directory.
-- **`Declaration check`.** Every source file declares that package name, allowing the compiler to detect a file copied or moved into the wrong directory.
+- **`Manifest identity`.** A package is the source in its project's `src/` directory, named by the `name` field of the project's manifest.
+- **`Declaration check`.** Every source file declares that package name, allowing the compiler to detect a file copied or moved into the wrong project.
 - **`One compilation unit`.** All source files in a package compile together without source-order dependencies.
 - **`The import form is the spelling`.** An import makes members of one package available to one source file, written the way the import writes them — qualified, aliased, or bare.
 - **`One spelling per entity`.** Whatever an import states is the only way that entity may be written in the file.
@@ -23,25 +23,29 @@ Zane packages are directory-defined namespaces and compilation units that contai
 
 ## 2. Package Identity and Compilation
 
-### 2.1 The directory basename is the package name
+### 2.1 The manifest names the package
 
-Every source directory defines one package. The package name is the basename of that directory and uses camelCase under [`lexical.md`](lexical.md) §3.
+Every project defines one package. Its source files are the `.zn` files directly in the project's `src/` directory ([`dependencies.md`](dependencies.md) §3). Its name is the `name` field of the project's `zane.coda` ([`dependencies.md`](dependencies.md) §2.1) and uses camelCase under [`lexical.md`](lexical.md) §3.
 
-For example, every source file directly inside a directory named `httpClient` belongs to the package `httpClient`.
+For example, every source file directly in `src/` of a project whose manifest says `name httpClient` belongs to the package `httpClient`.
+
+A subdirectory of `src/` that contains a `.zn` file is a compile-time error.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#the-manifest-names-the-package) — "The manifest names the package".
 
 ### 2.2 Every source file declares its package
 
-Every source file **MUST** begin with a `package packageName` declaration whose name exactly matches the basename of the file's directory. A missing or mismatched declaration is a compile-time error.
+Every source file **MUST** begin with a `package packageName` declaration whose name exactly matches the `name` field of the project's manifest. A missing or mismatched declaration is a compile-time error.
 
 ```zane
 package httpClient
 ```
 
-The directory determines package membership; the declaration asserts that the file is in the directory its author intended.
+The project's `src/` directory determines package membership; the declaration asserts that the file is in the project its author intended.
 
 ### 2.3 A package is one order-independent compilation unit
 
-All source files directly in one package directory form a single compilation unit. Declaration order within a file and file order within the directory are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
+All source files of one package form a single compilation unit. Declaration order within a file and file order within `src/` are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#the-directory-is-the-package) — "The directory is the package".
 
@@ -215,8 +219,9 @@ Unit main() {
 
 | Concept | Rule |
 |---|---|
-| Package identity | The basename of a source directory |
-| Package declaration | Required in every source file and must match the directory basename |
+| Package identity | The `name` field of the project's manifest |
+| Package source | The `.zn` files directly in the project's `src/`; a subdirectory holding a `.zn` file is an error |
+| Package declaration | Required in every source file and must match the manifest's `name` |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |
