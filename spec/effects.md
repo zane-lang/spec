@@ -177,7 +177,7 @@ console Console(@program$console);
 console!print("hello world");
 ```
 
-The console's own method writes a string view ([`types.md`](types.md) §2.7). It writes exactly the view's length in bytes, so the bytes need no terminator:
+The console's own method borrows a string primitive ([`types.md`](types.md) §2.7). It writes exactly its length in bytes and does not interpret escapes, so the bytes need no terminator:
 
 ```zane
 @primitives$Unit print(this @runtime$Console, text @primitives$String) mut

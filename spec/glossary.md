@@ -92,7 +92,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.4 compiler concept types
 
-- **Meaning:** Compiler-provided types that may appear in parameter positions for literals but not in storage. An integer literal (`3`) carries `@concepts$Int` and a float literal (`3.0`) `@concepts$Float`, by spelling; a value of a parameterless (**leaf**) concept type is compile-time; a `[ ]` array literal carries `@concepts$Array<T, n>`; a `{ }` map literal carries `@concepts$Map<K, V>`.
+- **Meaning:** Compiler-provided types for source constructs, permitted in parameters but not storage. The leaf concepts `Type`, `@concepts$Int`, and `@concepts$Float` are compile-time values. String concepts may contain runtime interpolation; array and map concepts may contain runtime entries. A concept is not necessarily a compile-time value.
 - **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose constructor takes it.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
@@ -336,10 +336,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** A spent casing has done its job and is empty, and it can be reloaded; the symbol has handed its object on and holds nothing, but keeps the storage for another.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.6
 
-### 3.45 string view
+### 3.45 string primitive
 
-- **Meaning:** `@primitives$String`, a reference type whose handle holds a pointer to a string's first byte in the dynamic region and its length in bytes. The bytes carry no terminator; a consumer that needs one adds it.
-- **Why this name:** A pointer and a length, with no terminator, is the shape C++'s `string_view` and other languages' string slices have.
+- **Meaning:** `@primitives$String`, a value type with a fixed-size handle and owned bytes in the dynamic region. Copies own independent bytes; there is no terminator or anchor. `core` declares the value type `String` over it.
+- **Why this name:** It is the compiler-provided storage for string contents, underneath package-defined string types.
 - **Canonical home:** [`types.md`](types.md) §2.7
 
 ---

@@ -191,6 +191,9 @@ The cost is where recursion always puts it, and for a value sum it lands more of
 
 What did not change is that a value sum still cannot carry a `String`. That is not a leftover of the old restriction; it is [the rule that survived it](https://github.com/zane-lang/spec/blob/804631ffa94d4f7df08b38f057e2e4bb95add545/spec/memory.md#210-value-downstream-enforcement-transitive-value-only-field-restriction) — a reference type is made to be moved, not copied, and a value that held one would have to mint a second identity or share a host. So the `#` on `Expr` was never really about its recursion, which is the observation that started this. It carries `intLit String`. It was always going to be a reference type.
 
+> [!NOTE]
+> Superseded: the claim that a String payload cannot be held by a value sum. See "[Text without identity](types.md#text-without-identity)".
+
 ## The payload that does not share the variant's lifetime
 
 The struct/variant symmetry had one more edge than the declaration grammar made obvious. A struct field and a variant case payload are both named members, both selected with a dot, and both may even be boxed by the same placement rule. That made it tempting to let both originate a guest. Their storage lifetimes are not symmetric. A struct field's slot exists for as long as the struct that contains it; a variant payload exists only while its tag is live.

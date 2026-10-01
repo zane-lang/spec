@@ -57,7 +57,7 @@ A `Countdown` is copied whole, so copying one allocates and copies every node be
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
 
-The `#` on `Expr` below is forced by something else entirely: `intLit String` — `String` is a reference type, and a value sum may not carry one (see [`memory.md`](memory.md) §2.10). Its recursion would have been fine either way.
+The `#` on `Expr` below gives the nodes identity and makes them movable rather than copyable. Its `String` payloads are value types and do not require the reference form. Its `op Operation` payload does: `Operation` is a reference type, and a value sum may not carry one (see [`memory.md`](memory.md) §2.10). Recursion itself would be legal in either form.
 
 ```zane
 type QualifiedIdent = struct { packageName String; member String; }

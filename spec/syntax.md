@@ -236,7 +236,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: the machine-word scalars `@primitives$Int`, `@primitives$Float`, and `@primitives$Bool`, the string view `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the machine-word scalars `@primitives$Int`, `@primitives$Float`, and `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
@@ -262,7 +262,7 @@ Every intrinsic namespace except `@program$` is reachable from every package wit
 
 These compiler-provided concept types represent source literals before they are lowered into storage types: integer and float literals ([`lexical.md`](lexical.md) §7), string literals, array literals (§2.9), and map literals (§2.10). `Type` in parameter declarations (§2.11) and `@concepts$Block` (§2.12) are concept types too. Concept types may appear in parameter positions but **MUST NOT** be used as storage types such as local variables, fields, or nested storage positions. Functions and constructors may use concept-typed parameters to accept literals and lower them into the corresponding fundamental type.
 
-A concept type that takes no parameters — `Type`, `@concepts$Int`, `@concepts$Float`, and `@concepts$String` — is a **leaf** concept type. A value of a leaf concept type is a compile-time value wherever it appears, including as an argument to a verb. The entries of an array or map literal are ordinary expressions and may be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no such guarantee; a block argument (§2.12) is not a value at all.
+The **leaf** concept types — `Type`, `@concepts$Int`, and `@concepts$Float` — each represent a single compile-time value wherever they appear, including as an argument to a verb. `@concepts$String` instead carries literal text and optional interpolation ([`types.md`](types.md) §2.8); an interpolation may be a runtime value. The entries of an array or map literal are ordinary expressions and may likewise be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no compile-time guarantee; a block argument (§2.12) is not a value at all.
 
 A number or string literal becomes storage through the one constructor of the matching storage primitive (see [`types.md`](types.md) §2.7):
 
@@ -378,6 +378,25 @@ type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` r
 `node` is written as an ordinary hosting member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
 `&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **guest** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+
+### 2.15 String literal forms
+
+```zane
+"text"
+"text with \"double quotes\""
+"text with \\ and \w"
+"hello \%name"
+"literal \\%name"
+```
+
+A string is delimited by double quotes. `\"`, `\\`, and `\%name` are the language-defined forms inside it. After `\%`, `name` is one lowercase value identifier (§4 of [`lexical.md`](lexical.md)); it ends at the first character not belonging to that identifier. There is no expression-delimited interpolation form, and qualification, member selection, and calls are not part of the interpolation name.
+
+```zane
+"\%"          // ILLEGAL: missing interpolation identifier
+"\%TypeName"  // ILLEGAL: interpolation requires a value identifier
+```
+
+> **See also:** [`lexical.md`](lexical.md) §7.1 for tokenization and structural escapes. [`types.md`](types.md) §2.8 for concept typing and interpolation coercion.
 
 ---
 

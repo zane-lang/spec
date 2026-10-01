@@ -14,6 +14,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
+- **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8).
 - **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, `Unit`, `Array`, and `List` are declared by the `core` package over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
@@ -22,7 +23,7 @@ Zane keeps data layout and construction separate from behavior.
 
 ### 2.1 The value/reference axis and the `#` modifier
 
-Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: `@primitives$Int`, `@primitives$Float`, `@primitives$Bool`, and `@primitives$Array<T, n>` are value types, and `@primitives$List<T>` ([`generics.md`](generics.md) §8), the string view `@primitives$String` (§2.7), and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: `@primitives$Int`, `@primitives$Float`, `@primitives$Bool`, `@primitives$String` (§2.7), and `@primitives$Array<T, n>` are value types, and `@primitives$List<T>` ([`generics.md`](generics.md) §8) and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single hosting and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -83,7 +84,7 @@ type Color = struct { r Int; g Int; b Int; }    // value product type: has r and
 type Shape = variant { dot Dot; line Line; }      // value sum type: has dot or line
 ```
 
-The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field or an `&` field (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields. Both may recurse, their recursive members boxed into the dynamic region (see [`adt.md`](adt.md) §4). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type defined in Zane comes into being only through such a declaration and is always named there (§5.3). An intrinsic type is defined nowhere in Zane — the compiler supplies it — so it carries no `#`: `@primitives$List<T>`, `@primitives$String`, `@runtime$Console`, and `@runtime$Runtime` are reference types without one.
+The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product pair, `variant`/`#variant` the sum pair. A value mould — `struct` or `variant` — declares a value type: transitively value, so it **MUST NOT** contain a reference-type field or an `&` field (§2.2, [`memory.md`](memory.md) §2.10). A reference mould — `#struct` or `#variant` — declares a reference type, which may hold reference-type and `&` fields. Both may recurse, their recursive members boxed into the dynamic region (see [`adt.md`](adt.md) §4). The body syntax is symmetric across these four combinations; the keyword picks product versus sum and the `#` picks value versus reference. Because `#` marks only a mould, a reference type defined in Zane comes into being only through such a declaration and is always named there (§5.3). An intrinsic type is defined nowhere in Zane — the compiler supplies it — so it carries no `#`: `@primitives$List<T>`, `@runtime$Console`, and `@runtime$Runtime` are reference types without one.
 
 > **Story:** [`stories/types.md`](../stories/types.md#confining--to-the-body-forms) — "Confining `#` to the body forms".
 
@@ -95,7 +96,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String` and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no hosting identity and cannot be targeted by an `&` guest. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
 `Int` converts only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Float`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
 
@@ -125,9 +126,9 @@ An implementation may erase only the runtime storage of `Unit` values, including
 
 ### 2.7 Literals and their storage primitives
 
-A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Three storage primitives take a literal directly: `@primitives$Int` and `@primitives$Float`, which are machine-word scalars, and `@primitives$String`, the string view described below. `@primitives$Bool` is a machine-word scalar as well.
+A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Three storage primitives take a literal directly: `@primitives$Int` and `@primitives$Float`, which are machine-word scalars, and `@primitives$String`, the string storage primitive described below. `@primitives$Bool` is a machine-word scalar as well.
 
-Each of the three has exactly one constructor, and it takes the concept type of the matching literal:
+Each of the three has exactly one compiler-provided constructor, and it takes the concept type of the matching literal. Packages may additionally declare conversions to primitives under §4:
 
 ```zane
 @primitives$Int(value @concepts$Int)
@@ -151,15 +152,47 @@ A parameter of a primitive type therefore takes a primitive, or a type with an i
 @controlflow$repeat(3, { console!print("hi"); });                    // ILLEGAL: no implicit constructor from @concepts$Int to @primitives$Int
 ```
 
-The argument is a value of a leaf concept type, so it is known at compile time, and the constructor embeds it in the primitive. A literal the primitive cannot represent is a compile-time error: an integer literal greater than the largest `@primitives$Int`, or a float literal whose magnitude exceeds the largest finite `@primitives$Float`.
+The numeric arguments are values of leaf concept types, so they are known at compile time, and their constructors embed them in the primitives. A string concept may include runtime interpolation (§2.8); its constructor materializes the text when those values are available. A literal the primitive cannot represent is a compile-time error: an integer literal greater than the largest `@primitives$Int`, or a float literal whose magnitude exceeds the largest finite `@primitives$Float`.
 
 ```zane
 big @primitives$Int(99999999999999999999);   // ILLEGAL: out of range for @primitives$Int
 ```
 
-`@primitives$String` is a **string view**: a reference type (§2.1), like `@primitives$List<T>`, whose fixed-size handle holds a pointer to the string's first byte in the dynamic region ([`memory.md`](memory.md) §3.6) and the string's length in bytes. The bytes carry no terminator. The length alone marks where the string ends, and a consumer that needs a terminator adds one itself. `@runtime$Console` takes a view as it is ([`effects.md`](effects.md) §6.6).
+`@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the segmented offset of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no anchor or backpointer and cannot be targeted by an `&` guest.
+
+The compiler-provided string constructor concatenates the string concept's literal fragments and interpolated string values in their written order (§2.8). It does not interpret any remaining backslash sequences. A package constructor accepting the concept may instead interpret its literal fragments, for example as regex syntax or text escapes. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
+
+```zane
+a String("hello");
+b String = a;                // deep copy: a and b own independent bytes
+b = String("goodbye");        // a still contains hello
+bad &String = a;              // ILLEGAL: String is a value type
+type Label = struct { text String; }  // legal: value-type field
+```
+
+> **Story:** [`stories/types.md`](../stories/types.md#text-without-identity) — "Text without identity".
 
 > **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
+
+### 2.8 String concepts and interpolation
+
+A string literal, interpolated or not, carries `@concepts$String`. It is a concept rather than storage and follows the parameter-only rule of [`syntax.md`](syntax.md) §2.8. It contains an ordered sequence of literal text fragments and interpolated `@primitives$String` values. A literal without interpolation is known at compile time; an interpolated concept may contain runtime values. Its fragments and interpolation sites are fixed at compile time, but its completed text need not be.
+
+At each `\%var`, the compiler resolves `var` as a value symbol in the caller's scope. The site requires `@primitives$String` and is a coercion site (§4.2): a primitive string is accepted directly, or exactly one visible applicable implicit constructor converts the source to that primitive. The ordinary source restriction (§4.4), home-package rule (§4.5), ambiguity check, and no-chaining rule (§4.3) all apply. There is no automatic numeric formatting or special conversion from a reference type.
+
+Each interpolation is evaluated once, in written order, when the containing literal is evaluated. The concept captures a copy of the resulting primitive string under [`memory.md`](memory.md) §2.3, not a guest or a deferred lookup of the symbol. Later changes to the source do not change the captured value. Conversions follow the ordinary effect and abort-handling rules. The concept does not require an intermediate concatenated storage string; its consumer may build directly in its eventual destination.
+
+```zane
+name String("enrique");
+console!print("hello \%name");  // String converts to @primitives$String; name stays usable
+raw @primitives$String("enrique");
+console!print("hello \%raw");   // primitive accepted directly
+literal @concepts$String = "hello";  // ILLEGAL: concepts cannot be stored
+```
+
+The language recognizes quote escaping, backslash escaping, and interpolation as literal structure ([`lexical.md`](lexical.md) §7.1). Other backslash sequences remain text for the consumer to interpret. Consumer interpretation does not change the caller's scope or give the consumer access to variables named in the text.
+
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#literal-structure-and-consumer-interpretation) — "Literal structure and consumer interpretation".
 
 ---
 
@@ -480,6 +513,7 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Positional arguments of a named-constructor call `Type.name(...)`
 - Named field entries of a field-constructor call `Type{ field = expr; }`
 - Entries of an enum-map declaration ([`adt.md`](adt.md) §6)
+- String interpolation sites `\%var`, whose destination is `@primitives$String` (§2.8)
 
 Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way, and an enum-map entry fills the slot its declaration's header states. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 
@@ -644,13 +678,14 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
-| Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one constructor, not `implicit`, taking its literal's concept type; a literal the primitive cannot represent is a compile-time error |
-| String view | `@primitives$String`: a reference type whose handle holds a pointer into the dynamic region and a byte length, with no terminator |
+| Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
+| String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator, anchor, or stored guest; copies are deep |
+| String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments and named field-constructor entries — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
 | `Type` / `@concepts$Int` constructor parameter | Accepts a type or a compile-time integer; inferred from inline introduction or passed explicitly as a value parameter |
