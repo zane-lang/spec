@@ -105,7 +105,7 @@ math/
   zane-artifacts.coda
 ```
 
-Source files live under `src/`. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
+Source files live in the `src/` directory. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
 
 ### 3.1 Artifact manifest (`zane-artifacts.coda`)
 
@@ -127,7 +127,7 @@ The hashes above illustrate the field format, not actual published archives. Eac
 
 The toolchain **MUST** reject malformed rows, non-HTTPS URLs, invalid hashes, and duplicate target triples. It reads this file only from the verified source commit (§4), including for transitive packages. Consumers do not duplicate the artifact hashes in their own resolution files: their pinned commits already pin each dependency's artifact manifest.
 
-Each asset is a gzip-compressed tar archive containing a `build/` directory with the library's original object files and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under `build/`. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
+Each asset is a gzip-compressed tar archive containing a `build/` directory with the library's original object files and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
 
 ### 3.2 Publishing a release
 
@@ -226,7 +226,7 @@ The URL and version are mangled into safe path components using Go-style path ma
 
 Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the boundary after the version unambiguous.) The normalized host-and-path string that names the cache directory is also the input to the identity hash of §6.1, so one cache entry and one symbol identity always correspond.
 
-The `src/` subdirectory holds the repository checked out at the verified commit, including its `src/` source tree and artifact manifest. `artifacts/<target>/` holds the verified archive and its extracted original objects under `build/`. `build/<target>/` holds the rewritten objects produced during `zane add`. Target triples used as cache directory names **MUST** be single path-safe components.
+The `src/` subdirectory holds the repository checked out at the verified commit, including its `src/` source tree and artifact manifest. `artifacts/<target>/` holds the verified archive and its extracted original objects under the `build/` directory. `build/<target>/` holds the rewritten objects produced during `zane add`. Target triples used as cache directory names **MUST** be single path-safe components.
 
 A ready prebuilt cache entry records the verified source commit, target triple, archive hash, and toolchain tag and verified commit used for rewriting. Reuse requires all recorded values to match the current request; a different target, changed commit, changed hash, or different rewriting toolchain pin invalidates reuse. Source-built objects are kept separately (§12.1). Re-adding a matching package in another project reuses the ready entry without downloading and rewriting it again. The repository URL, not the asset host, determines the package's cache and symbol identity.
 
@@ -305,7 +305,7 @@ Packages publish a release archive for each supported target triple and record i
 
 ### 12.1 Source compilation is explicit opt-in
 
-The normal workflow consumes the verified release artifact from `artifacts/<target>/build/`. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
+The normal workflow consumes the verified release artifact from the `artifacts/<target>/build/` directory. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead.
 
 ```sh
 zane add math https://github.com/zane-lang/math v1.0.1 --from-source
@@ -326,7 +326,7 @@ At a high level, dependency resolution proceeds in this order:
 5. recursively read each verified checkout's dependency manifests, apply the same pin checks, and reject cycles or identity-hash collisions (§6.1, §9, §10)
 6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for explicit source compilation, use §12.1 instead
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
-8. rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success
+8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
 9. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
 10. link the locally compiled program against the selected target's cached objects, using the separate source-built entry where explicitly requested
 
