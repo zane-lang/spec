@@ -161,6 +161,34 @@ Here `n` in the return position is the number the use site supplied for that par
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
 
+### 3.6 A wrong-kind type argument is reported where the concrete type enters
+
+A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind.
+
+```zane
+type Box<T Type> = #struct {
+    value T;
+}
+Box<T>(value T Type) => init{value;}
+
+a Box(MainCharacter());  // legal: a reference type may hold a reference type
+b Box(Int(3));           // legal: and a value type
+```
+
+Such an error is reported at the **origin** of the type: the first position, following the type down from where it is written into the parameters it fills, at which it is a concrete type rather than a parameter. An explicit type argument is its own origin. An inferred one originates at the value argument it is read from. A parameter that only forwards a type to another parameter is never the origin, so a generic verb that passes `T` on is not where its caller's mistake is reported.
+
+```zane
+type Pair<T Type> = struct {
+    first T;
+}
+Pair<T>(first T Type) => init{first;}
+Pair<T> wrap(x T Type) => Pair(x)
+
+alias Crew = Pair<MainCharacter>   // error at MainCharacter: the explicit argument is the origin
+q Pair(MainCharacter());           // error at MainCharacter(): the inferred T originates there
+r wrap(MainCharacter());           // error at MainCharacter(), not inside wrap
+```
+
 ---
 
 ## 4. Type Expressions (`<>`)
@@ -426,6 +454,8 @@ The following are intentionally not specified in this version:
 | Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
+| Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
+| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; its elements take their root's state, may be guested under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; `core` declares `List` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |
