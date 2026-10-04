@@ -258,7 +258,7 @@ wrong, in both directions:
   belongs before them. The diff is quiet through all of that by design.
 - **Adjusting in passing.** Rewording a merged chapter inside a PR that also
   changes the language. §5 allows adjusting a merged chapter only in a PR whose
-  sole purpose is that adjustment, and only when every claim still stands.
+  sole purpose is that adjustment.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 
