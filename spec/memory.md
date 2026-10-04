@@ -66,6 +66,8 @@ Overwriting a roaming host, a list element, or a variant payload destroys the ol
 
 An `&T` stored *as an element value* is different: rewriting that element merely replaces one guest value with another.
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#settled-overwrites-stay-in-place-and-only-an-escape-relocates) — "Settled overwrites stay in place, and only an escape relocates".
+
 ### 2.3 Value types are copied whole, mutable in place, and freely overwritable
 
 Value types have no identity. A value is mutated in place through a `mut` method whose `this` is a borrow of the value's storage (see [`effects.md`](effects.md) §2.3, [`functions.md`](functions.md) §2.4), and its storage slot may also be reassigned wholesale.
@@ -197,6 +199,7 @@ engine Engine();        // legal: plain host binding; Engine() temporary is mate
 ```
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#contingent-hosts-float-to-their-owner) — "Contingent hosts float to their owner".
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 ### 2.8.1 A roaming host settles where it lands
 
@@ -231,6 +234,7 @@ The `&` fields a roaming value holds may name settled hosts elsewhere; every sto
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#settled-and-roaming-the-host-that-stopped-moving) — "Settled and roaming: the host that stopped moving".
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 ### 2.9 Function parameters: borrow, take, and guest
 
@@ -459,6 +463,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#settled-overwrites-stay-in-place-and-only-an-escape-relocates) — "Settled overwrites stay in place, and only an escape relocates".
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 

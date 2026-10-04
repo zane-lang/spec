@@ -201,6 +201,8 @@ squad Squad(...);
 lead &Player = squad[1];     // legal: the projection ends at an ArrayRef element of a settled root
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
+
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
 
