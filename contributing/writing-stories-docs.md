@@ -70,13 +70,15 @@ Teasers fail in a few recurring ways:
 - **A question.** A heading answers; the chapter does not open by posing a puzzle in its title.
 - **Editorial framing** that grades the decision ("against the hype") instead of naming it. The verdict belongs in the prose, where it can be argued.
 
+Each heading on the left fails the test; the one on the right names the same chapter.
+
 | Teaser | Plain |
 | --- | --- |
 | The keyword that was neither | `and` and `or` become `*` and `+` |
 | The sum that could not contain itself | A value sum may recurse |
-| The word every namespace shares | Everything behind `@` is intrinsic |
+| The word every namespace shares | `intrinsic` names the whole `@` space |
 | The check that fired once, and the move that outran it | An `&` store compares root symbols |
-| Two doors, not a colored box | Two exits instead of a `Result` value |
+| Two doors, not a colored box | Failure as a second exit, not a `Result` value |
 | What does a receiver receive? | Renaming the receiver to the subject |
 
 A plain heading may still have a voice. "No turbofish: passing types as values" and "Doing without `while`" carry a point of view and still name exactly what the chapter settles; the rule is against hiding the subject, not against style.
@@ -156,7 +158,7 @@ This is the discipline that makes the folder a *history* rather than a stale sna
 
 "Append" is meant literally, and it has two teeth:
 
-- **Do not edit a published chapter's prose.** Not to correct a claim the design has since retired, not to soften it, not to reword it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why, naming the superseded claim explicitly — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…". The one thing a published chapter may gain is a supersession note, below.
+- **Do not edit a published chapter's prose.** Not to correct a claim the design has since retired, not to soften it, not to reword it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why, naming the superseded claim explicitly — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…". The one thing a published chapter may gain is a supersession note, and the one line it may change is its heading; both are below.
 - **A new chapter goes after every published one**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
 
 **Mark a retired claim where it stands.** The new chapter tells the story of the retirement, but only to a reader who gets that far. Most readers arrive mid-file, through a spec section's `> **Story:**` pointer (§4.4), and read the chapter it lands on as the current word. So when a change retires a claim a published chapter makes, the same pull request adds a **supersession note** to that chapter, directly after the paragraph that makes the claim:
@@ -172,6 +174,8 @@ The note is a signpost, not a correction. It names the claim and links the chapt
 - **Only a retired claim earns one.** A later chapter that refines, sharpens, or finishes an earlier one without contradicting it needs no note; neither does an example written in syntax that has since changed, since every chapter shows the forms of its own time and a reader expects it to.
 - **A note stays editable.** Unlike the chapter it sits in, a note records no history — it is a signpost to where the present account lives — so it may be corrected, reworded, or removed at any time. When the chapter it points to is superseded in turn, re-point the note at the newest chapter instead of adding a second one, so the reader takes one hop rather than following a chain.
 
+**A heading may be retitled.** A heading is navigation rather than narrative: readers meet it in the outline and in `> **Story:**` pointers, and §2.3 asks it to say plainly what the chapter decided. So a published chapter's heading may be renamed to meet §2.3, on its own, with the chapter's prose and its place in the file unchanged. The new heading has a new anchor, so the same change fixes every inbound link (§4.4): the href and quoted text of each `> **Story:**` pointer in `spec/`, the link in each supersession note, and the href of each sibling or cross-story link. Prose that names the chapter by its old heading keeps that wording, since it is prose; only its href moves.
+
 **The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What must not move is anything that was already merged.
 
 **Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
@@ -180,7 +184,7 @@ The note is a signpost, not a correction. It names the claim and links the chapt
 git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)|^-> (\[!NOTE\]|Superseded:)|^-$"
 ```
 
-The second `grep` drops three kinds of line: the file header, a supersession note's lines (a note may be edited), and removed blank lines (which change no text). A deleted line that itself began with `-`, such as a list item, still shows. Any other output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only, apart from note edits — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
+The second `grep` drops three kinds of line: the file header, a supersession note's lines (a note may be edited), and removed blank lines (which change no text). A deleted line that itself began with `-`, such as a list item, still shows. Any other output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. A retitle shows here too, as its old heading and as each prose line whose only change is a link's `#anchor`; `git diff --word-diff` confirms nothing else on those lines moved. The clean result is additions only, apart from note edits and retitles — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
 
 Additions only is necessary and not sufficient, because a line added *inside* a published chapter is silent too, and the only such line the rule allows is a supersession note. So also look at where the additions land:
 
