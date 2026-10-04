@@ -332,7 +332,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.44 spent symbol
 
-- **Meaning:** A host symbol after its object has been moved out, whether by a direct move or by passing it to a swallowing parameter. It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new host. A symbol changes between hosting and spent only in its declaration block.
+- **Meaning:** A host symbol after its object has been moved out, whether by a direct move or by passing it to a swallowing parameter. It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new host. A symbol changes between hosting and spent only in its declaration block, and a parameter, being read-only, is never refilled.
 - **Why this name:** A spent casing has done its job and is empty, and it can be reloaded; the symbol has handed its object on and holds nothing, but keeps the storage for another.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.6
 

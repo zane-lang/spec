@@ -366,7 +366,7 @@ Vector{x Int; y Int;} {
 }
 ```
 
-Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
+Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand. The entries run in the order written, so an entry that moves a parameter spends it for every entry after it ([`lifetimes.md`](lifetimes.md) §1.6).
 
 ### 3.8 Constructors do not use `mut`
 
@@ -374,7 +374,7 @@ Constructors are not methods. They create new values rather than mutating an exi
 
 ### 3.9 `&` fields require `&` constructor parameters
 
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a stable place that may mint one. A bare host symbol or stable struct-field path may mint a guest; a hosting path containing a subscript or variant-case projection, and any temporary, may not. A contingent read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it, unless the constructor also moves that value into the object it builds ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a stable place that may mint one. A bare host symbol or stable struct-field path may mint a guest; a hosting path containing a subscript or variant-case projection, and any temporary, may not. A contingent read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
 
 ```zane
 package Vehicle
@@ -687,7 +687,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
-| Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
+| Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage unless it also moves it into the object it builds |
 | `Type` / `@concepts$Int` constructor parameter | Accepts a type or a compile-time integer; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

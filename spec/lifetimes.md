@@ -23,7 +23,7 @@ main.peer.io = someIO;  // ILLEGAL: `peer` is an `&`, so `main` does not name
                         //   the tree this would write into
 ```
 
-A **store** is legal only when every host the stored value names — directly, or through an `&` it **carries** (§1.10) — has an owner that outlives the destination's owner. An assignment, a move, a return, and an argument are all stores. There is one comparison in this section, and those are the places it is made.
+A **store** is legal only when every host the stored value names — directly, or through an `&` it **carries** (§1.10) — has an owner that outlives the destination's owner. An assignment, a move, a return, an abort, and an argument are all stores. There is one comparison in this section, and those are the places it is made.
 
 Two clauses complete it. A **block** outlives every block nested within it, and which block owns a symbol is fixed at that symbol's declaration, so nothing later can falsify it. And the hosts **inside** a stored value travel with it, taking the destination's owner — which is why a value may always be stored somewhere its own guests already point into.
 
@@ -165,7 +165,7 @@ Unit enterMatch(player Player) {
 
 `startMatch` puts `player` into the local `island`. Because `player` belongs to the call site, `island` draining does not destroy it; the value lives until `enterMatch`'s own scope drains. Inside `enterMatch`, `player` was passed to `startMatch` by hosting access, so `enterMatch`'s `player` symbol is now spent (§1.8), as is the argument symbol in whatever called `enterMatch`.
 
-For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Binding a plain `T` parameter into `&` storage is a compile-time error, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it, which may outlive the call. The callee's signature therefore signals which mode applies, and so what the caller gives up.
+For `&` fields specifically, the callee must declare the corresponding parameter as `&T` ([`memory.md`](memory.md) §2.9). Binding a plain `T` parameter into `&` storage is a compile-time error, because a swallowed value is hosted at the call site while an `&` field lives with the object that holds it, which may outlive the call. The one exception is a body that also moves the parameter into that same object, so the two travel together (§1.10). The callee's signature therefore signals which mode applies, and so what the caller gives up.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
 
@@ -191,6 +191,8 @@ view:inspect();          // legal
 ```
 
 A symbol changes between hosting and spent only in the block where it is declared. A move out of it is confined there by §1.3, and a store that refills it is confined there too, so whether a symbol is spent never depends on which path ran. Overwriting a symbol that still hosts leaves it hosting, so that store is not confined.
+
+A parameter is never refilled. A store into one is a write, and a parameter is read-only ([`effects.md`](effects.md) §2.4). A body that needs a host back after passing a parameter on moves the parameter into a local first, and refills that (§1.8).
 
 ```zane
 engine Engine();
@@ -226,6 +228,21 @@ A **local** is the case this rule excludes, and it is excluded by lifetime rathe
 
 This rule governs a return that **is** an `&T`. A return that *carries* one — a hosting value with an `&` reachable inside it — is the same store, and §1.1 compares the carried guest's owner on the same reasoning.
 
+An `abort` is a store into the call-site scope exactly as a `return` is: its value lands in the caller's handler rather than in the caller's result ([`error-handling.md`](error-handling.md) §3). So an aborted `&T` is held to the same roots, and so is a guest carried by an aborted value:
+
+```zane
+Int?&Node refused() {
+    value Node();
+    abort value;  // ILLEGAL: value is hosted by the body scope, which drains at the abort
+}
+
+Int?&Node passed(node &Node) {
+    abort node;   // legal: rooted in a parameter
+}
+```
+
+The handler's binder is then what the call's result would have been: it names what the call's argument paths name, and every store of it is compared against those (§1.11).
+
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
@@ -256,15 +273,16 @@ weapon Weapon();
 weapon2 Weapon = reforge(weapon);  // reforge relays the host; weapon2 hosts the result
 ```
 
-A relay that swallows a value and hands it back uses the return path. Here `startMatch` consumes `player` into `island`, so `player` is spent; `enterMatch` then refills it from `returnPlayer`'s return. The refill is at the top level of the body, the parameter's declaration block (§1.3, §1.6), so `player` hosts again and `return player` is an ordinary move:
+A relay that swallows a value and hands it back uses the return path. A parameter is read-only and is never refilled (§1.6), so the body first moves `player` into a local, at the top level of the body (§1.3). `startMatch` consumes `kept` into `island`, so `kept` is spent; `enterMatch` then refills it from `returnPlayer`'s return, in `kept`'s own declaration block, so `kept` hosts again and `return kept` is an ordinary move:
 
 ```zane
 Player enterMatch(player Player) {
+    kept Player = player;                 // the parameter moves into a local
     island Island = makeIsland();
-    playerId Int = player.id;
-    island!startMatch(player);             // startMatch consumes player; player is now spent
-    player = island!returnPlayer(playerId); // refill: player is a full host again
-    return player;
+    playerId Int = kept.id;
+    island!startMatch(kept);              // startMatch consumes kept; kept is now spent
+    kept = island!returnPlayer(playerId); // refill: kept is a full host again
+    return kept;
 }
 
 Unit main() {
@@ -332,10 +350,10 @@ do() {
 A guest naming inside the value is what a constructor's `init{ }` normally settles:
 
 ```zane
-Main(io std$IO) => init{io; terminal = Terminal(io);}
+Main(io std$IO) => init{terminal = Terminal(io); io;}
 ```
 
-`io` moves into the Main's own field, and the guest inside `terminal` follows it there ([`memory.md`](memory.md) §2.8.1). A `Main` may therefore be stored anywhere, while a `Car` holding a guest to storage it does not own may only go where that storage outlives it.
+The entries run in the order written ([`types.md`](types.md) §3.7). The guest inside `terminal` is minted from `io` first; then `io` moves into the Main's own field, and the guest follows it there ([`memory.md`](memory.md) §2.8.1). Written the other way round, `Terminal(io)` would name a spent `io` (§1.6). The guest names a host inside the Main, which is the one case a swallowed parameter may be bound into `&` storage ([`memory.md`](memory.md) §2.9). A `Main` may therefore be stored anywhere, while a `Car` holding a guest to storage it does not own may only go where that storage outlives it.
 
 Everything reachable under one root symbol belongs to one hosting tree ([`memory.md`](memory.md) §2.1), which is why a guest that names inside its own value needs no further comparison: it travels with what it points at and goes when the tree goes. What none of this reaches is a host destroyed while its tree lives on — a separate matter, governed by §2.1 and by [`memory.md`](memory.md) §2.8.1.
 
@@ -429,7 +447,7 @@ A call **substitutes** the path the caller supplied — an argument path, or the
 
 The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
 
-For an `&` field the callee must still declare the corresponding parameter `&T` ([`memory.md`](memory.md) §2.9, [`types.md`](types.md) §3.9). A swallowed value is hosted at the call site, so binding one into `&` storage would leave the field naming storage the caller may move out from under it, and no argument path the caller could supply would fix that.
+For an `&` field the callee must still declare the corresponding parameter `&T` ([`memory.md`](memory.md) §2.9, [`types.md`](types.md) §3.9). A swallowed value is hosted at the call site, so binding one into `&` storage would leave the field naming storage the caller may move out from under it, and no argument path the caller could supply would fix that — unless the body also moves the value under the same root, where the guest names a host inside the object (§1.10).
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-empty-template-the-design-that-would-have-needed-no-signatures) — "The empty template: the design that would have needed no signatures".
@@ -479,16 +497,16 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 
 | Concept | Rule |
 |---|---|
-| Store | Legal only when every host the stored value names — its own, and every host reached through a guest it carries — has an owner that outlives the destination's owner; an assignment, a move, a return, and an argument are all stores |
+| Store | Legal only when every host the stored value names — its own, and every host reached through a guest it carries — has an owner that outlives the destination's owner; an assignment, a move, a return, an abort, and an argument are all stores |
 | Owner | A symbol is owned by its declaring block; a field or element reached by owning steps by its root symbol's owner; a parameter and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A path stepping *through* an `&` has left its root's tree, has no owner, and may be read but never stored into. A block outlives every block nested in it; hosts inside a stored value travel with it and take the destination's owner |
-| `&` return | Returned `&T` must be rooted in a parameter of either mode, `this` included, because a parameter belongs to the call-site scope; a local is not a root |
+| `&` return | Returned or aborted `&T` must be rooted in a parameter of either mode, `this` included, because a parameter belongs to the call-site scope; a local is not a root |
 | Guest assignment | Copies an existing `&T` value, or mints from a stable guest source ([`memory.md`](memory.md) §2.8): a bare host symbol, a struct-field path containing no subscript or variant-case projection, or an `&T` parameter |
 | Move-source | A direct host symbol (local or parameter), a hosting verb result, or a `#variant` case form; not an `&`, a value-type borrow, a field, a container element, or any other access path |
 | Move declaration-block restriction | A direct host symbol may only be moved in the exact lexical block where it was declared; parameters may be moved at the body top level |
 | Move destination scope | Destination host must be in the same or a higher lexical scope than the source host — the store rule read against the moved value's own host |
 | Carried guest | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. One naming a host inside the value satisfies any destination, one naming anything else keeps its owner and is compared at every store. Carrying none skips this comparison only, never the value's own host |
 | Resting place | Where a verb stores a parameter is part of its signature: a path rooted at another parameter or at the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. It records where a parameter lands, never whether passing one spends the caller's symbol |
-| Spent symbol | After a move, the source symbol is spent: any use is a compile-time error until a store refills it, and it changes between hosting and spent only in its declaration block |
+| Spent symbol | After a move, the source symbol is spent: any use is a compile-time error until a store refills it, and it changes between hosting and spent only in its declaration block; a parameter is read-only and is never refilled |
 | Parameter scope | A reference parameter belongs to the call-site scope, not the body, so a value passed by hosting access outlives the call |
 | Hosting argument | A verb takes a **guest** (`&T`, caller keeps it), **relays** the host (`T` and returns a hosting handle, caller may bind it to host again), or **consumes** it (`T`, no host returned); passing to a plain `T` spends the caller's symbol whatever the body does |
 | Return value | A return need not be bound; an unbound reference-type result floats to the enclosing scope as an anonymous host, while an ignored value-type result is discarded |

@@ -303,13 +303,31 @@ do() {
 
 So bare `T` does not mean the same thing in both positions — on an ordinary parameter it swallows, on `this` it guests — because `this` was never a swallow position to begin with. The two kinds diverge here, and visibly: a reference-type `this` is a guest, a value-type `this` is a borrow (mutable under `mut`). They are written identically because in both cases the subject is simply the object the method was called on, and neither kind has a choice to express.
 
-Binding a **swallowed** parameter into `&` storage is illegal, and the parameter mode is what makes that visible at the signature. This is not a guest-source restriction — a bare symbol is a guest source (§2.8) — but a lifetime one, and it is the one case no argument path can rescue. A swallowed value is hosted at the call site, and the caller has already given up its host by passing it ([`lifetimes.md`](lifetimes.md) §1.8), so there is no path the caller could name for the store rule to compare against:
+Binding a **swallowed** parameter into `&` storage is illegal unless the parameter's own value moves into the same object, and the parameter mode is what makes that visible at the signature. This is not a guest-source restriction — a bare symbol is a guest source (§2.8) — but a lifetime one, and it is the one case no argument path can rescue. A swallowed value is hosted at the call site, and the caller has already given up its host by passing it ([`lifetimes.md`](lifetimes.md) §1.8), so there is no path the caller could name for the store rule to compare against:
 
 ```zane
 Unit setEngineSwallowed(this Car, engine Engine) mut {
     this.engine = engine;  // ILLEGAL: a swallowed host may not be bound into `&` storage
     return Unit();
 }
+```
+
+The exception keeps the guest and its host together. When the body also moves the parameter into a hosting place under the same root as the `&` storage — the same `init{ }`, or the same parameter's object ([`lifetimes.md`](lifetimes.md) §1.11) — the guest names a host inside that object and travels with it ([`lifetimes.md`](lifetimes.md) §1.10). The guest is minted first, since `init{ }` runs its entries in the order written ([`types.md`](types.md) §3.7), and follows the value when it moves (§2.8.1):
+
+```zane
+type Mount = #struct {
+    engine &Engine;  // an `&` field
+}
+
+type Kit = #struct {
+    engine Engine;   // a hosting field
+    mount Mount;     // carries an `&Engine`
+}
+
+Mount(engine &Engine) => init{engine;}
+
+Kit(engine Engine) => init{mount = Mount(engine); engine;}  // legal: engine moves into the same Kit
+Mount wrap(engine Engine) => Mount(engine)                   // ILLEGAL: the Mount leaves; engine stays at the call site
 ```
 
 Returning one as `&T` is a different matter and is legal ([`lifetimes.md`](lifetimes.md) §1.7): the returned guest lands in the caller, which is the very scope the swallowed value belongs to, so §1.1 compares the two directly at the call site.
@@ -679,7 +697,7 @@ A single global free stack and frontier require synchronization under concurrent
 | Borrow | Non-hosting, non-escaping access to a caller's value storage for the duration of a call; no anchor, not storable, not returnable, not a move-source |
 | Value-type parameter | Always a read-only borrow; caller need not supply a place; copied only when the parameter — an existing place — is itself bound into a fresh slot (assignment, declaration, field or return store), never merely by being passed |
 | Reference-type parameter | `T` swallows (hosting access; passing a host spends the caller's symbol whatever the body does — see [`lifetimes.md`](lifetimes.md) §1.8); `&T` takes a guest, and leaves the caller a full host |
-| Swallowed parameter into `&` storage | Illegal — not for want of a guest source but because the swallowed value is hosted at the call site while an `&` field may outlive the call; returning it as `&T` is legal |
+| Swallowed parameter into `&` storage | Illegal — not for want of a guest source but because the swallowed value is hosted at the call site while an `&` field may outlive the call — unless the body also moves the value under the same root; returning it as `&T` is legal |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Value-downstream enforcement | Value types may contain only value types, value-type primitives among them, transitively — never a reference-type or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or scoped borrow, never by a stored `&` |

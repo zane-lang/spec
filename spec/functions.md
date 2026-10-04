@@ -123,7 +123,7 @@ A reference-type method parameter selects one of two passing modes ([`memory.md`
 - A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
 - A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
 
-A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
+A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call — unless the body also moves it into the same object ([`memory.md`](memory.md) §2.9). A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
 
 ```zane
 type Car = #struct {
@@ -461,7 +461,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller supplies a stable guest source or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
 | Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any guest derived from one |
-| Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which is spent, or a temporary, which has no symbol to spend; callee **MUST NOT** bind it into `&` storage |
+| Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which is spent, or a temporary, which has no symbol to spend; callee **MUST NOT** bind it into `&` storage unless it also moves it into the same object |
 | Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
