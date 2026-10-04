@@ -19,7 +19,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
-- **`Two container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T`, the single fixed-size container primitive and a value type; `@primitives$List<T>` is its dynamically sized counterpart and a reference type. `core` declares `Array` and `List` over them.
+- **`Three container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type; `@primitives$List<T>` is the dynamically sized counterpart and a reference type. `core` declares `Array`, `ArrayRef`, and `List` over them.
 
 ---
 
@@ -379,6 +379,21 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 `@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. It is a reference type, so no value type may contain one ([`memory.md`](memory.md) §2.10). Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. `core` declares `List<T>` over it as a `#` reference type, since that declaration is written in Zane.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-container-whose-size-the-type-cannot-carry) — "A container whose size the type cannot carry".
+
+### 8.4 ArrayRef is the fixed-size reference primitive
+
+`@primitives$ArrayRef<T, n>` is a reference-type storage primitive: `n` contiguous elements of type `T`, laid out as `@primitives$Array<T, n>` is. `T` may be a value type or a reference type, since a reference type may contain either ([`memory.md`](memory.md) §2.10). `core` declares `ArrayRef<T, n>` over it as a `#` reference type. Its size is statically known, so it lives inline in the fixed-size region like any other statically sized host ([`memory.md`](memory.md) §3.5).
+
+An `ArrayRef` is built from an array literal, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
+
+```zane
+squad ArrayRef([Enemy(Int(1)), Enemy(Int(2)), Enemy(Int(3))]);
+grid ArrayRef.fill(100, ^Enemy(i Int) => Enemy(i));
+```
+
+Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be guested. An element is overwritten in place and is never moved out, under either kind of root.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 ---
 

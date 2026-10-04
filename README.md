@@ -38,7 +38,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/types.md`](spec/types.md) | Fundamental types, value/reference types, fields, constructors, implicit conversions, and `type`/`alias` declarations |
 | [`spec/adt.md`](spec/adt.md) | Enums, variants, the struct/variant symmetry, pattern matching, `match`, and enum maps |
 | [`spec/functions.md`](spec/functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
-| [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array` and `List` container primitives |
+| [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array`, `ArrayRef`, and `List` container primitives |
 | [`spec/memory.md`](spec/memory.md) | Hosting, settled and roaming hosts, guests, and arena layout |
 | [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, and capability wiring |

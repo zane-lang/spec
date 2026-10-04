@@ -189,6 +189,18 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
+A subscript expression denotes the place its body projects, so it is a guest source exactly when that place is ([`memory.md`](memory.md) §2.8). Following the body through every subscript and field it uses ends at one intrinsic projection, which decides: an `@primitives$ArrayRef` element takes its root's state and may be guested when that root is settled, an `@primitives$List` element is always roaming, and an `@primitives$Array` element is a value.
+
+```zane
+type Squad = #struct {
+    _members ArrayRef<Player, 4>;
+}
+(this Squad)[index Int] => this._members[index]
+
+squad Squad(...);
+lead &Player = squad[1];     // legal: the projection ends at an ArrayRef element of a settled root
+```
+
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
 

@@ -146,7 +146,7 @@ EnumName.property FieldType {
 
 ### 2.1 Fundamental types
 
-`Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `List<T>`
+`Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`
 
 These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
@@ -228,10 +228,11 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 ```zane
 @primitives$Array<T, n>
+@primitives$ArrayRef<T, n>
 @primitives$List<T>
 ```
 
-`@primitives$Array<T, n>` is `n` contiguous elements of type `T`, a value type; `@primitives$List<T>` is its dynamically sized counterpart, a reference type. `core` declares `Array<T, n>` and `List<T>` over them (§2.1), and source writes those names. Both parameters of `Array` may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
+`@primitives$Array<T, n>` is `n` contiguous elements of type `T`, a value type; `@primitives$ArrayRef<T, n>` is the same layout as a reference type; `@primitives$List<T>` is their dynamically sized counterpart, a reference type. `core` declares `Array<T, n>`, `ArrayRef<T, n>`, and `List<T>` over them (§2.1), and source writes those names. Both parameters of `Array` may be concrete (`Array<Int, 10000>`), forwarded from an enclosing scope (`Array<T, n>`), or inferred by a constructor from a literal (`Array([Int(1), Int(2), Int(3)])`). See [`generics.md`](generics.md) §8.
 
 ### 2.7 Intrinsic namespaces
 

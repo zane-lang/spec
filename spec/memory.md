@@ -34,7 +34,7 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 - A **settled** host may be guested (§2.8). It never moves: no expression takes its object out of it.
 - A **roaming** host may be moved (see [`lifetimes.md`](lifetimes.md) §1.2). Nothing guests it, or anything inside it.
 
-A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming host **settles** when it moves into a settled place, and a settled host never becomes roaming.
+A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming host **settles** when it moves into a settled place, and a settled host never becomes roaming.
 
 ```zane
 spare ^Engine = Engine(Int(1));  // roaming
@@ -54,7 +54,7 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a settled host destroys the old occupant and writes the replacement at the same address. This holds at every depth a guest can reach: each boxed member reached from the host through struct fields (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing guests into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A guest to the host, or to any field of it, inline or boxed, therefore observes the replacement.
+Overwriting a settled host destroys the old occupant and writes the replacement at the same address. This holds at every depth a guest can reach: each boxed member reached from the host through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing guests into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A guest to the host, or to any field of it, inline or boxed, therefore observes the replacement.
 
 ```zane
 car Car(...);
@@ -144,13 +144,13 @@ The following are place expressions:
 Only a **settled** place may mint a new guest. A new `&` value may be minted from:
 
 - a **bare settled symbol** — a local or a package constant
-- a struct-field access whose path from a settled root contains no subscript or variant-case projection, such as `car.engine`
-- an `&T` parameter, or a field path from one
+- a path from a settled root that passes only through struct fields and `ArrayRef` elements, such as `car.engine` or `squad[2].weapon`
+- an `&T` parameter, or such a path from one
 
 Four things are rejected:
 
 - A roaming host, and any place reached from one, is never a guest source. Nothing guests a host that may still move.
-- A path containing `[]` anywhere is never a guest source, even when the final expression is a field access. `players[100]` and `players[100].weapon` are both excluded.
+- A subscript is a guest source only when the place it projects is an `ArrayRef` element ([`functions.md`](functions.md) §2.9). A list element is roaming, so `players[100]` and `players[100].weapon` on a `List` are both excluded.
 - A variant case payload is never a guest source, and neither is a path that continues through one.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
@@ -170,10 +170,15 @@ t &Car = spare;          // ILLEGAL: spare is roaming
 ```
 
 ```zane
-weapon &Weapon = players[100].weapon;  // ILLEGAL: the path crosses []
+weapon &Weapon = players[100].weapon;  // ILLEGAL: players is a List; its elements are roaming
 ```
 
-For an element or a case payload, keep the guest at the settled container and perform the access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
+```zane
+squad ArrayRef([Player(), Player()]);
+lead &Weapon = squad[1].weapon;        // legal: squad is settled, and its elements are too
+```
+
+For a list element or a case payload, keep the guest at the settled container and perform the access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
 
 Reading an `&T` value that is already stored behind such an access remains legal:
 
@@ -210,10 +215,10 @@ garage.car = make(Int(2));     // settles in garage.car when garage is settled
 
 What a host contains takes a state from where it sits:
 
-- **Fixed storage inherits its root's state.** A struct's fields are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction. An array is a value type ([`generics.md`](generics.md) §8.1), so it holds no host at all (§2.10).
+- **Fixed storage inherits its root's state.** A struct's fields and an `ArrayRef`'s elements are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction ([`generics.md`](generics.md) §8.4). An `Array` is a value type ([`generics.md`](generics.md) §8.1), so it holds no host at all (§2.10).
 - **Dynamic storage is always roaming.** A list's elements and a variant's payload come and go while their owner lives, so they are roaming even under a settled root. A settled list may be guested as a whole; its elements may not.
 
-A field is never declared roaming. A field of a **roaming** root may be moved out, because nothing can observe the root; the root is then partly spent, tracked in its declaration block as a spent symbol is ([`lifetimes.md`](lifetimes.md) §1.6). A field of a settled root is overwritten, never moved out (§2.2).
+A field is never declared roaming. An `ArrayRef` element is never moved out, under either kind of root: its index is a runtime value, so which element is spent could not be tracked. A field of a **roaming** root may be moved out, because nothing can observe the root; the root is then partly spent, tracked in its declaration block as a spent symbol is ([`lifetimes.md`](lifetimes.md) §1.6). A field of a settled root is overwritten, never moved out (§2.2).
 
 A roaming value cannot hold a guest into its own insides, because nothing inside a roaming host is guestable. An object is wired to its own parts after it settles, from outside it:
 
@@ -552,7 +557,8 @@ An overwrite destroys the old occupant while guests to the slot remain. They nam
 | `&` (guest) | Guest-only non-hosting storage naming a settled host; may be repointed, copied by value, and returned, but can never host a `T` |
 | Spent host slot | After a roaming host's value moves out, the slot is spent and keeps enough storage for a store to refill it |
 | Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
-| New `&` value | May be minted only from a settled place: a bare settled symbol, a struct-field path from a settled root containing no subscript or variant-case projection, or an `&T` parameter; roaming hosts, paths through `[]` or a variant payload, and temporaries are rejected |
+| New `&` value | May be minted only from a settled place: a bare settled symbol, or a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only; roaming hosts, list elements, variant payloads, and temporaries are rejected |
+| `ArrayRef` element | Fixed storage: takes its root's state, may be guested under a settled root, is overwritten in place, and is never moved out |
 | Field of a roaming root | May be moved out; the root is partly spent until refilled; a field is never declared roaming |
 | Borrow | Non-hosting, non-escaping access to a caller's storage for the duration of a call; not storable, not returnable, not a guest source, not a move-source |
 | Value-type parameter | Always a read-only borrow; copied only when the parameter is itself bound into a fresh slot |
