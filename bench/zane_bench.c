@@ -1471,7 +1471,7 @@ static void bm_destroy(MNode *n) {
 }
 
 static void test14(void) {
-    record_test("Test 14", "Boxed members: roaming move vs deep value copy  [8191 nodes]");
+    record_test("Test 14", "Boxed members: roaming escape vs deep value copy  [8191 nodes]");
     double T[RUNS];
     int64_t expected;
 
@@ -1488,7 +1488,7 @@ static void test14(void) {
         T[r] = now_ns() - t0;
         assert(bh_sum(root) == expected); sink ^= root;
     }
-    record_row("Move roaming hosted tree", T);
+    record_row("Escape roaming hosted tree (relocate)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();

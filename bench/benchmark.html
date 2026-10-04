@@ -876,7 +876,7 @@ const TESTS=[
   },
   {
     "t": "T14 \u2014 boxed members",
-    "title": "Boxed members: roaming move vs deep value copy",
+    "title": "Boxed members: roaming escape vs deep value copy",
     "labels": [
       "Construct fresh value tree in place",
       "Deep-copy value tree (place source)",
@@ -935,8 +935,8 @@ const TESTS=[
         "val": "resolved once from the member's type, not per allocation"
       },
       {
-        "label": "Relocation",
-        "val": "recursive; old blocks returned to their exact-size stacks"
+        "label": "Escape",
+        "val": "recursive relocation; old blocks returned to their exact-size stacks"
       },
       {
         "label": "Deep copy",
@@ -955,7 +955,7 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. Moving a roaming root relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming host is guested, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
+    "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming host is guested, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
     "note": "Awaiting a re-pinned run. The hosted rows above were measured with a 24-byte node carrying a backpointer, and rehosting retargeted each node's anchor; the \"every node guested\" row describes a tree the language no longer allows, since nothing inside a roaming host is guested. A roaming node is now 16 bytes and a move rewrites only handles. The value pair is the current code's: ~18us to deep-copy from an existing place against ~12us to construct fresh, both O(structure) as \u00a72.3 requires, the ~5us between them the copy itself. malloc's deep copy is ~95us, ~5.4x.",
     "noteStale": false
   }
