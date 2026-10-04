@@ -137,7 +137,8 @@
             225011.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Zane's host was 40 bytes and allocation zeroed a 4-byte backpointer in it; it is now a 32-byte bump that writes nothing. The 'Arena + one-field init' row existed to match that write and is retired. malloc, Pool and the pure Arena row ran the same code they run now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 2",
@@ -621,7 +622,8 @@
             107767.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Both tether rows resolved two dependent loads, tether to anchor cell to payload; a guest is now the host's own offset and resolves in one. The direct-pointer row ran the same code it runs now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 7",
@@ -702,7 +704,8 @@
             1160549.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Zane's entities were 40-byte hosts with a zeroed backpointer; they are now 32 bytes with nothing written at allocation. The malloc and Pool rows ran the same code they run now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 8",
@@ -808,7 +811,8 @@
             3486588.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Zane's particles were 32-byte hosts (24 bytes plus a backpointer, rounded); they are now 24 bytes with nothing written at allocation. The malloc and Pool rows ran the same code they run now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 9",
@@ -889,7 +893,8 @@
             381977.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Zane's refill bumped 40-byte hosts; it now bumps 32-byte ones. The malloc and Pool rows ran the same code they run now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 10",
@@ -1021,7 +1026,7 @@
           ]
         }
       ],
-      "provenance_note": "Measured before build_tree was fixed. Every node with budget left drew at least one child, so the first child took the whole remaining budget and each later sibling slot was NULL: the structure was a 4,000-node chain of depth 3,999 with no branch points, not a branching tree. The cross-allocator ratios survive because every row ran on that same shape, but the absolutes and the guest-density reading do not. Re-run for figures on the corrected topology (depth ~20-26, ~1,070 branch points)."
+      "provenance_note": "Measured before build_tree was fixed. Every node with budget left drew at least one child, so the first child took the whole remaining budget and each later sibling slot was NULL: the structure was a 4,000-node chain of depth 3,999 with no branch points, not a branching tree. The cross-allocator ratios survive because every row ran on that same shape, but the absolutes and the guest-density reading do not. Re-run for figures on the corrected topology (depth ~20-26, ~1,070 branch points). Separately: measured by the anchor-model harness, before settled and roaming hosts. The three Zane rows differed only in how many anchors teardown released. A guest now leaves nothing in its host, so they are one row, 'Zane cascade destroy'; the node payload is also 24 rather than 32 bytes. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 11",
@@ -1102,7 +1107,8 @@
             1354715.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Zane's entities were 40-byte hosts with a zeroed backpointer; they are now 32 bytes. The list-block path, and the malloc and Pool rows, ran the same code they run now. Re-pin for figures from the current harness."
     },
     {
       "id": "Test 12",
@@ -1162,193 +1168,6 @@
     },
     {
       "id": "Test 13",
-      "title": "Scan-heavy mixed workload  [10 payload scans : 1 tether resolve pass]",
-      "rows": [
-        {
-          "label": "Mixed 10:1 (scan-heavy)",
-          "samples_ns": [
-            4066624.0,
-            3317751.0,
-            3610980.0,
-            3578038.0,
-            3647677.0,
-            3745371.0,
-            3552439.0,
-            3467232.0,
-            3600846.0,
-            3567567.0,
-            3562514.0,
-            3726185.0,
-            3562060.0,
-            3718449.0,
-            3472201.0,
-            3468401.0,
-            3831608.0,
-            3391148.0,
-            3484957.0,
-            3576591.0
-          ]
-        }
-      ]
-    },
-    {
-      "id": "Test 14",
-      "title": "Guest resolution across forwarding anchors  [20k guests x 8 passes]",
-      "rows": [
-        {
-          "label": "Terminal anchor (0 hops)",
-          "samples_ns": [
-            136271.0,
-            147547.0,
-            123795.0,
-            123331.0,
-            123664.0,
-            123832.0,
-            127589.0,
-            229858.0,
-            123320.0,
-            123342.0,
-            123305.0,
-            123870.0,
-            123400.0,
-            124095.0,
-            136708.0,
-            123643.0,
-            123977.0,
-            128824.0,
-            123636.0,
-            123939.0
-          ]
-        },
-        {
-          "label": "1 forwarding hop",
-          "samples_ns": [
-            216558.0,
-            209694.0,
-            212041.0,
-            248453.0,
-            210457.0,
-            208623.0,
-            207681.0,
-            326645.0,
-            213030.0,
-            211138.0,
-            215489.0,
-            208121.0,
-            209214.0,
-            263968.0,
-            209192.0,
-            273012.0,
-            209108.0,
-            209451.0,
-            294018.0,
-            247003.0
-          ]
-        },
-        {
-          "label": "2 forwarding hops",
-          "samples_ns": [
-            669507.0,
-            332256.0,
-            337332.0,
-            332808.0,
-            328750.0,
-            360626.0,
-            327271.0,
-            341109.0,
-            327411.0,
-            326749.0,
-            336376.0,
-            497969.0,
-            364403.0,
-            332339.0,
-            327931.0,
-            358904.0,
-            330330.0,
-            326786.0,
-            333646.0,
-            352520.0
-          ]
-        },
-        {
-          "label": "4 forwarding hops",
-          "samples_ns": [
-            662581.0,
-            655044.0,
-            584126.0,
-            609075.0,
-            583999.0,
-            755324.0,
-            595485.0,
-            632223.0,
-            590943.0,
-            580320.0,
-            592838.0,
-            808301.0,
-            791681.0,
-            580792.0,
-            610388.0,
-            596754.0,
-            585081.0,
-            786052.0,
-            610556.0,
-            601281.0
-          ]
-        },
-        {
-          "label": "4 hops, compressing as it goes",
-          "samples_ns": [
-            327216.0,
-            307700.0,
-            333661.0,
-            307547.0,
-            576244.0,
-            358950.0,
-            350963.0,
-            374407.0,
-            383878.0,
-            355906.0,
-            388141.0,
-            439669.0,
-            354009.0,
-            352253.0,
-            594481.0,
-            359312.0,
-            379270.0,
-            355193.0,
-            351975.0,
-            368306.0
-          ]
-        },
-        {
-          "label": "Terminal anchor, same footprint",
-          "samples_ns": [
-            290109.0,
-            335601.0,
-            289700.0,
-            282955.0,
-            308708.0,
-            294820.0,
-            463831.0,
-            307811.0,
-            287594.0,
-            286507.0,
-            301328.0,
-            286991.0,
-            286626.0,
-            309115.0,
-            286724.0,
-            281860.0,
-            360860.0,
-            326360.0,
-            582683.0,
-            339604.0
-          ]
-        }
-      ]
-    },
-    {
-      "id": "Test 15",
       "title": "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]",
       "rows": [
         {
@@ -1479,7 +1298,7 @@
       ]
     },
     {
-      "id": "Test 16",
+      "id": "Test 14",
       "title": "Boxed members: rehost relocation vs deep value copy  [8191 nodes]",
       "rows": [
         {
@@ -1607,7 +1426,8 @@
             98909.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "Measured by the anchor-model harness, before settled and roaming hosts. Hosted nodes were 24 bytes with a backpointer, and rehosting retargeted each node's anchor. A roaming hosted node is now 16 bytes and a move updates nothing but its handles, and the 'every node guested' row describes a tree the language no longer allows, since nothing inside a roaming host is guested. The value-tree and malloc rows ran the same code they run now. Re-pin for figures from the current harness."
     }
   ]
 }
