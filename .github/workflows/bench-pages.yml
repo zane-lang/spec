@@ -1,0 +1,41 @@
+# Publishes the committed benchmark page. It deploys bench/benchmark.html as
+# rendered, and never runs the harness: the page shows the pinned run, and a
+# CI runner is not a machine a run is pinned from.
+name: bench-pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "bench/benchmark.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Stage the page
+        run: |
+          mkdir -p _site
+          cp bench/benchmark.html _site/index.html
+
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5
