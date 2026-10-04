@@ -150,7 +150,7 @@ The bounded-loop rule survives this, and survives it better than it did as a key
 
 ## `guard` stops being a keyword
 
-One construct did not move, and for a while we had an argument for why it could not. A call is an expression evaluated *inside* a scope. Whatever it does, it does before control returns to the statement that made it — so a call can never be the thing that leaves the scope it sits in. `guard` stayed grammar, the single survivor of a redesign that had just emptied the grammar of everything else.
+One construct, `guard`, did not move, and for a while we had an argument for why it could not. A call is an expression evaluated *inside* a scope. Whatever it does, it does before control returns to the statement that made it — so a call can never be the thing that leaves the scope it sits in. `guard` stayed grammar, the single survivor of a redesign that had just emptied the grammar of everything else.
 
 We checked whether it could be dissolved a different way. With blocks transparent to control transfer, a bare condition-less exit written inside an `if` block would leave the scope containing that `if` — which looks like `guard` reassembled from smaller parts. It seemed not to be: it lands one level shallower than a `guard` written at the same depth, because the exit sees the `if` call as its own enclosing call. Reproducing `guard` would need the exit at the guard's depth, which needs the condition, which is where we started.
 

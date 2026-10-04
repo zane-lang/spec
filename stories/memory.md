@@ -245,7 +245,7 @@ The one invariant this does disturb is one we had written a chapter to earn. [Th
 
 ## What a copy is for, and the ban that survived it
 
-A rule can look finished and still be resting on nothing, and the way you find out is that somebody asks why. This chapter is about one that turned out to be resting on two mistakes of ours, and about what was left standing after both were withdrawn.
+A rule can look finished and still be resting on nothing, and the way you find out is that somebody asks why. This chapter is about one, that a value `variant` cannot contain itself, which turned out to be resting on two mistakes of ours, and about what was left standing after both were withdrawn.
 
 [The previous chapter](#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) handed recursion to reference types and gave a reason for the half it withheld. A box is *owned* storage, we said; something has to free it, relocate it, and decide what a copy does; that something is a host, and having it is what makes a type a reference type. So a value type gets no box, and a value `variant` cannot contain itself.
 

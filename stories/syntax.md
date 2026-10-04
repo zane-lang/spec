@@ -54,7 +54,7 @@ There is one seam in all this reuse and it is worth pointing at, because it is t
 
 ## Two orders, and the one we had already turned down
 
-The shape does not reach the one declaration a reader meets most often. A named verb puts its type first, exactly as the C form this story opened by rejecting does:
+The shape does not reach the one declaration a reader meets most often: a named verb puts its type first, exactly as the C form this story opened by rejecting does:
 
 ```zane
 Unit shoot(this Player) mut { ... }
