@@ -256,10 +256,9 @@ wrong, in both directions:
   they were already written. They are drafts until the PR merges — rewrite,
   reorder, and insert among them freely; a decision reached late in review often
   belongs before them. The diff is quiet through all of that by design.
-- **Too strict, on merged chapters.** Refusing to reword, retitle, or restructure
-  a merged chapter when no language change is involved. §5 protects the
-  chapter's claims, not its wording; an edit that leaves every claim standing is
-  allowed.
+- **Adjusting in passing.** Rewording a merged chapter inside a PR that also
+  changes the language. §5 allows adjusting a merged chapter only in a PR whose
+  sole purpose is that adjustment, and only when every claim still stands.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 
