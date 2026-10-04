@@ -233,11 +233,11 @@ A **reference type** parameter has three passing modes, one per surface form:
 
 | Mode | Written | Caller supplies | The callee may |
 |---|---|---|---|
-| Borrow | `T` | any host, settled or roaming, or a temporary | read it, and write it only as a `mut` subject; never store it, return it, or move it |
+| Borrow | `T` | any host, settled or roaming, or a temporary | read it; never write it, store it, return it, or move it |
 | Take | `^T` | a roaming host, which is spent, or a temporary ([`lifetimes.md`](lifetimes.md) §1.2) | move it, store it, or return it; it dies with the body otherwise |
 | Guest | `&T` | a settled place that mints a guest, or an existing `&T` value (§2.8) | read it, return it as `&T`, or store it; where a stored guest comes to rest is part of the signature ([`lifetimes.md`](lifetimes.md) §1.11) |
 
-- A **borrow** is non-hosting, non-escaping access to the caller's host for the duration of the call. It has no address the callee could keep: a borrow cannot be stored, returned, or minted into a guest. The caller stays a full host.
+- A **borrow** is non-hosting, non-escaping access to the caller's host for the duration of the call. It has no address the callee could keep: a borrow cannot be stored, returned, or minted into a guest. Like every parameter other than `this`, it is read-only ([`effects.md`](effects.md) §2.4), so it is never assigned or the subject of a `!` call; the subject is the one borrow a `mut` method may write. The caller stays a full host.
 - A **take** moves the host into the callee. The parameter is a roaming host of the body; the body moves it on — into another parameter's object, into the result, into a local — or it dies when the body's scope drains.
 - A **guest** parameter is an ordinary guest. Inside the callee body the parameter acts as a place expression that may be read or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. Binding it into an `&` **field** is decided at each call: the callee records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the owners of the two argument paths it actually wrote.
 

@@ -464,7 +464,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | `^T` method parameter | Takes: caller supplies a move-source — a roaming host symbol, which is spent, or a temporary, which has no symbol to spend; callee owns it |
 | `this` | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T`, and nothing is written on it to select a mode |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `^T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |

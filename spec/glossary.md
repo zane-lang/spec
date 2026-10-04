@@ -212,7 +212,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.24 roaming host
 
-- **Meaning:** A reference-type host that may move anywhere and that nothing guests, nor anything inside it: a symbol, parameter, or return written `^T`, a field of a roaming root, and every list element and variant payload.
+- **Meaning:** A reference-type host that may move anywhere. Neither it nor anything inside it can be guested. It is a symbol, parameter, or return written `^T`, a field of a roaming root, or any list element or variant payload.
 - **Why this name:** The opposite of *settled* in the same register: a host still travelling, which no guest can visit. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
