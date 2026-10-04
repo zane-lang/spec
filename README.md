@@ -13,6 +13,8 @@ contributing/     ← style guides for writing spec docs and stories docs
 bench/            ← reference C harness used for runtime experiments
 ```
 
+The rendered results of the pinned benchmark run are published at <https://zane-lang.github.io/spec/> and are redeployed whenever `bench/benchmark.html` changes on `main`.
+
 ## Specification documents
 
 The specification lives in [`spec/`](spec/) and is organized by topic. Each document has a single canonical home for its rules; everything else cross-references.
