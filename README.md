@@ -13,7 +13,7 @@ contributing/     ← style guides for writing spec docs and stories docs
 bench/            ← reference C harness used for runtime experiments
 ```
 
-The rendered results of the pinned benchmark run are published at <https://zane-lang.github.io/spec/>, redeployed whenever `bench/benchmark.html` changes on `main`.
+The rendered results of the pinned benchmark run are published at <https://zane-lang.github.io/spec/> and are redeployed whenever `bench/benchmark.html` changes on `main`.
 
 ## Specification documents
 
