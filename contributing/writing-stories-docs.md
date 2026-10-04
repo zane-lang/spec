@@ -49,11 +49,37 @@ Do not create one file per chapter (too fragmentary) or one file for the whole l
 
 ### 2.2 A chapter is a theme, not a decision
 
-A chapter is a **phase of the design** — an episode in which one pressure was met and resolved — and it almost always settles **several related decisions at once**, because that is how they were actually made. It is named by a `## ` heading: a short noun phrase that names the *theme* ("URL identity and the two-file manifest", "No turbofish: passing types as values"), not a question and not a single spec rule.
+A chapter is a **phase of the design** — an episode in which one pressure was met and resolved — and it almost always settles **several related decisions at once**, because that is how they were actually made. It is named by a `## ` heading that states the *theme* plainly (§2.3), not a single spec rule.
 
 This is the rule to hold on to: **do not write one chapter per spec decision.** A spec section is a fine-grained rule; a chapter is the coarser line of reasoning that produced a cluster of such rules. Group decisions that were forced by the same pressure into one chapter and let them play out as a single story; conversely, one large decision may run across several chapters if the thinking really arrived in stages. Let the chapter boundaries fall where the *reasoning* has joints — typically a handful of chapters per file — not where the spec has section numbers. There is no required template below the heading, no labelled parts, no metadata ritual. Everything under the heading is the story.
 
 A chapter is **not pinned to a spec section.** It is free to range across whatever the episode touched. It *should* link to specific spec rules where it discusses them (§4), but those links serve the reader; they are not a structural anchor, and a chapter is never reshaped just to line up one-to-one with a `§N`.
+
+### 2.3 A heading says what happened
+
+A chapter heading tells the reader what the chapter is about and what was decided in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing carries the kind") both do this.
+
+The test is to read the heading without the chapter. A reader who knows the spec should be able to say which rule it explains and roughly which way the decision went. A heading that only makes sense once the chapter has been read is a teaser, and it is rewritten until it passes.
+
+Teasers fail in a few recurring ways:
+
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the host — and *Y* a riddle about it. The chapter knows which keyword; the heading names it.
+- **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
+- **Personification.** A construct that *wanted*, *outran*, *outlived*, or *could not contain itself* describes a rule as a character. State what the rule does.
+- **A paradox or punchline** that inverts an expectation the reader has not formed yet.
+- **A question.** A heading answers; the chapter does not open by posing a puzzle in its title.
+- **Editorial framing** that grades the decision ("against the hype") instead of naming it. The verdict belongs in the prose, where it can be argued.
+
+| Teaser | Plain |
+| --- | --- |
+| The keyword that was neither | `and` and `or` become `*` and `+` |
+| The sum that could not contain itself | A value sum may recurse |
+| The word every namespace shares | Everything behind `@` is intrinsic |
+| The check that fired once, and the move that outran it | An `&` store compares root symbols |
+| Two doors, not a colored box | Two exits instead of a `Result` value |
+| What does a receiver receive? | Renaming the receiver to the subject |
+
+A plain heading may still have a voice. "No turbofish: passing types as values" and "Doing without `while`" carry a point of view and still name exactly what the chapter settles; the rule is against hiding the subject, not against style.
 
 ---
 
