@@ -161,15 +161,24 @@ TypeName
 
 ```zane
 &TypeName
+^TypeName
 ```
 
-`&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions. It is the only marker a type may carry.
+`&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
 Array<&Node, n>
 ```
 
-See [`memory.md`](memory.md) §2.9 for the semantics of the two passing modes.
+`^TypeName` is a **roaming** host of a reference type. It is legal on a local-variable declaration, a parameter, and a return type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
+
+```zane
+spare ^Engine = Engine();
+^Car make(power Int) { ... }
+Unit park(this Garage, car ^Car) mut { ... }
+```
+
+See [`memory.md`](memory.md) §2.1 for settled and roaming hosts, and §2.9 for the semantics of the three passing modes.
 
 ### 2.4 Type expressions
 
@@ -349,10 +358,11 @@ ReturnType?AbortType[this SubjectType, ParamType, ...] mut
 
 The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
 
-Reference-typed parameters and returns use the ordinary type form. A parameter slot accepts both passing modes — `ParamType` and `&ParamType` — and a return slot accepts a bare or `&` type (§2.3):
+Reference-typed parameters and returns use the ordinary type form. A parameter slot accepts all three passing modes — `ParamType`, `^ParamType`, and `&ParamType` — and a reference-typed return slot accepts a `^` or `&` type (§2.3):
 
 ```zane
 ReturnType[&ParamType, ...]
+^ReturnType[^ParamType, ...]
 &ReturnType[this SubjectType, &ParamType, ...]
 ReturnType[this SubjectType, ParamType, ...] mut
 ```
@@ -415,7 +425,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 ```
 
-A **reference-type** parameter independently selects one of the two passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` swallows, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so `&` is not written on one.
+A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the host, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
@@ -441,7 +451,7 @@ ReturnType name(this SubjectType<T Type, n @concepts$Int>, param ParamType, ...)
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-The subject takes **no** marker, for either kind of type: `&` is never written on `this`. A reference-type subject is an implicit guest, which may be stored or returned as `&T` without asking; a value subject is a borrow of the caller's slot, mutable when the method is `mut`. See [`functions.md`](functions.md) §2.4.
+The subject takes **no** marker, for either kind of type: neither `^` nor `&` is written on `this`. The subject is always a borrow of the caller's value or host, mutable when the method is `mut`, and never stored or returned as `&T`. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 

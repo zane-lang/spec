@@ -91,13 +91,13 @@ A value type is copied on assignment, has no identity, and — the load-bearing 
 
 What the axis does **not** decide is **recursion**. Either kind may contain itself, through a member the compiler boxes. That rule and the reasoning behind it belong to [`adt.md`](adt.md) §4.
 
-Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — though what it is differs by kind: a value subject is a *borrow* of the caller's slot, so the value is mutable without gaining identity, while a reference subject is a *guest*, so the object is mutable without the method taking hosting. Neither consumes the caller's host.
+Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and it is the same thing in each: a *borrow* of the caller's value or host, so a value is mutable without gaining identity and an object is mutable without the method taking hosting. Neither consumes the caller's host.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
 - **A value copy is deep.** Copying a value copies every payload it owns out of line into fresh storage, which is what lets a value type recurse without ever aliasing. See [`memory.md`](memory.md) §2.3.
 - **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
-- **A guest follows its object.** A new `&` is minted only from a stable guest source — a bare host symbol, a stable struct-field path, or an `&T` parameter — and it names the object hosted there at that moment. Subscripted paths and variant-case payloads remain readable but cannot originate a guest. That object may later move, and the guest travels with it. See [`memory.md`](memory.md) §2.8 and §2.8.1.
+- **A guest names a host that never moves.** A reference-type host is either settled — guestable, never moving again — or roaming — movable, and guested by nothing. A new `&` is minted only from a settled place, so the object it names stays where it is until its scope drains. See [`memory.md`](memory.md) §2.1, §2.8, and §2.8.1.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
