@@ -238,7 +238,7 @@ lists the integration steps for a wholly new story and §4.4 gives the
 guide §8 carries the same obligation from the spec side. Don't skip the second
 half — it is the one sessions forget.
 
-### Append-only: the two ways a session gets it wrong
+### Append-only: the ways a session gets it wrong
 
 **Story guide §5 owns this rule** — what may be edited, the PR-versus-commit
 distinction, the rare consolidation exception, and the `git diff origin/main`
