@@ -248,10 +248,10 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T` or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `^T`, or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
 
 ```zane
-Unit consume(this Car, engine Engine)
+Unit consume(this Car, engine ^Engine)
 Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mode
 ```
 
