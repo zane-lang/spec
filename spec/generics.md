@@ -132,7 +132,7 @@ This is what lets a bare `T` be read unambiguously. In a **type**, a name in the
 
 These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of what that slot accepts. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Float` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
+> **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 
 ### 3.4 References are bare; casing carries the kind
 
@@ -299,7 +299,7 @@ c Vector<Float> = vec(2, 3.5);     // ILLEGAL: no overload takes an integer and 
 
 No implicit constructor has a concept type as its destination ([`types.md`](types.md) §4.4), so an integer literal never selects a `@concepts$Float` overload and a float literal never selects a `@concepts$Int` one.
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#what-a-decimal-point-says) — "What a decimal point says".
+> **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 
 ---
 

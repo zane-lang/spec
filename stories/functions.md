@@ -54,7 +54,7 @@ The problem was not whether synthesizing `Unit()` was safe; it was where the kno
 
 We therefore took the strict rule we had initially rejected. Every returning path carries an explicit value, so a `Unit` verb ends in `return Unit()` and an expression body writes `Unit noOperation() => Unit()`. The cost is repetition where the signature already proves there is only one possible value. What it buys is more fundamental: `Unit` stays ordinary all the way through the compiler, and every return AST has the same shape regardless of the type travelling through it.
 
-## What does a receiver receive?
+## Renaming the receiver to the subject
 
 The rules in this document had said "receiver" from the first draft, and we never looked at the word once. It arrived free with the object model, the way it arrives free in Go, Swift, Ruby, and Java's documentation, and a word that every neighbouring language already uses does not attract the scrutiny a coined one does. It survived the whole of the passing-mode work by being invisible.
 
@@ -72,7 +72,7 @@ We weighed keeping `receiver` anyway, on the strength of it being what every oth
 
 The larger cost is one this file is currently demonstrating. The spec is rewritten to the present, so every rule now says *subject*; the stories are not, so every chapter above this one still says *receiver*, and always will. A reader working through the design history meets both words for one concept and must carry the mapping themselves. We accepted that deliberately rather than quietly reaching back to rewrite the earlier chapters: an accurate record of the reasoning we actually had, in the words we actually had it in, is worth more than a uniform vocabulary. This chapter is the mapping.
 
-## A permission the overload set cannot see
+## Lambda `mut` permission in overload matching
 
 [Names that are not values](#names-that-are-not-values) had a lambda passed into an overloaded callee "by exact shape match". That was nearly true, and the gap between nearly and exactly turned up when the compiler first had to run function values. A lambda that does not declare `mut` may be held by a `mut` function type ([`functions.md` §7.2](https://github.com/zane-lang/spec/blob/f6928946080a595bee5bbe2ede552d832752301e/spec/functions.md#72-lambdas-are-self-typed-function-values)): `mut` on a function type is a permission, and a lambda that never writes its subject is safe wherever writing is allowed. The compiler honored that for a declaration and refused it for an argument. So `callback Unit[this Node] mut = Unit(this Node) { ... }` followed by `register(callback)` compiled, and `register(Unit(this Node) { ... })` did not, though it is the same value going to the same place.
 

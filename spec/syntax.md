@@ -257,7 +257,7 @@ A namespace is named for what its members are or what they are for. Every member
 
 Every intrinsic namespace except `@program$` is reachable from every package without an import. `@program$` is reachable only from the root package ([`packages.md`](packages.md) §6.1), which passes its instances to any other package that needs one.
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-word-every-namespace-shares) — "The word every namespace shares".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#intrinsic-names-the-whole--space) — "`intrinsic` names the whole `@` space".
 
 ### 2.8 Compiler concept types
 
@@ -281,7 +281,7 @@ A number or string literal becomes storage through the one constructor of the ma
 @primitives$String(value @concepts$String)
 ```
 
-> **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
+> **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage".
 
 ### 2.9 Array literals
 
@@ -822,8 +822,8 @@ g();
 }
 ```
 
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#what-had-to-be-true-before-a-brace-could-end-a-statement) — "What had to be true before a brace could end a statement".
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-list-that-stayed-inside-the-parentheses) — "The list that stayed inside the parentheses" tells why a `[ ]` does not trail.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#statements-end-in--so-a-trailing-brace-can-end-one) — "Statements end in `;` so a trailing brace can end one".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a `[ ]` does not trail.
 
 An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
 

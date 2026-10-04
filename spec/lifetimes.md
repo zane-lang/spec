@@ -57,8 +57,8 @@ The comparison the compiler makes is between two declaration blocks, after resol
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#inheriting-a-debt-safety-without-a-borrow-checker) — "Inheriting a debt: safety without a borrow checker".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-owner-lifetime-replaces-the-same-root-rule) — "The owner lifetime replaces the same-root rule".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#place-lifetimes-inside-a-live-owner) — "Place lifetimes inside a live owner".
 
 ### 1.2 Move-sources are roaming hosts, `^T` results, and `#variant` case forms
 
@@ -131,7 +131,7 @@ The restriction applies only to symbol move-sources. A verb result or `#variant`
 
 A moved host is roaming, so nothing guests it, and its own host has nothing to strand by moving. A roaming symbol moves only in its declaration block (§1.3), so the host it moves into is declared there or above. A settled host never moves, so its owner is fixed where it settles. The only comparison a move makes is §1.1's, over the guests the moved value **carries** (§1.10).
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-the-call-site-stopped-holding) — "What the call site stopped holding".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
 ### 1.5 A borrow lasts for the call; a taken parameter is the body's
 
@@ -154,7 +154,7 @@ Unit enterMatch(player ^Player) {
 For `&` fields specifically, the callee must declare the corresponding parameter as `&T`. A `^T` parameter is roaming and is never a guest source ([`memory.md`](memory.md) §2.8), and a borrow is never stored.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#consumed-or-borrowed-the-parameter-that-lives-at-the-call-site) — "Consumed or borrowed: the parameter that lives at the call site".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-the-call-site-stopped-holding) — "What the call site stopped holding".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
 ### 1.6 A moved symbol is spent until a store refills it
 
@@ -225,9 +225,9 @@ The handler's binder is then what the call's result would have been: it names wh
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#simplifying-the-return-root-rule) — "Simplifying the return-root rule".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-the-call-site-stopped-holding) — "What the call site stopped holding".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
 ### 1.8 Passing a roaming host to a `^T` parameter spends it
 
@@ -283,7 +283,7 @@ repair(car3);             // legal: the result is destroyed here
 
 Binding the return is how the caller keeps the host. A relayed host that is not bound is gone, which the caller can see at the call: a bare statement keeps nothing.
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-the-call-site-stopped-holding) — "What the call site stopped holding".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
 ### 1.10 A value carries the guests reachable along owning edges
 
@@ -322,7 +322,7 @@ do() {
 
 A settled value may hold guests into its own fields, wired after it settles ([`memory.md`](memory.md) §2.8.1). It never moves, so those guests are compared once, where they are stored. What none of this reaches is a host destroyed while its tree lives on, which §2.1 answers.
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-check-that-fired-once-and-the-move-that-outran-it) — "The check that fired once, and the move that outran it".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#an--store-compares-root-symbols) — "An `&` store compares root symbols".
 
 ### 1.11 A signature records where its parameters come to rest
 
@@ -407,8 +407,8 @@ A call **substitutes** the path the caller supplied — an argument path, or the
 
 The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#two-lifetimes-and-only-one-of-them-had-a-name) — "Two lifetimes, and only one of them had a name".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-empty-template-the-design-that-would-have-needed-no-signatures) — "The empty template: the design that would have needed no signatures".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-owner-lifetime-replaces-the-same-root-rule) — "The owner lifetime replaces the same-root rule".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-rejected-design-that-needed-no-signatures) — "The rejected design that needed no signatures".
 
 ---
 
@@ -426,8 +426,8 @@ A settled host never moves, so it dies at its own scope's drain or at an overwri
 
 A **value** has death points that are equally static: its slot is overwritten, or the host, container, or scope holding it dies. Whatever storage that value owns out of line — the payload of a boxed member, and every payload beneath it — is returned at that point, recursively (see [`memory.md`](memory.md) §2.3 and §3.2). No tracking is needed to find the moment, because every one of these points is known from the program text.
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-lifetime-that-was-not-the-owners) — "The lifetime that was not the owner's".
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#what-the-call-site-stopped-holding) — "What the call site stopped holding".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#place-lifetimes-inside-a-live-owner) — "Place lifetimes inside a live owner".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
 ### 2.2 Scopes drain before destruction
 

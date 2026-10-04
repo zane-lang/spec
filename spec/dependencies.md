@@ -376,9 +376,9 @@ The `zane-version` field in `zane.coda` pins the toolchain tag used to build the
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 - The `zane` command that reads the manifest is not part of the toolchain the tag pins. It installs the compiler the tag names and runs it, so one installed `zane` command builds projects pinned to any toolchain tag.
 
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-package-that-was-the-language) — "The package that was the language".
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-command-outside-the-pin) — "The command outside the pin".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-part-of-the-language-again) — "`core` becomes part of the language again".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-an-ordinary-package-over-a-primitive-floor) — "`core` becomes an ordinary package over a primitive floor".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-zane-command-is-not-pinned-by-zane-version) — "The `zane` command is not pinned by `zane-version`".
 
 ---
 

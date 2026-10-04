@@ -35,8 +35,8 @@ Int scaledId(this Node, factor Int) {
 }
 ```
 
-> **Story:** [`stories/functions.md`](../stories/functions.md#what-does-a-receiver-receive) — "What does a receiver receive?".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
+> **Story:** [`stories/functions.md`](../stories/functions.md#renaming-the-receiver-to-the-subject) — "Renaming the receiver to the subject".
+> **Story:** [`stories/memory.md`](../stories/memory.md#bare-symbols-become-guest-sources-again) — "Bare symbols become guest sources again".
 
 ### 2.2 `this` grants private-field access
 
@@ -190,7 +190,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-list-that-stayed-inside-the-parentheses) — "The list that stayed inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
 
 ---
 
@@ -263,7 +263,7 @@ Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter
 Unit tune(f Unit[this Engine])
 Unit tune(f Unit[this Engine] mut)  // ERROR: differs only by `mut` on a function type
 ```
-> **Story:** [`stories/functions.md`](../stories/functions.md#a-permission-the-overload-set-cannot-see) — "A permission the overload set cannot see".
+> **Story:** [`stories/functions.md`](../stories/functions.md#lambda-mut-permission-in-overload-matching) — "Lambda `mut` permission in overload matching".
 
 ### 4.2 Consequences of the overload identity rules
 

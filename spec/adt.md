@@ -37,7 +37,7 @@ The property that distinguishes an `enum` is **uniformity** — the substitutabi
 
 Per-member associated data is attached externally through an enum map (§6), which keeps the members themselves payloadless and interchangeable. The consumers of an enum are iteration, ordinal use, total mapping, and exhaustive matching.
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
+> **Story:** [`stories/adt.md`](../stories/adt.md#separate-enum-and-variant-keywords) — "Separate `enum` and `variant` keywords".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-last-shape-the-peer-mould) — "Naming the last shape: the peer mould".
 
 ---
@@ -55,7 +55,7 @@ type Chain     = #variant { done Unit; more Chain; }       // legal: `more` is a
 
 A `Countdown` is copied whole, so copying one allocates and copies every node beneath it (see [`memory.md`](memory.md) §2.3), and two `Countdown` values never share a node. A `Chain` has identity and is **moved** rather than copied, and its boxed member hosts the child it holds. The choice between them is therefore the ordinary value/reference choice, made on the ordinary grounds, and recursion no longer forces it.
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-value-sum-may-recurse) — "A value sum may recurse".
 
 The `#` on `Expr` below gives the nodes identity and makes them movable rather than copyable. Its `String` payloads are value types and do not require the reference form. Its `op Operation` payload does: `Operation` is a reference type, and a value sum may not carry one (see [`memory.md`](memory.md) §2.10). Recursion itself would be legal in either form.
 
@@ -85,7 +85,7 @@ A member projected as a type is written `Expr.intLit`: `Expr` is the type (upper
 
 Reading a member of a variant value is **partial**: the case may not be the live one. A member read is therefore an **abortable** access (`?` / `??`, see [`error-handling.md`](error-handling.md)). A variant member projection is not a guest source: a payload is always roaming, because the variant may stay alive while its live case changes and the old payload disappears ([`memory.md`](memory.md) §2.8.1). Code that needs durable access takes a guest to the whole reference variant and performs the case read through that guest when needed (see [`memory.md`](memory.md) §2.8). The primary consumer of a variant is the exhaustive `match` block (§5). A single-payload case, once bound, behaves as its payload, so a value of `Expr.intLit`'s payload type reaches that payload's members directly.
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#the-payload-that-does-not-share-the-variants-lifetime) — "The payload that does not share the variant's lifetime".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-variant-payload-is-not-a-guest-source) — "A variant payload is not a guest source".
 
 ### 3.1 The struct/variant symmetry
 
@@ -180,8 +180,8 @@ program Expr = Expr.op(Operation(Expr.intLit("3"), Expr.intLit("2"), Operator.ad
 
 Boxing carries costs, all of them the price of the child actually being owned. Reaching a boxed child costs one indirection, which recursion cannot avoid. Moving a roaming reference-type node relocates every boxed descendant into the destination scope's dynamic region, so moving a tree costs time proportional to the tree rather than to its root (see [`memory.md`](memory.md) §3.5) — the same price a `List` already pays for its backing store. A recursive **value** type pays that cost more often, because it is copied rather than moved — but only where a copy actually happens. Binding an existing **place** into another slot walks and reallocates the whole structure. Building a fresh one does not: a non-place result is constructed directly in its eventual destination, recursively, so `Countdown.more(Countdown.more(Countdown.done(Unit())))` builds each node once where it will live rather than copying each completed prefix into the next (see [`memory.md`](memory.md) §2.3). Passing one to a parameter does not either, since a value-type parameter is a read-only borrow (§2.9). The O(structure) case is the one that reads like a copy: `b Countdown = a`, or a field, container, or return store whose source is an **existing** value. A store whose source is a fresh non-place result constructs in place instead and costs nothing extra, returns included. Where a tree is large and shared handling is wanted, that is the signal to reach for the reference form.
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#the-bindings-that-existed-only-to-be-pointed-at) — "The bindings that existed only to be pointed at".
-> **Story:** [`stories/adt.md`](../stories/adt.md#the-sum-that-could-not-contain-itself) — "The sum that could not contain itself".
+> **Story:** [`stories/adt.md`](../stories/adt.md#recursion-through-hosting-not-) — "Recursion through hosting, not `&`".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-value-sum-may-recurse) — "A value sum may recurse".
 
 ---
 
@@ -314,7 +314,7 @@ A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): th
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#payloadless-peers-keep-their-data-outside) — "Payloadless peers keep their data outside".
 > **Story:** [`stories/types.md`](../stories/types.md#no-exception-for-the-bare-literal) — "No exception for the bare literal" tells why an entry here is a coercion site.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-straggler-the-rule-had-already-caught) — "The straggler the rule had already caught" tells why this body moved from `[ ]` to `{ }`.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-enum-map-takes-braces) — "The enum map takes braces" tells why this body moved from `[ ]` to `{ }`.
 
 ---
 
@@ -355,7 +355,7 @@ type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference
 | Recursive boxing | `Box<T>` written on the recursive field | nothing written: the recursive member is an ordinary member the compiler boxes (§4) |
 | Match | pattern matching (destructures shape, nests, guards) | variant matching (tag only; no nesting or guards) |
 
-> **Story:** [`stories/adt.md`](../stories/adt.md#two-constructs-against-the-hype) — "Two constructs, against the hype".
+> **Story:** [`stories/adt.md`](../stories/adt.md#separate-enum-and-variant-keywords) — "Separate `enum` and `variant` keywords".
 
 ---
 

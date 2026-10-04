@@ -70,7 +70,7 @@ Two consequences fall out that make the rule feel less like a patch and more lik
 
 The cost is real and it is the mirror image of the gain. Shared *mutable* state that crosses a spawn must now be expressible as a value — a self-contained tree with no internal sharing — because that is the only thing the rule lets you mutate concurrently. Genuinely graph-shaped mutable state, with aliased sub-objects or cycles, cannot be handed to two spawns at all; it has to be restructured into values or kept single-threaded. We think that is the right price, and not only because it is safe by construction: the patterns that most want concurrent mutation — a parameter block, an audio buffer, a snapshot of world state — are already value-shaped, and the ones that are not are exactly the ones where a silent data race would have been hardest to find. The rule that began as a hole in a per-instance check ended as a single sentence about the receiver's type, and the reason it can be that small is that the value/reference axis had already done the work.
 
-## Two rules that said less than they meant
+## Closing gaps in the two signature-safety rules
 
 The [signature-based safety](#safety-the-compiler-proves-from-signatures-not-locks) this document rests on is stated in two rules, and writing block arguments forced us to read both closely enough to notice that each one enforced less than it claimed.
 

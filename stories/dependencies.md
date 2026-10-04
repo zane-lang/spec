@@ -90,7 +90,7 @@ The deeper reason to prefer this shape is a feature we have not built yet but me
 
 The cost we accept is the one the [previous chapter](#the-toolchain-rides-one-tag-the-standard-library-does-not) named as the reason to couple in the first place, now turned face-up: a compiler and a `core` are versioned independently, so a project *can* pin a `core` that does not match what its compiler emits calls into, a mismatch the single tag made impossible by construction. We do not make that impossible any more; we make it *ordinary* — a version incompatibility like any other, caught, if it is caught, by the same pinning and compatibility machinery that governs every dependency, not prevented outright by a release process. That is a genuine guard the coupling gave for free and this design gives up. We judge it the right price: the alternative was a permanent exception to the package model, and an exception that has to be re-explained at every feature — imports, versioning, and the omni-import still to come — is a heavier long-run tax than a version mismatch that a project pins its way out of.
 
-## The package that was the language
+## `core` becomes part of the language again
 
 The [previous chapter](#cutting-core-loose-from-the-toolchain) made `core` ordinary to protect the uniformity of packages. It was a coherent local answer and the wrong global one. The contradiction appeared when we stopped asking how `Int` is imported and asked what an `if` accepts. The answer was already the canonical `Bool`; a counted loop already depended on canonical `Int`; literals, `String`, and the unit type had roles beside them. An ordinary package can be omitted or replaced. These identities could not be. Calling their container ordinary did not make the dependency optional; it only hid a language dependency inside the package graph.
 
@@ -99,13 +99,13 @@ We briefly tried to preserve the package by pushing control flow down to the und
 The answer is not to erase the implementation package. `core` still gives the fundamental types ordinary source declarations, constructors, methods, and primitive-backed layouts, but it becomes part of the compiler distribution rather than the program's package graph. Programs see `Int`, `Float`, `Bool`, `String`, and `Unit` as predeclared names: they neither import `core` nor write `core$Int`, and no manifest can omit or replace it. Reusable functionality remains in ordinary, specifically named packages and follows the dependency rules without privilege.
 
 > [!NOTE]
-> Superseded: `core` is no longer part of the compiler distribution with predeclared names; it is an ordinary dependency again. See "[The floor that made the package optional](#the-floor-that-made-the-package-optional)".
+> Superseded: `core` is no longer part of the compiler distribution with predeclared names; it is an ordinary dependency again. See "[`core` becomes an ordinary package over a primitive floor](#core-becomes-an-ordinary-package-over-a-primitive-floor)".
 
 This reverses the previous chapter without turning the type implementations into compiler AST exceptions. The language fixes which declarations `Bool` and `Int` name because its control-flow contracts require those identities; `core` still implements their behavior through the same package machinery used to compile source. The cost is a privileged package that cannot evolve on an independent library cadence or participate in imports and dependency resolution. That is real coupling, but it is confined to implementation and release rather than leaking primitive layout into source code or special cases into every fundamental type.
 
-## The floor that made the package optional
+## `core` becomes an ordinary package over a primitive floor
 
-Twice now this file has moved `core` and twice the move was decided by something outside it. The first time we cut it loose to protect the uniformity of packages; [the chapter after that](#the-package-that-was-the-language) put it back, because uniformity was the wrong thing to be protecting when `if` needed *the* `Bool` and an ordinary package can be omitted or replaced. That reversal was correct on its own terms. It also named, and rejected, the escape we have now taken — and it is worth quoting the objection rather than pretending it was never made, because the objection was sound about the design it was looking at.
+Twice now this file has moved `core` and twice the move was decided by something outside it. The first time we cut it loose to protect the uniformity of packages; [the chapter after that](#core-becomes-part-of-the-language-again) put it back, because uniformity was the wrong thing to be protecting when `if` needed *the* `Bool` and an ordinary package can be omitted or replaced. That reversal was correct on its own terms. It also named, and rejected, the escape we have now taken — and it is worth quoting the objection rather than pretending it was never made, because the objection was sound about the design it was looking at.
 
 The claim was that pushing control flow down to the underlying primitives would make the package wrapper optional "at the price of writing conditions and bounds through private representation fields and tying syntax to one storage layout." That price is exactly right for the design it describes, in which a condition is written `Bool(true)._v` and every program is coupled to how `core` happens to wrap a word. What changed is not our tolerance for that price. It is that the price is no longer charged.
 
@@ -171,7 +171,7 @@ Two commands needed to tell them apart. A release of a library is a set of objec
 
 The cost is that a project is one or the other. A library that wants to ship a command-line tool, or an application that wants to expose its internals to other projects, has to become two projects, which [a local path dependency](#where-a-dependencys-code-comes-from) at least makes cheap to work on together. And the field is one more thing that can be wrong: a library declared as an application cannot be added by anyone until its author changes the field and releases again.
 
-## The command outside the pin
+## The `zane` command is not pinned by `zane-version`
 
 The design had long said that `zane-version` selects the compiler ([`dependencies.md` §14](https://github.com/zane-lang/spec/blob/5b86aad1b6130fefb78df8734687e8ebdbeb8ff9/spec/dependencies.md#14-toolchain-version)), and we had planned the `zane` command as part of the compiler repository. Writing down the first commands showed why that could not work. The program that reads `zane-version` cannot be the program it selects. A project pinned to one compiler, built by a `zane` command released with a later one, must either hand the build to the pinned compiler or ignore its own pin, and if the command is that later compiler, there is no one to hand it to. Rust reached the same split for the same reason: `rustup` and `cargo` are not versioned with `rustc`.
 

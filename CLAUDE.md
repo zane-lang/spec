@@ -172,7 +172,7 @@ grep -RIn "receiver" spec/
 ```
 
 The single expected hit is the `> **Story:**` pointer in `functions.md` §2.1
-naming the chapter "What does a receiver receive?" — a chapter heading keeps the
+naming the chapter "Renaming the receiver to the subject" — a chapter heading keeps the
 old word because that is what the chapter is about. Any other hit is a
 reintroduction; fix it. Merged stories say "receiver" throughout and stay that
 way, so the two trees disagree on this word by design. Use `subject` in new
