@@ -4,7 +4,7 @@
 
 ## Two axes instead of a keyword per kind
 
-A type in Zane answers two independent questions, and the design turns on refusing to fuse them. The first is *shape*: is this a product (fields side by side) or a sum (one of several cases)? The second is *kind*: is this a value — copied, identity-less, transitively value — or a reference — a single-owner thing with stable identity that other things can point at? Those are orthogonal. A product can be either kind; so can a sum. Four cells in a two-by-two grid.
+A type in Zane answers two independent questions. The first is *shape*: is this a product (fields side by side) or a sum (one of several cases)? The second is *kind*: is this a value — copied, identity-less, transitively value — or a reference — a single-owner thing with stable identity that other things can point at? Those are orthogonal. A product can be either kind; so can a sum. Four cells in a two-by-two grid, and the design turns on refusing to fuse the two questions that make them.
 
 The mainstream move is to spend a keyword on each cell, or on most of them: `struct` for the value product, `class` for the reference product, `enum` or `union` for sums, each a separate declaration form with its own rules bolted on. We rejected that, because it makes a reader learn four things where there are really two, and it hides the fact that value-versus-reference is the *same* distinction whether you are looking at a product or a sum. If `class` is "the reference one" for products, nothing in `class` tells you what "the reference one" would be for a sum — the knowledge doesn't transfer, because the grammar split it across unrelated keywords.
 
