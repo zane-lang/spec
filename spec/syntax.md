@@ -167,7 +167,7 @@ TypeName
 `&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
-Array<&Node, n>
+List<&Node>
 ```
 
 `^TypeName` is a **roaming** host of a reference type. It is legal on a local-variable declaration, a parameter, and a return type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
