@@ -189,6 +189,8 @@ q Pair(MainCharacter());           // error at MainCharacter(): the inferred T o
 r wrap(MainCharacter());           // error at MainCharacter(), not inside wrap
 ```
 
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-wrong-kind-type-argument-is-reported-at-its-origin) — "A wrong-kind type argument is reported at its origin".
+
 ---
 
 ## 4. Type Expressions (`<>`)
