@@ -19,7 +19,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
-- **`Two container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T`, the single fixed-size container primitive and a value type; `@primitives$List<T>` is its dynamically sized counterpart and a reference type. `core` declares `Array` and `List` over them.
+- **`Three container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type; `@primitives$List<T>` is the dynamically sized counterpart and a reference type. `core` declares `Array`, `ArrayRef`, and `List` over them.
 
 ---
 
@@ -160,6 +160,36 @@ Int size(this Buffer<T Type, n @concepts$Int>) {
 Here `n` in the return position is the number the use site supplied for that parameter. The subject type `Buffer<T Type, n @concepts$Int>` introduces `T` and `n` inline; the return position references `n`. The `Array<T, n>` layout inside `Buffer` uses the same `n` to fix the storage size.
 
 > **See also:** [`effects.md`](effects.md) §2 — a number parameter read in a body position is a read-only value-like binding.
+
+### 3.6 A wrong-kind type argument is reported where the concrete type enters
+
+A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind.
+
+```zane
+type Box<T Type> = #struct {
+    value T;
+}
+Box<T>(value T Type) => init{value;}
+
+a Box(MainCharacter());  // legal: a reference type may hold a reference type
+b Box(Int(3));           // legal: and a value type
+```
+
+Such an error is reported at the **origin** of the type: the first position, following the type down from where it is written into the parameters it fills, at which it is a concrete type rather than a parameter. An explicit type argument is its own origin. An inferred one originates at the value argument it is read from. A parameter that only forwards a type to another parameter is never the origin, so a generic verb that passes `T` on is not where its caller's mistake is reported. The diagnostic **MUST** identify the path from the origin to the slot that rejects the type, since the reported line alone does not show why the type was wrong.
+
+```zane
+type Pair<T Type> = struct {
+    first T;
+}
+Pair<T>(first T Type) => init{first;}
+Pair<T> wrap(x T Type) => Pair(x)
+
+alias Crew = Pair<MainCharacter>   // error at MainCharacter: the explicit argument is the origin
+q Pair(MainCharacter());           // error at MainCharacter(): the inferred T originates there
+r wrap(MainCharacter());           // error at MainCharacter(), not inside wrap
+```
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-wrong-kind-type-argument-is-reported-at-its-origin) — "A wrong-kind type argument is reported at its origin".
 
 ---
 
@@ -380,6 +410,21 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-container-whose-size-the-type-cannot-carry) — "A container whose size the type cannot carry".
 
+### 8.4 ArrayRef is the fixed-size reference primitive
+
+`@primitives$ArrayRef<T, n>` is a reference-type storage primitive: `n` contiguous elements of type `T`, laid out as `@primitives$Array<T, n>` is. `T` may be a value type or a reference type, since a reference type may contain either ([`memory.md`](memory.md) §2.10). `core` declares `ArrayRef<T, n>` over it as a `#` reference type. Its size is statically known, so it lives inline in the fixed-size region like any other statically sized host ([`memory.md`](memory.md) §3.5).
+
+An `ArrayRef` is built from an array literal, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
+
+```zane
+squad ArrayRef([Enemy(Int(1)), Enemy(Int(2)), Enemy(Int(3))]);
+grid ArrayRef.fill(100, ^Enemy(i Int) => Enemy(i));
+```
+
+Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be guested. An element is overwritten in place and is never moved out, under either kind of root.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
+
 ---
 
 ## 9. Deferred Features
@@ -411,6 +456,8 @@ The following are intentionally not specified in this version:
 | Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
+| Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
+| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; its elements take their root's state, may be guested under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; `core` declares `List` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |

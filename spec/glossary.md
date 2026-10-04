@@ -206,13 +206,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.23 settled host
 
-- **Meaning:** A reference-type host that may be guested and never moves again: a bare reference-type symbol, or a field of a settled root. A roaming host settles by moving into a settled place. Overwriting it writes the replacement at the same address.
+- **Meaning:** A reference-type host that may be guested and never moves again: a bare reference-type symbol, or a field or `ArrayRef` element of a settled root. A roaming host settles by moving into a settled place. Overwriting it writes the replacement at the same address.
 - **Why this name:** It continues the host/guest register — a guest can only visit a host that has settled — and says the host has stopped moving for good.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.24 roaming host
 
-- **Meaning:** A reference-type host that may move anywhere. Neither it nor anything inside it can be guested. It is a symbol, parameter, or return written `^T`, a field of a roaming root, or any list element or variant payload.
+- **Meaning:** A reference-type host that may move anywhere. Neither it nor anything inside it can be guested. It is a symbol, parameter, or return written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
 - **Why this name:** The opposite of *settled* in the same register: a host still travelling, which no guest can visit. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
@@ -284,7 +284,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.36 guest source
 
-- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a struct-field path from a settled root that crosses neither a subscript nor a variant-case payload, or an `&T` parameter. A roaming host, and anything reached from one, never originates a guest.
+- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only, or an `&T` parameter itself. List elements and variant payloads are excluded. A roaming host, and anything reached from one, never originates a guest.
 - **Why this name:** The term names the *source* end — where a guest may come from — separately from where a stored guest may go, which is the store rule's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 

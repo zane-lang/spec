@@ -34,7 +34,7 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 - A **settled** host may be guested (§2.8). It never moves: no expression takes its object out of it.
 - A **roaming** host may be moved (see [`lifetimes.md`](lifetimes.md) §1.2). Nothing guests it, or anything inside it.
 
-A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming host **settles** when it moves into a settled place, and a settled host never becomes roaming.
+A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming host **settles** when it moves into a settled place, and a settled host never becomes roaming.
 
 ```zane
 spare ^Engine = Engine(Int(1));  // roaming
@@ -54,7 +54,7 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a settled host destroys the old occupant and writes the replacement at the same address. A guest to the host, or to any field of it, therefore observes the replacement.
+Overwriting a settled host destroys the old occupant and writes the replacement at the same address. This holds at every depth a guest can reach: each boxed member reached from the host through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing guests into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A guest to the host, or to any field of it, inline or boxed, therefore observes the replacement.
 
 ```zane
 car Car(...);
@@ -65,6 +65,8 @@ car.engine = Engine(); // the old engine is destroyed; r observes the replacemen
 Overwriting a roaming host, a list element, or a variant payload destroys the old occupant unless the operation first moves it elsewhere. Nothing guests it, so nothing observes the change of occupant.
 
 An `&T` stored *as an element value* is different: rewriting that element merely replaces one guest value with another.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#settled-overwrites-stay-in-place-and-only-an-escape-relocates) — "Settled overwrites stay in place, and only an escape relocates".
 
 ### 2.3 Value types are copied whole, mutable in place, and freely overwritable
 
@@ -144,13 +146,13 @@ The following are place expressions:
 Only a **settled** place may mint a new guest. A new `&` value may be minted from:
 
 - a **bare settled symbol** — a local or a package constant
-- a struct-field access whose path from a settled root contains no subscript or variant-case projection, such as `car.engine`
-- an `&T` parameter, or a field path from one
+- a path from a settled root that passes only through struct fields and `ArrayRef` elements, such as `car.engine` or `squad[2].weapon`
+- an `&T` parameter, or such a path from one
 
 Four things are rejected:
 
 - A roaming host, and any place reached from one, is never a guest source. Nothing guests a host that may still move.
-- A path containing `[]` anywhere is never a guest source, even when the final expression is a field access. `players[100]` and `players[100].weapon` are both excluded.
+- A subscript is a guest source only when the place it projects is an `ArrayRef` element ([`functions.md`](functions.md) §2.9). A list element is roaming, so `players[100]` and `players[100].weapon` on a `List` are both excluded.
 - A variant case payload is never a guest source, and neither is a path that continues through one.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
@@ -170,10 +172,15 @@ t &Car = spare;          // ILLEGAL: spare is roaming
 ```
 
 ```zane
-weapon &Weapon = players[100].weapon;  // ILLEGAL: the path crosses []
+weapon &Weapon = players[100].weapon;  // ILLEGAL: players is a List; its elements are roaming
 ```
 
-For an element or a case payload, keep the guest at the settled container and perform the access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
+```zane
+squad ArrayRef([Player(), Player()]);
+lead &Weapon = squad[1].weapon;        // legal: squad is settled, and its elements are too
+```
+
+For a list element or a case payload, keep the guest at the settled container and perform the access through it when needed. A guest to a container may subscript that container, and a guest to a variant may read whichever case is live; neither access may mint a new guest to the element or case payload.
 
 Reading an `&T` value that is already stored behind such an access remains legal:
 
@@ -192,6 +199,7 @@ engine Engine();        // legal: plain host binding; Engine() temporary is mate
 ```
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#contingent-hosts-float-to-their-owner) — "Contingent hosts float to their owner".
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 ### 2.8.1 A roaming host settles where it lands
 
@@ -210,10 +218,10 @@ garage.car = make(Int(2));     // settles in garage.car when garage is settled
 
 What a host contains takes a state from where it sits:
 
-- **Fixed storage inherits its root's state.** A struct's fields are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction. An array is a value type ([`generics.md`](generics.md) §8.1), so it holds no host at all (§2.10).
+- **Fixed storage inherits its root's state.** A struct's fields and an `ArrayRef`'s elements are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction ([`generics.md`](generics.md) §8.4). An `Array` is a value type ([`generics.md`](generics.md) §8.1), so it holds no host at all (§2.10).
 - **Dynamic storage is always roaming.** A list's elements and a variant's payload come and go while their owner lives, so they are roaming even under a settled root. A settled list may be guested as a whole; its elements may not.
 
-A field is never declared roaming. A field of a **roaming** root may be moved out, because nothing can observe the root; the root is then partly spent, tracked in its declaration block as a spent symbol is ([`lifetimes.md`](lifetimes.md) §1.6). A field of a settled root is overwritten, never moved out (§2.2).
+A field is never declared roaming. An `ArrayRef` element is never moved out, under either kind of root: its index is a runtime value, so which element is spent could not be tracked. A field of a **roaming** root may be moved out, because nothing can observe the root; the root is then partly spent, tracked in its declaration block as a spent symbol is ([`lifetimes.md`](lifetimes.md) §1.6). A field of a settled root is overwritten, never moved out (§2.2).
 
 A roaming value cannot hold a guest into its own insides, because nothing inside a roaming host is guestable. An object is wired to its own parts after it settles, from outside it:
 
@@ -226,6 +234,7 @@ The `&` fields a roaming value holds may name settled hosts elsewhere; every sto
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#settled-and-roaming-the-host-that-stopped-moving) — "Settled and roaming: the host that stopped moving".
 > **Story:** [`stories/memory.md`](../stories/memory.md#where-a-new-ref-may-come-from) — "Where a new ref may come from".
+> **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 ### 2.9 Function parameters: borrow, take, and guest
 
@@ -376,7 +385,7 @@ Each lexical scope owns an **arena** made from two independent allocation region
 
 Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
 
-Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's memory is released together when that scope drains, and no guest ever resolves into released memory. A value that escapes is promoted out of the draining scope first (§3.5, §3.7); only a roaming host or a value escapes, and nothing guests either.
+Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's memory is released together when that scope drains, and no guest ever resolves into released memory. A value that escapes is promoted out of the draining scope first (§3.5); only a roaming host or a value escapes, and nothing guests either.
 
 ```text
 one scope arena
@@ -407,7 +416,7 @@ Guests (§4.1), dynamic handles, and size-stack entries (§3.2) use segmented of
 
 ### 3.2 Allocation, reuse, and teardown
 
-The fixed-size region is a pure bump allocator: no size classes, no free list, no coalescing. A host has a fixed-size storage slot, so an overwrite consumes no new space in that region. Reference-type overwrite and move ordering follow §2.2 and §3.7. A materialized **value** slot follows the replacement rule of §2.3: the right-hand side observes the pre-overwrite occupant, and any overlapping replacement is completed before the old value ends. Only then are the old value's owned dynamic blocks — backing stores and boxed payloads alike, recursively — returned to their exact-size stacks and the replacement installed in the same slot. If the compiler proves the replacement does not depend on the current occupant, it may destroy the old value and construct a non-place result directly in that slot. Nothing in the fixed-size region is reclaimed individually — bytes in a slot that cease to be live before the scope drains remain dead space until teardown.
+The fixed-size region is a pure bump allocator: no size classes, no free list, no coalescing. A host has a fixed-size storage slot, so an overwrite consumes no new space in that region. Reference-type overwrite and move ordering follow §2.2 and §3.5. A materialized **value** slot follows the replacement rule of §2.3: the right-hand side observes the pre-overwrite occupant, and any overlapping replacement is completed before the old value ends. Only then are the old value's owned dynamic blocks — backing stores and boxed payloads alike, recursively — returned to their exact-size stacks and the replacement installed in the same slot. If the compiler proves the replacement does not depend on the current occupant, it may destroy the old value and construct a non-place result directly in that slot. Nothing in the fixed-size region is reclaimed individually — bytes in a slot that cease to be live before the scope drains remain dead space until teardown.
 
 The dynamic region adds exact-size reuse on top of its bump frontier. Each scope maintains one LIFO **size stack** for every (byte size, alignment) pair that has become reusable. To allocate a dynamic block of size `S` and alignment `A`, the runtime first pops `size_stack[S, A]`; only when that stack is empty does it bump the dynamic frontier, rounding it up to `A` first. Keying on alignment as well as size is what keeps reuse sound now that blocks no longer share one alignment: a block returned by a type needing 8-byte alignment must not be handed to a type needing 16. It never satisfies a request from another size stack and never coalesces neighbouring blocks.
 
@@ -430,7 +439,7 @@ A **boxed member** is laid out the same way: a fixed-size handle inline, with th
 Boxing is available on **both** sides of the `#` axis. Two separate questions decide what a boxed member means, and they are answered by **different** types:
 
 - **What the payload is** follows the **member's own declared type**, never the enclosing one. A reference-typed payload is an ordinary reference-type instance with identity: a boxed field takes its root's state as any field does (§2.8.1), and a boxed variant payload is roaming like any payload — being boxed neither grants nor withholds a guest. A value-typed payload is an ordinary value: no identity and nothing to guest. Because boxing is permitted off a cycle (§3.3, [`adt.md`](adt.md) §4), a reference type may box a value-typed member; that stores a plain value out of line and does **not** give it identity.
-- **What becomes of the payload when the enclosing instance moves, is copied, or dies** follows the **enclosing type's kind**. A reference type *hosts* what it boxes: it destroys the payload when it dies, and moving it while it roams relocates the payload (§3.5). A value type *owns* what it boxes: the payload is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2).
+- **What becomes of the payload when the enclosing instance moves, is copied, or dies** follows the **enclosing type's kind**. A reference type *hosts* what it boxes: it destroys the payload when it dies, and moving it while it roams carries the payload with it (§3.5). A value type *owns* what it boxes: the payload is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2).
 
 Either way the member's declared type is unchanged by being boxed, and the box is placement rather than an extra level of type.
 
@@ -442,9 +451,11 @@ The compiler may pack booleans in structs and arena frames when doing so does no
 
 Placement is an implementation decision, not a language-visible property. The arena model places every materialized, statically sized scope slot — value-type storage, a reference-type host, a dynamic type's fixed-size handle, or a boxed member's handle — inline in that scope's fixed-size region. The compiler may keep an unobservable value in registers or otherwise optimize its physical placement, but reference types do not require a separate heap allocation merely because they carry identity. A recursive member is boxed for the opposite reason: not because of which side of the `#` axis its type sits on, but because a finite inline layout does not exist for it (§3.3).
 
-When a roaming reference-type instance moves, all storage owned by that host is relocated into storage owned by the destination. Its statically sized inline bytes are copied into the destination host's fixed-size slot (§3.7). For every **dynamic block** the host owns — a resizable backing store behind a `List` or `String` handle, or the payload of a boxed member — the runtime allocates an equal-size block or oversized span in the destination scope's dynamic region, relocates the live contents into it according to their ordinary move rules, updates the copied handle, and then returns the old source block or span to its exact-size stack. Nothing inside a roaming host is guested, so nothing else is updated. A promotion therefore completes before the source scope may drain and leaves no destination handle pointing into source-scope memory.
+A move transfers a roaming host into a destination host of the **same type** ([`lifetimes.md`](lifetimes.md) §1). Both have the same statically known size, so a move copies the host's inline bytes, its handles among them, into the destination's fixed-size slot. A destination that already holds an object follows §2.2: a settled destination is overwritten in place, and any other destination's occupant is destroyed first. The source slot is spent ([`lifetimes.md`](lifetimes.md) §1.6). Nothing inside a roaming host is guested, so a move updates nothing else.
 
-Relocation is **recursive**, because a relocated block may itself own dynamic blocks: a boxed payload holds its own boxed members, and a backing store holds its elements' owned storage. Moving the root of a roaming recursive structure therefore relocates the whole structure, at a cost proportional to the number of boxed nodes it contains rather than to the root alone. This is the ordinary consequence of the children being owned; a `List` already pays it for its backing store.
+The **dynamic blocks** the host owns — the backing store behind a `List` or `String` handle, and the payload of a boxed member — stay where they are. A move copies their handles and never their contents, while the scope that holds the blocks outlives the destination host. A move whose destination outlives that scope is an **escape**: a `return` out of the scope that allocated the blocks, or a store into a host declared above it. Before that scope drains, every block the escaping host owns **MUST** reside in a scope that lives as long as the destination, so that no handle ever names released memory. The implementation either relocates each block — allocating an equal-size block or oversized span in such a scope's dynamic region, moving the live contents into it under their ordinary move rules, updating the handle, and returning the old block to its exact-size stack — or allocates the block there in the first place.
+
+Relocation is **recursive**, because a relocated block may itself own dynamic blocks: a boxed payload holds its own boxed members, and a backing store holds its elements' owned storage. Relocating the root of a roaming recursive structure therefore relocates the whole structure, at a cost proportional to the number of boxed nodes it contains rather than to the root alone.
 
 When a **value itself** is copied into a slot owned by another scope, it reaches that scope by copying rather than moving, and the same recursion applies to its blocks: the copy allocates each backing store and boxed payload afresh in the destination scope's dynamic region and copies into it, so the copy owns storage in the scope that holds it and the source keeps its own (§2.3). This governs the value being copied, not every value-typed payload in sight: one that a reference host owns through a boxed member travels with that host under the relocation rule above, because what becomes of a boxed payload follows the enclosing type's kind (§3.3).
 
@@ -452,6 +463,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#settled-overwrites-stay-in-place-and-only-an-escape-relocates) — "Settled overwrites stay in place, and only an escape relocates".
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
@@ -478,21 +490,12 @@ A list grows according to the following rules:
 
 A block never grows in place across a chunk boundary, and an oversized span is never extended in place: further growth relocates into a doubled oversized span after checking that exact-size stack first. Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. Guests to the list remain valid because they reach the list's host, whose fixed-size handle now names the current backing store.
 
-A **boxed member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's segmented offset; the payload is one instance of the member's declared type, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's enclosing instance is destroyed. Overwriting the member writes the replacement into the same block, which always fits because both are instances of the member's type, so a guest into a settled boxed member keeps its address. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is thereafter only relocated by moving its roaming host, or allocated afresh by a deep value copy (§2.3, §3.5).
+A **boxed member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's segmented offset; the payload is one instance of the member's declared type, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's enclosing instance is destroyed. Overwriting the member writes the replacement into the same block, which always fits because both are instances of the member's type, and the replacement's own boxed members are written into the blocks the occupant already holds, recursively (§2.2). A guest into a settled boxed member, or into any member below it, keeps its address. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is thereafter only relocated when its roaming host escapes, or allocated afresh by a deep value copy (§2.3, §3.5).
 
 Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a **growable backing store** — 128 bytes or larger — is cache-line aligned within them. Every other block takes its own type's alignment, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-free-zero-sentinel-and-cache-line-aligned-buffers) — "A free zero sentinel, and cache-line-aligned buffers".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
-
-### 3.7 Moving a value reuses the destination slot
-
-A move transfers a roaming host into a destination host of the **same type** (see [`lifetimes.md`](lifetimes.md) §1). Because both sides have identical, statically known size, a move is a fixed-size overwrite of the destination slot:
-
-- Moving into a fresh declaration or a return slot is in-place initialization.
-- Moving into an already-initialized host, element, or payload first destroys the current occupant, then overwrites the same-size slot. An operation that hands the old occupant out moves it elsewhere first.
-
-A roaming symbol moves only in its declaration block ([`lifetimes.md`](lifetimes.md) §1.3), so the destination is declared there or above, and its slot already exists. Moving copies the complete hosted representation into destination-owned storage. The inline payload or handle is copied into the destination's fixed-size slot. Each dynamic block the host owns — a backing store or a boxed payload — is relocated into an equal-size destination-region block or oversized span as specified in §3.5, recursively through any blocks it owns in turn, and the old block is returned to the source scope's exact-size stack. The source payload bytes then cease to be live. The source slot is spent: its full-size storage is dead until a store refills it or its scope drains. Nothing inside a roaming host is guested, so a move updates nothing else.
 
 ---
 
@@ -551,7 +554,7 @@ An overwrite destroys the old occupant while guests to the slot remain. They nam
 | Roaming host | May move; nothing guests it or anything inside it; written `^T`, and every list element and variant payload |
 | Settling | A roaming host settles by moving into a settled place; a settled host never roams again |
 | Hosting storage | Reference-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
-| Settled overwrite | Destroys the old occupant and writes the replacement at the same address; guests to the slot or its fields observe the replacement |
+| Settled overwrite | Destroys the old occupant and writes the replacement at the same address, reusing the block of every boxed member reached through struct fields and `ArrayRef` elements; guests to the slot or any of its fields observe the replacement |
 | Value type | Mutable in place through a borrowed `mut` subject; storage may also be overwritten freely |
 | Value construction | A non-place value expression constructs directly in its eventual destination, recursively through nested fresh results; only an existing place is copied |
 | Value overwrite | The right-hand side observes the pre-overwrite value; an overlapping replacement is completed before the old value and its owned blocks are destroyed |
@@ -559,7 +562,8 @@ An overwrite destroys the old occupant while guests to the slot remain. They nam
 | `&` (guest) | Guest-only non-hosting storage naming a settled host; may be repointed, copied by value, and returned, but can never host a `T` |
 | Spent host slot | After a roaming host's value moves out, the slot is spent and keeps enough storage for a store to refill it |
 | Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
-| New `&` value | May be minted only from a settled place: a bare settled symbol, a struct-field path from a settled root containing no subscript or variant-case projection, or an `&T` parameter; roaming hosts, paths through `[]` or a variant payload, and temporaries are rejected |
+| New `&` value | May be minted only from a settled place: a bare settled symbol, or a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only; roaming hosts, list elements, variant payloads, and temporaries are rejected |
+| `ArrayRef` element | Fixed storage: takes its root's state, may be guested under a settled root, is overwritten in place, and is never moved out |
 | Field of a roaming root | May be moved out; the root is partly spent until refilled; a field is never declared roaming |
 | Borrow | Non-hosting, non-escaping access to a caller's storage for the duration of a call; not storable, not returnable, not a guest source, not a move-source |
 | Value-type parameter | Always a read-only borrow; copied only when the parameter is itself bound into a fresh slot |
@@ -568,7 +572,7 @@ An overwrite destroys the old occupant while guests to the slot remain. They nam
 | Value-downstream enforcement | Value types may contain only value types, value-type primitives among them, transitively — never a reference-type or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
-| Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; moving a roaming host copies inline bytes and every owned dynamic block into destination-owned regions, recursively, before source storage is retired |
+| Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; moving a roaming host copies its inline bytes and handles, and its dynamic blocks stay put unless it escapes the scope holding them, which must first leave every block in a scope that lives as long as the destination |
 | Boxed member | A member whose type can lead back to the enclosing type is stored as a fixed-size handle inline with its enclosing instance, while the instance the handle names lives in the dynamic region; required on a containment cycle, permitted elsewhere, and nothing marks it in the source. In a reference type it is a **hosting** member; in a value type the value owns it outright and deep-copies it. An overwrite reuses its block |
 | `&` representation | A guest is the `u32` segmented offset of the settled host it names |
 | Addressing | Every chunk shares one `u32` segmented-offset directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |

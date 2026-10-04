@@ -3,39 +3,32 @@
 # Authored after inspecting a real run of zane_bench (see
 # zane_bench_results.json, and zane_bench_results.txt rendered from it).
 #
-# PROVENANCE AND NOISE. The committed run is a fresh full-suite run, taken
-# under WSL2 with no core pinning, on a hybrid CPU: 8 performance cores and
-# 16 efficiency cores. That matters for the two rows that spawn threads, T8
-# and T12, and for nothing else — see T12's note.
+# PROVENANCE AND NOISE. The committed run is a fresh full-suite run of the
+# settled/roaming harness, the first since the anchor pool, the per-host
+# backpointer and forwarding were removed (spec PR #212). It was taken on a
+# different and less powerful machine than the previous pin, which ran under
+# WSL2 with no core pinning on a hybrid desktop CPU of 8 performance and 16
+# efficiency cores. Rows whose code did not change came in 1.9-5.1x slower
+# here than in that pin, which is the machine, not the code, so no absolute
+# figure here should be compared with one from before. Every comparison below
+# is between rows of this run. The two threaded rows, T8 and T12, are the
+# noisiest on either machine.
 #
-# Every row now carries all 20 per-run samples in zane_bench_results.json, so
-# the spread below is checkable rather than asserted, and it shows two things.
-# The first pass of a row is almost always its slowest, often by 3-5x, so a
-# row's max is warm-up rather than variance. The median is taken over all 20
-# samples, warm-up included; it is quoted here because it barely moves when
-# that pass is dropped, not because the pass is excluded. T1's Zane row is
-# 158.7us over all twenty and 152.8us over the last nineteen. And absolute
-# figures move a great deal between runs of identical code: every row here
-# came in 1.2-2.8x faster than the run before it. So treat each figure as one
-# run's median, good to about one significant figure. The durable content is
-# the ratios, the orderings, and effects large enough to survive that band;
-# where two rows fall inside it the note says they tie rather than picking a
-# winner, and where a finding did not survive the last re-run the note says
-# that too.
+# Every row carries all 20 per-run samples in zane_bench_results.json, so the
+# spread is checkable rather than asserted. In this run the first pass is the
+# slowest in only 10 of the 49 timed rows, but where it is, it can dominate:
+# 13x the median on T1's Zane row and 25x on T3's arena row. The median is
+# taken over all 20 samples, warm-up included, and barely moves when that pass
+# is dropped: T1's Zane row is 86.2us over all twenty and 85.0us over the last
+# nineteen. Treat each figure as one run's median, good to about one
+# significant figure. The durable content is the ratios, the orderings, and
+# effects large enough to survive that band; where two rows fall inside it the
+# note says they tie rather than picking a winner.
 #
 # runbench.py reads this file alongside the results and renders each block as
 # the "Reading the result" note for its test — a section below that test's
 # chart. It interprets the numbers; the configuration lives in the panel above
-# the chart, and checked invariants live in that panel's meta rows. One test
-# (T13) is a compile-time A/B against the -DZM_INTERLEAVE build. Those pairs
-# predate this run, which is default-only: three have been taken, all three
-# favour the global pool, and none of them pins the magnitude.
-#
-# One caution specific to those pairs: in one of them the interleaved run was
-# taken on a quieter machine than its partner. On the tests that mint no
-# guests the two builds run identical code, and there the interleaved run came
-# out ~24% faster — so that pair's numbers are biased *toward* the interleaved
-# layout, and it lost anyway.
+# the chart, and checked invariants live in that panel's meta rows.
 #
 # Format: one block per test, opened by "[Test N]". Lines starting with '#'
 # are comments; blank lines separate blocks.
@@ -46,174 +39,130 @@
 # which re-renders from that file instead of measuring again.
 
 [Test 1]
-Zane's bump (~159us) runs ~13x faster than malloc (~2.06ms) and ~1.5x faster
-than Pool (~231us) — and since only Zane's release is free, its figure is
-allocation alone where the other two carry their frees inside it. Arena
-(~14us) is a further ~11x ahead, but read that row for what it is rather than
-as an allocator that beats this one: it bumps a pointer and never writes to
-the memory it hands out, so it pays no cache-line fills at all. The row beside
-it settles the point. The same flat arena writing one 4-byte field per object
-costs ~155us, which is Zane's ~159us to within 2%. Nothing separating those
-two is the chunked design; what separates either of them from the pure bump is
-the cache-line fills that one write pulls in across ~4 MB, and every allocator
-that initializes an object pays those. What the pure-bump row marks is the
-floor for address arithmetic, and that is a floor no allocator which
-initializes anything can reach.
+Zane's bump (~86us) runs ~58x faster than malloc (~5.03ms) and ~6.5x faster
+than Pool (~559us), and since only Zane's release is free, its figure is
+allocation alone where the other two carry their frees inside it. Neither
+Zane nor the flat arena (~39us) writes to the memory it hands out now that a
+host carries no backpointer, so the ~2.2x between them is not cache-line
+fills: the only code that differs is Zane's chunk-boundary check and the
+frontier it keeps in its region record. The first of Zane's twenty passes
+took ~1.14ms, 13x its median; the harness touches every page of the region
+before any test runs, so that pass is warm-up of something other than page
+faults, and the median is the figure to read.
 
 [Test 2]
 Zane's row is not a fast release loop; it is no loop at all. zm_host_release
 is an empty function, so the compiler deletes the 100k-iteration loop outright,
 and the harness reports the row as eliminated rather than timing two
-timestamps around nothing. malloc (~959us) and Pool (~194us) spend ~9.6ns and
-~1.9ns an object returning blocks to a structure that later allocations must
-search. Shuffling costs them nothing extra; having the structure at all is the
-cost.
+timestamps around nothing. malloc (~2.27ms) and Pool (~681us) spend ~23ns and
+~6.8ns an object returning blocks to a structure that later allocations must
+search. Having the structure at all is the cost.
 
 [Test 3]
-Mixed sizes cost Zane nothing structural: ~260us, ~2.6ns a block, and the
-ordering against malloc (~3.51ms, ~13x) and Pool (~980us, ~3.8x) is what T1
-already showed at a single size. Arena (~29us) is again the floor. The
-multiples are the part to distrust — the previous run put malloc at ~21x and
-Pool at ~7x on this same code, both competitors having been unusually slow
-that day. The ordering is what has held across both.
+Mixed sizes cost Zane nothing structural: ~708us, ~7ns a block, against
+malloc (~9.90ms, ~14x) and Pool (~4.59ms, ~6.5x). Arena (~115us) is again
+the floor. The ordering is the one T1 shows at a single size and the one the
+previous two pins showed here; the multiples are the part to distrust, Pool's
+having moved from ~3.8x to ~6.5x between pins on unchanged code.
 
 [Test 4]
-Layout alone spans ~3.2x. Contiguous inline storage (~33us) is the floor, the
-chunked forms sit close behind (UList ~47us, CChunked ~51us), and the
-scattered pointer array costs ~106us. What did not survive the re-run is the
-shuffle: walking the pointer array in order (~106us) and shuffled (~101us) now
-tie, where the previous run had the shuffled walk costing ~1.5x the sequential
-one. Whatever separated them there did not reproduce here, so treat the
-prefetcher story that reading invited as unsupported. The gap between
-contiguous storage and any scattered form is what both runs agree on.
+Layout alone spans ~2.8x. Contiguous inline storage (~127us) is the floor,
+the chunked forms sit close behind (UList ~151us, CChunked ~171us), the
+scattered pointer array costs ~204us walked in order, and ~350us shuffled.
+The shuffle is back: ~1.7x the in-order walk, where the previous pin had the
+two tying and the one before that had ~1.5x. A finding that appears in two of
+three runs is a tendency rather than a result. The gap between contiguous
+storage and any scattered form is what all three agree on.
 
 [Test 5]
-Copying costs Zane nothing measurable, and this run puts it in front: ~162us
-against C's realloc vector (~224us), which extends its mapping instead of
-copying, and CChunked (~204us). The previous run had those three inside each
-other's noise, so read the ~1.3x lead as "not behind" rather than as a win.
-Only UList (~749us) is clearly last, in both runs. Bounding a block to one
-chunk is what forces the relocations, and it stays cheap because only the two
-oversized spans copy at all; growth at the frontier moves nothing.
+Zane's list (~473us) again leads C's realloc vector (~616us) by ~1.3x, and
+CChunked (~703us) follows; UList (~1.89ms) is clearly last. Two pins now put
+the same ~1.3x lead in front, which is enough to say growth at the dynamic
+frontier is not behind a realloc that extends its mapping, if not enough to
+call it a win. Bounding a block to one chunk is what forces relocation, and
+it stays cheap because only the two oversized spans copy at all.
 
 [Test 6]
-The extra dependent load costs ~1.24x: ~84us direct against ~104us tethered,
-about a fifth of a nanosecond on each of 100k accesses, most of it absorbed by
-the pipeline. Caching the chunk directory or re-fetching it lands within ~3%
-— inside the noise, so the directory is not on the critical path. This is the
-terminal case only; T14 measures what an identity that has outlived a move
-pays.
+A guest now costs what a pointer costs. Resolving a segmented offset (~195us
+with the chunk directory hoisted, ~168us re-fetched) ties dereferencing a raw
+pointer (~191us); the fastest passes, ~157us direct against ~163-166us
+offset, agree to within 6%, and the re-fetched row coming in ahead is noise.
+Under anchors the same test cost ~1.24x direct, which was the anchor-cell
+load a guest no longer makes. The shift and mask that turn an offset into an
+address are absorbed by the pipeline.
 
 [Test 7]
-Once entity counts stabilize the allocator stops mattering: Zane (~1.19ms)
-and Pool (~1.18ms) tie, malloc (~1.39ms) trails by ~18%, and the
-order-of-magnitude gaps of T1-T3 have gone into per-frame update work. All
-three are steady here, each holding within 1.2-1.4x across its 20 passes. The
-erratic malloc the previous run reported — its slowest pass twice its fastest
-— did not reproduce, so steadiness is no longer what separates them.
+Once entity counts stabilize the allocator stops mattering much: Zane
+(~4.28ms), Pool (~4.56ms) and malloc (~4.99ms) span ~17%, with Zane nominally
+in front of Pool by ~7%. The previous pin had Zane and Pool tied, so read
+that lead as inside the noise. The order-of-magnitude gaps of T1-T3 have gone
+into per-frame update work.
 
 [Test 8]
-Maximum churn narrows the field rather than widening it: Pool (~3.49ms), Zane
-(~3.70ms) and malloc (~3.99ms) span 14%, against an order of magnitude in
-T1-T3. The work-stealing row is the result worth keeping — ~23.6ms, ~6.4x
-plain Zane, with the pool already warm, so startup does not explain it.
-Per-frame particle work is too small to amortize scheduling. The multiple is
-softer than the ~14x the previous run reported and the row is far steadier
-here (~22.9-29.2ms against ~78-151ms), but both runs say the same thing:
-distributing this much work costs several times more than doing it.
+Maximum churn is the one workload where Zane comes last: Pool ~12.2ms,
+malloc ~15.1ms, Zane ~17.0ms, ~1.4x Pool. The fixed region never reuses a
+freed slot before the scope drains, so each frame's spawns land in memory
+the update loop has not touched, where Pool hands back the slots that just
+died and are still in cache; that is the likely cost, and it is the price of
+T9's flat refill. Zane's own passes spread from ~14.0ms to ~24.6ms, the
+widest of the three. The work-stealing row is ~145ms, ~8.5x plain Zane:
+per-frame particle work is too small to amortize scheduling, as both
+previous pins also found.
 
 [Test 9]
 A bump frontier cannot be fragmented, and the refill shows it: Zane takes
-~77us for the 50k objects, ~1.5ns each, the rate it would charge on an
-untouched region — and it holds that rate across all 20 passes. The
-competitors do not, which is the part the per-run samples now make visible.
-malloc (~852us) and Pool (~346us) refill from the freed slots at ~17ns and
-~7ns an object, ~11x and ~4.5x, and both degrade as the run proceeds: malloc's
-passes climb from ~480us to ~890us and Pool's from ~81us to ~474us before
-plateauing, each cycle handing the free list back in a worse order than it
-found it. Zane's flat line against those two curves is what reclaiming nothing
-until the scope drains buys.
+~49us for the 50k objects, ~1ns each, and holds between ~48us and ~54us
+across all 20 passes. It is also the one row in the suite that got faster
+than the previous pin in absolute terms, ~77us then, on a run where every
+unchanged row got slower: refilling no longer zeroes a backpointer in each
+host. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and
+~24x, and both degrade across the run: Pool's passes climb from ~379us to a
+~2.24ms worst and malloc's from ~1.49ms to ~3.01ms, each cycle handing the
+free list back in a worse order than it found it.
 
 [Test 10]
-Read the ratios here, not the absolutes, and read the guest-density rows with
-care. These figures were measured before build_tree was fixed, when the first
-child of every node took the whole node budget and each later sibling was
-NULL — a 4,000-node chain of depth 3,999 with no branch points, rather than a
-branching tree. What survives is the comparison against the other allocators,
-since every row ran on that same shape: malloc's coalescing costs ~2.4x
-Zane's teardown and Pool (~36us) ties it, and a check on the corrected
-topology reproduced both. What does not survive is the reading that guest
-density is free. These numbers put the fully guested row nominally fastest of
-the three, which the chain produced; on a real branching tree the same check
-put it a few percent behind, in line with the ~5% an earlier run reported.
-The mechanism is what makes the cost small either way: anchors are never
-enumerated, so retiring 4,000 payload anchors is one backpointer test per
-node, against an object the post-order walk already holds in cache. Teardown
-scales with the tree, not with how much of it is guested — but the figures
-above need a re-run before they say so.
+Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc
+~152us (~2.5x). This is the first pin on the corrected topology, roughly
+1,070 branch points at depth ~20-26 rather than the 4,000-node chain the
+earlier figures measured, and the cross-allocator ordering survived the
+change. Guest density no longer has a row, because a guest leaves nothing in
+its host for teardown to visit; what Zane's walk does per node is return the
+node's child list to its exact-size stack.
 
 [Test 11]
-The mixed workload compresses the field to a tie, and the previous run's
-caution proved right: Zane ~1.35ms, Pool ~1.40ms, malloc ~1.47ms, where that
-run had Pool in front of Zane. Updates, scans and randomized maintenance
-dominate, so the allocator is only a small slice of the total. The 9% between
-fastest and slowest is inside what a median shifts between runs, and the
-ordering duly moved.
+The mixed workload compresses the field to a tie: Zane ~3.89ms, malloc
+~4.08ms, Pool ~4.12ms, ~6% end to end. Updates, scans and randomized
+maintenance dominate, so the allocator is a small slice of the total, and the
+ordering has moved between every pin.
 
 [Test 12]
-Concurrency loses, and by how much depends on where the four workers land.
-The scan splits into four equal shards and waits for all of them, so a pass
-runs at the speed of its slowest shard — and on a hybrid host with 8
-performance cores against 16 efficiency ones, nothing pins a worker to
-either. The 20 passes spread 4.5x accordingly: ~72us at best, ~194us median,
-~322us at worst, against ~24us sequential. The best pass is the one to read.
-At ~2.9x sequential it reproduces the ~3.1x an earlier run measured with the
-process pinned to four cores, so the ~7.9x median is core placement, not the
-cost of distributing. The finding survives either reading: distributing a
-24us scan costs several times more than doing it outright, because per-shard
-work this small cannot amortize the handoff. T8 shows the other side of the
-same coin — at ~23ms a pass its work-stealing row spreads only 1.28x, both
-because the work amortizes placement and because stealing lets a fast core
-drain a slow one's queue.
+Concurrency loses. The scan splits into four equal shards and waits for all
+of them, so a pass runs at the speed of its slowest shard: concurrent passes
+run ~248us at best, ~398us median and ~647us at worst, against ~114us
+sequential (~89us best). Best against best is ~2.8x, close to the ~2.9x of
+the previous pin and the ~3.1x an earlier run measured with the process
+pinned to four cores, which is the figure to read; the median adds core
+placement on top. Distributing a ~100us scan costs several times more than
+doing it outright, because per-shard work this small cannot amortize the
+handoff.
 
 [Test 13]
-~3.57ms for the weighted mix. The A/B evidence predates this run, which is
-default-only: across three default/interleaved pairs the interleaved build
-lost every one — by 8.9%, 26.4% and 4.8% — one of them from a ~24% machine
-advantage. Three measurements in one direction is reasonable evidence that
-protecting the scan wins the aggregate; none pins its size. A payload-only
-companion agreed on all three pairs before it was retired as redundant with
-this test, which weights the same effect properly. The design argument
-follows: scans are pervasive and un-hoistable where resolves are occasional,
-so the pool's dearer resolve (T6) is the right trade.
-
-[Test 14]
-Hops are linear and expensive: ~124us, ~212us, ~333us and ~605us at zero,
-one, two and four. Compression costs ~357us against the ~298us floor,
-recovering about four fifths of the four-hop penalty on the very first
-repeated access — what §4.8 claims for it — and the ~59us residual is the
-store it makes on every pass. The floor is the figure to notice: it sits ~2.4x
-above the ~124us terminal row on footprint alone, five hosts and five cells
-against one.
-
-[Test 15]
-Not knowing a size until runtime costs nothing measurable: ~237us for the
-runtime size class against ~242us for the static one over 60,000 pairs, the
-runtime row nominally ahead. The previous run put the static row ~6% in front.
-The effect is inside the noise in both and this run reverses its sign, so the
-honest reading is that a runtime size class is free, not that it is cheap. The
-stacks cost far more — the frontier-only row runs ~50us, ~4.8x under both —
+Not knowing a size until runtime costs nothing measurable: ~688us for the
+runtime size class against ~755us for the static one over 60,000 pairs, the
+runtime row nominally ahead, as it was in the previous pin. The effect is
+inside the noise, so the reading is that a runtime size class is free. The
+stacks cost far more — the frontier-only row runs ~257us, ~2.7x under both —
 and what they buy is memory rather than time: frontier-only bumps through
 17.9 MB of fresh chunks to hold a 1 MB live set where the stack runs recycle
-inside ~1.8 MB. Pool (~212us) stays ahead by ~1.1x because its link is a raw
-pointer where §3.1 makes this one a segmented offset: inherent, not
-recoverable.
+inside ~1.8 MB. Pool (~473us) stays ahead, by ~1.5x this time, because its
+link is a raw pointer where §3.1 makes this one a segmented offset.
 
-[Test 16]
-Guesting every node costs rehosting ~28% — ~42us against ~33us — and no more,
-because each host retargets its own anchor and no guest is ever enumerated.
-That is the steadiest figure in the suite, the previous run having put it at
-~27%. The value pair is the one to read: ~18us to deep-copy from an existing
-place against ~12us to construct fresh. Both are O(structure) as §2.3
-requires, and the ~5us between them is the copy itself, which is why only an
-existing source pays it. malloc's deep copy is ~95us, ~5.4x.
+[Test 14]
+An escape costs what a deep copy costs. Relocating the roaming tree out of
+its scope (~84us) and deep-copying the value tree from an existing place
+(~81us) both walk all 8,191 nodes and allocate a block for each; the escape
+additionally returns each old block to its stack, and the two tie. A move
+that does not escape copies only the root's handles and is not timed.
+Constructing a fresh value tree in place (~46us) is the floor both sit ~1.8x
+above, which is the copy itself and why only an existing source or an escape
+pays it. malloc's deep copy is ~342us, ~4.2x.
