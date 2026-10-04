@@ -110,11 +110,13 @@ of pinning a run, and `--from-file` re-renders from the committed JSON without
 measuring at all.
 
 That split exists because `explanations.txt` quotes the pinned numbers, so
-replacing them silently invalidates every note in the file. The committed run
-was taken under WSL2 with no core pinning, on a hybrid CPU — 8 performance
-cores and 16 efficiency ones — which is why T12's four workers spread 4.5x
-across their twenty passes and why that row and T8 are the two whose absolute
-figures do not reproduce elsewhere. **Do not pin a run from a container.**
+replacing them silently invalidates every note in the file. Pins come from
+the maintainer's own machines, and those differ: one pin ran under WSL2 on a
+hybrid desktop CPU, the next on a less powerful machine, where unchanged rows
+came in 1.9-5x slower. So an absolute figure never compares across pins; the
+notes compare rows within one run, and the header of `explanations.txt`
+records which machine the run came from. T8 and T12, the two threaded rows,
+are the noisiest on any of them. **Do not pin a run from a container.**
 
 A row whose number is known-bad is corrected in place instead: drop the field
 and set `provenance_note` on the test, which `runbench.py` prints on every

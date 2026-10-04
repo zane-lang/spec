@@ -5,13 +5,14 @@
 #
 # PROVENANCE AND NOISE. The committed run is a fresh full-suite run of the
 # settled/roaming harness, the first since the anchor pool, the per-host
-# backpointer and forwarding were removed (spec PR #212). The previous pin was
-# taken under WSL2 with no core pinning, on a hybrid CPU of 8 performance and
-# 16 efficiency cores, which is what makes the two threaded rows, T8 and T12,
-# the noisiest. Rows whose code did not change came in 1.9-5.1x slower here
-# than in that pin, so the two runs were not taken under the same conditions,
-# and no absolute figure here should be compared with one from before. Every
-# comparison below is between rows of this run.
+# backpointer and forwarding were removed (spec PR #212). It was taken on a
+# different and less powerful machine than the previous pin, which ran under
+# WSL2 with no core pinning on a hybrid desktop CPU of 8 performance and 16
+# efficiency cores. Rows whose code did not change came in 1.9-5.1x slower
+# here than in that pin, which is the machine, not the code, so no absolute
+# figure here should be compared with one from before. Every comparison below
+# is between rows of this run. The two threaded rows, T8 and T12, are the
+# noisiest on either machine.
 #
 # Every row carries all 20 per-run samples in zane_bench_results.json, so the
 # spread is checkable rather than asserted. In this run the first pass is the
