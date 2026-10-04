@@ -63,10 +63,10 @@ The test is to read the heading without the chapter. A reader who knows the spec
 
 Teasers fail in a few recurring ways:
 
-- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the host — and *Y* a riddle about it. The chapter knows which keyword; the heading names it.
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the host — and *Y* a riddle about it. The chapter knows which one it means; the heading names it.
 - **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
-- **Personification.** A construct that *wanted*, *outran*, *outlived*, or *could not contain itself* describes a rule as a character. State what the rule does.
-- **A paradox or punchline** that inverts an expectation the reader has not formed yet.
+- **Personification.** A heading in which a construct *wanted*, *outran*, *outlived*, or *could not contain itself* treats a rule as a character. State what the rule does.
+- **A paradox or punchline** that inverts an expectation the reader has not formed yet. State the outcome instead of staging a surprise.
 - **A question.** A heading answers; the chapter does not open by posing a puzzle in its title.
 - **Editorial framing** that grades the decision ("against the hype") instead of naming it. The verdict belongs in the prose, where it can be argued.
 
