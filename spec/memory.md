@@ -336,6 +336,7 @@ This rule preserves uniform call syntax. The call site writes `consume(e)`, `ins
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 

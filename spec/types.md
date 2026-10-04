@@ -368,6 +368,8 @@ Vector{x Int; y Int;} {
 
 Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand. The entries run in the order written, so an entry that moves a parameter spends it for every entry after it ([`lifetimes.md`](lifetimes.md) §1.6).
 
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
+
 ### 3.8 Constructors do not use `mut`
 
 Constructors are not methods. They create new values rather than mutating an existing subject, so `mut` does not apply.

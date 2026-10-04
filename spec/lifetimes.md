@@ -246,6 +246,7 @@ The handler's binder is then what the call's result would have been: it names wh
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-root-rule-that-got-shorter) — "The root rule that got shorter".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 
 ### 1.8 Passing a host to a `T` parameter spends it
 
@@ -296,6 +297,7 @@ A verb that only reads its reference argument may still declare it plain `T`: re
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 
 ### 1.9 An ignored hosting result floats to the enclosing scope
 
@@ -358,6 +360,7 @@ The entries run in the order written ([`types.md`](types.md) §3.7). The guest i
 Everything reachable under one root symbol belongs to one hosting tree ([`memory.md`](memory.md) §2.1), which is why a guest that names inside its own value needs no further comparison: it travels with what it points at and goes when the tree goes. What none of this reaches is a host destroyed while its tree lives on — a separate matter, governed by §2.1 and by [`memory.md`](memory.md) §2.8.1.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-check-that-fired-once-and-the-move-that-outran-it) — "The check that fired once, and the move that outran it".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 
 ### 1.11 A signature records where its parameters come to rest
 
