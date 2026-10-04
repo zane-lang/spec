@@ -179,7 +179,7 @@ The sentinel changes by one small accounting detail. Segmented offset zero remai
 
 ## Removing the bare symbol as a guest source
 
-The whole of the preceding machinery — hosts, guests, anchors, forwarding cells, retirement stacks — was built to answer one question, and it took a five-line program to show that we had been answering the wrong one:
+The whole of the preceding machinery — hosts, guests, anchors, forwarding cells, retirement stacks — was built to keep a guest pointing at its object when the object moves. This five-line program asks a question that machinery does not settle:
 
 ```zane
 main Player()
@@ -245,7 +245,7 @@ The one invariant this does disturb is one we had written a chapter to earn. [Th
 
 ## What a copy is for, and the ban that survived it
 
-A rule can look finished and still be resting on nothing, and the way you find out is that somebody asks why. This chapter is about one that turned out to be resting on two mistakes of mine, and about what was left standing after both were withdrawn.
+A rule can look finished and still be resting on nothing, and the way you find out is that somebody asks why. This chapter is about one that turned out to be resting on two mistakes of ours, and about what was left standing after both were withdrawn.
 
 [The previous chapter](#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) handed recursion to reference types and gave a reason for the half it withheld. A box is *owned* storage, we said; something has to free it, relocate it, and decide what a copy does; that something is a host, and having it is what makes a type a reference type. So a value type gets no box, and a value `variant` cannot contain itself.
 
@@ -277,15 +277,13 @@ A boxed member never had that problem, which is why it walks through while a `Li
 
 ## Bare symbols become guest sources again
 
-Two chapters up, we removed a guest source and then immediately built a passing mode to replace what removing it broke. That is a shape worth being suspicious of at the time, and we were not suspicious enough. This chapter is about going back.
+Two chapters up, we removed a guest source and then immediately built a passing mode to replace what removing it broke. That is a shape worth being suspicious of at the time, and we were not suspicious enough. This chapter reverts the ban.
 
 The ban's own ledger, written when it landed, said the cost was "one surprising rejection at the root of a tree" — you could no longer write `Expr.flip(leaf)` and had to root your structure in a field. That accounting was honest about the thing it was looking at and blind to everything else, because the rest of the cost had already been spent one chapter later and was not being counted as cost. [The borrow mode](#three-ways-to-hand-over-an-object) exists for exactly one reason: the ban made `topSpeed(engine)` unwritable, and something had to make it writable again. So the true bill was a new sigil, a third passing mode on every signature, a `this` whose meaning depended on which kind of type it named, and an `&`-return rule that had to explain separately why each of the two rejected modes was not a root. None of that appears in the chapter that took the credit for the ban being cheap.
 
 Then the one item that *was* counted disappeared on its own. [Making a recursive member an owned child](#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) took `&` out of recursive spines entirely: a recursive case is boxed through a handle, so a tree is built from owning edges and needs no guest source anywhere. The rule that a recursive structure must be rooted in a field went with it. The single cost the ban's ledger had named was gone, and what remained on the page was the machinery built to pay a bill nobody was charging any more.
 
 That is the pressure that reopened it, and the judgment that settled it was blunt: the `'` semantic was not worth having as a separate thing to learn. Not "the borrow is wrong" — the borrow is exactly right for value types, where it has always been what a parameter *is*. The objection is to a second sigil whose whole job is to route around a restriction we chose. Delete the restriction and the sigil has no work left.
-
-### The ban did not close the hole it was standing next to
 
 There is a harder version of that objection, and it is the one that makes the revert obvious rather than merely defensible. **The ban did not remove the situation the machinery exists for.** Not "removed it at a cost we later judged too high" — did not remove it at all.
 
@@ -324,9 +322,7 @@ Both guests are minted from **field accesses**. Fields were never banned — the
 
 So the ban was never buying the merge machinery's removal. It bought one *question* — what a guest to a bare symbol's own slot denotes after that slot is moved from — and left the underlying mechanism fully reachable by the ordinary route. We had been carrying it as though it were load-bearing on the runtime, and it was load-bearing on nothing but a documentation problem.
 
-That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets — which is the next section.
-
-### Answering the question instead of deleting it
+That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets, which follow.
 
 Reverting means the five-liner comes back, and this time it has to be answered rather than made illegal:
 
@@ -350,8 +346,6 @@ This is where we declined the rest of the package that was on the table. The pro
 
 > [!NOTE]
 > Superseded: a moved-from symbol is now spent after all, for a reason this paragraph did not weigh. See "[A moved host is spent, not a guest](lifetimes.md#a-moved-host-is-spent-not-a-guest)".
-
-### What comes back, and what it costs
 
 With bare symbols pointable again, `'T` has nothing left to do and goes. A reference-type parameter is `T` or `&T` ([`memory.md` §2.9](https://github.com/zane-lang/spec/blob/c36ef08/spec/memory.md#29-function-parameters-swallow-and-guest)) — swallow it, or take a guest — and `topSpeed(engine)` works by declaring `engine &Engine` and passing the local as it stands. The `'` character returns to being unused, which is where it was before we borrowed it from Rust to name something Rust uses it for a different reason.
 

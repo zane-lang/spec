@@ -284,7 +284,7 @@ So the restriction had to land on the **store** rather than the source. Our firs
 > [!NOTE]
 > Superseded: an `&` store is no longer checked by comparing root symbols, and the four-form raise enumeration went with it. See "[The owner lifetime replaces the same-root rule](#the-owner-lifetime-replaces-the-same-root-rule)".
 
-We shipped that, alongside an enumeration of the four ways a value can be raised, and lived with it long enough to notice we did not like it. The next chapter is about what was wrong with it, which turned out not to be any of the things it got wrong.
+We shipped that, alongside an enumeration of the four ways a value can be raised, and lived with it long enough to notice we did not like it. [The next chapter](#the-owner-lifetime-replaces-the-same-root-rule) replaces it, because the rule was correct but not memorable.
 
 ## The owner lifetime replaces the same-root rule
 

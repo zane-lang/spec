@@ -56,7 +56,7 @@ The short-circuiting went, and we let it go deliberately. Operands are evaluated
 
 ## The loose operator forms and the `'` prefix
 
-Reusing `*` and `+` broke something we did not see until we tried to write a condition with it, and it is the kind of break that matters most: silent.
+Reusing `*` and `+` put conjunction at the wrong precedence, and we did not see it until we tried to write a condition with it, because the break was silent.
 
 `*` sits at precedence level three and comparisons sit at five, the loosest. So conjunction binds *tighter* than comparison — backwards for every compound condition anyone writes. `age > Int(18) * hasId` groups as `age > (Int(18) * hasId)`, which at least fails loudly on the missing `Int * Bool`. `a == b * c == d` with four booleans does not fail at all: it groups as `(a == (b * c)) == d`, type-checks, returns a `Bool`, and is not the conjunction of two equalities that was written. `and` and `or` never had this problem for a reason nobody had had to state: they sat below everything.
 
