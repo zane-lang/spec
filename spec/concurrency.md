@@ -139,7 +139,7 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 
 A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every guest derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
-> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#two-rules-that-said-less-than-they-meant) — "Two rules that said less than they meant".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
@@ -151,7 +151,7 @@ For any one storage location, at most one live spawned call may hold a **mutable
 
 One spawn site can hold more than one live borrow. A site inside a loop body launches a call per iteration, and §4.1 keeps every one of them live until the scope drains, so inspecting the site's subject once settles nothing. A spawned `mut` call inside a loop body **MUST** take its subject from storage declared inside that body, which gives each iteration its own location; a subject owned by an enclosing scope is a compile-time error.
 
-> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#two-rules-that-said-less-than-they-meant) — "Two rules that said less than they meant".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
 ### 4.4 Reads take a coherent snapshot
 
@@ -202,7 +202,7 @@ Lambdas **MUST NOT** capture outer variables. All dependencies must be passed ex
 
 A **block argument** captures and is exempt, because it cannot be stored and cannot be spawned (§3.1). It runs during the call that receives it, in the frame that wrote it, so the reach of what it captures is the reach of ordinary lexical code. See [`control-flow.md`](control-flow.md) §2.2.
 
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#where-the-capture-would-have-bitten) — "Where the capture would have bitten".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-verb-with-a-block-parameter-cannot-be-spawned) — "A verb with a block parameter cannot be spawned".
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 

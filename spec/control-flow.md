@@ -46,7 +46,7 @@ A block **MUST NOT** escape the call it is written at. It may not be stored, ret
 This non-escape is what makes capture safe here while it stays forbidden for lambdas ([`functions.md`](functions.md) §7.4, [`concurrency.md`](concurrency.md) §5.2). A lambda may be stored and run later, possibly in parallel, so captured state could be reached from somewhere the compiler cannot see. A block runs during the call that receives it, in the frame that wrote it.
 
 A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`concurrency.md`](concurrency.md) §3.1).
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#where-the-capture-would-have-bitten) — "Where the capture would have bitten".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-verb-with-a-block-parameter-cannot-be-spawned) — "A verb with a block parameter cannot be spawned".
 
 
 ### 2.3 A block is a scope for bindings, not for control transfer
@@ -85,7 +85,7 @@ Transparency is what keeps an exit usable at any depth: a construct that opened 
 Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
 
 An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). A call to an exiting verb ends the invocation that made it, and the expansion above is what decides which invocation that is: the block-taking verbs in between have no frame, so the call is made by the innermost enclosing verb that does (§4.2).
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 
 
 ### 2.4 A block may yield a value
@@ -135,7 +135,7 @@ ran:else() {
 ```
 
 Because a chain is a sequence of ordinary calls rather than one construct, its parts are joined by the value they pass along and nothing else. The compiler checks each call; it does not check that a chain is well-formed.
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-last-thing-still-tied-to-a-package) — "The last thing still tied to a package".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#moving-if-and-loop-into-core) — "Moving `if` and `loop` into `core`".
 
 
 ### 3.3 A condition is evaluated unless it is written as a block
@@ -196,7 +196,7 @@ Unit configure(settings Settings) {
 Its condition is an ordinary argument, so it is `core`'s `Bool` and reaches it through the same coercion as any other argument. A type usable in an `if` is usable in a `guard` on identical terms; the language itself names no type for either.
 
 `guard` takes no block. A run of statements before an exit is a branch whose block ends with a `guard`, which is the same shape written one level out.
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 
 ---
 
@@ -257,8 +257,8 @@ Writing the intrinsic directly in a verb's own body is therefore not a way to le
 The exit carries no value, so the invocation it ends **MUST** have return type `Unit`. Because the caller is decided at the call site, an exiting verb is legal in a `Unit` caller and rejected in a caller that must produce a value; the check belongs to the call, not to the exiting verb's declaration. An invocation with any other return type leaves early with `return`, which carries the value out through blocks the same way (§2.3).
 
 The intrinsic **MUST NOT** appear in a lambda's body, including a block argument written there. A call through a function value names the value, not a body, so the invocation that an exit in the lambda would end could not be checked against the rule above. A lambda leaves early with `return`. An exiting verb it calls, such as `guard`, ends the lambda itself, since the lambda is that verb's caller.
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#the-exit-that-took-no-condition) — "The exit that took no condition".
-> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-no-function-type-could-carry) — "An exit no function type could carry".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#no-exitfromcall-in-a-lambda-body) — "No `exitFromCall` in a lambda body".
 
 
 ### 4.3 Repetition is bounded by the shape of `repeat`

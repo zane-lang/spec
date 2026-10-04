@@ -104,7 +104,7 @@ Because `core` is an ordinary dependency, two of its versions may be linked side
 
 A file that writes `Int` therefore imports `core` first, most often with the whole-package form `import core$` ([`packages.md`](packages.md) §3.3). Examples throughout this specification are written as though that import were already present, so `core`'s members appear unqualified in them.
 
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-floor-that-made-the-package-optional) — "The floor that made the package optional".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-an-ordinary-package-over-a-primitive-floor) — "`core` becomes an ordinary package over a primitive floor".
 
 `Unit` is the unit type. Its `core` declaration is an empty value `struct`, so it has exactly one logical value and zero-sized storage. `Unit()` is its ordinary `core` constructor. It may appear wherever any other value type may appear, including symbols, fields, arrays, generic arguments, function parameters, and return types.
 
@@ -122,7 +122,7 @@ completed Unit = performWork();
 
 An implementation may erase only the runtime storage of `Unit` values, including fields, array elements, and constructor results. It **MUST** still evaluate every expression that produces a `Unit` value at its original program point and in its original order. Storage erasure never removes side effects or otherwise changes observable evaluation.
 
-> **Story:** [`stories/types.md`](../stories/types.md#unit-exposes-the-package-that-wasnt-one) — "Unit exposes the package that wasn't one".
+> **Story:** [`stories/types.md`](../stories/types.md#unit-becomes-an-ordinary-type-and-core-leaves-the-package-model) — "`Unit` becomes an ordinary type, and `core` leaves the package model".
 
 ### 2.7 Literals and their storage primitives
 
@@ -172,7 +172,7 @@ type Label = struct { text String; }  // legal: value-type field
 
 > **Story:** [`stories/types.md`](../stories/types.md#text-without-identity) — "Text without identity".
 
-> **Story:** [`stories/types.md`](../stories/types.md#the-literal-that-had-no-way-into-storage) — "The literal that had no way into storage".
+> **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage".
 
 ### 2.8 String concepts and interpolation
 
@@ -413,7 +413,7 @@ car Car(Engine());  // ILLEGAL: a temporary cannot initialize an `&` field
 
 What still constrains such a field is lifetime, not source: the object it points at must have an owner that outlives the owner of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's owner, so that comparison does not stop at construction — every later store of the containing value asks it again, over the guests that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no owner until the caller says where the object goes; it records which parameters land in `&` fields and each call settles it ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no guest source (see [`adt.md`](adt.md) §4).
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
+> **Story:** [`stories/memory.md`](../stories/memory.md#bare-symbols-become-guest-sources-again) — "Bare symbols become guest sources again".
 
 A reference type whose fields are all plain hosts takes them as `^T` parameters, moving each into the object it builds:
 

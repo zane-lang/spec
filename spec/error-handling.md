@@ -14,7 +14,7 @@ Zane uses a **Bifurcated Return Path** model in which success and failure are bo
 - **`Abort path`.** The failure path uses the abort type on the right of `?`.
 - **`Mandatory handling`.** Every abortable call must attach a `?` or `??` handler at the call site.
 
-> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failure-as-a-second-exit-not-a-result-value) — "Failure as a second exit, not a `Result` value".
 
 ---
 
@@ -59,7 +59,7 @@ parserOk Int?ParseError[String] = Int?ParseError(text String) { ... } // ok
 parserBad Int[String] = Int?ParseError(text String) { ... } // ILLEGAL: abort type would be dropped
 ```
 
-> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failure-as-a-second-exit-not-a-result-value) — "Failure as a second exit, not a `Result` value".
 
 ---
 
@@ -123,7 +123,7 @@ completed Unit = performWork();
 
 When such a call is abortable, the handler attaches to the call expression exactly as for any other primary return type.
 
-> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#the-empty-door-still-carries-a-value) — "The empty door still carries a value".
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#a-unit-abort-still-carries-a-value) — "A `Unit` abort still carries a value".
 
 ### 3.5 `match` is abort-transparent
 
@@ -141,7 +141,7 @@ result Int = match token {
 
 > **See also:** [`adt.md`](adt.md) §5 for the `match` expression.
 
-> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#two-doors-not-a-colored-box) — "Two doors, not a colored box".
+> **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failure-as-a-second-exit-not-a-result-value) — "Failure as a second exit, not a `Result` value".
 
 ---
 

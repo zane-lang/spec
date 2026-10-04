@@ -191,7 +191,7 @@ Non-`&` host bindings may be initialized from any expression, including temporar
 engine Engine();        // legal: plain host binding; Engine() temporary is materialized into engine
 ```
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-host-that-outlived-its-place) — "The host that outlived its place".
+> **Story:** [`stories/memory.md`](../stories/memory.md#contingent-hosts-float-to-their-owner) — "Contingent hosts float to their owner".
 
 ### 2.8.1 A roaming host settles where it lands
 
@@ -482,7 +482,7 @@ A **boxed member** (§3.3) uses the same two-part representation with a payload 
 
 Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a **growable backing store** — 128 bytes or larger — is cache-line aligned within them. Every other block takes its own type's alignment, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-sentinel-that-costs-nothing-and-the-buffer-that-wanted-a-line) — "The sentinel that costs nothing, and the buffer that wanted a line".
+> **Story:** [`stories/memory.md`](../stories/memory.md#a-free-zero-sentinel-and-cache-line-aligned-buffers) — "A free zero sentinel, and cache-line-aligned buffers".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 
 ### 3.7 Moving a value reuses the destination slot

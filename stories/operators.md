@@ -42,7 +42,7 @@ Operator implementations therefore belong to the home package of at least one op
 
 The restriction closes off retroactive adaptation in a neutral third package. When two foreign types ought to interoperate, their operators cannot be supplied by an unrelated bridge package; one of the home packages must own the integration, or the caller must use a named conversion or verb. We take that friction over allowing a seemingly harmless import to rewrite the meaning of existing notation.
 
-## The keyword that was neither
+## `and` and `or` become `*` and `+`
 
 Once branching had left the language, one oddity was left standing where everything around it had a category. `and` and `or` were not operators — the fixed set is symbolic and they are words — and they were not functions either, because a function receives evaluated arguments and short-circuiting is precisely the refusal to evaluate one. They were keywords, which is a category with exactly two members and no principle behind it.
 
@@ -54,9 +54,9 @@ Two things fell out that we did not choose and could not have chosen otherwise. 
 
 The short-circuiting went, and we let it go deliberately. Operands are evaluated, because these are ordinary operator calls and nothing about a token should silently change evaluation order. What replaces it is an overload taking a deferred right operand, which puts the choice at the call site where a reader can see it — the same move as marking a mutating call with `!` rather than leaving it to be inferred from a declaration elsewhere. The cost is that `cache:has(k) * expensive(k)` runs `expensive` unconditionally, and someone will be bitten by it; the compensation is that the version that does not is visibly different on the page.
 
-## A tier below everything
+## The loose operator forms and the `'` prefix
 
-Reusing `*` and `+` broke something we did not see until we tried to write a condition with it, and it is the kind of break that matters most: silent.
+Reusing `*` and `+` put conjunction at the wrong precedence, and we did not see it until we tried to write a condition with it, because the break was silent.
 
 `*` sits at precedence level three and comparisons sit at five, the loosest. So conjunction binds *tighter* than comparison — backwards for every compound condition anyone writes. `age > Int(18) * hasId` groups as `age > (Int(18) * hasId)`, which at least fails loudly on the missing `Int * Bool`. `a == b * c == d` with four booleans does not fail at all: it groups as `(a == (b * c)) == d`, type-checks, returns a `Bool`, and is not the conjunction of two equalities that was written. `and` and `or` never had this problem for a reason nobody had had to state: they sat below everything.
 

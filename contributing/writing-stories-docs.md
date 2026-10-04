@@ -49,11 +49,39 @@ Do not create one file per chapter (too fragmentary) or one file for the whole l
 
 ### 2.2 A chapter is a theme, not a decision
 
-A chapter is a **phase of the design** — an episode in which one pressure was met and resolved — and it almost always settles **several related decisions at once**, because that is how they were actually made. It is named by a `## ` heading: a short noun phrase that names the *theme* ("URL identity and the two-file manifest", "No turbofish: passing types as values"), not a question and not a single spec rule.
+A chapter is a **phase of the design** — an episode in which one pressure was met and resolved — and it almost always settles **several related decisions at once**, because that is how they were actually made. It is named by a `## ` heading that states the *theme* plainly (§2.3), not a single spec rule.
 
 This is the rule to hold on to: **do not write one chapter per spec decision.** A spec section is a fine-grained rule; a chapter is the coarser line of reasoning that produced a cluster of such rules. Group decisions that were forced by the same pressure into one chapter and let them play out as a single story; conversely, one large decision may run across several chapters if the thinking really arrived in stages. Let the chapter boundaries fall where the *reasoning* has joints — typically a handful of chapters per file — not where the spec has section numbers. There is no required template below the heading, no labelled parts, no metadata ritual. Everything under the heading is the story.
 
 A chapter is **not pinned to a spec section.** It is free to range across whatever the episode touched. It *should* link to specific spec rules where it discusses them (§4), but those links serve the reader; they are not a structural anchor, and a chapter is never reshaped just to line up one-to-one with a `§N`.
+
+### 2.3 A heading says what happened
+
+A chapter heading tells the reader what the chapter is about and what was decided in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing carries the kind") both do this.
+
+The test is to read the heading without the chapter. A reader who knows the spec should be able to say which rule it explains and roughly which way the decision went. A heading that only makes sense once the chapter has been read is a teaser, and it is rewritten until it passes.
+
+Teasers fail in a few recurring ways:
+
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the host — and *Y* a riddle about it. The chapter knows which one it means; the heading names it.
+- **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
+- **Personification.** A heading in which a construct *wanted*, *outran*, *outlived*, or *could not contain itself* treats a rule as a character. State what the rule does.
+- **A paradox or punchline** that inverts an expectation the reader has not formed yet. State the outcome instead of staging a surprise.
+- **A question.** A heading answers; the chapter does not open by posing a puzzle in its title.
+- **Editorial framing** that grades the decision ("against the hype") instead of naming it. The verdict belongs in the prose, where it can be argued.
+
+Each heading on the left fails the test; the one on the right names the same chapter.
+
+| Teaser | Plain |
+| --- | --- |
+| The keyword that was neither | `and` and `or` become `*` and `+` |
+| The sum that could not contain itself | A value sum may recurse |
+| The word every namespace shares | `intrinsic` names the whole `@` space |
+| The check that fired once, and the move that outran it | An `&` store compares root symbols |
+| Two doors, not a colored box | Failure as a second exit, not a `Result` value |
+| What does a receiver receive? | Renaming the receiver to the subject |
+
+A plain heading may still have a voice. "No turbofish: passing types as values" and "Doing without `while`" carry a point of view and still name exactly what the chapter settles; the rule is against hiding the subject, not against style.
 
 ---
 
@@ -66,11 +94,13 @@ A good chapter tends to move through four things — but as *prose*, never as la
 - **The resolution.** What was decided, and the reasoning that settled it.
 - **The cost.** What the decision makes worse, what it defers, what it leaves open. Where a decision carries a real cost, naming it is the most valuable thing a chapter can do — it is the part later readers will most want to have been told, and a chapter that lists only upsides usually means the cost went unexamined, not that there wasn't one. But this is a strong recommendation, not a requirement: do not invent or inflate a downside just to have one. If, after genuinely looking, the honest account is that the decision cost little or nothing, say that plainly rather than manufacturing a drawback the spec does not bear out.
 
+**The reason comes first.** A chapter opens by establishing why it exists: what made the decision necessary, told before the decision itself. The reason takes as long as it takes. It may be one sentence or several paragraphs, a single irritation that had been on our minds for a long time or several pressures arriving at once, a sudden discovery or a gap the previous chapter left. What is fixed is the order: the reader understands the problem before meeting the answer, because a solution read after its problem is intuitive and the same solution read first is arbitrary. It is the real reason, as it happened, not one reconstructed to make the transition tidy. A hook that holds the problem back to build suspense ("it is the kind of break that matters most: silent") breaks the order as surely as opening on the answer does.
+
 Frame a cost as an *inherent* property of the design, never as a migration burden. The toolchain versions itself (see [`dependencies.md`](../spec/dependencies.md) §14), so there is no existing body of code that a change must avoid breaking — never state a decision's cost as porting or breaking old code. Name the inherent cost instead: what the language now makes harder or impossible.
 
 Let the length flex with the episode: a minor turn is a paragraph, a foundational one runs to pages.
 
-**Order chapters by the path the thinking took**, not by spec section order and not by tidy importance. A chapter usually opens where the previous one left off — one choice creates the problem the next one solves — so the natural order is causal and roughly chronological, and because there are no separators, the opening sentence of each chapter should carry the reader across the seam ("With identity settled, the next question is…", "Shipping prebuilt objects raises a problem the moment…"). "When" here means *relative to the other decisions* ("once we had settled X, the next pressure was Y"), not a calendar date; record a real date or commit only if it genuinely matters. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead.
+**Order chapters by the path the thinking took**, not by spec section order and not by tidy importance. A chapter usually opens where the previous one left off — one choice creates the problem the next one solves — so the natural order is causal and roughly chronological, and because there are no separators, the opening sentence of each chapter should carry the reader across the seam ("With identity settled, the next question is…", "Shipping prebuilt objects raises a problem the moment…"). The same goes for a chapter's last sentence: it ends on the cost or hands the reader to the next chapter by saying what that chapter settles, never on a cliffhanger that withholds it. "When" here means *relative to the other decisions* ("once we had settled X, the next pressure was Y"), not a calendar date; record a real date or commit only if it genuinely matters. Recording the discarded attempts in the order they were tried is often clearer than a tidy after-the-fact summary: it shows *why* the final design has the shape it does, and it stops a future reader from re-walking roads already known to be dead.
 
 ### 3.1 Coined terms are defended here
 
@@ -128,9 +158,9 @@ This is the discipline that makes the folder a *history* rather than a stale sna
 
 **Append, don't overwrite.** When the design changes, the old reasoning did not become false — it became *the previous chapter*. So when the spec moves, add to the story: open a **new chapter at the end of the file** — after everything already published, see the publication note below — that names the cause and what it forced — *"The shift to X meant the old Y no longer held, so we…"* — and pin its spec references to the new commit (§4.2). The discarded path stays on the page as the record of why the design used to be one way and is now another; that causal trail is often the most illuminating thing in the file, and rewriting it away destroys it.
 
-"Append" is meant literally, and it has two teeth:
+When the language changes, "append" is meant literally, and it has two teeth:
 
-- **Do not edit a published chapter's prose.** Not to correct a claim the design has since retired, not to soften it, not to reword it. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why, naming the superseded claim explicitly — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…". The one thing a published chapter may gain is a supersession note, below.
+- **Do not rewrite a published chapter's account of the design.** Not to correct a claim the design has since retired, not to soften it, not to bring it in line with the present. A chapter records what was true when it was written; a later chapter is where you say what stopped being true and why, naming the superseded claim explicitly — "the segmented-offset chapter had promotion rewrite the one anchor cell; that holds only while…". What the old chapter gains is a supersession note, below.
 - **A new chapter goes after every published one**, never slotted between chapters that already exist. Chapter order is the order the thinking moved, and the file's tail is the present. Inserting into the middle rewrites the sequence even when no existing character changes.
 
 **Mark a retired claim where it stands.** The new chapter tells the story of the retirement, but only to a reader who gets that far. Most readers arrive mid-file, through a spec section's `> **Story:**` pointer (§4.4), and read the chapter it lands on as the current word. So when a change retires a claim a published chapter makes, the same pull request adds a **supersession note** to that chapter, directly after the paragraph that makes the claim:
@@ -146,27 +176,23 @@ The note is a signpost, not a correction. It names the claim and links the chapt
 - **Only a retired claim earns one.** A later chapter that refines, sharpens, or finishes an earlier one without contradicting it needs no note; neither does an example written in syntax that has since changed, since every chapter shows the forms of its own time and a reader expects it to.
 - **A note stays editable.** Unlike the chapter it sits in, a note records no history — it is a signpost to where the present account lives — so it may be corrected, reworded, or removed at any time. When the chapter it points to is superseded in turn, re-point the note at the newest chapter instead of adding a second one, so the reader takes one hop rather than following a chain.
 
-**The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What must not move is anything that was already merged.
+**Editing a published chapter is the exception.** History is not carved in stone, but it is edited rarely and only on purpose. A published chapter may be adjusted only when the adjustment is the entire change: a pull request whose one purpose is to fix how the stories read — a heading retitled (§2.3), the voice fixed (§6), a structure §2 does not allow taken out, a passage reworded — and that changes nothing in `spec/` beyond the links it has to move. A change to the language never edits a published chapter in passing; it appends, and the old chapter gains at most a supersession note. Even in a dedicated change, every edit has to leave the chapter's claims standing: afterwards it says the same things about what the language did and why, at the same point in the history. An edit that changes one of those claims is a change to the history, and the new account goes in a new chapter instead. The one exception is a claim that was already false when the chapter was written: a misreported order of events, a reason that was never the reason, a citation to the wrong rule. That is an error in the record rather than a turn in the design, so a dedicated change corrects it in place.
 
-**Verify it by diffing.** Before committing a story change, check it against the branch you are merging into:
+A retitled heading has a new anchor, so the same change fixes every inbound link (§4.4), and those fixes are part of its one purpose rather than a second one: the href and quoted text of each `> **Story:**` pointer in `spec/`, the link in each supersession note, and the href of each sibling or cross-story link.
 
-```sh
-git diff origin/main -- stories/<topic>.md | grep -E "^-" | grep -vE "^--- (a/|/dev/null)|^-> (\[!NOTE\]|Superseded:)|^-$"
-```
+**The unit of publication is the pull request, not the commit.** "Published" means merged — what is on the default branch. The chapters a PR is *itself* adding are still draft until it lands, so within that PR they may be rewritten, reordered, or have a new chapter inserted among them, however many commits it takes. A design decision reached late in review often belongs *before* the chapters already drafted on the branch, and putting it there is not a violation. What it must not do is rewrite a merged chapter's claims or move a merged chapter.
 
-The second `grep` drops three kinds of line: the file header, a supersession note's lines (a note may be edited), and removed blank lines (which change no text). A deleted line that itself began with `-`, such as a list item, still shows. Any other output is a violation: a removed or rewritten line means a published chapter was edited, and a `-` next to a chapter heading means a chapter was inserted ahead of one that had already merged. The clean result is additions only, apart from note edits — which is also why the check is the right one to run: it compares against what is published, so it stays silent while you rearrange your own branch's new chapters and speaks up the moment you disturb a merged one.
-
-Additions only is necessary and not sufficient, because a line added *inside* a published chapter is silent too, and the only such line the rule allows is a supersession note. So also look at where the additions land:
+**Review it by diffing.** Before committing a story change, read it against the branch you are merging into:
 
 ```sh
-git diff -U0 origin/main -- stories/<topic>.md | grep -E "^(@@|\+)"
+git diff --word-diff origin/main -- stories/<topic>.md
 ```
 
-Every hunk that lands before the file's former end must be a supersession note — its `> ` lines and the blank line that sets it apart — and nothing else. New chapters land at the tail, after all of them.
+Comparing against what is published keeps the diff quiet while you rearrange your own branch's new chapters and shows every change to a merged one. Each change inside a published chapter is either a supersession note or, in a change that does nothing else, an adjustment that passes the claims test above; anything that alters what the chapter says the design was belongs in a new chapter. New chapters land at the tail, after every published one.
 
-Nothing runs this for you. There is no CI job and no hook; the rule is enforced by the author running the diff before committing and by the reviewer running it again on the branch. That is deliberate — the "consolidate dead threads" exception below is a judgement call no check could make, so a green check would have to be overridable anyway — but it does mean a violation reaches `main` if both people skip it. Treat the command as part of the commit, not as an optional audit.
+Nothing runs this for you. There is no CI job and no hook, because whether an edit changes a claim is a judgement no check could make. The rule is enforced by the author reading the diff before committing and by the reviewer reading it again on the branch, so a rewritten claim reaches `main` only if both skip it. Treat the diff as part of the commit, not as an optional audit.
 
-**Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
+**Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar, and consolidation is the one adjustment that may drop claims rather than keep them standing; like any other, it is the whole of its change. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
 
 The contrast to hold in mind: the **spec** is rewritten to the present on every change — it states only what is true now. The **story** accumulates — it states how what is true now came to be. They have opposite update rules on purpose.
 

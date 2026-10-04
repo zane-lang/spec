@@ -172,7 +172,7 @@ grep -RIn "receiver" spec/
 ```
 
 The single expected hit is the `> **Story:**` pointer in `functions.md` §2.1
-naming the chapter "What does a receiver receive?" — a chapter heading keeps the
+naming the chapter "Renaming the receiver to the subject" — a chapter heading keeps the
 old word because that is what the chapter is about. Any other hit is a
 reintroduction; fix it. Merged stories say "receiver" throughout and stay that
 way, so the two trees disagree on this word by design. Use `subject` in new
@@ -220,8 +220,8 @@ npx markdownlint-cli2 "**/*.md"
 
 Committed `.markdownlint.jsonc` is the canonical statement of which rules are
 on; `README.md` § "Markdown formatting" says why exactly one is. A fix here is
-whitespace only, so it does not touch what a merged chapter says and the
-append-only check stays quiet. CI runs the same command on every PR, so
+whitespace only, so it does not touch what a merged chapter claims, which is
+all the append rule protects. CI runs the same command on every PR, so
 a miss here comes back as a red check rather than a review comment.
 
 ## Writing a design story
@@ -238,27 +238,27 @@ lists the integration steps for a wholly new story and §4.4 gives the
 guide §8 carries the same obligation from the spec side. Don't skip the second
 half — it is the one sessions forget.
 
-### Append-only: the two ways a session gets it wrong
+### Append-only: the ways a session gets it wrong
 
 **Story guide §5 owns this rule** — what may be edited, the PR-versus-commit
 distinction, the rare consolidation exception, and the `git diff origin/main`
-check to run before every commit touching `stories/`. Read it there and run the
-check it gives. This section adds only what sessions on this repo keep getting
+review to run before every commit touching `stories/`. Read it there and run the
+diff it gives. This section adds only what sessions on this repo keep getting
 wrong, in both directions:
 
 - **Too loose.** Editing a merged chapter's prose to fix a retired claim. Say
   what stopped being true from the *new* chapter instead; the old chapter gains
   only the supersession note §5 allows, which unlike the prose stays editable. Caught in review, not by the author.
 - **Forgetting the note.** A change that retires a merged chapter's claim owes
-  that chapter a supersession note in the same PR, and the additions-only check
-  cannot notice it is missing — grep the story for the retired claim yourself.
+  that chapter a supersession note in the same PR, and the diff cannot show a
+  note that is missing — grep the story for the retired claim yourself.
 - **Too strict.** Refusing to touch chapters *your own branch* added, because
   they were already written. They are drafts until the PR merges — rewrite,
   reorder, and insert among them freely; a decision reached late in review often
-  belongs before them. The check is quiet through all of that by design.
-
-If the check is clean, you have not violated the rule, whatever your instinct
-says.
+  belongs before them. The diff is quiet through all of that by design.
+- **Adjusting in passing.** Rewording a merged chapter inside a PR that also
+  changes the language. §5 allows adjusting a merged chapter only in a PR whose
+  sole purpose is that adjustment.
 
 ### Interview the maintainer — you cannot reconstruct the real reasoning
 

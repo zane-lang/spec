@@ -104,7 +104,7 @@ if(age > Int(18) '* hasId) { ... }
 if((age > Int(18)) * hasId) { ... }
 ```
 
-> **Story:** [`stories/operators.md`](../stories/operators.md#the-keyword-that-was-neither) — "The keyword that was neither".
+> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-become--and-) — "`and` and `or` become `*` and `+`".
 
 ### 2.5 Reserved meanings for `!` and `~`
 
@@ -165,7 +165,7 @@ The loose forms are surface grammar like every other level. They add no token to
 
 > **See also:** [`lexical.md`](lexical.md) §4.3 for `'` as a reserved sigil.
 
-> **Story:** [`stories/operators.md`](../stories/operators.md#a-tier-below-everything) — "A tier below everything".
+> **Story:** [`stories/operators.md`](../stories/operators.md#the-loose-operator-forms-and-the--prefix) — "The loose operator forms and the `'` prefix".
 
 ### 3.2 Precedence is fixed syntax
 
@@ -202,7 +202,7 @@ a + b == ~(~a * ~b)
 
 `~Int` and `~Float` are additive inverses rather than complements (§2.5), so these identities do not hold there and the logical reading of `*` and `+` is available only to `Bool` and to user-defined types complemented under their own `~`.
 
-> **Story:** [`stories/operators.md`](../stories/operators.md#the-keyword-that-was-neither) — "The keyword that was neither".
+> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-become--and-) — "`and` and `or` become `*` and `+`".
 
 ---
 
