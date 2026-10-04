@@ -1528,12 +1528,14 @@ static void test14(void) {
         ZGuest engine = *car_engine;
         ZGuest turbo  = ((SEngine*)zm_deref(engine))->turbo;
         uint32_t spare = se_build(es, ts, 2, 20);
+        uint32_t spare_turbo = ((SEngine*)zm_resolve(spare))->turbo;
         se_overwrite(es, ts, *car_engine, spare);
         assert(*car_engine == engine);
         assert(((SEngine*)zm_deref(engine))->power == 2);
         assert(((SEngine*)zm_deref(engine))->turbo == turbo);
         assert(((STurbo*)zm_deref(turbo))->boost == 20);
         assert(zd_take(es) == zm_resolve(spare));
+        assert(zd_take(ts) == zm_resolve(spare_turbo));
         sink ^= (int64_t)engine ^ (int64_t)turbo;
     }
 }
