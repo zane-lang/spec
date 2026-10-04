@@ -322,7 +322,7 @@ Both guests are minted from **field accesses**. Fields were never banned — the
 
 So the ban was never buying the merge machinery's removal. It bought one *question* — what a guest to a bare symbol's own slot denotes after that slot is moved from — and left the underlying mechanism fully reachable by the ordinary route. We had been carrying it as though it were load-bearing on the runtime, and it was load-bearing on nothing but a documentation problem.
 
-That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets, which follow.
+That reframes the whole ledger. It is not that we paid a sigil and a passing mode for a smaller runtime; the runtime is identical either way. We paid them for a narrower *explanation*, and then discovered the explanation has a perfectly good answer that fits in two bullets of the spec, given below.
 
 Reverting means the five-liner comes back, and this time it has to be answered rather than made illegal:
 
