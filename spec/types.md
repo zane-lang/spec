@@ -42,7 +42,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, moved not 
 
 ### 2.2 Value types are transitive and mutable in place
 
-A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting or anchor bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
+A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no hosting bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
 
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
@@ -158,7 +158,7 @@ The numeric arguments are values of leaf concept types, so they are known at com
 big @primitives$Int(99999999999999999999);   // ILLEGAL: out of range for @primitives$Int
 ```
 
-`@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the segmented offset of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no anchor or backpointer and cannot be targeted by an `&` guest.
+`@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the segmented offset of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no identity and cannot be targeted by an `&` guest.
 
 The compiler-provided string constructor concatenates the string concept's literal fragments and interpolated string values in their written order (§2.8). It does not interpret any remaining backslash sequences. A package constructor accepting the concept may instead interpret its literal fragments, for example as regex syntax or text escapes. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
 
@@ -267,7 +267,7 @@ Vector{x Int; y Int;} {
 }
 ```
 
-This form is the canonical constructor syntax when the constructor parameters map directly to fields.
+This form is the canonical constructor syntax when the constructor parameters map directly to fields. A field-constructor entry of a reference type is a parameter like any other ([`memory.md`](memory.md) §2.9): an entry that fills a hosting field is written `^T` and takes the host, and one that fills an `&` field is written `&T`.
 
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
@@ -366,7 +366,9 @@ Vector{x Int; y Int;} {
 }
 ```
 
-Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand.
+Every field of the target type **MUST** be assigned exactly once, either explicitly or through implicit field access shorthand. The entries run in the order written, so an entry that moves a parameter spends it for every entry after it ([`lifetimes.md`](lifetimes.md) §1.6).
+
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 
 ### 3.8 Constructors do not use `mut`
 
@@ -374,7 +376,7 @@ Constructors are not methods. They create new values rather than mutating an exi
 
 ### 3.9 `&` fields require `&` constructor parameters
 
-An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T` — a swallowing `T` will not do, because the swallowed value is hosted at the call site while the field outlives it ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a stable place that may mint one. A bare host symbol or stable struct-field path may mint a guest; a hosting path containing a subscript or variant-case projection, and any temporary, may not. A contingent read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
+An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. A borrow `T` is never stored, and a taken `^T` is roaming, which nothing guests ([`memory.md`](memory.md) §2.9). The caller must then supply a guest under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a settled place that may mint one. A bare settled symbol or a struct-field path from a settled root may mint a guest; a roaming host, a path containing a subscript or variant-case projection, and any temporary may not. A read whose value is already `&T`, such as `weapons[1]` for `List<&Weapon>`, remains legal because it copies the stored guest rather than minting one from the element slot.
 
 ```zane
 package Vehicle
@@ -390,9 +392,9 @@ Car(engine &Engine) {
 ```
 
 ```zane
-// ILLEGAL: plain parameter cannot be bound into `&` storage
+// ILLEGAL: a borrow cannot be bound into `&` storage
 Car(engine Engine) {
-    return init{engine = engine;}   // ERROR: plain parameter MUST NOT be bound into `&` storage
+    return init{engine = engine;}   // ERROR: a borrow is never stored
 }
 ```
 
@@ -405,7 +407,7 @@ car Car(garage.spare);  // legal: a field access is a guest source
 
 ```zane
 engine Engine();
-car Car(engine);    // legal: a bare symbol is a guest source
+car Car(engine);    // legal: a bare settled symbol is a guest source
 car Car(Engine());  // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
@@ -413,18 +415,18 @@ What still constrains such a field is lifetime, not source: the object it points
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-ban-that-cost-more-than-the-question-it-closed) — "The ban that cost more than the question it closed".
 
-A reference type whose fields are all plain hosts does not require `&` parameters:
+A reference type whose fields are all plain hosts takes them as `^T` parameters, moving each into the object it builds:
 
 ```zane
 type Car = #struct {
     engine Engine;
 }
 
-Car(engine Engine) {
+Car(engine ^Engine) {
     return init{engine = engine;}
 }
 
-car Car(Engine());  // legal: plain host field accepts a temporary
+car Car(Engine());  // legal: a temporary moves into the field
 ```
 
 ### 3.10 Type and number parameters
@@ -679,7 +681,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Reference type (`#`) | Single hosting and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
 | Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
-| String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator, anchor, or stored guest; copies are deep |
+| String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored guest; copies are deep |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
@@ -687,7 +689,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
-| Plain `T` constructor parameter | Value-only; caller may supply a temporary; callee **MUST NOT** bind it into `&` storage |
+| `^T` constructor parameter | Takes a roaming host or a temporary; callee moves it into a hosting field |
+| Plain `T` constructor parameter | A borrow: read only, never stored; a value-type parameter is always one |
 | `Type` / `@concepts$Int` constructor parameter | Accepts a type or a compile-time integer; inferred from inline introduction or passed explicitly as a value parameter |
 | `type` declaration | Introduces a new distinct type, structurally equal to its right-hand side but not interchangeable with it |
 | `alias` declaration | Introduces an interchangeable alternate name for a type expression |

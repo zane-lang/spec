@@ -62,22 +62,20 @@ A method without `mut` may read `this`, its parameters, and reachable read-only 
 
 A method marked `mut` may write to any state reachable through `this`, whether through a hosting field or a guest.
 
-A write to `this` lands on the caller's object; how `this` reaches the caller differs by kind (see [`memory.md`](memory.md) §2.9):
+A write to `this` lands on the caller's object, because `this` is a **borrow** of it for either kind of type (see [`memory.md`](memory.md) §2.9). For a value-type subject the borrow is of the caller's slot — the actual value, not a copy — which makes the value mutable in place while preserving its value semantics. For a reference-type subject it is the caller's host, settled or roaming. Nothing is written on `this` to select a mode, because a subject has no other. The caller stays a full host either way.
 
-- For a **value-type** subject, `this` is a **mutable borrow** of the caller's slot — the actual value, not a copy. The borrow makes the value mutable in place while preserving its value semantics. Because the borrow is scoped and non-escaping, `this` may be read and written but cannot be stored as an `&` or returned as one, since a value type is not `&`-rootable.
-- For a **reference-type** subject, `this` is an implicit **guest**. The subject parameter is never a swallow position — a method does not consume the object it is called on — so bare `this T` here is a guest rather than the swallow it would be on an ordinary parameter, and **`&` is never written on `this`**: there is no second mode for the marker to select. The caller stays a full host either way.
-
-A guest subject may be read, mutated, returned as `&T` ([`lifetimes.md`](lifetimes.md) §1.7), or used as the destination of an `&` store ([`lifetimes.md`](lifetimes.md) §1.1), so a method that needs to keep its subject past the call needs no special declaration to do it.
+The borrow is scoped and non-escaping: `this` may be read and, under `mut`, written, and may be the root of an `&` store into the subject ([`lifetimes.md`](lifetimes.md) §1.11), but it is never moved, stored, or returned as `&T`. A verb that hands out a guest into an object takes that object as an `&T` parameter instead.
 
 ```zane
-Unit setScale(this Node, scale Float) mut {   // reference subject: the implicit guest
+Unit setScale(this Node, scale Float) mut {   // reference subject: a borrow of the caller's host
     this.scale = scale;
     return Unit();
 }
 ```
 
 ```zane
-&Weapon mainWeapon(this Player) => this.weapon   // the subject may be returned as `&`
+&Weapon mainWeapon(player &Player) => player.weapon  // a guest is handed out by a function
+&Weapon weapon(this Player) => this.weapon           // ILLEGAL: this is a borrow
 ```
 
 ```zane
@@ -114,16 +112,17 @@ subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 
 ### 2.7 Parameters are read-only
 
-Explicit parameters other than `this` are read-only. A read-only binding admits no write, and a `!` call is a write: it runs a `mut` method that writes its subject. So a parameter can be neither assigned nor the subject of a `!` call, and neither can anything reached through it or any guest derived from it ([`effects.md`](effects.md) §4.1, §4.4). How each parameter is passed — the two reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
+Explicit parameters other than `this` are read-only. A read-only binding admits no write, and a `!` call is a write: it runs a `mut` method that writes its subject. So a parameter can be neither assigned nor the subject of a `!` call, and neither can anything reached through it or any guest derived from it ([`effects.md`](effects.md) §4.1, §4.4). How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
-### 2.8 Swallow and guest method parameters
+### 2.8 Borrow, take, and guest method parameters
 
-A reference-type method parameter selects one of two passing modes ([`memory.md`](memory.md) §2.9):
+A reference-type method parameter selects one of three passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as `&T` is a **guest**: the caller either supplies a stable guest source under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
-- A parameter declared as a plain reference type `T` **swallows** its argument — it takes the value by hosting access, which the value's call-site scope keeps ([`lifetimes.md`](lifetimes.md) §1.5).
+- A parameter declared as a plain reference type `T` is a **borrow**: the caller passes any host, settled or roaming, or a temporary, and stays a full host. The callee may read it; it may not store, return, or move it.
+- A parameter declared as `^T` **takes** its argument: the caller passes a roaming host, which is spent ([`lifetimes.md`](lifetimes.md) §1.8), or a temporary. The callee owns it and may move it on, store it, or return it.
+- A parameter declared as `&T` is a **guest**: the caller either supplies a settled place under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
 
-A swallowed parameter may not be bound into `&` storage, because it is hosted at the call site while an `&` field may outlive the call. A value-type parameter is always a read-only borrow. To pass a reference object without giving up hosting, use `&T`.
+Only a guest parameter may be bound into `&` storage: a borrow is never stored, and a taken host is roaming, which nothing guests. A value-type parameter is always a read-only borrow.
 
 ```zane
 type Car = #struct {
@@ -131,9 +130,9 @@ type Car = #struct {
     _value Int;
 }
 
-// `&` parameter used only to read
-Int calculate(this Car, engine &Engine) {
-    return this._value + engine.speed;  // legal: reading through the guest
+// a borrow, used only to read
+Int calculate(this Car, engine Engine) {
+    return this._value + engine.speed;  // legal: reading through the borrow
 }
 
 // `&` parameter stored into an `&` field: recorded in the signature, checked per call
@@ -142,9 +141,9 @@ Unit setEngine(this Car, engine &Engine) mut {
     return Unit();
 }
 
-// plain reference-type parameter swallows; the swallowed value is hosted at the call site
+// a borrow is never stored
 Unit setEngineWrong(this Car, engine Engine) mut {
-    this.engine = engine;  // ILLEGAL: cannot store a swallowed host into an `&` field
+    this.engine = engine;  // ILLEGAL: a borrow cannot be bound into an `&` field
     return Unit();
 }
 ```
@@ -155,8 +154,8 @@ Call syntax is uniform regardless of the parameter mode; only what the caller ma
 engine Engine();
 garage Garage();
 
-car:calculate(engine);         // legal: a bare symbol is a guest source
-car!setEngine(engine);         // legal: one block owns car and engine
+car:calculate(engine);         // legal: a borrow of engine
+car!setEngine(engine);         // legal: engine is settled, and one block owns car and engine
 car!setEngine(garage.spare);   // legal: a field access is a guest source, and
                                //   garage is owned by the same block
 car!setEngine(Engine());       // ILLEGAL: a temporary is not a place expression
@@ -249,10 +248,10 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T` or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `^T`, or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
 
 ```zane
-Unit consume(this Car, engine Engine)
+Unit consume(this Car, engine ^Engine)
 Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mode
 ```
 
@@ -455,16 +454,17 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's slot for a value subject and an implicit guest for a reference subject |
+| `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or host |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
-| `&` method parameter | Caller supplies a stable guest source or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
+| `&` method parameter | Caller supplies a settled place or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
 | Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any guest derived from one |
-| Plain `T` method parameter | Swallows; caller supplies a move-source — a host symbol, which is spent, or a temporary, which has no symbol to spend; callee **MUST NOT** bind it into `&` storage |
-| Reference-type `this` | Never a swallow position: it is an implicit guest, and `&` is never written on `this` |
+| Plain `T` method parameter | A borrow: caller passes any host or a temporary and keeps it; callee may read it, never store, return, or move it |
+| `^T` method parameter | Takes: caller supplies a move-source — a roaming host symbol, which is spent, or a temporary, which has no symbol to spend; callee owns it |
+| `this` | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T`, and nothing is written on it to select a mode |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `^T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |

@@ -101,6 +101,7 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 | Sigil | Meaning | Canonical home |
 |---|---|---|
 | `&` | Guest type (`&Node`) | [`memory.md`](memory.md) §2 |
+| `^` | Roaming host type (`^Node`) | [`memory.md`](memory.md) §2.1 |
 | `@` | Intrinsic namespace (`@primitives$`, `@concepts$`, `@controlflow$`, `@runtime$`, `@program$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
 | `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
