@@ -14,7 +14,6 @@ Zane is built on a small number of commitments that the rest of the language der
 
 - **`Source is captured intent`.** Zane code is a high-level description of architecture and thought, not a transcript of machine steps. It is intentionally high-level because that is the form in which intent is clearest.
 - **`Compilation is staged; types are values`.** A type is an ordinary compile-time value that the compiler *executes* in an earlier stage to produce a layout. Parameterization, and the split between type expressions and calls, fall out of this.
-- **`Casing determines kind`.** A name's case tells the reader and the parser what kind of thing it is — a type or a value. This single rule is what makes the surface grammar viable without sigils.
 - **`Layout is fixed`.** Every value of a given type is the same number of bytes. Uniform stride is a global invariant, not a per-type choice.
 - **`Identity is opt-in`.** A type defined in Zane is a value unless it is marked `#`; the mark makes it a reference type with identity and aliasing, moved rather than copied. Value versus reference is one axis, orthogonal to the product/sum shape of the body.
 - **`Strictness is the performance model`.** The language forbids high-level conveniences that would dissolve a low-level guarantee. The rules are not a tax paid alongside fast code — they are the mechanism that produces it.
@@ -45,17 +44,11 @@ Three consequences that other documents depend on:
 
 ---
 
-## 4. Casing Determines Kind
+## 4. Identifier Casing and Parsing
 
-A name's initial case is semantic. An uppercase-initial name is a type; a lowercase-initial name is a value (including a compile-time integer). The full rule, and its effect on parsing, are specified by [`lexical.md`](lexical.md) §3 and §5.
+The surface grammar uses enforced identifier casing to simplify parsing and distinguish type names from value names. The initial-case rule and the ambiguities it resolves are specified by [`lexical.md`](lexical.md) §3 and §5. It supports the syntax; it does not define the staging, ownership, or layout model described here.
 
-This is a foundation, not a style convention, because the whole surface grammar leans on it:
-
-- `Vector<Int>` parses as a type application and `a < b` as a comparison, told apart solely by the case of the token before `<`. Without this, `<>` type syntax would not be viable. See [`lexical.md`](lexical.md) §5.
-- A parameter needs no sigil. A bare `T` is a type and a bare `n` is a number, so a reference carries its kind without decoration. See [`generics.md`](generics.md) §3.
-- The reader gets the same information the parser does: kind is visible at every use site, everywhere, for free.
-
-The cost — that case is not a free naming choice — is accepted deliberately; see the story.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
 
 ---
 
@@ -110,7 +103,6 @@ Both kinds are mutated in place through a `mut` method, and the subject is writt
 |---|---|---|
 | Captured intent | Source expresses architecture and intent, not machine steps; high-level on purpose | this document |
 | Staged compilation | Types are compile-time values executed in an earlier stage; `<>` and `()` are different stages | [`generics.md`](generics.md) §2, §4–§5 |
-| Casing determines kind | A name's case is its kind — uppercase type, lowercase value/number | [`lexical.md`](lexical.md) §3, §5 |
 | Fixed layout | Every value of a type is the same size; uniform stride is global | [`generics.md`](generics.md) §7, [`memory.md`](memory.md) §3 |
 | Identity is opt-in | A type defined in Zane is a value unless marked `#`; `#` adds identity and `&`-aliasing and makes the type moved rather than copied; a value type is transitively value, and either kind may recurse through a boxed member | [`memory.md`](memory.md) §2, [`types.md`](types.md) §2, [`adt.md`](adt.md) §2–§3 |
 | Strictness is performance | Forbidding guarantee-dissolving conveniences is what licenses aggressive codegen | [`memory.md`](memory.md), [`effects.md`](effects.md), [`lifetimes.md`](lifetimes.md) |
