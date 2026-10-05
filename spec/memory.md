@@ -44,6 +44,7 @@ moved Engine = engine;           // ILLEGAL: a settled owner never moves
 ```
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#settled-and-roaming-the-host-that-stopped-moving) — "Settled and roaming: the host that stopped moving".
+> **Story:** [`stories/memory.md`](../stories/memory.md#owner-and-reference-replace-host-and-guest-and-the-store-rule-compares-scopes) — "Owner and reference replace host and guest, and the store rule compares scopes".
 
 ### 2.2 A settled owner is overwritten in place
 
@@ -119,6 +120,7 @@ An `&` type is legal in storage sites (local symbols, fields, nested storage typ
 Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#two-vocabularies-host-and-guest-above-anchor-and-tether) — "Two vocabularies: host and guest above anchor and tether".
+> **Story:** [`stories/memory.md`](../stories/memory.md#owner-and-reference-replace-host-and-guest-and-the-store-rule-compares-scopes) — "Owner and reference replace host and guest, and the store rule compares scopes".
 
 ### 2.5 References are repointable
 

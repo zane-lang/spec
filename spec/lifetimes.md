@@ -59,6 +59,7 @@ The comparison the compiler makes is between two declaration blocks, after resol
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-owner-lifetime-replaces-the-same-root-rule) — "The owner lifetime replaces the same-root rule".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#place-lifetimes-inside-a-live-owner) — "Place lifetimes inside a live owner".
+> **Story:** [`stories/memory.md`](../stories/memory.md#owner-and-reference-replace-host-and-guest-and-the-store-rule-compares-scopes) — "Owner and reference replace host and guest, and the store rule compares scopes".
 
 ### 1.2 Move-sources are roaming owners, `^T` results, and `#variant` case forms
 
