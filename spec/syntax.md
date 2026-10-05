@@ -164,7 +164,7 @@ TypeName
 ^TypeName
 ```
 
-`&TypeName` is a **reference** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+`&TypeName` is a **reference** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions, return-type positions, and abort-type positions.
 
 ```zane
 List<&Node>
@@ -426,7 +426,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 ```
 
-A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned or aborted.
+A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type carries `^` or `&` (`^ReturnType`, `&AbortType`); a bare one is ill-formed, because a borrow is never returned or aborted.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
