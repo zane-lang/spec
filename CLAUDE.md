@@ -185,7 +185,7 @@ slot that holds an object is its **owner**, and what the store rule compares is
 a place's **scope** (glossary §3.32, §3.33, §3.43). Each guard comes back empty:
 
 ```sh
-grep -RIn -i -E "guest|\bhost" spec/ | grep -v "> \*\*Story:\*\*" | grep -v "^spec/dependencies.md"
+grep -RIn -i -E "guest|\bhost" spec/ | grep -vF '> **Story:**' | grep -v "^spec/dependencies.md"
 grep -RIn -E "(block|scope)s? owns?\b|owned by (the |its |that |this |an? )?(declaring |enclosing |body )?(block|scope)|owner comparison" spec/
 grep -RIn -i -E "\breference (field|element|parameter|member|slot)s?\b" spec/
 ```

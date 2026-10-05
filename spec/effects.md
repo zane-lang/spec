@@ -35,7 +35,7 @@ A capability is an object whose methods model access to external state, such as 
 
 ### 2.3 `mut`
 
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: it is a **borrow** of the caller's value or owner (see [`functions.md`](functions.md) §2.4). It never takes ownership, so a `mut` call leaves the caller exactly as it found it.
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: it is a **borrow** of the caller's value or owner (see [`functions.md`](functions.md) §2.4). It never takes ownership: a `mut` call may change the caller's object, but the caller still holds it afterwards.
 
 ### 2.4 Parameters are read-only
 
