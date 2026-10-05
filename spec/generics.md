@@ -133,6 +133,8 @@ Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
+
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
 `Type` and `@concepts$Int` are compiler-provided concept types. `Type` is the concept of a type; `@concepts$Int` is the concept of a compile-time integer, and is the same concept type an integer literal carries ([`syntax.md`](syntax.md) §2.8). Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `@concepts$Int` is a compile-time integer, whether it arrives as a number argument in a type expression or as an integer literal passed to a verb, because both are leaf concept types ([`syntax.md`](syntax.md) §2.8). Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, an `@concepts$Int` value in a number position.
