@@ -8,7 +8,7 @@ The parser needs to distinguish type names from value names in places where the 
 
 This is primarily a parsing decision. For example, `Vector<Int>` and `a < b` share the `<` character, but the uppercase type name and lowercase value name let the grammar distinguish type application from comparison without consulting a symbol table ([`lexical.md` §5](https://github.com/zane-lang/spec/blob/b5f8af74ed636926ad75c3e6618c785112e137fb/spec/lexical.md#5-how-casing-disambiguates-the-grammar)). The casing rule has to be enforced for that distinction to be reliable; a lint that could be waived would leave the parser needing to handle the exceptions.
 
-Readers get a useful side benefit: a name's initial case also helps them see whether it names a type or a value. We did not choose casing as a central organizing idea for the language, and neither the type model nor the memory model follows from it. It is a small syntax rule that makes an intended convention useful to the parser as well as the reader. The cost is limited naming freedom: lowercase type names and uppercase value names are unavailable.
+Readers get a useful side benefit: a name's initial case also helps them see whether it names a type or a value. We did not choose casing as a central organising idea for the language, and neither the type model nor the memory model follows from it. It is a small syntax rule that makes an intended convention useful to the parser as well as the reader. The cost is limited naming freedom: lowercase type names and uppercase value names are unavailable.
 
 ## Privacy lives in the name
 
