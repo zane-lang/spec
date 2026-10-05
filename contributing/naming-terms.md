@@ -30,7 +30,7 @@ does the teaching before the definition is even read.
   caller's storage for the call and must give it back; it cannot keep it.
 - **`settled` / `roaming`** — the two states of an owner. A settler has stopped
   travelling and taken a fixed home, so a reference may name it; a roaming owner
-  is still on the move, and nothing may.
+  is still on the move, and nothing may reference it.
 
 In each case the everyday meaning is not decoration — it is a true structural
 analogy. The word's real-world role maps onto the concept's role, so the name

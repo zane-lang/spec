@@ -357,7 +357,7 @@ static inline void *zm_own(size_t obj_size) { return zm_fixed_alloc(obj_size); }
 static void zm_own_release(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
 
 static inline ZRef zm_mint_ref(void *obj) { return zm_seg(obj); }
-static inline void *zm_deref(ZRef g) { return zm_resolve(g); }
+static inline void *zm_deref(ZRef r) { return zm_resolve(r); }
 
 static void zm_reset(void) {
     zm.next_chunk = 0;

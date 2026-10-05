@@ -14,7 +14,7 @@ Zane eliminates dangling references by combining single ownership, an owner that
 - **`References name settled owners`.** An `&` — a **reference** — is a non-owning handle to a settled owner of a **reference type** (a `#`-marked type, or a reference-type intrinsic such as `@primitives$List<T>`). A value type has no identity to point at, so it is shared by copy or borrow, never by a stored reference (§2.4).
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its backing stores and boxed payloads into fresh storage instead of sharing them (§2.3, §2.10).
 - **`Three passing modes`.** A bare reference-type parameter, and every subject, is a **borrow**; `^T` takes the owner; `&T` takes a reference. A value-type parameter is always a borrow (§2.9).
-- **`Lexical lifetime enforcement`.** Every store is checked against declaration scopes alone (see [`lifetimes.md`](lifetimes.md) §1), and objects are destroyed when their owners' scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
+- **`Lexical lifetime enforcement`.** Every store is checked against declaration scopes alone (see [`lifetimes.md`](lifetimes.md) §1), and objects are destroyed when their owner's scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
 - **`Regioned arena placement`.** Every scope has separate fixed-size and dynamic regions. Statically sized storage is placed inline in the fixed-size region; resizable data and the payloads of boxed members use the dynamic region (§3).
 - **`A reference is an address`.** A settled owner never moves, so a reference stores the owner's segmented offset directly (§4).
 
@@ -124,7 +124,7 @@ Declaring an `&` symbol is legal; §2.8 governs what may initialize it.
 
 ### 2.5 References are repointable
 
-An `&` symbol or `&` field may be assigned a different reference later, either by copying an existing `&T` value or by minting one from a settled place (§2.8), as long as the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the scope that rule compares is the field's root symbol's, not one of the field's own.
+An `&` symbol or `&` field may be assigned a different reference later, either by copying an existing `&T` value or by minting one from a settled place (§2.8), as long as the store rule in [`lifetimes.md`](lifetimes.md) §1.1 is satisfied. For an `&` **field or element**, the scope that rule compares is the field's root symbol's, not the field's own.
 
 ### 2.6 References are independent
 
