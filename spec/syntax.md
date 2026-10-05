@@ -388,7 +388,7 @@ type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` r
 
 `node` is written as an ordinary owning member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, or a type parameter filled with one ([`generics.md`](generics.md) §3.6) — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ### 2.15 String literal forms
 
@@ -428,7 +428,7 @@ ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 
 A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned or aborted.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
