@@ -63,7 +63,7 @@ The test is to read the heading without the chapter. A reader who knows the spec
 
 Teasers fail in a few recurring ways:
 
-- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the host — and *Y* a riddle about it. The chapter knows which one it means; the heading names it.
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the owner — and *Y* a riddle about it. The chapter knows which one it means; the heading names it.
 - **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
 - **Personification.** A heading in which a construct *wanted*, *outran*, *outlived*, or *could not contain itself* treats a rule as a character. State what the rule does.
 - **A paradox or punchline** that inverts an expectation the reader has not formed yet. State the outcome instead of staging a surprise.
@@ -104,9 +104,9 @@ Let the length flex with the episode: a minor turn is a paragraph, a foundationa
 
 ### 3.1 Coined terms are defended here
 
-When the topic **coins, renames, or reserves a term of art** — one that earns a [`glossary.md`](../spec/glossary.md) entry (`verb`, `mould`, `host`, `guest`, `anchor`, `tether`, and their kin) — the story is where its name is argued, and this is a requirement, not an optional flourish. The glossary records only the short "why this name"; the developed case — the candidates weighed, why each rival lost, why the winner won — is design history like any other decision, and it belongs in the chapter that introduces the concept the term names, told as prose (see [`naming-terms.md`](naming-terms.md) §6). A term whose name was a genuine choice is not fully recorded until that choice is defended in a story. The one exception is a term whose name is self-evident — its everyday sense maps straight onto the concept, with no rival to reject — which needs no such passage.
+When the topic **coins, renames, or reserves a term of art** — one that earns a [`glossary.md`](../spec/glossary.md) entry (`verb`, `mould`, `subject`, `settled`, `roaming`, and their kin) — the story is where its name is argued, and this is a requirement, not an optional flourish. The glossary records only the short "why this name"; the developed case — the candidates weighed, why each rival lost, why the winner won — is design history like any other decision, and it belongs in the chapter that introduces the concept the term names, told as prose (see [`naming-terms.md`](naming-terms.md) §6). A term whose name was a genuine choice is not fully recorded until that choice is defended in a story. The one exception is a term whose name is self-evident — its everyday sense maps straight onto the concept, with no rival to reject — which needs no such passage.
 
-When a term is **renamed**, do not back-date the old name out of earlier chapters. The old chapters were written when the old name was true, and that history stands; open a *new* chapter (or extend the relevant one) that records the change and why it came — the way [`stories/memory.md`](../stories/memory.md) added a chapter for the host/guest rename rather than rewriting the chapters that still say "owner" and "tether". This is the [append-don't-overwrite](#5-updating-a-story-when-the-spec-changes) rule applied to vocabulary.
+When a term is **renamed**, do not back-date the old name out of earlier chapters. The old chapters were written when the old name was true, and that history stands; open a *new* chapter (or extend the relevant one) that records the change and why it came — the way [`stories/memory.md`](../stories/memory.md) added a chapter for each renaming of `&` — ref, tether, guest, reference — rather than rewriting the chapters that still say the older words. This is the [append-don't-overwrite](#5-updating-a-story-when-the-spec-changes) rule applied to vocabulary.
 
 ---
 

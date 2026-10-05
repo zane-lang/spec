@@ -225,7 +225,7 @@ static void workers_shutdown(void) {
 #define ZD_NIL        0xFFFFFFFFu
 #define ZD_STACKS     1024
 
-typedef uint32_t ZGuest;
+typedef uint32_t ZRef;
 
 typedef struct { uint32_t chunk; uint32_t off; int live; uint8_t *cbase; } ZBump;
 typedef struct { uint32_t size; uint32_t align; uint32_t head; } ZSizeStack;
@@ -353,11 +353,11 @@ static int zd_grow_in_place(void *block, size_t old_bytes, size_t new_bytes) {
     return 1;
 }
 
-static inline void *zm_host(size_t obj_size) { return zm_fixed_alloc(obj_size); }
-static void zm_host_release(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
+static inline void *zm_own(size_t obj_size) { return zm_fixed_alloc(obj_size); }
+static void zm_own_release(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
 
-static inline ZGuest zm_mint_guest(void *obj) { return zm_seg(obj); }
-static inline void *zm_deref(ZGuest g) { return zm_resolve(g); }
+static inline ZRef zm_mint_ref(void *obj) { return zm_seg(obj); }
+static inline void *zm_deref(ZRef r) { return zm_resolve(r); }
 
 static void zm_reset(void) {
     zm.next_chunk = 0;
@@ -518,7 +518,7 @@ static void test1(void) {
     double T[RUNS];
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
-    for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_host(32); for(int i=0;i<N;i++) zm_host_release(ptrs[i],32); T[r]=now_ns()-t0; }
+    for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_own(32); for(int i=0;i<N;i++) zm_own_release(ptrs[i],32); T[r]=now_ns()-t0; }
     record_row("Zane (fixed-region bump)", T);
 
     for (int r=0;r<RUNS;r++) { double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=malloc(32); for(int i=0;i<N;i++) free(ptrs[i]); T[r]=now_ns()-t0; }
@@ -577,7 +577,7 @@ static void test3(void) {
 }
 
 static void test4(void) {
-    record_test("Test 4", "Iteration: inline (hosted) vs pointer-chase  [32B Entity x 100k]");
+    record_test("Test 4", "Iteration: inline (owned) vs pointer-chase  [32B Entity x 100k]");
     double T[RUNS];
 
     Entity *inl=(Entity*)malloc(N*sizeof(Entity));
@@ -676,18 +676,18 @@ static void test5(void) {
 }
 
 static void test6(void) {
-    record_test("Test 6", "Guest access via segmented offset vs direct pointer  [100k accesses]");
+    record_test("Test 6", "Reference access via segmented offset vs direct pointer  [100k accesses]");
     double T[RUNS];
 
     zm_reset();
     Entity **objs   = (Entity**)malloc(N * sizeof(Entity*));
     Entity **direct = (Entity**)malloc(N * sizeof(Entity*));
-    ZGuest  *refs   = (ZGuest*)malloc(N * sizeof(ZGuest));
+    ZRef  *refs   = (ZRef*)malloc(N * sizeof(ZRef));
 
     for(int i=0;i<N;i++){
-        objs[i] = (Entity*)zm_host(sizeof(Entity));
+        objs[i] = (Entity*)zm_own(sizeof(Entity));
         objs[i]->hp = i%100+1;
-        refs[i] = zm_mint_guest(objs[i]);
+        refs[i] = zm_mint_ref(objs[i]);
         direct[i] = objs[i];
     }
 
@@ -732,7 +732,7 @@ static void test6(void) {
     record_row("Segmented offset (chunk dir reloaded)", T);
 
     for(int i=0;i<N;i++) assert(zm_deref(refs[i]) == (void*)direct[i]);
-    for(int i=0;i<N;i++) zm_host_release(objs[i], sizeof(Entity));
+    for(int i=0;i<N;i++) zm_own_release(objs[i], sizeof(Entity));
     free(objs);free(direct);free(refs);
 }
 
@@ -754,8 +754,8 @@ static void ep_remove(EntityPool *p,int i){if(p->slots[i]){p->slots[i]=NULL;p->c
 typedef void*(*AllocFn)(size_t);
 typedef void (*FreeFn)(void*,size_t);
 
-static void *zane_obj_alloc(size_t s){return zm_host(s);}
-static void  zane_obj_free (void*p,size_t s){zm_host_release(p,s);}
+static void *zane_obj_alloc(size_t s){return zm_own(s);}
+static void  zane_obj_free (void*p,size_t s){zm_own_release(p,s);}
 static void *ma_obj_alloc(size_t s){return malloc(s);}
 static void  ma_obj_free (void*p,size_t s){(void)s;free(p);}
 static void *po_obj_alloc(size_t s){return pool_alloc(s);}
@@ -938,10 +938,10 @@ static void test9(void) {
 
     for(int r=0;r<RUNS;r++){
         zm_reset();
-        for(int i=0;i<N;i++){ptrs[i]=zm_host(32);((Entity*)ptrs[i])->hp=i;}
-        for(int i=0;i<N;i+=2) zm_host_release(ptrs[i],32);
+        for(int i=0;i<N;i++){ptrs[i]=zm_own(32);((Entity*)ptrs[i])->hp=i;}
+        for(int i=0;i<N;i+=2) zm_own_release(ptrs[i],32);
         double t0=now_ns();
-        for(int i=0;i<N/2;i++) ptrs[i]=zm_host(32);
+        for(int i=0;i<N/2;i++) ptrs[i]=zm_own(32);
         T[r]=now_ns()-t0; sink^=(int64_t)(uintptr_t)ptrs[0];
     }
     record_row("Zane -- refill (fixed-region bump)", T);
@@ -1018,7 +1018,7 @@ static void destroy_zane(TNode *n) {
     if(!n) return;
     for(int i=0;i<n->nchildren;i++) destroy_zane(n->children[i]);
     if(n->children) zane_children_free(n->children,n->nchildren);
-    zm_host_release(n, sizeof(TNode));
+    zm_own_release(n, sizeof(TNode));
 }
 
 static void destroy_malloc(TNode *n){ if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_malloc(n->children[i]); if(n->children)ma_children_free(n->children,n->nchildren); free(n); }
@@ -1026,7 +1026,7 @@ static void destroy_pool(TNode *n)  { if(!n)return; for(int i=0;i<n->nchildren;i
 
 
 static void test10(void) {
-    record_test("Test 10", "Hosting tree teardown  [~4000 nodes, cascade post-order destroy]");
+    record_test("Test 10", "Ownership tree teardown  [~4000 nodes, cascade post-order destroy]");
     double T[RUNS];
     zane_children_stack = zd_stack(ZM_LIST_MIN, ZM_LINE);
 
@@ -1221,23 +1221,23 @@ static void test12(void) {
     double T[RUNS];
     assert((N % WORKER_COUNT) == 0);
 
-    Entity *hosted = (Entity*)malloc(N * sizeof(Entity));
+    Entity *owned = (Entity*)malloc(N * sizeof(Entity));
     for (int i = 0; i < N; i++) {
-        hosted[i].id = i;
-        hosted[i].x = i * 1.1;
-        hosted[i].y = i * 2.2;
-        hosted[i].hp = i % 100 + 1;
+        owned[i].id = i;
+        owned[i].x = i * 1.1;
+        owned[i].y = i * 2.2;
+        owned[i].hp = i % 100 + 1;
     }
 
     const int shard_len = N / WORKER_COUNT;
     const int64_t expected = (int64_t)(N / 100) * 5050;
 
-    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += hosted[i].hp; assert(warm == expected); sink ^= warm; }
+    { int64_t warm = 0; for (int i = 0; i < N; i++) warm += owned[i].hp; assert(warm == expected); sink ^= warm; }
     {
         WorkerJob run[WORKER_COUNT];
         SumJob jobs[WORKER_COUNT];
         for (int i = 0; i < WORKER_COUNT; i++) {
-            jobs[i] = (SumJob){ .base = hosted, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
             run[i] = (WorkerJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
         workers_run(run, WORKER_COUNT);
@@ -1254,20 +1254,20 @@ static void test12(void) {
         double t0 = now_ns();
         for (int shard = 0; shard < WORKER_COUNT; shard++) {
             int start = shard * shard_len;
-            for (int i = 0; i < shard_len; i++) acc += hosted[start + i].hp;
+            for (int i = 0; i < shard_len; i++) acc += owned[start + i].hp;
         }
         T[r] = now_ns() - t0;
         assert(acc == expected);
         sink ^= acc;
     }
-    record_row("Hosted Array shards, sequential", T);
+    record_row("Owned Array shards, sequential", T);
 
     for (int r = 0; r < RUNS; r++) {
         WorkerJob run[WORKER_COUNT];
         SumJob jobs[WORKER_COUNT];
         double t0 = now_ns();
         for (int i = 0; i < WORKER_COUNT; i++) {
-            jobs[i] = (SumJob){ .base = hosted, .start = i * shard_len, .len = shard_len, .sum = 0 };
+            jobs[i] = (SumJob){ .base = owned, .start = i * shard_len, .len = shard_len, .sum = 0 };
             run[i] = (WorkerJob){ .fn = sum_entity_shard, .arg = &jobs[i] };
         }
         workers_run(run, WORKER_COUNT);
@@ -1279,9 +1279,9 @@ static void test12(void) {
         assert(acc == expected);
         sink ^= acc;
     }
-    record_row("Hosted Array shards, concurrent (4 workers)", T);
+    record_row("Owned Array shards, concurrent (4 workers)", T);
 
-    free(hosted);
+    free(owned);
 }
 
 #define REUSE_BLOCKS 2000
@@ -1488,7 +1488,7 @@ static void test14(void) {
         T[r] = now_ns() - t0;
         assert(bh_sum(root) == expected); sink ^= root;
     }
-    record_row("Escape roaming hosted tree (relocate)", T);
+    record_row("Escape roaming owned tree (relocate)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
@@ -1523,10 +1523,10 @@ static void test14(void) {
     {
         ZSizeStack *es = zd_stack(sizeof(SEngine), 8);
         ZSizeStack *ts = zd_stack(sizeof(STurbo), 8);
-        uint32_t *car_engine = (uint32_t*)zm_host(sizeof(uint32_t));
+        uint32_t *car_engine = (uint32_t*)zm_own(sizeof(uint32_t));
         *car_engine = se_build(es, ts, 1, 10);
-        ZGuest engine = *car_engine;
-        ZGuest turbo  = ((SEngine*)zm_deref(engine))->turbo;
+        ZRef engine = *car_engine;
+        ZRef turbo  = ((SEngine*)zm_deref(engine))->turbo;
         uint32_t spare = se_build(es, ts, 2, 20);
         uint32_t spare_turbo = ((SEngine*)zm_resolve(spare))->turbo;
         se_overwrite(es, ts, *car_engine, spare);

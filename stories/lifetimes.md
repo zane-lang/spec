@@ -296,6 +296,9 @@ What we had actually been doing, without naming it, was recognising exactly one 
 
 Give it a name — an **owner** — and say where each place gets one. A symbol is owned by its declaring block. A field or element is owned by its root symbol's owner, never its own. A parameter and an `init{ }` have no owner in the body at all; each stands for a path in the caller's frame. Then the whole of it is one sentence: a store is legal when every host the stored value names, directly or through a guest it carries, has an owner that outlives the destination's owner.
 
+> [!NOTE]
+> Superseded: this lifetime is now a place's **scope**, and "owner" names the slot that holds an object. See "[Owner and reference replace host and guest, and the store rule compares scopes](memory.md#owner-and-reference-replace-host-and-guest-and-the-store-rule-compares-scopes)".
+
 The four raise forms evaporate, and not by being absorbed into a longer sentence. They were four *syntactic occasions* on which a value changes lifetime, and a value changes lifetime by being **stored** — an assignment, a move, a return, an argument. There was never anything to enumerate. We had enumerated because we were looking for the places a check could go stale, which is a question you only have to ask if you believe some checks run once and stay believed.
 
 Two things we had assumed were consequences of the root rule turned out to be consequences of nothing, and both were losses.

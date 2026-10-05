@@ -160,7 +160,7 @@ directory argument: `grep` prints `bench/: Is a directory` and silently skips it
 otherwise.
 
 There used to be a guard here matching `&X = bareSymbol`. It is **gone** and
-must not be restored: a bare symbol is a guest source (`spec/memory.md` §2.8),
+must not be restored: a bare symbol is a reference source (`spec/memory.md` §2.8),
 so a match indicates nothing either way — what governs such an assignment is the
 scope comparison in `spec/lifetimes.md` §1.1, which needs the declaration scopes
 of both sides and so cannot be grepped at all.
@@ -179,6 +179,22 @@ old word because that is what the chapter is about. Any other hit is a
 reintroduction; fix it. Merged stories say "receiver" throughout and stay that
 way, so the two trees disagree on this word by design. Use `subject` in new
 prose on both sides.
+
+**`guest`, `host`, and the lifetime `owner`.** The `&` is a **reference**, the
+slot that holds an object is its **owner**, and what the store rule compares is
+a place's **scope** (glossary §3.32, §3.33, §3.43). Each guard comes back empty:
+
+```sh
+grep -RIn -i -E "guest|\bhost" spec/ | grep -vF '> **Story:**' | grep -v "^spec/dependencies.md"
+grep -RIn -E "(block|scope)s? owns?\b|owned by (the |its |that |this |an? )?(declaring |enclosing |body )?(block|scope)|owner comparison" spec/
+grep -RIn -i -E "\breference (field|element|parameter|member|slot)s?\b" spec/
+```
+
+The first skips `> **Story:**` pointers, whose quoted chapter headings keep the
+old words, and `dependencies.md`, where a host is a download server. The second
+catches the old lifetime `owner` coming back: a block is a scope, never an
+owner. The third guards spec guide §6.6. Merged stories keep the old words,
+as with `receiver`.
 
 **The separator.** The bracket picks the separator (canonical home
 `spec/lexical.md` §6). `init{ }` and the field-constructor header and call site

@@ -51,7 +51,7 @@ A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`co
 
 ### 2.3 A block is a scope for bindings, not for control transfer
 
-A block owns the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
+A block is the scope of the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
 
 It is **transparent** to control transfer. `return` and `abort` written inside a block act on the invocation containing the *call*, not on the block, and a call to an exiting verb such as `core`'s `guard` (§3.6) ends that same invocation:
 
@@ -318,7 +318,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Block argument | A braced run of statements passed to a call; type `@concepts$Block` or `Block<T>`; no parameters, no name, never a value |
 | Capture | A block reads and writes its enclosing scope's bindings |
 | Escape | A block may not be stored, returned, bound, placed in storage, or spawned; it may be handed to another verb |
-| Scope | A block owns its own declarations but is transparent to `return` and `abort`, and a `guard` written in one exits the verb the block was written in |
+| Scope | A block is the scope of its own declarations but is transparent to `return` and `abort`, and a `guard` written in one exits the verb the block was written in |
 | Lowering | A verb taking a block parameter is expanded at its call site, transitively, so a block never crosses a call boundary and an exit inside one is a jump within one frame |
 | Yielding | A `Block<T>` ends its yielding paths with `resolve`; `return` still leaves the enclosing verb |
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |

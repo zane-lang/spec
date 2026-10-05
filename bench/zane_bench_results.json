@@ -281,7 +281,7 @@
     },
     {
       "id": "Test 4",
-      "title": "Iteration: inline (hosted) vs pointer-chase  [32B Entity x 100k]",
+      "title": "Iteration: inline (owned) vs pointer-chase  [32B Entity x 100k]",
       "rows": [
         {
           "label": "Inline array  (Array<Entity, 100000>)",
@@ -518,7 +518,7 @@
     },
     {
       "id": "Test 6",
-      "title": "Guest access via segmented offset vs direct pointer  [100k accesses]",
+      "title": "Reference access via segmented offset vs direct pointer  [100k accesses]",
       "rows": [
         {
           "label": "Direct pointer (baseline)",
@@ -867,7 +867,7 @@
     },
     {
       "id": "Test 10",
-      "title": "Hosting tree teardown  [~4000 nodes, cascade post-order destroy]",
+      "title": "Ownership tree teardown  [~4000 nodes, cascade post-order destroy]",
       "rows": [
         {
           "label": "Zane cascade destroy",
@@ -1032,7 +1032,7 @@
       "title": "Concurrent shard scan  [4 x Array<Entity, 25000> read-only shard sums]",
       "rows": [
         {
-          "label": "Hosted Array shards, sequential",
+          "label": "Owned Array shards, sequential",
           "samples_ns": [
             131561.0,
             114527.0,
@@ -1057,7 +1057,7 @@
           ]
         },
         {
-          "label": "Hosted Array shards, concurrent (4 workers)",
+          "label": "Owned Array shards, concurrent (4 workers)",
           "samples_ns": [
             450859.0,
             422161.0,
@@ -1219,7 +1219,7 @@
       "title": "Boxed members: roaming escape vs deep value copy  [8191 nodes]",
       "rows": [
         {
-          "label": "Escape roaming hosted tree (relocate)",
+          "label": "Escape roaming owned tree (relocate)",
           "samples_ns": [
             85598.0,
             84161.0,

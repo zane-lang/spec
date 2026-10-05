@@ -7,11 +7,11 @@ independently of how the page is built.
 
 # ─────────────────────────────────────────────────────────────
 # Test metadata: short name, title, setup, and per-impl facts.
-# These track spec/memory.md: hosting is the default and the guest (&) is
-# opt-in; a scope owns a fixed-size region and a dynamic region that never
-# share a chunk; a reference-type host is settled (guestable, never moves) or
-# roaming (moves, guested by nothing); and a guest is the u32 segmented offset
-# of the settled host it names. A host carries no metadata of its own.
+# These track spec/memory.md: ownership is the default and the reference (&)
+# is opt-in; a scope has a fixed-size region and a dynamic region that never
+# share a chunk; an owner is settled (referenceable, never moves) or roaming
+# (moves, referenced by nothing); and a reference is the u32 segmented offset
+# of the settled owner it names. An owned object carries no metadata of its own.
 #
 # The "Reading the result" note for each test is NOT stored here. It is read
 # from explanations.txt — result interpretation authored after looking at a
@@ -23,9 +23,9 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "One fixed-region frontier bump per host, with a chunk-boundary check. A host carries no header, so allocation writes nothing into the object. Release is a no-op — the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
+        "setup": "One fixed-region frontier bump per object, with a chunk-boundary check. An object carries no header, so allocation writes nothing into the object. Release is a no-op — the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
         "meta": [
-            ("Object size", "32B — no per-host metadata"),
+            ("Object size", "32B — no per-object metadata"),
             ("Alloc cost", "one fixed-region bump"),
             ("Release cost", "no-op — fixed region reclaims only at drain"),
             ("Arena row", "flat bump, no chunk boundary"),
@@ -81,23 +81,23 @@ TEST_META = {
         ],
     },
     "Test 6": {
-        "short": "T6 — guest access",
-        "title": "Guest access via a segmented offset vs a direct pointer",
-        "setup": "A guest is the u32 segmented offset of the settled host it names (memory.md §4.1). Resolving it is a shift, a mask and one chunk-directory load, then the host itself. Nothing is allocated to mint a guest and nothing is recorded in the host.",
+        "short": "T6 — reference access",
+        "title": "Reference access via a segmented offset vs a direct pointer",
+        "setup": "A reference is the u32 segmented offset of the settled owner it names (memory.md §4.1). Resolving it is a shift, a mask and one chunk-directory load, then the object itself. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Segmented offset, dir cached", "chunk directory hoisted; offset → host"),
+            ("Segmented offset, dir cached", "chunk directory hoisted; offset → object"),
             ("Segmented offset, dir reloaded", "chunk directory re-fetched per access"),
-            ("Guest size", "u32 segmented offset — half a 64-bit pointer"),
-            ("Guest cost", "4B — the guest itself; the host stores nothing"),
-            ("Asserted", "every guest resolves to the host it was minted from"),
+            ("Reference size", "u32 segmented offset — half a 64-bit pointer"),
+            ("Reference cost", "4B — the reference itself; the owner stores nothing"),
+            ("Asserted", "every reference resolves to the object it was minted from"),
             ("Runs", "20 — median reported"),
         ],
     },
     "Test 7": {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
-        "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
+        "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
         "meta": [
             ("Entity size", "32B"),
             ("Frame count", "500 frames"),
@@ -134,7 +134,7 @@ TEST_META = {
     "Test 10": {
         "short": "T10 — tree teardown",
         "title": "Cascade destruction — Zane vs malloc and pool",
-        "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A guest leaves nothing in its host, so how many guests a tree has cannot change its teardown.",
+        "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A reference leaves nothing in its owner, so how many references a tree has cannot change its teardown.",
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
             ("Child lists", "128B dynamic blocks returned to the size stack"),
@@ -145,8 +145,8 @@ TEST_META = {
     },
     "Test 11": {
         "short": "T11 — stress test",
-        "title": "Fragmentation stress: hosts + lists, random spawn / push / kill cycles",
-        "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
+        "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
+        "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
         "meta": [
             ("Object size", "32B"),
             ("List blocks", "128 / 256 / 512B, cache-line aligned"),
@@ -159,7 +159,7 @@ TEST_META = {
     "Test 12": {
         "short": "T12 — concurrent scan",
         "title": "Concurrent shard scan over four independent Array&lt;Entity, 25000&gt; workloads",
-        "setup": "Four read-only shards of one hosted inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
+        "setup": "Four read-only shards of one owned inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
         "meta": [
             ("Workers", "4"),
             ("Shard size", "25,000 entities"),
@@ -186,17 +186,17 @@ TEST_META = {
     "Test 14": {
         "short": "T14 — boxed members",
         "title": "Boxed members: roaming escape vs deep value copy",
-        "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md §3.5); nothing inside a roaming host is guested, so nothing else is updated. A value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
+        "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md §3.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
         "meta": [
             ("Tree", "complete binary, depth 12 — 8,191 nodes"),
-            ("Hosted node", "16B — value and two handles"),
+            ("Owned node", "16B — value and two handles"),
             ("Value node", "16B — value and two handles"),
             ("Boxed payload", "exact node size, node alignment; no size class, no floor"),
             ("Stack key", "resolved once from the member's type, not per allocation"),
             ("Escape", "recursive relocation; old blocks returned to their exact-size stacks"),
             ("Deep copy", "recursive; source keeps its own storage"),
             ("Fresh construction", "built directly in the destination — no copy"),
-            ("Asserted", "overwriting a settled boxed member, and the boxed member inside it, reuses both blocks; guests to either keep their address and see the replacement"),
+            ("Asserted", "overwriting a settled boxed member, and the boxed member inside it, reuses both blocks; references to either keep their address and see the replacement"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -247,7 +247,7 @@ def get_color(impl_name):
     for key, color in DYN_COLORS:
         if lower.startswith(key):
             return color
-    if "zane" in lower or "segmented" in lower or "hosted tree" in lower:
+    if "zane" in lower or "segmented" in lower or "owned tree" in lower:
         for key, color in ZANE_VARIANTS.items():
             if key in lower:
                 return color
@@ -260,9 +260,9 @@ def get_color(impl_name):
         if impl_name.startswith(prefix):
             return color
 
-    if lower.startswith("hosted array shards, concurrent"):
+    if lower.startswith("owned array shards, concurrent"):
         return "#7c6ff7"
-    if lower.startswith("hosted array shards, sequential"):
+    if lower.startswith("owned array shards, sequential"):
         return "#3aab76"
     if "sequential" in lower:
         return "#c49a2a"

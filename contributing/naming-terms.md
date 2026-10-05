@@ -2,7 +2,7 @@
 
 This guide describes how the spec chooses the coined terms it reuses — the named
 concepts recorded in [`glossary.md`](../spec/glossary.md), such as `verb`,
-`subject`, `mould`, `borrow`, `host`, `guest`, `anchor`, and `tether`. It governs the *terms of art* the
+`subject`, `mould`, `borrow`, `settled`, and `roaming`. It governs the *terms of art* the
 documentation leans on, not the surface keywords of the language itself.
 
 Terminology is worth naming deliberately because a good term is used on nearly
@@ -28,15 +28,9 @@ does the teaching before the definition is even read.
   is cast from them.
 - **`borrow`** — the passing mode for a value type. The callee is *lent* the
   caller's storage for the call and must give it back; it cannot keep it.
-- **`host` / `guest`** — the source-facing relationship. A host provides a
-  reference-type object and bounds a guest's stay; a guest may access what the
-  host provides without storing it or controlling its lifetime.
-- **`anchor` / `tether`** — the internal memory-model mechanism. A guest's
-  tether resolves through the hosted object's anchor, and rehosting updates the
-  anchor rather than every tether.
-
-Keeping the pairs in separate registers matters: host/guest teaches what source
-code means, while anchor/tether explains how the runtime preserves that meaning.
+- **`settled` / `roaming`** — the two states of an owner. A settler has stopped
+  travelling and taken a fixed home, so a reference may name it; a roaming owner
+  is still on the move, and nothing may reference it.
 
 In each case the everyday meaning is not decoration — it is a true structural
 analogy. The word's real-world role maps onto the concept's role, so the name
@@ -72,8 +66,8 @@ reader has to sound out, is a poor handle no matter how precise.
 ### 2.4 An oblique connection is fine
 
 The link between the word and the concept may be one hop away; it need not
-encapsulate the definition. A name is not a summary. `anchor` does not spell out
-"stable indirection through an anchor table" — it just points, and the meaning
+encapsulate the definition. A name is not a summary. `settled` does not spell out
+"may be referenced, and never moved again" — it just points, and the meaning
 settles onto it with use. Aim for *connected but not descriptive*.
 
 ### 2.5 The meaning accrues through use
@@ -82,6 +76,23 @@ Do not expect the name to carry the whole concept on day one. A good term is a
 little empty at first and fills up as the spec uses it. The best connections are
 the ones a reader discovers *after* the word already feels natural — the buried
 resonance that rewards a second look rather than announcing itself.
+
+### 2.6 It takes every form the prose needs
+
+A term that names a relationship is needed as a verb as often as a noun: the
+rules say what *may* stand in that relationship, not only what the thing is
+called. Check that the word bends into every form the spec will write — noun,
+verb, participle, and the compounds built from them — before adopting it. A
+noun with no natural verb pushes the prose into forced coinages ("may be
+guested") or into a generic word that drifts from the term.
+
+### 2.7 It carries the weight of the rule
+
+A term whose concept carries an obligation should be a word whose everyday sense
+already carries it. A reader brings the weight of a familiar word along: one who
+meets a *reference* already expects that it can dangle and must not outlive what
+it names, while a *link* reads as something you may follow or ignore. A word
+lighter than its rule teaches the reader to take the rule lightly.
 
 ---
 
@@ -107,8 +118,8 @@ seen rarely and gains its meaning slowly, so an oblique reference like *Ariadne*
 (the thread through the labyrinth) is a strength.
 
 A **term** is the opposite case: read constantly, and needed to teach on contact.
-Terms therefore lean plain and everyday — `verb`, `subject`, `mould`, `borrow`, `host`,
-`guest`, `anchor`, `tether` — even when the underlying instinct (name by metaphor, keep the link
+Terms therefore lean plain and everyday — `verb`, `subject`, `mould`, `borrow`, `settled`,
+`roaming` — even when the underlying instinct (name by metaphor, keep the link
 oblique) is the same. When in doubt for a term, choose the ordinary word over the exotic one.
 
 ---

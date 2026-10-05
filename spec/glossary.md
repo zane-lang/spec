@@ -46,7 +46,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.5 water-tower lifetimes
 
-- **Meaning:** Scope-hosted objects stay alive until every `spawn`ed call in that scope has completed and the scope drains.
+- **Meaning:** Objects owned in a scope stay alive until every `spawn`ed call in that scope has completed and the scope drains.
 - **Why this name:** The source document explains the rule through a water-tower analogy in which each still-running spawned call acts like a plate holding the water level up.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.1
 
@@ -74,7 +74,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.1 place expression
 
-- **Meaning:** A place expression denotes an existing storage location. Guest-source eligibility is separate: not every place may mint a new `&` (§3.36).
+- **Meaning:** A place expression denotes an existing storage location. Reference-source eligibility is separate: not every place may mint a new `&` (§3.36).
 - **Why this name:** The term names the expressions that refer to a storage "place" rather than to a temporary value.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
@@ -204,21 +204,21 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
-### 3.23 settled host
+### 3.23 settled owner
 
-- **Meaning:** A reference-type host that may be guested and never moves again: a bare reference-type symbol, or a field or `ArrayRef` element of a settled root. A roaming host settles by moving into a settled place. Overwriting it writes the replacement at the same address.
-- **Why this name:** It continues the host/guest register — a guest can only visit a host that has settled — and says the host has stopped moving for good.
+- **Meaning:** An owner that may be referenced and never moves again: a bare reference-type symbol, or a field or `ArrayRef` element of a settled root. A roaming owner settles by moving into a settled place. Overwriting it writes the replacement at the same address.
+- **Why this name:** A settler has stopped travelling and taken a fixed home; a reference can name only an owner that has done so, and the word says the owner has stopped moving for good.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
-### 3.24 roaming host
+### 3.24 roaming owner
 
-- **Meaning:** A reference-type host that may move anywhere. Neither it nor anything inside it can be guested. It is a symbol, parameter, or return written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
-- **Why this name:** The opposite of *settled* in the same register: a host still travelling, which no guest can visit. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
+- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, or return written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
+- **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.25 arena placement
 
-- **Meaning:** Where a hosted object's storage is materialized: the arena of the scope that creates it, split into a **fixed-size** region for statically sized slots and the handles that sit in them, and a **dynamic** region for the payloads those handles name. Placement is an unobservable implementation choice.
+- **Meaning:** Where an owned object's storage is materialized: the arena of the scope that creates it, split into a **fixed-size** region for statically sized slots and the handles that sit in them, and a **dynamic** region for the payloads those handles name. Placement is an unobservable implementation choice.
 - **Why this name:** Placement is a choice among **arenas** — the per-scope regions — rather than between a stack and a heap; the creating scope's arena is the default, a parent arena the fallback on escape.
 - **Canonical home:** [`memory.md`](memory.md) §3.5
 
@@ -230,8 +230,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.27 borrow
 
-- **Meaning:** Non-hosting, non-escaping access to a caller's storage for the duration of a call: a bare parameter of either kind of type, and every subject. It is the only way a value type is passed. A borrow is mutable only as a `mut` subject, and a value is copied only when bound into a fresh slot.
-- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not host it and cannot keep it. Unlike a guest, the borrow itself cannot be stored, returned, or used as a move-source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
+- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call: a bare parameter of either kind of type, and every subject. It is the only way a value type is passed. A borrow is mutable only as a `mut` subject, and a value is copied only when bound into a fresh slot.
+- **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not own it and cannot keep it. Unlike a reference, the borrow itself cannot be stored, returned, or used as a move-source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.28 coercion site
@@ -248,7 +248,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.30 value mould / reference mould
 
-- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through guests. It does not decide whether the type may recurse — both forms may, through a boxed member (§3.39).
+- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through references. It does not decide whether the type may recurse — both forms may, through a boxed member (§3.39).
 - **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
@@ -258,39 +258,39 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** Product and sum are the standard algebraic names for the two `{ }`-bodied shapes; "peer" names the third from the `enum`'s own defining property — uniform, interchangeable, payloadless members — rather than forcing it into the sum family it degenerately belongs to.
 - **Canonical home:** [`types.md`](types.md) §2.5 (product, sum); [`adt.md`](adt.md) §2 (peer)
 
-### 3.32 host
+### 3.32 owner
 
-- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its hosting handle — and governs that object's lifetime. This is the role commonly called an **owner** in other languages. Every reference-type object has exactly one host at a time, settled (§3.23) or roaming (§3.24). Moving a roaming object transfers it to a new host.
-- **Why this name:** Zane says **host** because a real-life host provides both accommodation and the duration of a guest's stay; the term emphasizes where an object resides and how long it remains available.
+- **Meaning:** A source-facing symbol, field, or container slot that stores a reference-type object — or its owning handle — and governs that object's lifetime. Every reference-type object has exactly one owner at a time, settled (§3.23) or roaming (§3.24). Moving a roaming object transfers it to a new owner.
+- **Why this name:** It is the ordinary owner of other languages — one per object, governing its lifetime, handed on by a move — so the plain word needs no metaphor.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
-### 3.33 guest
+### 3.33 reference
 
-- **Meaning:** The source-facing `&T`: access to a settled reference-type host (§3.23) without storing that object or controlling its lifetime. A guest may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its host. It is represented by the host's segmented offset.
-- **Why this name:** A guest may use what a host provides without owning it, and the guest's stay cannot outlast the host.
+- **Meaning:** The source-facing `&T`: access to a settled owner (§3.23) without storing that object or controlling its lifetime. A reference may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its owner. It is represented by the owner's segmented offset.
+- **Why this name:** Readers already know a reference as something that reaches an object it does not own and must not outlive it, which is the rule. A **reference type** is exactly the kind of type a reference may name.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
 ### 3.34 taken parameter
 
-- **Meaning:** A `^T` parameter, which takes a roaming host or a temporary from the caller. Passing a roaming host symbol spends it (§3.44). The parameter is then a roaming host of the body, which moves it on or lets it die when the body drains.
-- **Why this name:** The callee *takes* the host, plainly and for good, in contrast to a borrow it gives back and a guest it only visits.
+- **Meaning:** A `^T` parameter, which takes a roaming owner or a temporary from the caller. Passing a roaming owner symbol spends it (§3.44). The parameter is then a roaming owner of the body, which moves it on or lets it die when the body drains.
+- **Why this name:** The callee *takes* the owner, plainly and for good, in contrast to a borrow it gives back and a reference it only names.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
 ### 3.35 relay / consume
 
-- **Meaning:** The two ways a verb can treat a reference-type host it takes (§3.34), told apart by its return. It **relays** the host when it returns `^T`; the caller may bind that return to host the object again. It **consumes** the host when it returns no host. A verb that declares `T` or `&T` instead borrows or takes a guest, and leaves the caller's host unchanged.
-- **Why this name:** "Consume" names taking the value for good; "relay" names passing the hosting role through and handing it back out.
+- **Meaning:** The two ways a verb can treat an owner it takes (§3.34), told apart by its return. It **relays** the owner when it returns `^T`; the caller may bind that return to own the object again. It **consumes** the owner when it returns no owner. A verb that declares `T` or `&T` instead borrows or takes a reference, and leaves the caller's owner unchanged.
+- **Why this name:** "Consume" names taking the value for good; "relay" names passing ownership through and handing it back out.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
-### 3.36 guest source
+### 3.36 reference source
 
-- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only, or an `&T` parameter itself. List elements and variant payloads are excluded. A roaming host, and anything reached from one, never originates a guest.
-- **Why this name:** The term names the *source* end — where a guest may come from — separately from where a stored guest may go, which is the store rule's business.
+- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only, or an `&T` parameter itself. List elements and variant payloads are excluded. A roaming owner, and anything reached from one, never originates a reference.
+- **Why this name:** The term names the *source* end — where a reference may come from — separately from where a stored reference may go, which is the store rule's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 
 ### 3.37 passing mode
 
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **guest** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one.
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **reference** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in each, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -314,25 +314,25 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.41 move-source
 
-- **Meaning:** An expression denoting a roaming value that the expression is entitled to consume, and therefore the only thing that may be moved into a hosting position: a roaming symbol, a field of a roaming root, a `^T` result, or a `#variant` case form. A settled host is never one.
+- **Meaning:** An expression denoting a roaming value that the expression is entitled to consume, and therefore the only thing that may be moved into an owning position: a roaming symbol, a field of a roaming root, a `^T` result, or a `#variant` case form. A settled owner is never one.
 - **Why this name:** It names the *source* end of a move, which is where the restriction lives: the rule is about what an expression is entitled to give up, not about where the value lands.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 
-### 3.42 carried guest
+### 3.42 carried reference
 
-- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — the same graph the boxed-member rule reads (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is hosted elsewhere and travels separately. A value's carried guests are what the store rule compares alongside the value's own host.
-- **Why this name:** The value *carries* the guest the way luggage carries its contents — the guest travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
+- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — the same graph the boxed-member rule reads (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is owned elsewhere and travels separately. A value's carried references are what the store rule compares alongside the value's owner.
+- **Why this name:** The value *carries* the reference the way luggage carries its contents — the reference travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
 
-### 3.43 owner
+### 3.43 scope
 
-- **Meaning:** The lifetime a place belongs to, and the only thing the store rule compares. A **symbol** is owned by its declaring block; a **field or element** takes its root symbol's owner rather than having one of its own; a `^T` parameter is owned by the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
-- **Why this name:** It names what a place's lifetime *is owed to* rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's owner tells you everything.
+- **Meaning:** The block whose lifetime bounds a place, and the only thing the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
+- **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's scope tells you everything.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
 ### 3.44 spent symbol
 
-- **Meaning:** A roaming host symbol after its object has been moved out, whether by a direct move or by passing it to a taken parameter (§3.34). It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new host. A symbol changes between hosting and spent only in its declaration block, and a parameter, being read-only, is never refilled.
+- **Meaning:** A roaming owner symbol after its object has been moved out, whether by a direct move or by passing it to a taken parameter (§3.34). It denotes no object, so any use of it is a compile-time error, until a store **refills** it with a new owner. A symbol changes between owning and spent only in its declaration block, and a parameter, being read-only, is never refilled.
 - **Why this name:** A spent casing has done its job and is empty, and it can be reloaded; the symbol has handed its object on and holds nothing, but keeps the storage for another.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.6
 

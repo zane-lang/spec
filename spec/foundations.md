@@ -73,9 +73,9 @@ It is the foundation under a large part of the runtime model:
 
 ## 6. Strictness Is the Performance Model
 
-Zane is strict — single hosting, fixed layout, read-only parameters, mandatory error handling — and the strictness is not a separate concern from its performance. It *is* the performance story.
+Zane is strict — single ownership, fixed layout, read-only parameters, mandatory error handling — and the strictness is not a separate concern from its performance. It *is* the performance story.
 
-High-level expression, on its own, usually costs speed. What buys it back is that the rules preserve enough invariants for the compiler to generate good code without guessing: hosting is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
+High-level expression, on its own, usually costs speed. What buys it back is that the rules preserve enough invariants for the compiler to generate good code without guessing: ownership is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
 
 So the rules should not be read as a usability tax levied next to the performance. They are the bargain itself: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
 
@@ -91,13 +91,13 @@ A value type is copied on assignment, has no identity, and — the load-bearing 
 
 What the axis does **not** decide is **recursion**. Either kind may contain itself, through a member the compiler boxes. That rule and the reasoning behind it belong to [`adt.md`](adt.md) §4.
 
-Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and it is the same thing in each: a *borrow* of the caller's value or host, so a value is mutable without gaining identity and an object is mutable without the method taking hosting. Neither consumes the caller's host.
+Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and it is the same thing in each: a *borrow* of the caller's value or owner, so a value is mutable without gaining identity and an object is mutable without the method taking ownership. Neither consumes the caller's owner.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
 - **A value copy is deep.** Copying a value copies every payload it owns out of line into fresh storage, which is what lets a value type recurse without ever aliasing. See [`memory.md`](memory.md) §2.3.
-- **`&` rides on `#`.** A non-hosting `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
-- **A guest names a host that never moves.** A reference-type host is either settled — guestable, never moving again — or roaming — movable, and guested by nothing. A new `&` is minted only from a settled place, so the object it names stays where it is until its scope drains. See [`memory.md`](memory.md) §2.1, §2.8, and §2.8.1.
+- **`&` rides on `#`.** A non-owning `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
+- **A reference names an owner that never moves.** An owner is either settled — referenceable, never moving again — or roaming — movable, and referenced by nothing. A new `&` is minted only from a settled place, so the object it names stays where it is until its scope drains. See [`memory.md`](memory.md) §2.1, §2.8, and §2.8.1.
 - **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".

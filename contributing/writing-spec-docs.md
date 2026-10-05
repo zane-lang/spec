@@ -77,7 +77,7 @@ Always `Zane` followed by a descriptive noun phrase. Examples:
 One or two sentences immediately after the title, before the first `---`. Describes in plain English what the document covers. No heading — just body text.
 
 ```markdown
-This document specifies Zane's memory model: how objects are hosted and destroyed, how memory is laid out and allocated, and how non-hosting references are safely tracked through the anchor system.
+This document specifies Zane's memory model: how objects are owned and destroyed, how memory is laid out and allocated, and how references are kept from dangling.
 ```
 
 ### 2.3 See also block
@@ -143,8 +143,8 @@ Every topic document begins with `## 1. Overview`. It contains:
 
 Zane uses a **structural effect model** with a single user-facing effect modifier: `mut`.
 
-- **Single hosting.** Every heap object has exactly one host at all times.
-- **Host and guest.** An object lives in a host; an `&` guest may access it without controlling its lifetime.
+- **Single ownership.** Every heap object has exactly one owner at all times.
+- **Owner and reference.** An object is held by an owner; an `&` reference may access it without controlling its lifetime.
 ```
 
 The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
@@ -320,8 +320,8 @@ Void[Int, this Node] // ILLEGAL: this must be the first parameter
 
 Keep sentences short. One idea per sentence. Avoid nested clauses. Use active voice.
 
-Good: *A guest never outlives its host.*
-Bad: *The lifetime associated with a guest is prevented from extending beyond the lifetime associated with its host.*
+Good: *A reference never outlives its owner.*
+Bad: *The lifetime associated with a reference is prevented from extending beyond the lifetime associated with its owner.*
 
 ### 6.2 Emphasis
 
@@ -356,6 +356,10 @@ At the end of a section that is closely connected to another document, add a `> 
 ### 6.5 Describe the present, not a migration
 
 Do not frame a rule in terms of backward compatibility or migrating existing code. The toolchain versions itself (see [`dependencies.md`](../spec/dependencies.md) §14), so code keeps compiling against the version it was written for; the spec describes only the language as it is now, never a migration path from an older form.
+
+### 6.6 Name an `&` slot by its sigil
+
+Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` element**, or an **`&T` parameter**. Do not call it a "reference field" or "reference parameter". A *reference-type* field or parameter is one whose type is a reference type, and it owns or borrows its object, so a single hyphen would be all that separates owning from not owning.
 
 ---
 

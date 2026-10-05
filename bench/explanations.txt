@@ -4,7 +4,7 @@
 # zane_bench_results.json, and zane_bench_results.txt rendered from it).
 #
 # PROVENANCE AND NOISE. The committed run is a fresh full-suite run of the
-# settled/roaming harness, the first since the anchor pool, the per-host
+# settled/roaming harness, the first since the anchor pool, the per-object
 # backpointer and forwarding were removed (spec PR #212). It was taken on a
 # different and less powerful machine than the previous pin, which ran under
 # WSL2 with no core pinning on a hybrid desktop CPU of 8 performance and 16
@@ -42,8 +42,8 @@
 Zane's bump (~86us) runs ~58x faster than malloc (~5.03ms) and ~6.5x faster
 than Pool (~559us), and since only Zane's release is free, its figure is
 allocation alone where the other two carry their frees inside it. Neither
-Zane nor the flat arena (~39us) writes to the memory it hands out now that a
-host carries no backpointer, so the ~2.2x between them is not cache-line
+Zane nor the flat arena (~39us) writes to the memory it hands out now that an
+object carries no backpointer, so the ~2.2x between them is not cache-line
 fills: the only code that differs is Zane's chunk-boundary check and the
 frontier it keeps in its region record. The first of Zane's twenty passes
 took ~1.14ms, 13x its median; the harness touches every page of the region
@@ -51,7 +51,7 @@ before any test runs, so that pass is warm-up of something other than page
 faults, and the median is the figure to read.
 
 [Test 2]
-Zane's row is not a fast release loop; it is no loop at all. zm_host_release
+Zane's row is not a fast release loop; it is no loop at all. zm_own_release
 is an empty function, so the compiler deletes the 100k-iteration loop outright,
 and the harness reports the row as eliminated rather than timing two
 timestamps around nothing. malloc (~2.27ms) and Pool (~681us) spend ~23ns and
@@ -83,12 +83,12 @@ call it a win. Bounding a block to one chunk is what forces relocation, and
 it stays cheap because only the two oversized spans copy at all.
 
 [Test 6]
-A guest now costs what a pointer costs. Resolving a segmented offset (~195us
+A reference now costs what a pointer costs. Resolving a segmented offset (~195us
 with the chunk directory hoisted, ~168us re-fetched) ties dereferencing a raw
 pointer (~191us); the fastest passes, ~157us direct against ~163-166us
 offset, agree to within 6%, and the re-fetched row coming in ahead is noise.
 Under anchors the same test cost ~1.24x direct, which was the anchor-cell
-load a guest no longer makes. The shift and mask that turn an offset into an
+load a reference no longer makes. The shift and mask that turn an offset into an
 address are absorbed by the pipeline.
 
 [Test 7]
@@ -115,7 +115,7 @@ A bump frontier cannot be fragmented, and the refill shows it: Zane takes
 across all 20 passes. It is also the one row in the suite that got faster
 than the previous pin in absolute terms, ~77us then, on a run where every
 unchanged row got slower: refilling no longer zeroes a backpointer in each
-host. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and
+object. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and
 ~24x, and both degrade across the run: Pool's passes climb from ~379us to a
 ~2.24ms worst and malloc's from ~1.49ms to ~3.01ms, each cycle handing the
 free list back in a worse order than it found it.
@@ -125,8 +125,8 @@ Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc
 ~152us (~2.5x). This is the first pin on the corrected topology, roughly
 1,070 branch points at depth ~20-26 rather than the 4,000-node chain the
 earlier figures measured, and the cross-allocator ordering survived the
-change. Guest density no longer has a row, because a guest leaves nothing in
-its host for teardown to visit; what Zane's walk does per node is return the
+change. Reference density no longer has a row, because a reference leaves
+nothing in its owner for teardown to visit; what Zane's walk does per node is return the
 node's child list to its exact-size stack.
 
 [Test 11]
