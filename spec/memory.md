@@ -34,7 +34,7 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 - A **settled** owner may be referenced (§2.8). It never moves: no expression takes its object out of it.
 - A **roaming** owner may be moved (see [`lifetimes.md`](lifetimes.md) §1.2). Nothing references it, or anything inside it.
 
-A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
+A symbol, parameter, return type, or abort type written with `^` is roaming; a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
 
 ```zane
 spare ^Engine = Engine(Int(1));  // roaming

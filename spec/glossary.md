@@ -212,7 +212,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.24 roaming owner
 
-- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, or return written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
+- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, return, or abort written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
 - **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 

@@ -114,7 +114,7 @@ type Player<T Type> = #struct {
     extraSettings T;
 }
 
-Player<T>(name String, extraSettings T Type) => init{name; extraSettings;}
+Player<T>(name String, extraSettings ^T Type) => init{name; extraSettings;}
 
 player Player<Unit> = Player("Manuel", Unit());
 completed Unit = performWork();

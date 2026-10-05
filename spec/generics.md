@@ -169,7 +169,7 @@ A type parameter ranges over value and reference types alike. Whether a given ty
 type Box<T Type> = #struct {
     value T;
 }
-Box<T>(value T Type) => init{value;}
+Box<T>(value ^T Type) => init{value;}
 
 a Box(MainCharacter());  // legal: a reference type may hold a reference type
 b Box(Int(3));           // legal: and a value type

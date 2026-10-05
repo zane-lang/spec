@@ -170,7 +170,7 @@ TypeName
 List<&Node>
 ```
 
-`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, and a return type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
+`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
 
 ```zane
 spare ^Engine = Engine();
@@ -359,7 +359,7 @@ ReturnType?AbortType[this SubjectType, ParamType, ...] mut
 
 The abort type stays attached to the return type, exactly as in a declaration's `ReturnType?AbortType name(...)` header.
 
-Reference-typed parameters and returns use the ordinary type form. A parameter slot accepts all three passing modes — `ParamType`, `^ParamType`, and `&ParamType` — and a reference-typed return slot accepts a `^` or `&` type (§2.3):
+Reference-typed parameters and returns use the ordinary type form. A parameter slot accepts all three passing modes — `ParamType`, `^ParamType`, and `&ParamType` — and a reference-typed return or abort slot accepts a `^` or `&` type (§2.3):
 
 ```zane
 ReturnType[&ParamType, ...]
@@ -426,7 +426,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 ```
 
-A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned.
+A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned or aborted.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
