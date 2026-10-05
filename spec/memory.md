@@ -34,7 +34,7 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 - A **settled** owner may be referenced (§2.8). It never moves: no expression takes its object out of it.
 - A **roaming** owner may be moved (see [`lifetimes.md`](lifetimes.md) §1.2). Nothing references it, or anything inside it.
 
-A symbol, parameter, or return type written with `^` is roaming; a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
+A symbol, parameter, return type, or abort type written with `^` is roaming, except a type parameter filled with a value type, which is an ordinary value (§2.9); a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
 
 ```zane
 spare ^Engine = Engine(Int(1));  // roaming
@@ -261,7 +261,7 @@ spare ^Engine = Engine();
 t Float = topSpeed(spare);   // legal: a borrow takes a roaming owner too
 ```
 
-A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type.
+A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type. One written `&T` takes a reference, so `T` is always filled with a reference type there ([`generics.md`](generics.md) §3.6).
 
 Passing a value by borrow is the semantic model rather than an optimization; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
 

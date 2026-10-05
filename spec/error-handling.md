@@ -28,7 +28,7 @@ An abortable function declares:
 ReturnType?AbortType
 ```
 
-A declaration with no `?AbortType` cannot abort.
+A declaration with no `?AbortType` cannot abort. A reference-typed abort type carries `^` or `&` exactly as a reference-typed return type does ([`syntax.md`](syntax.md) §3.1), because an abort hands its value to the caller as a return does.
 
 ### 2.2 `Unit` abort type
 

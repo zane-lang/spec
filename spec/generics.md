@@ -124,7 +124,16 @@ A verb has no header because it never needs one: its parameters are always infer
 
 A name is introduced by its first **marked** occurrence and referenced bare everywhere else in the signature. A bare reference may appear *before* the introduction: in `T head(arr Array<T Type, n @concepts$Int>)` the return type `T` is a bare reference even though it is written first, because the introduction is the marked `T Type` in the parameter list. Within one verb signature every occurrence of a name is the **same** parameter, so `T add(x T Type, y T Type)` constrains `x` and `y` to a single type `T`; a non-introducing occurrence may be written bare (`T`) or may repeat the concept (`T Type`), and both denote the same parameter.
 
+An introduction on a value parameter's own type carries that parameter's passing mode ([`memory.md`](memory.md) §2.9) the way a concrete type does: `x T Type` borrows, `x ^T Type` takes an owner, and `x &T Type` takes a reference. The marker belongs to the parameter, so a bare `T` elsewhere in the signature names the type without it. A verb that stores its argument is the one that needs the marker, since an introduction is the only place `T` is written on that parameter:
+
+```zane
+Box<T>(value ^T Type) => init{value;}   // takes the owner, to store it
+Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
+```
+
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
@@ -163,13 +172,13 @@ Here `n` in the return position is the number the use site supplied for that par
 
 ### 3.6 A wrong-kind type argument is reported where the concrete type enters
 
-A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind.
+A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind. An `&T` takes only a reference type ([`memory.md`](memory.md) §2.4), so a value type that fills `T` there, on a field or on a verb's parameter, is ill-formed the same way.
 
 ```zane
 type Box<T Type> = #struct {
     value T;
 }
-Box<T>(value T Type) => init{value;}
+Box<T>(value ^T Type) => init{value;}
 
 a Box(MainCharacter());  // legal: a reference type may hold a reference type
 b Box(Int(3));           // legal: and a value type

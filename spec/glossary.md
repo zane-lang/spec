@@ -212,7 +212,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.24 roaming owner
 
-- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, or return written `^T`, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
+- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, return, or abort written `^T` with `T` a reference type, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
 - **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
@@ -272,7 +272,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.34 taken parameter
 
-- **Meaning:** A `^T` parameter, which takes a roaming owner or a temporary from the caller. Passing a roaming owner symbol spends it (§3.44). The parameter is then a roaming owner of the body, which moves it on or lets it die when the body drains.
+- **Meaning:** A `^T` parameter with `T` a reference type, which takes a roaming owner or a temporary from the caller; filled with a value type, it is a borrow. Passing a roaming owner symbol spends it (§3.44). The parameter is then a roaming owner of the body, which moves it on or lets it die when the body drains.
 - **Why this name:** The callee *takes* the owner, plainly and for good, in contrast to a borrow it gives back and a reference it only names.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
