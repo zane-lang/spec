@@ -121,7 +121,7 @@ const TESTS=[
     "meta": [
       {
         "label": "Object size",
-        "val": "32B \u2014 no per-host metadata"
+        "val": "32B \u2014 no per-object metadata"
       },
       {
         "label": "Alloc cost",
@@ -140,8 +140,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "One fixed-region frontier bump per host, with a chunk-boundary check. A host carries no header, so allocation writes nothing into the object. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
-    "note": "Zane's bump (~86us) runs ~58x faster than malloc (~5.03ms) and ~6.5x faster than Pool (~559us), and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Neither Zane nor the flat arena (~39us) writes to the memory it hands out now that a host carries no backpointer, so the ~2.2x between them is not cache-line fills: the only code that differs is Zane's chunk-boundary check and the frontier it keeps in its region record. The first of Zane's twenty passes took ~1.14ms, 13x its median; the harness touches every page of the region before any test runs, so that pass is warm-up of something other than page faults, and the median is the figure to read.",
+    "setup": "One fixed-region frontier bump per object, with a chunk-boundary check. An object carries no header, so allocation writes nothing into the object. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
+    "note": "Zane's bump (~86us) runs ~58x faster than malloc (~5.03ms) and ~6.5x faster than Pool (~559us), and since only Zane's release is free, its figure is allocation alone where the other two carry their frees inside it. Neither Zane nor the flat arena (~39us) writes to the memory it hands out now that an object carries no backpointer, so the ~2.2x between them is not cache-line fills: the only code that differs is Zane's chunk-boundary check and the frontier it keeps in its region record. The first of Zane's twenty passes took ~1.14ms, 13x its median; the harness touches every page of the region before any test runs, so that pass is warm-up of something other than page faults, and the median is the figure to read.",
     "noteStale": false
   },
   {
@@ -185,7 +185,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
-    "note": "Zane's row is not a fast release loop; it is no loop at all. zm_host_release is an empty function, so the compiler deletes the 100k-iteration loop outright, and the harness reports the row as eliminated rather than timing two timestamps around nothing. malloc (~2.27ms) and Pool (~681us) spend ~23ns and ~6.8ns an object returning blocks to a structure that later allocations must search. Having the structure at all is the cost.",
+    "note": "Zane's row is not a fast release loop; it is no loop at all. zm_own_release is an empty function, so the compiler deletes the 100k-iteration loop outright, and the harness reports the row as eliminated rather than timing two timestamps around nothing. malloc (~2.27ms) and Pool (~681us) spend ~23ns and ~6.8ns an object returning blocks to a structure that later allocations must search. Having the structure at all is the cost.",
     "noteStale": false
   },
   {
@@ -382,8 +382,8 @@ const TESTS=[
     "noteStale": false
   },
   {
-    "t": "T6 \u2014 guest access",
-    "title": "Guest access via a segmented offset vs a direct pointer",
+    "t": "T6 \u2014 reference access",
+    "title": "Reference access via a segmented offset vs a direct pointer",
     "labels": [
       "Segmented offset (chunk dir reloaded)",
       "Direct pointer (baseline)",
@@ -417,31 +417,31 @@ const TESTS=[
       },
       {
         "label": "Segmented offset, dir cached",
-        "val": "chunk directory hoisted; offset \u2192 host"
+        "val": "chunk directory hoisted; offset \u2192 object"
       },
       {
         "label": "Segmented offset, dir reloaded",
         "val": "chunk directory re-fetched per access"
       },
       {
-        "label": "Guest size",
+        "label": "Reference size",
         "val": "u32 segmented offset \u2014 half a 64-bit pointer"
       },
       {
-        "label": "Guest cost",
-        "val": "4B \u2014 the guest itself; the host stores nothing"
+        "label": "Reference cost",
+        "val": "4B \u2014 the reference itself; the owner stores nothing"
       },
       {
         "label": "Asserted",
-        "val": "every guest resolves to the host it was minted from"
+        "val": "every reference resolves to the object it was minted from"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "A guest is the u32 segmented offset of the settled host it names (memory.md \u00a74.1). Resolving it is a shift, a mask and one chunk-directory load, then the host itself. Nothing is allocated to mint a guest and nothing is recorded in the host.",
-    "note": "A guest now costs what a pointer costs. Resolving a segmented offset (~195us with the chunk directory hoisted, ~168us re-fetched) ties dereferencing a raw pointer (~191us); the fastest passes, ~157us direct against ~163-166us offset, agree to within 6%, and the re-fetched row coming in ahead is noise. Under anchors the same test cost ~1.24x direct, which was the anchor-cell load a guest no longer makes. The shift and mask that turn an offset into an address are absorbed by the pipeline.",
+    "setup": "A reference is the u32 segmented offset of the settled owner it names (memory.md \u00a74.1). Resolving it is a shift, a mask and one chunk-directory load, then the object itself. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
+    "note": "A reference now costs what a pointer costs. Resolving a segmented offset (~195us with the chunk directory hoisted, ~168us re-fetched) ties dereferencing a raw pointer (~191us); the fastest passes, ~157us direct against ~163-166us offset, agree to within 6%, and the re-fetched row coming in ahead is noise. Under anchors the same test cost ~1.24x direct, which was the anchor-cell load a reference no longer makes. The shift and mask that turn an offset into an address are absorbed by the pipeline.",
     "noteStale": false
   },
   {
@@ -495,7 +495,7 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized hosts in the fixed-size region, which reclaims in bulk at drain.",
+    "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
     "note": "Once entity counts stabilize the allocator stops mattering much: Zane (~4.28ms), Pool (~4.56ms) and malloc (~4.99ms) span ~17%, with Zane nominally in front of Pool by ~7%. The previous pin had Zane and Pool tied, so read that lead as inside the noise. The order-of-magnitude gaps of T1-T3 have gone into per-frame update work.",
     "noteStale": false
   },
@@ -615,7 +615,7 @@ const TESTS=[
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
-    "note": "A bump frontier cannot be fragmented, and the refill shows it: Zane takes ~49us for the 50k objects, ~1ns each, and holds between ~48us and ~54us across all 20 passes. It is also the one row in the suite that got faster than the previous pin in absolute terms, ~77us then, on a run where every unchanged row got slower: refilling no longer zeroes a backpointer in each host. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and ~24x, and both degrade across the run: Pool's passes climb from ~379us to a ~2.24ms worst and malloc's from ~1.49ms to ~3.01ms, each cycle handing the free list back in a worse order than it found it.",
+    "note": "A bump frontier cannot be fragmented, and the refill shows it: Zane takes ~49us for the 50k objects, ~1ns each, and holds between ~48us and ~54us across all 20 passes. It is also the one row in the suite that got faster than the previous pin in absolute terms, ~77us then, on a run where every unchanged row got slower: refilling no longer zeroes a backpointer in each object. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and ~24x, and both degrade across the run: Pool's passes climb from ~379us to a ~2.24ms worst and malloc's from ~1.49ms to ~3.01ms, each cycle handing the free list back in a worse order than it found it.",
     "noteStale": false
   },
   {
@@ -669,13 +669,13 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A guest leaves nothing in its host, so how many guests a tree has cannot change its teardown.",
-    "note": "Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc ~152us (~2.5x). This is the first pin on the corrected topology, roughly 1,070 branch points at depth ~20-26 rather than the 4,000-node chain the earlier figures measured, and the cross-allocator ordering survived the change. Guest density no longer has a row, because a guest leaves nothing in its host for teardown to visit; what Zane's walk does per node is return the node's child list to its exact-size stack.",
+    "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A reference leaves nothing in its owner, so how many references a tree has cannot change its teardown.",
+    "note": "Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc ~152us (~2.5x). This is the first pin on the corrected topology, roughly 1,070 branch points at depth ~20-26 rather than the 4,000-node chain the earlier figures measured, and the cross-allocator ordering survived the change. Reference density no longer has a row, because a reference leaves nothing in its owner for teardown to visit; what Zane's walk does per node is return the node's child list to its exact-size stack.",
     "noteStale": false
   },
   {
     "t": "T11 \u2014 stress test",
-    "title": "Fragmentation stress: hosts + lists, random spawn / push / kill cycles",
+    "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
     "labels": [
       "Zane (fixed bump + size stacks)",
       "malloc / free",
@@ -728,7 +728,7 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Entities are fixed-region hosts whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
+    "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
     "note": "The mixed workload compresses the field to a tie: Zane ~3.89ms, malloc ~4.08ms, Pool ~4.12ms, ~6% end to end. Updates, scans and randomized maintenance dominate, so the allocator is a small slice of the total, and the ordering has moved between every pin.",
     "noteStale": false
   },
@@ -736,8 +736,8 @@ const TESTS=[
     "t": "T12 \u2014 concurrent scan",
     "title": "Concurrent shard scan over four independent Array&lt;Entity, 25000&gt; workloads",
     "labels": [
-      "Hosted Array shards, sequential",
-      "Hosted Array shards, concurrent (4 workers)"
+      "Owned Array shards, sequential",
+      "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
       113.7,
@@ -782,7 +782,7 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "Four read-only shards of one hosted inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
+    "setup": "Four read-only shards of one owned inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
     "note": "Concurrency loses. The scan splits into four equal shards and waits for all of them, so a pass runs at the speed of its slowest shard: concurrent passes run ~248us at best, ~398us median and ~647us at worst, against ~114us sequential (~89us best). Best against best is ~2.8x, close to the ~2.9x of the previous pin and the ~3.1x an earlier run measured with the process pinned to four cores, which is the figure to read; the median adds core placement on top. Distributing a ~100us scan costs several times more than doing it outright, because per-shard work this small cannot amortize the handoff.",
     "noteStale": false
   },
@@ -865,7 +865,7 @@ const TESTS=[
     "labels": [
       "Construct fresh value tree in place",
       "Deep-copy value tree (place source)",
-      "Escape roaming hosted tree (relocate)",
+      "Escape roaming owned tree (relocate)",
       "malloc deep copy"
     ],
     "data": [
@@ -899,7 +899,7 @@ const TESTS=[
         "val": "complete binary, depth 12 \u2014 8,191 nodes"
       },
       {
-        "label": "Hosted node",
+        "label": "Owned node",
         "val": "16B \u2014 value and two handles"
       },
       {
@@ -928,14 +928,14 @@ const TESTS=[
       },
       {
         "label": "Asserted",
-        "val": "overwriting a settled boxed member, and the boxed member inside it, reuses both blocks; guests to either keep their address and see the replacement"
+        "val": "overwriting a settled boxed member, and the boxed member inside it, reuses both blocks; references to either keep their address and see the replacement"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming host is guested, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
+    "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
     "note": "An escape costs what a deep copy costs. Relocating the roaming tree out of its scope (~84us) and deep-copying the value tree from an existing place (~81us) both walk all 8,191 nodes and allocate a block for each; the escape additionally returns each old block to its stack, and the two tie. A move that does not escape copies only the root's handles and is not timed. Constructing a fresh value tree in place (~46us) is the floor both sit ~1.8x above, which is the copy itself and why only an existing source or an escape pays it. malloc's deep copy is ~342us, ~4.2x.",
     "noteStale": false
   }

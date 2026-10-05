@@ -164,13 +164,13 @@ TypeName
 ^TypeName
 ```
 
-`&TypeName` is a **guest** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
+`&TypeName` is a **reference** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions and return-type positions.
 
 ```zane
 List<&Node>
 ```
 
-`^TypeName` is a **roaming** host of a reference type. It is legal on a local-variable declaration, a parameter, and a return type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
+`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, and a return type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
 
 ```zane
 spare ^Engine = Engine();
@@ -178,7 +178,7 @@ spare ^Engine = Engine();
 Unit park(this Garage, car ^Car) mut { ... }
 ```
 
-See [`memory.md`](memory.md) §2.1 for settled and roaming hosts, and §2.9 for the semantics of the three passing modes.
+See [`memory.md`](memory.md) §2.1 for settled and roaming owners, and §2.9 for the semantics of the three passing modes.
 
 ### 2.4 Type expressions
 
@@ -386,9 +386,9 @@ type Cell = #struct { value Int; }               // reference product type, decl
 type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` recurses
 ```
 
-`node` is written as an ordinary hosting member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
+`node` is written as an ordinary owning member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **guest** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum` — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ### 2.15 String literal forms
 
@@ -426,7 +426,7 @@ ReturnType name(param T Type, ...) { body }
 ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 ```
 
-A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the host, `&ParamType` takes a guest. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned.
+A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type is written `^ReturnType` or `&ReturnType`; a bare one is ill-formed, because a borrow is never returned.
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
@@ -452,7 +452,7 @@ ReturnType name(this SubjectType<T Type, n @concepts$Int>, param ParamType, ...)
 
 `this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
 
-The subject takes **no** marker, for either kind of type: neither `^` nor `&` is written on `this`. The subject is always a borrow of the caller's value or host, mutable when the method is `mut`, and never stored or returned as `&T`. See [`functions.md`](functions.md) §2.4.
+The subject takes **no** marker, for either kind of type: neither `^` nor `&` is written on `this`. The subject is always a borrow of the caller's value or owner, mutable when the method is `mut`, and never stored or returned as `&T`. See [`functions.md`](functions.md) §2.4.
 
 `=> expr` returns `expr`, including when `expr` has type `Unit`.
 

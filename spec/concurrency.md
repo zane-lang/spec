@@ -12,7 +12,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 
 - **`Implicit parallelism`.** The compiler may run provably independent work in parallel when it cannot change program results.
 - **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility.
-- **`Water-tower lifetimes`.** A scope’s hosted objects live until all spawned work in that scope completes.
+- **`Water-tower lifetimes`.** Objects owned in a scope live until all spawned work in that scope completes.
 - **`Mutation needs a value subject`.** A spawned call may mutate only a value-typed subject; a value type's transitive alias-freedom lets the compiler rule out a data race from the subject's type, and at most one spawn may mutably borrow a given location.
 - **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
 
@@ -117,7 +117,7 @@ Independent work may still be parallelized only when doing so preserves those so
 
 ### 3.7 No serial-equivalence guarantee
 
-`spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and hosting rules.
+`spawn` explicitly opts out of serial equivalence. Program results may depend on scheduling except where constrained by effect and ownership rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#spawn-and-why-it-marks-only-a-call) — "`spawn`, and why it marks only a call".
 
@@ -127,7 +127,7 @@ Independent work may still be parallelized only when doing so preserves those so
 
 ### 4.1 Water-tower lifetime extension
 
-A scope does not complete until all `spawn`ed calls inside it have completed. Hosted objects in that scope are destroyed only when the scope is **drained**.
+A scope does not complete until all `spawn`ed calls inside it have completed. Objects owned in that scope are destroyed only when the scope is **drained**.
 
 The analogy is a vertical water tower with water at the top and one horizontal plate for each still-running spawned call in that scope. The water cannot fall past a plate that is still in place, so destruction cannot pass that still-live concurrent work either.
 
@@ -137,7 +137,7 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 
 ### 4.2 Concurrent mutation requires a value-typed subject
 
-A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every guest derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
+A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every reference derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
@@ -147,9 +147,9 @@ A direct consequence is that spawned work never mutates a reference-typed object
 
 ### 4.3 Single writer per storage location
 
-For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` subject of a spawned `mut` call. By §4.2 that subject is always value-typed, so every borrow this rule counts is a value borrow ([`memory.md`](memory.md) §2.9). Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two subjects denote the same slot — so this disjointness is checked at the spawn site by inspecting the subjects, not by tracing the program. The hosting scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
+For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` subject of a spawned `mut` call. By §4.2 that subject is always value-typed, so every borrow this rule counts is a value borrow ([`memory.md`](memory.md) §2.9). Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two subjects denote the same slot — so this disjointness is checked at the spawn site by inspecting the subjects, not by tracing the program. The spawning scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
 
-One spawn site can hold more than one live borrow. A site inside a loop body launches a call per iteration, and §4.1 keeps every one of them live until the scope drains, so inspecting the site's subject once settles nothing. A spawned `mut` call inside a loop body **MUST** take its subject from storage declared inside that body, which gives each iteration its own location; a subject owned by an enclosing scope is a compile-time error.
+One spawn site can hold more than one live borrow. A site inside a loop body launches a call per iteration, and §4.1 keeps every one of them live until the scope drains, so inspecting the site's subject once settles nothing. A spawned `mut` call inside a loop body **MUST** take its subject from storage declared inside that body, which gives each iteration its own location; a subject declared in an enclosing scope is a compile-time error.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
@@ -162,7 +162,7 @@ A value whose members are all inline is one fixed-size contiguous slot, so the s
 - **A stale read is garbage, not an invalid access.** A scope cannot drain while a spawn inside it is live (§4.1), and the runtime unmaps a scope's chunks only at drain (see [`memory.md`](memory.md) §3.2). A block freed during the walk is therefore recycled *within a mapping that stays live*, so a stale handle resolves into readable memory holding some other occupant's bytes. This is the same failure class as a torn flat read, and the version check discards it the same way.
 - **Structure-directing metadata is untrusted until validation succeeds.** Before the final version check, every byte the walk reads may be torn or may belong to a recycled occupant. The walk **MUST** validate any metadata before using it to choose a typed layout or traversal shape. In particular, a `variant` or `#variant` discriminant must name one of the type's declared cases before case dispatch; an invalid discriminant aborts the attempt and causes a retry. The same rule applies to any count, length, or other metadata used to decide which child handles exist or how many entries to visit. A valid but stale value may still describe the wrong case for the attempted snapshot, but the remaining checks keep that attempt safe and the final version check discards it.
 - **The walk MUST be bounded, and MUST validate a whole payload span.** Because a recycled block may hold a handle left by its next occupant, a reader may pick up an offset that is not part of the structure it is traversing. Before interpreting what a handle names, the walk **MUST** check that the handle's **complete payload span** — its base offset, plus the size of the member's declared type, at that type's alignment — lies within a live region of the scope, and it **MUST** stop at a **depth bound**. That bound is derived, not arbitrary: a correct walk descends through a distinct live block at every step, so the number of live blocks in the scope's dynamic region when the attempt begins is a depth no legal structure can reach. Fixing the bound there is what keeps exhaustion **retryable** rather than terminal — exceeding it always means the walk is following recycled bytes, and never that the value is legitimately too deep, so the attempt is discarded and retried like any other failed validation. Each attempt takes the bound afresh, since the region may have grown. An offset that merely lands in a live region is not enough: a recycled block can hold one near a region's end, and reading a payload's worth of bytes from there would run past it. A handle failing either check aborts the attempt rather than being followed.
-- **The reader allocates in the destination scope.** A deep snapshot is an ordinary deep value copy into its fresh destination binding (see [`memory.md`](memory.md) §2.3). Each boxed payload is therefore allocated from the size stacks of the scope that owns that binding, not generally from the writer's or source value's scope. Snapshotting introduces no special source-scope staging and does not by itself make the reader and writer contend on one stack. Allocator synchronization is required only when concurrent work actually shares an underlying arena. Every block allocated by a snapshot attempt remains **provisional** until the final version check accepts that attempt. If metadata validation, span or depth validation, or the final version check rejects the attempt, the runtime **MUST** return every block allocated by that attempt to the destination scope's corresponding size stacks before retrying. The destination binding becomes live only after the attempt is accepted.
+- **The reader allocates in the destination scope.** A deep snapshot is an ordinary deep value copy into its fresh destination binding (see [`memory.md`](memory.md) §2.3). Each boxed payload is therefore allocated from the size stacks of that binding's scope, not generally from the writer's or source value's scope. Snapshotting introduces no special source-scope staging and does not by itself make the reader and writer contend on one stack. Allocator synchronization is required only when concurrent work actually shares an underlying arena. Every block allocated by a snapshot attempt remains **provisional** until the final version check accepts that attempt. If metadata validation, span or depth validation, or the final version check rejects the attempt, the runtime **MUST** return every block allocated by that attempt to the destination scope's corresponding size stacks before retrying. The destination binding becomes live only after the attempt is accepted.
 
 Two costs follow and are accepted. A snapshot of such a value allocates and is O(structure) where a flat snapshot allocates nothing, and a retry redoes the whole walk, so a fast writer can starve a reader in a way it cannot for a flat value. A value type that is read under `spawn` on a hot path is therefore better kept flat.
 
@@ -180,9 +180,9 @@ The effect system classifies resource access as **read** or **write**. Concurren
 
 The compiler enforces this from effect signatures; the programmer does not add locks.
 
-### 4.6 Guests passed to spawned work remain independent
+### 4.6 References passed to spawned work remain independent
 
-When a guest is passed to a spawned call, the callee receives its own guest to the same host. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the guest already held by spawned work.
+When a reference is passed to a spawned call, the callee receives its own reference to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the reference already held by spawned work.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
@@ -214,7 +214,7 @@ Zane does not define `async` or `await`. Concurrency is expressed only through `
 
 ### 5.4 No language-level process or channel abstraction
 
-Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by hosting and effect rules.
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by ownership and effect rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 

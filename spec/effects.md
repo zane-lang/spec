@@ -11,8 +11,8 @@ This document specifies Zane's effect model: `mut`, read-only bindings, what eac
 Zane uses a structural effect model with a single user-facing effect modifier: `mut`.
 
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
-- **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through guests.
-- **`Read-only everywhere else`.** Every other parameter is read-only, and so is every guest derived from one. A `!` call is a write, exactly as an assignment is.
+- **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
+- **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
 - **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature says which.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
 
@@ -35,7 +35,7 @@ A capability is an object whose methods model access to external state, such as 
 
 ### 2.3 `mut`
 
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: it is a **borrow** of the caller's value or host (see [`functions.md`](functions.md) §2.4). It never takes hosting, so a `mut` call leaves the caller exactly as it found it.
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: it is a **borrow** of the caller's value or owner (see [`functions.md`](functions.md) §2.4). It never takes ownership, so a `mut` call leaves the caller exactly as it found it.
 
 ### 2.4 Parameters are read-only
 
@@ -55,7 +55,7 @@ A verb's signature says what it may write. There are three kinds:
 | Method without `mut` | `:` | nothing its caller can see |
 | Function | a plain call | nothing its caller can see |
 
-Every verb may also write storage it hosts itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
+Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
 The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
 
@@ -69,7 +69,7 @@ Any verb may read capability-backed state through a `:` call on a capability it 
 
 ### 4.1 A read-only binding admits no write
 
-A verb writes a place in one of two ways: it assigns to the place, or it calls a `mut` method with the place as the subject, and that method writes it. A read-only binding admits neither. The read-only bindings are every parameter other than `this`, and `this` in a method without `mut`. Everything reached through a read-only binding is read-only too: its fields, its elements, and the object each of its guests names.
+A verb writes a place in one of two ways: it assigns to the place, or it calls a `mut` method with the place as the subject, and that method writes it. A read-only binding admits neither. The read-only bindings are every parameter other than `this`, and `this` in a method without `mut`. Everything reached through a read-only binding is read-only too: its fields, its elements, and the object each of its references names.
 
 ```zane
 Unit report(console &Console, msg String) {
@@ -91,23 +91,23 @@ console!log("hello");
 
 ### 4.3 `&` use sites follow ordinary call rules
 
-Reading through a guest is not a side effect by itself. At use sites, guests follow the same field-access and method-call rules as hosts. Mutation of the hosted object's state must still be expressed through a `mut` method call with that object as the subject.
+Reading through a reference is not a side effect by itself. At use sites, references follow the same field-access and method-call rules as owners. Mutation of the owned object's state must still be expressed through a `mut` method call with that object as the subject.
 
-### 4.4 Read-only follows the guest
+### 4.4 Read-only follows the reference
 
-A guest derived from a read-only binding is read-only wherever it goes: bound to a local, stored in a field, passed as an argument, or returned. The compiler assumes a `mut` method may write through every guest its subject reaches. A `!` call is therefore a compile-time error when its subject reaches a read-only guest through any chain of fields and guests.
+A reference derived from a read-only binding is read-only wherever it goes: bound to a local, stored in a field, passed as an argument, or returned. The compiler assumes a `mut` method may write through every reference its subject reaches. A `!` call is therefore a compile-time error when its subject reaches a read-only reference through any chain of fields and references.
 
 ```zane
 Unit f(console &Console) {
     k &Console = console;
     k!print("hi");        // ILLEGAL: k is derived from read-only console
     app App(console);     // App stores its argument in an `&` field
-    app!run();            // ILLEGAL: app reaches a read-only guest
+    app!run();            // ILLEGAL: app reaches a read-only reference
     return Unit();
 }
 ```
 
-Each verb judges this against its own bindings. Inside a verb, its parameters are read-only. At a call site, a guest the verb stores or returns takes the writability of the argument it came from, the same substitution that [`lifetimes.md`](lifetimes.md) §1.11 makes for owners. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only guest when `engine` is a parameter of the caller.
+Each verb judges this against its own bindings. Inside a verb, its parameters are read-only. At a call site, a reference the verb stores or returns takes the writability of the argument it came from, the same substitution that [`lifetimes.md`](lifetimes.md) §1.11 makes for scopes. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only reference when `engine` is a parameter of the caller.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
@@ -128,9 +128,9 @@ Two facts about a call are not in the signature. The compiler derives them from 
 
 The compiler uses these facts only to decide what it may evaluate at compile time or run in parallel ([`concurrency.md`](concurrency.md) §2).
 
-### 5.3 Reading through a guest is a read
+### 5.3 Reading through a reference is a read
 
-Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through a host or a guest.
+Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through an owner or a reference.
 
 ### 5.4 Unknown callees are assumed to touch capabilities and not terminate
 
@@ -148,7 +148,7 @@ There is no ambient global I/O capability. Code can reach external state only th
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
-Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit hosting path by which later methods can reach the capability. A capability stored from a writable source can be written by the object's `mut` methods; one stored from a read-only source stays read-only (§4.4).
+Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit owning path by which later methods can reach the capability. A capability stored from a writable source can be written by the object's `mut` methods; one stored from a read-only source stays read-only (§4.4).
 
 ### 6.3 `&` fields can also expose read access paths
 
@@ -156,7 +156,7 @@ Storing an `&` field is another explicit way to make state reachable. This does 
 
 ### 6.4 Context objects are explicit, not magical
 
-A "context object" that groups several capabilities is just another ordinary object in the hosting graph. It may reduce parameter count, but it does not hide effects from the compiler because the reachable capabilities are still explicit in storage and call structure.
+A "context object" that groups several capabilities is just another ordinary object in the ownership graph. It may reduce parameter count, but it does not hide effects from the compiler because the reachable capabilities are still explicit in storage and call structure.
 
 ### 6.5 Prop drilling is intentional
 
@@ -230,7 +230,7 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | `mut` method | Called with `!`; writes `this` and everything reached through it |
 | Method without `mut`, function | Write nothing their caller can see |
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
-| Derived guest | A guest derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
+| Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime |
 | Derived facts | Capability access and termination come from the body and its callees, and govern only compile-time evaluation and parallelism |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |

@@ -28,7 +28,7 @@
     Pool (per-size free-list)           median   4588564.00 ns  min   2950570.00 ns  max   8647932.00 ns  ( 4588.564 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 4 -- Iteration: inline (hosted) vs pointer-chase  [32B Entity x 100k]                      |
+  |  Test 4 -- Iteration: inline (owned) vs pointer-chase  [32B Entity x 100k]                       |
   +--------------------------------------------------------------------------------------------------+
     Inline array  (Array<Entity, 100000>)  median    126731.00 ns  min    123431.00 ns  max    224325.00 ns  (  126.731 us)
     Pointer array, sequential           median    204294.00 ns  min    188414.00 ns  max    275812.00 ns  (  204.294 us)
@@ -45,7 +45,7 @@
     CChunked (chunk=64, ptr-array)      median    703012.00 ns  min    614467.00 ns  max   1058061.00 ns  (  703.012 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 6 -- Guest access via segmented offset vs direct pointer  [100k accesses]                  |
+  |  Test 6 -- Reference access via segmented offset vs direct pointer  [100k accesses]              |
   +--------------------------------------------------------------------------------------------------+
     Direct pointer (baseline)           median    190864.00 ns  min    157134.00 ns  max    272404.00 ns  (  190.864 us)
     Segmented offset (chunk dir cached)  median    194718.00 ns  min    166223.00 ns  max    307789.00 ns  (  194.718 us)
@@ -74,7 +74,7 @@
     Pool -- refill from free-list       median   1189349.00 ns  min    379128.00 ns  max   2237458.00 ns  ( 1189.349 us)
 
   +--------------------------------------------------------------------------------------------------+
-  |  Test 10 -- Hosting tree teardown  [~4000 nodes, cascade post-order destroy]                     |
+  |  Test 10 -- Ownership tree teardown  [~4000 nodes, cascade post-order destroy]                   |
   +--------------------------------------------------------------------------------------------------+
     Zane cascade destroy                median     61770.00 ns  min     60185.00 ns  max    139085.00 ns  (   61.770 us)
     malloc cascade destroy              median    151595.00 ns  min    132747.00 ns  max   2204337.00 ns  (  151.595 us)
@@ -90,8 +90,8 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 12 -- Concurrent shard scan  [4 x Array<Entity, 25000> read-only shard sums]               |
   +--------------------------------------------------------------------------------------------------+
-    Hosted Array shards, sequential     median    113699.50 ns  min     88976.00 ns  max    241818.00 ns  (  113.700 us)
-    Hosted Array shards, concurrent (4 workers)  median    397919.50 ns  min    248006.00 ns  max    647310.00 ns  (  397.920 us)
+    Owned Array shards, sequential      median    113699.50 ns  min     88976.00 ns  max    241818.00 ns  (  113.700 us)
+    Owned Array shards, concurrent (4 workers)  median    397919.50 ns  min    248006.00 ns  max    647310.00 ns  (  397.920 us)
 
   +--------------------------------------------------------------------------------------------------+
   |  Test 13 -- Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]                   |
@@ -105,7 +105,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 14 -- Boxed members: roaming escape vs deep value copy  [8191 nodes]                       |
   +--------------------------------------------------------------------------------------------------+
-    Escape roaming hosted tree (relocate)  median     84027.50 ns  min     83354.00 ns  max    106732.00 ns  (   84.028 us)
+    Escape roaming owned tree (relocate)  median     84027.50 ns  min     83354.00 ns  max    106732.00 ns  (   84.028 us)
     Deep-copy value tree (place source)  median     80871.00 ns  min     71432.00 ns  max     86791.00 ns  (   80.871 us)
     Construct fresh value tree in place  median     45724.00 ns  min     45459.00 ns  max     46373.00 ns  (   45.724 us)
     malloc deep copy                    median    341561.50 ns  min    284774.00 ns  max    813260.00 ns  (  341.562 us)

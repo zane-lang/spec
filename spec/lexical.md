@@ -100,8 +100,8 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 
 | Sigil | Meaning | Canonical home |
 |---|---|---|
-| `&` | Guest type (`&Node`) | [`memory.md`](memory.md) §2 |
-| `^` | Roaming host type (`^Node`) | [`memory.md`](memory.md) §2.1 |
+| `&` | Reference type (`&Node`) | [`memory.md`](memory.md) §2 |
+| `^` | Roaming owner type (`^Node`) | [`memory.md`](memory.md) §2.1 |
 | `@` | Intrinsic namespace (`@primitives$`, `@concepts$`, `@controlflow$`, `@runtime$`, `@program$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
 | `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
@@ -295,7 +295,7 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
-| Leading `&` | `&Node` is a guest type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
+| Leading `&` | `&Node` is a reference type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |

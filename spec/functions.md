@@ -2,7 +2,7 @@
 
 This document specifies Zane's function model: functions, methods, subscripts, overload resolution, function values, lambdas, and method name resolution. Data declarations and constructors live in [`types.md`](types.md); the package-scope rules that govern these declarations live in [`packages.md`](packages.md).
 
-> **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for hosting and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
+> **See also:** [`types.md`](types.md) §3 for constructors. [`memory.md`](memory.md) §2 for ownership and `&` rules. [`effects.md`](effects.md) §2 for `mut`. [`syntax.md`](syntax.md) §3 for declaration grammar.
 
 ---
 
@@ -60,21 +60,21 @@ A method without `mut` may read `this`, its parameters, and reachable read-only 
 
 ### 2.4 Mutating methods use `mut`
 
-A method marked `mut` may write to any state reachable through `this`, whether through a hosting field or a guest.
+A method marked `mut` may write to any state reachable through `this`, whether through an owning field or a reference.
 
-A write to `this` lands on the caller's object, because `this` is a **borrow** of it for either kind of type (see [`memory.md`](memory.md) §2.9). For a value-type subject the borrow is of the caller's slot — the actual value, not a copy — which makes the value mutable in place while preserving its value semantics. For a reference-type subject it is the caller's host, settled or roaming. Nothing is written on `this` to select a mode, because a subject has no other. The caller stays a full host either way.
+A write to `this` lands on the caller's object, because `this` is a **borrow** of it for either kind of type (see [`memory.md`](memory.md) §2.9). For a value-type subject the borrow is of the caller's slot — the actual value, not a copy — which makes the value mutable in place while preserving its value semantics. For a reference-type subject it is the caller's owner, settled or roaming. Nothing is written on `this` to select a mode, because a subject has no other. The caller stays a full owner either way.
 
-The borrow is scoped and non-escaping: `this` may be read and, under `mut`, written, and may be the root of an `&` store into the subject ([`lifetimes.md`](lifetimes.md) §1.11), but it is never moved, stored, or returned as `&T`. A verb that hands out a guest into an object takes that object as an `&T` parameter instead.
+The borrow is scoped and non-escaping: `this` may be read and, under `mut`, written, and may be the root of an `&` store into the subject ([`lifetimes.md`](lifetimes.md) §1.11), but it is never moved, stored, or returned as `&T`. A verb that hands out a reference into an object takes that object as an `&T` parameter instead.
 
 ```zane
-Unit setScale(this Node, scale Float) mut {   // reference subject: a borrow of the caller's host
+Unit setScale(this Node, scale Float) mut {   // reference subject: a borrow of the caller's owner
     this.scale = scale;
     return Unit();
 }
 ```
 
 ```zane
-&Weapon mainWeapon(player &Player) => player.weapon  // a guest is handed out by a function
+&Weapon mainWeapon(player &Player) => player.weapon  // a reference is handed out by a function
 &Weapon weapon(this Player) => this.weapon           // ILLEGAL: this is a borrow
 ```
 
@@ -112,17 +112,17 @@ subject!Pkg$method(arg)    → Pkg$method(subject, arg)
 
 ### 2.7 Parameters are read-only
 
-Explicit parameters other than `this` are read-only. A read-only binding admits no write, and a `!` call is a write: it runs a `mut` method that writes its subject. So a parameter can be neither assigned nor the subject of a `!` call, and neither can anything reached through it or any guest derived from it ([`effects.md`](effects.md) §4.1, §4.4). How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
+Explicit parameters other than `this` are read-only. A read-only binding admits no write, and a `!` call is a write: it runs a `mut` method that writes its subject. So a parameter can be neither assigned nor the subject of a `!` call, and neither can anything reached through it or any reference derived from it ([`effects.md`](effects.md) §4.1, §4.4). How each parameter is passed — the three reference modes, or a value borrow — is covered in [`memory.md`](memory.md) §2.9.
 
-### 2.8 Borrow, take, and guest method parameters
+### 2.8 Borrow, take, and reference method parameters
 
 A reference-type method parameter selects one of three passing modes ([`memory.md`](memory.md) §2.9):
 
-- A parameter declared as a plain reference type `T` is a **borrow**: the caller passes any host, settled or roaming, or a temporary, and stays a full host. The callee may read it; it may not store, return, or move it.
-- A parameter declared as `^T` **takes** its argument: the caller passes a roaming host, which is spent ([`lifetimes.md`](lifetimes.md) §1.8), or a temporary. The callee owns it and may move it on, store it, or return it.
-- A parameter declared as `&T` is a **guest**: the caller either supplies a settled place under [`memory.md`](memory.md) §2.8, which mints a guest, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
+- A parameter declared as a plain reference type `T` is a **borrow**: the caller passes any owner, settled or roaming, or a temporary, and stays a full owner. The callee may read it; it may not store, return, or move it.
+- A parameter declared as `^T` **takes** its argument: the caller passes a roaming owner, which is spent ([`lifetimes.md`](lifetimes.md) §1.8), or a temporary. The callee owns it and may move it on, store it, or return it.
+- A parameter declared as `&T` is a **reference**: the caller either supplies a settled place under [`memory.md`](memory.md) §2.8, which mints a reference, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. Where it comes to rest is recorded in the signature ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
 
-Only a guest parameter may be bound into `&` storage: a borrow is never stored, and a taken host is roaming, which nothing guests. A value-type parameter is always a read-only borrow.
+Only an `&T` parameter may be bound into `&` storage: a borrow is never stored, and a taken owner is roaming, which nothing references. A value-type parameter is always a read-only borrow.
 
 ```zane
 type Car = #struct {
@@ -155,9 +155,9 @@ engine Engine();
 garage Garage();
 
 car:calculate(engine);         // legal: a borrow of engine
-car!setEngine(engine);         // legal: engine is settled, and one block owns car and engine
-car!setEngine(garage.spare);   // legal: a field access is a guest source, and
-                               //   garage is owned by the same block
+car!setEngine(engine);         // legal: engine is settled, and one scope holds car and engine
+car!setEngine(garage.spare);   // legal: a field access is a reference source, and
+                               //   garage is in the same scope
 car!setEngine(Engine());       // ILLEGAL: a temporary is not a place expression
 do() {
     spare Engine();
@@ -165,7 +165,7 @@ do() {
 }
 ```
 
-The last two fail for unrelated reasons. A temporary is refused at the source end, by [`memory.md`](memory.md) §2.8; `spare` is a perfectly good guest source and is refused at the destination end, by the store rule ([`lifetimes.md`](lifetimes.md) §1.1) applied to the paths this call supplied.
+The last two fail for unrelated reasons. A temporary is refused at the source end, by [`memory.md`](memory.md) §2.8; `spare` is a perfectly good reference source and is refused at the destination end, by the store rule ([`lifetimes.md`](lifetimes.md) §1.1) applied to the paths this call supplied.
 
 ### 2.9 Subscripts are place projections
 
@@ -189,7 +189,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
-A subscript expression denotes the place its body projects, so it is a guest source exactly when that place is ([`memory.md`](memory.md) §2.8). Following the body through every subscript and field it uses ends at one intrinsic projection, which decides: an `@primitives$ArrayRef` element takes its root's state and may be guested when that root is settled, an `@primitives$List` element is always roaming, and an `@primitives$Array` element is a value.
+A subscript expression denotes the place its body projects, so it is a reference source exactly when that place is ([`memory.md`](memory.md) §2.8). Following the body through every subscript and field it uses ends at one intrinsic projection, which decides: an `@primitives$ArrayRef` element takes its root's state and may be referenced when that root is settled, an `@primitives$List` element is always roaming, and an `@primitives$Array` element is a value.
 
 ```zane
 type Squad = #struct {
@@ -468,14 +468,14 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
 | Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
-| `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or host |
+| `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; no private-field privilege |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller supplies a settled place or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
-| Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any guest derived from one |
-| Plain `T` method parameter | A borrow: caller passes any host or a temporary and keeps it; callee may read it, never store, return, or move it |
-| `^T` method parameter | Takes: caller supplies a move-source — a roaming host symbol, which is spent, or a temporary, which has no symbol to spend; callee owns it |
+| Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any reference derived from one |
+| Plain `T` method parameter | A borrow: caller passes any owner or a temporary and keeps it; callee may read it, never store, return, or move it |
+| `^T` method parameter | Takes: caller supplies a move-source — a roaming owner symbol, which is spent, or a temporary, which has no symbol to spend; callee owns it |
 | `this` | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T`, and nothing is written on it to select a mode |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
 | Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `^T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
