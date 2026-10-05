@@ -1,6 +1,6 @@
 # Zane Lexical Rules
 
-This document specifies Zane's lexical layer: how source text is tokenised, how identifiers are formed, and how casing is significant. Zane parses case-sensitively, and the casing of an identifier's first letter decides whether it names a type or a value. These rules are what let the rest of the grammar — in particular the `<>` type syntax — stay unambiguous.
+This document specifies Zane's lexical layer: how source text is tokenised, how identifiers are formed, and how literals are written. Identifier casing distinguishes type names from value names during parsing, including where `<>` type expressions meet comparison syntax.
 
 > **See also:** [`syntax.md`](syntax.md) for the surface grammar built on these tokens. [`generics.md`](generics.md) §4.3 for how casing disambiguates `<>` type expressions. [`types.md`](types.md) §5 for `type` and `alias` declarations.
 
@@ -8,7 +8,7 @@ This document specifies Zane's lexical layer: how source text is tokenised, how 
 
 ## 1. Overview
 
-Zane is case-sensitive, and casing is load-bearing rather than stylistic. The first letter of a name selects its lexical class, so the same spelling in two cases is two different — and differently-classed — identifiers.
+Zane is case-sensitive. The first letter of a name selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
