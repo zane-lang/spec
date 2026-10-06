@@ -22,7 +22,22 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 
 ### 2.1 Compile-time reduction
 
-A call whose inputs are statically known is evaluated at compile time when it writes nothing its caller can see, touches no capability-backed state, and terminates ([`effects.md`](effects.md) §3, §5.2). This removes it from the runtime graph entirely.
+The compiler may evaluate at compile time any computation whose inputs it knows, and replace the code with what the computation produced. A value is known when it is a literal, a constant, or computed only from known values. A parameter of the verb being reduced is unknown, and so is a value read from capability-backed state ([`effects.md`](effects.md) §5.2), which only the running program has.
+
+Reduction runs from the leaves up. An expression whose inputs are known is replaced by its value, and the expression that contains it is tried next with that value as an input. A call is reduced the same way: its known arguments are its inputs, and its body is evaluated with them.
+
+Reduction is unobservable. The replacement makes each write the computation made that code still running can see, including a write through a `mut` call's subject. It also makes each write the computation made to capability-backed state, at the same point and in the same order. A computation that stops the program, such as a division by zero, stays runtime work, so the program still stops there.
+
+```zane
+Int loud(n Int) {
+    console!print("computing\n");
+    return n * 2;
+}
+
+answer Int = loud(21); // reduced to a print of "computing\n", then 42
+```
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#compile-time-reduction-runs-from-the-leaves-up-within-a-bound-on-work) — "Compile-time reduction runs from the leaves up, within a bound on work".
 
 ### 2.2 Parallelization of the residual graph
 
@@ -33,9 +48,13 @@ After compile-time reduction, the compiler analyzes the remaining work for indep
 
 This parallelism is **unobservable**: it must not change output, only timing.
 
-### 2.3 Termination matters only for compile-time reduction
+### 2.3 Reduction is bounded by work
 
-A call that writes nothing and touches no capability-backed state may be parallelized whether or not it is proven to terminate. Only compile-time reduction needs termination: a call that is not proven to terminate stays runtime work. See [`effects.md`](effects.md) §5.2 for how the compiler derives both facts.
+Neither reduction nor parallelization requires a call to be proven to terminate. A call that writes nothing and touches no capability-backed state may be parallelized whether or not it terminates.
+
+Reduction spends a bounded amount of work on each computation. A computation that does not finish within the bound stays runtime work, and the known computations inside it are still reduced. A verb that runs forever on some inputs is therefore still reduced wherever its inputs are known and its evaluation finishes, and the known parts of its body are reduced even where it is not.
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#compile-time-reduction-runs-from-the-leaves-up-within-a-bound-on-work) — "Compile-time reduction runs from the leaves up, within a bound on work".
 
 ### 2.4 Thread configuration
 
@@ -224,6 +243,7 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 
 | Concept | Rule |
 |---|---|
+| Compile-time reduction | Compiler may replace any computation whose inputs it knows with what it produced, from the leaves up, within a bound on work; a value read from capability-backed state is unknown, and writes the computation made are still made, in order |
 | Implicit parallelism | Compiler may parallelize only when results are unchanged |
 | `spawn` | Starts a concurrent function or method call; blocks only when results are read; illegal on a verb taking a block argument |
 | Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
