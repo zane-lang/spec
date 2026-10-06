@@ -418,6 +418,7 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 `@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. It is a reference type, so no value type may contain one ([`memory.md`](memory.md) §2.10). Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. A list grows by taking each new element through a `^T` parameter, so its `T` is never an `&` type; a fixed set of references is held in an `ArrayRef` (§8.4). `core` declares `List<T>` over it as a `#` reference type, since that declaration is written in Zane.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-container-whose-size-the-type-cannot-carry) — "A container whose size the type cannot carry".
+> **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
 
 ### 8.4 ArrayRef is the fixed-size reference primitive
 

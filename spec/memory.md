@@ -317,6 +317,7 @@ This rule preserves uniform call syntax. The call site writes `inspect(e)`, `set
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-borrow-comes-back-without-a-sigil) — "The borrow comes back, without a sigil".
+> **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
 
 ### 2.9.1 Nothing else in a call writes what the call borrows
 

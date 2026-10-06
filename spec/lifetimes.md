@@ -233,6 +233,7 @@ The handler's binder is then what the call's result would have been: it names wh
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#simplifying-the-return-root-rule) — "Simplifying the return-root rule".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#package-constants-become-return-roots-and-an-t-parameter-stops-being-a-store-root) — "Package constants become return roots, and an `&T` parameter stops being a store root".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
@@ -431,6 +432,8 @@ do() {
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-owner-lifetime-replaces-the-same-root-rule) — "The owner lifetime replaces the same-root rule".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-rejected-design-that-needed-no-signatures) — "The rejected design that needed no signatures".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#a-call-through-a-function-value-is-taken-to-store-every-reference) — "A call through a function value is taken to store every reference".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#package-constants-become-return-roots-and-an-t-parameter-stops-being-a-store-root) — "Package constants become return roots, and an `&T` parameter stops being a store root".
 
 ---
 
