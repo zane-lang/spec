@@ -121,17 +121,28 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-One fact about a call is not in the signature: whether the call touches capability-backed state. It reads that state anywhere, or writes it in the root package (§3). The compiler derives the fact from the verb's body and from every verb it calls.
+One fact about a call is not in the signature: whether the call touches capability-backed state. It reads that state anywhere, or writes it in the root package (§3). The compiler derives the fact from the verb's body and from every verb it calls, and uses it only to decide what it may evaluate at compile time (§5.3) or run in parallel ([`concurrency.md`](concurrency.md) §2).
 
-The compiler uses it only to decide what it may evaluate at compile time or run in parallel ([`concurrency.md`](concurrency.md) §2). A value read from capability-backed state is known only to the running program, so it is never evaluated at compile time. A write to capability-backed state is made at run time in the order the program makes it, whether or not the computation that made it was evaluated at compile time.
+### 5.3 Compile-time evaluation
 
-> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#compile-time-reduction-runs-from-the-leaves-up-within-a-bound-on-work) — "Compile-time reduction runs from the leaves up, within a bound on work".
+A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes nothing the program prints or computes, only how long it takes to run.
 
-### 5.3 Reading through a reference is a read
+```zane
+Int loud(n Int) {
+    console!print("computing\n");
+    return n * 2;
+}
+
+answer Int = loud(21); // may be evaluated at compile time; "computing" is still printed, before answer is set
+```
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#compile-time-evaluation-needs-no-termination-proof-and-sits-beside-capability-access) — "Compile-time evaluation needs no termination proof and sits beside capability access".
+
+### 5.4 Reading through a reference is a read
 
 Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through an owner or a reference.
 
-### 5.4 Unknown callees are assumed to touch capabilities
+### 5.5 Unknown callees are assumed to touch capabilities
 
 When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state.
 
@@ -232,4 +243,5 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime |
 | Derived fact | Capability access comes from the body and its callees, and governs only compile-time evaluation and parallelism |
+| Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes nothing a program prints or computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
