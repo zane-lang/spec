@@ -20,24 +20,18 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 
 ## 2. Implicit Parallelism (Compiler Responsibility)
 
-### 2.1 Compile-time reduction
+### 2.1 Parallelization of independent work
 
-A call whose inputs are statically known is evaluated at compile time when it writes nothing its caller can see, touches no capability-backed state, and terminates ([`effects.md`](effects.md) §3, §5.2). This removes it from the runtime graph entirely.
-
-### 2.2 Parallelization of the residual graph
-
-After compile-time reduction, the compiler analyzes the remaining work for independence. It may schedule independent work in parallel when:
+The compiler analyzes a program's work for independence. It may schedule independent work in parallel when:
 
 - the effect system proves the work is non-conflicting
 - parallelization is profitable (based on instruction count, IO presence, or other heuristics)
 
+A call that writes nothing and touches no capability-backed state may run in parallel whether or not it terminates.
+
 This parallelism is **unobservable**: it must not change output, only timing.
 
-### 2.3 Termination matters only for compile-time reduction
-
-A call that writes nothing and touches no capability-backed state may be parallelized whether or not it is proven to terminate. Only compile-time reduction needs termination: a call that is not proven to terminate stays runtime work. See [`effects.md`](effects.md) §5.2 for how the compiler derives both facts.
-
-### 2.4 Thread configuration
+### 2.2 Thread configuration
 
 The runtime uses a work-stealing thread pool. It starts sized to hardware concurrency, and the program's runtime ([`effects.md`](effects.md) §6.6) resizes it:
 
@@ -55,7 +49,7 @@ The runtime uses a work-stealing thread pool. It starts sized to hardware concur
 @program$runtime!setThreadsAuto();
 ```
 
-Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.2), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so outside the root package only a `mut` method whose `this` reaches the runtime can make one ([`effects.md`](effects.md) §3).
+Either may be called at any time and any number of times. Compiler-scheduled parallelism changes only timing (§2.1), and spawned work may depend on scheduling at any pool size (§3.7), so resizing the pool changes how fast a program runs without making any result possible that was not possible before. Each call writes to the runtime, so outside the root package only a `mut` method whose `this` reaches the runtime can make one ([`effects.md`](effects.md) §3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 

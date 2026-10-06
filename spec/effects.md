@@ -59,7 +59,7 @@ Every verb may also write storage it owns itself, which its caller never sees. W
 
 The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
 
-Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.2).
+Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
@@ -119,22 +119,32 @@ Each verb judges this against its own bindings. Inside a verb, its parameters ar
 
 The compiler uses reachability from `this` to determine which state is writable in a `mut` method and readable in any method.
 
-### 5.2 Capability access and termination
+### 5.2 Capability access
 
-Two facts about a call are not in the signature. The compiler derives them from the verb's body and from every verb it calls:
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2).
 
-- whether the call touches capability-backed state: reads it anywhere, or writes it in the root package (§3)
-- whether the call terminates. Every repetition carries a count ([`control-flow.md`](control-flow.md) §3.5), so recursion is the only unbounded path, and a verb terminates when no call path from it leads back to it.
+### 5.3 Compile-time evaluation
 
-The compiler uses these facts only to decide what it may evaluate at compile time or run in parallel ([`concurrency.md`](concurrency.md) §2).
+A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes.
 
-### 5.3 Reading through a reference is a read
+```zane
+Int loud(n Int) {
+    console!print("computing\n");
+    return n * 2;
+}
+
+answer Int = loud(21); // may be evaluated at compile time; "computing" is still printed, before answer is set
+```
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#compile-time-evaluation-needs-no-termination-proof-and-sits-beside-capability-access) — "Compile-time evaluation needs no termination proof and sits beside capability access".
+
+### 5.4 Reading through a reference is a read
 
 Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through an owner or a reference.
 
-### 5.4 Unknown callees are assumed to touch capabilities and not terminate
+### 5.5 Unknown callees are assumed to touch capabilities
 
-When the compiler cannot see a callee's body, as with a call through a function value, it assumes the call touches capability-backed state and may not terminate.
+When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -232,5 +242,6 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime |
-| Derived facts | Capability access and termination come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |

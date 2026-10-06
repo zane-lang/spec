@@ -196,6 +196,14 @@ Format as a two-column table: left column is the concept name, right column is t
 | Constructor | Package-scope declaration; no `this`; returns `init{ }` |
 ```
 
+### 3.6 Compiler behaviour a rule enables
+
+The spec is about the language, not about a compiler. Some language rules exist to make compiler behaviour possible, though, and a few of those behaviours are distinctive enough to be part of what the language is: implicit parallelism ([`concurrency.md`](../spec/concurrency.md) §2) and compile-time evaluation ([`effects.md`](../spec/effects.md) §5.3) are the examples.
+
+Such a behaviour is stated next to the rule that enables it: in the subsection directly after that rule, when one subsection holds it, as compile-time evaluation follows capability access. It says what the compiler may do and what that guarantees a program, such as that the program cannot observe it. It never says how the compiler does it: the algorithm, its bounds, and its heuristics belong in the compiler's own documentation.
+
+Not every compiler behaviour needs a mention. Write one down only when it shows what the rule before it buys.
+
 ---
 
 ## 4. Language Comparisons Section
