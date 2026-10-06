@@ -6,7 +6,7 @@ This document specifies how Zane identifies, fetches, versions, caches, and link
 
 ## 1. Overview
 
-Zane treats a package's full source URL as its identity and pins every dependency to an exact tag plus commit hash.
+Zane treats a project's full source URL as its identity and pins every dependency to an exact tag plus commit hash. A dependency is a whole project: the library packages it publishes ([`packages.md`](packages.md) §4.3) share its URL, its version, and its pin, and this document calls the fetched project a **package** where no confusion with its library packages can arise.
 
 - **`URL identity`.** The repository URL is canonical; local keys are only conveniences.
 - **`Exact versioning`.** Each dependency records a specific tag and the commit that tag must resolve to.
@@ -23,11 +23,9 @@ Each project records dependencies across two committed files: an intent manifest
 
 ### 2.1 Manifest (`zane.coda`)
 
-`zane.coda` records what the project wants, by package key:
+`zane.coda` records what the project wants, by dependency key:
 
 ```zane
-name app
-kind application
 zane-version v0.4.1
 version-pattern v*.+.++
 
@@ -45,24 +43,20 @@ remaps [
 
 Top-level fields:
 
-- **`name`** (required): the package's name, in camelCase under [`lexical.md`](lexical.md) §3. It **MUST NOT** be `test`, the name of a library's test package ([`packages.md`](packages.md) §7.1). Every source file of the project's `src/` declares it ([`packages.md`](packages.md) §2.2), and compiled symbols carry it (§6.1).
-- **`kind`** (required): `library` or `application`. An application's root package declares `main` ([`packages.md`](packages.md) §6.2). Only a library may be a dependency: a dependency whose manifest says `application` fails dependency resolution with an error naming it (§9).
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 Each `deps` row records:
 
-- **key**: the local camelCase package name used in source code and as the lookup key into `zane-lock.coda`
+- **key**: a camelCase label for the dependency, which commands name it by and which joins the row to `zane-lock.coda`; source code never writes it, since an import names a library package (§8)
 - **version**: the exact tag requested by the user
 - **from**: where the dependency's code comes from — `release` for the verified prebuilt archive (§5), `source` for local compilation of the verified checkout (§12.1), or a local project path beginning with `./`, `../`, or `/` (§12.2)
 
 The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
 
-The optional top-level **`test-deps`** block lists the dependencies that only a library's test package imports ([`packages.md`](packages.md) §7.3). It has the same columns as `deps`, and its rows follow the same rules:
+The optional top-level **`test-deps`** block lists the dependencies whose packages only the project's test packages import ([`packages.md`](packages.md) §7.3). It has the same columns as `deps`, and its rows follow the same rules:
 
 ```zane
-name mathLib
-kind library
 zane-version v0.4.1
 version-pattern v*.+.++
 
@@ -78,9 +72,9 @@ test-deps [
 ]
 ```
 
-A `test-deps` block takes effect only in a test build of the project whose manifest holds it. In a transitively fetched manifest it is ignored, so a library's test dependencies never enter its consumers' dependency graphs. A `test-deps` block in a manifest whose `kind` is `application` is an error.
+A `test-deps` block takes effect only in a test build of the project whose manifest holds it. In a transitively fetched manifest it is ignored, so a project's test dependencies never enter its consumers' dependency graphs.
 
-No key appears in both `deps` and `test-deps`, and neither block uses the key `test`.
+No key appears in both `deps` and `test-deps`.
 
 The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). A URL listed in `remaps` that matches no package in the resolved dependency graph is a likely stale entry or typo; the toolchain emits an informational warning during dependency resolution (not an error) so the manifest can be kept clean. `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -103,7 +97,7 @@ Each row records:
 - **url**: the canonical package identity.
 - **commit**: the exact commit that the recorded tag must resolve to.
 
-The repository URL is the canonical identity; the key is only a local convenience for naming the package in source and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
+The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
 The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
@@ -131,22 +125,23 @@ zane update math v6.2.9 --accept-tag-move
 
 ## 3. Repository Layout
 
-Library repositories contain source and committed metadata:
+Project repositories contain source and committed metadata:
 
 ```zane
-math/
-  src/
+geometry/
+  lib/
+  bin/
   test/
   zane.coda
   zane-lock.coda
   zane-artifacts.coda
 ```
 
-Source files live in the `src/` directory, and `zane.coda` names the package they form ([`packages.md`](packages.md) §2.1). The optional `test/` directory holds the library's test package ([`packages.md`](packages.md) §7), which no release archive contains. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
+Library packages live in `lib/`, program packages in `bin/`, and test packages in `test/` ([`packages.md`](packages.md) §2.1). A release archive holds the objects of the `lib/` packages alone. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
 
 ### 3.1 Artifact manifest (`zane-artifacts.coda`)
 
-A library commits `zane-artifacts.coda` at its repository root. Its `artifacts` table describes the library's own prebuilt objects, with one row per supported target triple:
+A project with library packages commits `zane-artifacts.coda` at its repository root. Its `artifacts` table describes the prebuilt objects of its library packages, with one row per supported target triple:
 
 ```zane
 artifacts [
@@ -164,7 +159,7 @@ The hashes above illustrate the field format, not actual published archives. Eac
 
 The toolchain **MUST** reject malformed rows, non-HTTPS URLs, invalid hashes, and duplicate target triples. It reads this file only from the verified source commit (§4), including for transitive packages. Consumers do not duplicate the artifact hashes in their own lock files: their pinned commits already pin each dependency's artifact manifest.
 
-Each asset is a gzip-compressed tar archive containing a `build/` directory with the library's original object files and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
+Each asset is a gzip-compressed tar archive containing a `build/` directory with the original object files of every library package of the project, subpackages and `_`-prefixed packages included, and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
 
 ### 3.2 Publishing a release
 
@@ -209,7 +204,7 @@ Hash verification fixes which bytes the author published. It does not prove that
 
 ### 6.1 Placeholder-prefix rewriting
 
-Libraries are compiled with their own exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag, a `%` separator, the package's identity hash, and a second `%` — and places the rewritten binaries into `build/`.
+A project's library packages are compiled with their exported symbols prefixed by the placeholder marker `!`. During `zane add`, the toolchain rewrites those symbols — replacing the `!` prefix with the resolved version tag, a `%` separator, the package's identity hash, and a second `%` — and places the rewritten binaries into `build/`.
 
 Conceptually:
 
@@ -219,7 +214,7 @@ Conceptually:
 
 The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the UTF-8 encoding of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
 
-The name after the second `%` is the **library's own** package name — the `name` field of its manifest (§2.1, [`packages.md`](packages.md) §2.1) — baked into the symbol when the library author compiled it, never the consumer's manifest key, which is a local nickname (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
+The name after the second `%` is the library package's **path** within its project's `lib/` directory, its directory names joined by `.`: `math` for `lib/math/`, `gui.opengl` for `lib/gui/opengl/` ([`packages.md`](packages.md) §2.2). It is baked into the symbol when the project's author compiled it, never the consumer's manifest key, which is a local label (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
 
 The first `%` delimits the version, because `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7). The identity hash contains only hexadecimal digits, so the second `%` always follows the first after exactly 16 characters. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
 
@@ -265,7 +260,7 @@ The URL and version are mangled into safe path components using Go-style path ma
 
 Each `/` in the resulting URL then produces a new subdirectory level, so both `https://github.com/zane-lang/math` and `git@github.com:zane-lang/math` normalize to `github.com/zane-lang/math` as nested directories — which also means the HTTPS and SSH forms of one repository share a single cache identity rather than fetching twice. The path-safety check applies to the URL *after* these normalization steps: if the normalized URL or the version tag contains any character that is not safe to use directly as a path component — such as `:`, `@`, `%`, `?`, `#`, or any other character that would be illegal or ambiguous on the host filesystem — `zane add` **MUST** fail immediately with an error rather than attempting to mangle or escape the offending character. (The scheme, the SSH user prefix, and the normalized SCP `:` are exempt by construction; the check screens only the host-and-path remainder that actually becomes directory names.) (`%` is additionally reserved as the symbol separator of §6.1, so forbidding it in tags keeps the boundary after the version unambiguous.) The normalized host-and-path string that names the cache directory is also the input to the identity hash of §6.1, so one cache entry and one symbol identity always correspond.
 
-The `src/` subdirectory holds the repository checked out at the verified commit, including its `src/` source tree and artifact manifest. `artifacts/<target>/` holds the verified archive and its extracted original objects under the `build/` directory. `build/<target>/` holds the rewritten objects produced during `zane add`. Target triples used as cache directory names **MUST** be single path-safe components.
+The `src/` subdirectory holds the repository checked out at the verified commit, including its `lib/` source tree and artifact manifest. `artifacts/<target>/` holds the verified archive and its extracted original objects under the `build/` directory. `build/<target>/` holds the rewritten objects produced during `zane add`. Target triples used as cache directory names **MUST** be single path-safe components.
 
 A ready prebuilt cache entry records the verified source commit, target triple, archive hash, and toolchain tag and verified commit used for rewriting. Reuse requires all recorded values to match the current request; a different target, changed commit, changed hash, or different rewriting toolchain pin invalidates reuse. Source-built objects are kept separately (§12.1). Re-adding a matching package in another project reuses the ready entry without downloading and rewriting it again. The repository URL, not the asset host, determines the package's cache and symbol identity.
 
@@ -288,21 +283,23 @@ A fully expanded cache path for the `math` example therefore looks like:
 
 ---
 
-## 8. Import Syntax
+## 8. Importing a Dependency's Packages
 
-Source code imports by manifest key:
+Source code imports a dependency's library package by the package's own name:
 
 ```zane
 import math
 ```
 
-And uses package members through that key:
+And uses its members through that name:
 
 ```zane
 math$vec(...)
 ```
 
-`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). Whichever form it takes, the key is what names the dependency: source code never writes version-prefixed package names directly, and the compiler resolves keys through `zane.coda` and `zane-lock.coda`.
+`import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). A project's packages reach the **public library packages** ([`packages.md`](packages.md) §4.3) of its direct dependencies and no others. A package that a dependency reaches only through its own dependencies is imported by adding it to `deps`. Source code never writes version-prefixed names or manifest keys.
+
+Within one project, the project's own top-level library and program packages and the public library packages of its direct dependencies **MUST** have distinct names, and so **MUST** the public library packages of its `test-deps`. Dependency resolution aborts with an error naming both packages and the dependencies that provide them otherwise.
 
 ---
 
@@ -310,11 +307,9 @@ math$vec(...)
 
 When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
 
-Every package in the dependency graph other than the root **MUST** declare `kind library` in its manifest (§2.1). Resolution aborts with an error naming any dependency whose manifest says `application`.
+A dependency **MUST** have at least one public library package. Resolution aborts with an error naming any dependency that has none. A dependency's program and test packages are never compiled, and a fetched package's `test-deps` block contributes nothing to the graph (§2.1).
 
-A fetched package's `test-deps` block contributes nothing to the graph (§2.1).
-
-> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-project-says-what-it-is) — "A project says what it is".
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-projects-packages-move-into-lib-bin-and-test) — "A project's packages move into `lib/`, `bin/` and `test/`".
 
 ---
 
@@ -350,7 +345,7 @@ Packages publish a release archive for each supported target triple and record i
 
 ### 12.1 Source compilation is explicit opt-in
 
-The normal workflow consumes the verified release artifact from the `artifacts/<target>/build/` directory. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/src/` instead, by recording `source` in the dependency's `from` column (§2.1):
+The normal workflow consumes the verified release artifact from the `artifacts/<target>/build/` directory. A user who does not trust the shipped object file may opt into local compilation from the verified source checkout under `src/lib/` instead, by recording `source` in the dependency's `from` column (§2.1):
 
 ```sh
 zane add math https://github.com/zane-lang/math v1.0.1 --from-source
@@ -362,7 +357,7 @@ The choice is part of the committed manifest, so every build of the project comp
 
 ### 12.2 Local path dependencies
 
-A `from` value that is a path names a local project directory. A path that begins with `/` is absolute, and any other path is relative to the root of the project being built. The toolchain compiles that project's package from its `src/` directory on every build instead of fetching the pinned commit. The path project's own `zane.coda` and `zane-lock.coda` supply its dependencies, which follow the normal pinned fetch rules.
+A `from` value that is a path names a local project directory. A path that begins with `/` is absolute, and any other path is relative to the root of the project being built. The toolchain compiles that project's library packages from its `lib/` directory on every build instead of fetching the pinned commit. The path project's own `zane.coda` and `zane-lock.coda` supply its dependencies, which follow the normal pinned fetch rules.
 
 ```sh
 zane dev geometry ../geometry
@@ -385,14 +380,14 @@ At a high level, dependency resolution proceeds in this order:
 2. validate the package URLs and version tags for path safety (§7)
 3. resolve each recorded tag and verify its commit against the corresponding lock file (§4), for every dependency whose `from` is not a path
 4. fetch and check out each verified commit into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, or a dependency whose `kind` is `application` (§6.1, §9, §10)
+5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, a dependency with no public library package, or two packages a project reaches under one name (§6.1, §8, §9, §10)
 6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for a `source` dependency, use §12.1 instead, and for a path dependency, use §12.2 instead
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
 9. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
-10. link the locally compiled program against the selected target's cached objects, using the separate source-built entry for a `source` dependency and the path build for a path dependency
+10. link the program package being built, with the project's library packages it reaches compiled locally, against the selected target's cached objects, using the separate source-built entry for a `source` dependency and the path build for a path dependency
 
-A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `test-deps` rows counted among the project's direct dependencies. It compiles the library from the project's `src/` as a dependency of the test package and links the test package as the program.
+A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `test-deps` rows counted among the project's direct dependencies, and links the test package as the program.
 
 ---
 

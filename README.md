@@ -53,7 +53,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/control-flow.md`](spec/control-flow.md) | Block arguments, the three control-flow intrinsics, the `core` branching and repetition built on them, and 1-based ordinal rules |
 | [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, precedence, Boolean algebra, and loose forms |
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
-| [`spec/packages.md`](spec/packages.md) | Project-defined namespaces and compilation units, file-scoped imports, explicit member access, package visibility, package-scope state, the root package that holds `main`, and a library's test package |
+| [`spec/packages.md`](spec/packages.md) | The `lib/`, `bin/` and `test/` project layout, library packages and their subpackages, file-scoped imports, explicit member access, package visibility, package-scope state, and the program and test packages that hold `main` |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, test dependencies, version pinning, fetching, and caching |
 
 ## Design stories

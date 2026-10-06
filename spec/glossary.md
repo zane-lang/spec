@@ -354,13 +354,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.2 placeholder-prefix rewriting
 
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the package name the symbol carries is the library's own.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the name the symbol carries is the library package's own path within its project.
 - **Why this name:** The shipped `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
 ### 4.3 URL identity
 
-- **Meaning:** A package's canonical identity is its full source URL, while local aliases are only import conveniences.
+- **Meaning:** A dependency's canonical identity is its project's full source URL, while manifest keys are only local labels.
 - **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
 
@@ -414,7 +414,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package at the root of the dependency graph being built — the application, a library built on its own, or a library's test package in a test build. Only it reaches `@program$`, and it holds `main`.
+- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$`, and it holds `main`; a library package is never one.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 
@@ -426,6 +426,18 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.14 test package
 
-- **Meaning:** The package named `test` in a library's `test/` directory. It imports the library as a consumer would and is the root package of a test build.
-- **Why this name:** It is the package that tests the library, and its name is fixed the way the `src/` directory's is, so the directory and the declaration both say `test`.
+- **Meaning:** A directory of a project's `test/` holding `.zn` files, each declaring `package test`. It imports what the tested package's real user imports and is the root package of its own test build.
+- **Why this name:** It is the package that tests the others, and its name is fixed, so every test package's declaration says `test`.
 - **Canonical home:** [`packages.md`](packages.md) §7
+
+### 4.15 library package / program package
+
+- **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports.
+- **Why this name:** The directories already say it: `lib/` holds what others link against, `bin/` what becomes a program.
+- **Canonical home:** [`packages.md`](packages.md) §2.1
+
+### 4.16 subpackage
+
+- **Meaning:** A directory with `.zn` files inside a library package, nested to any depth. Only its parent imports it, and no other project sees it.
+- **Why this name:** It is a package in every respect, placed under another one that alone reaches it.
+- **Canonical home:** [`packages.md`](packages.md) §2.3
