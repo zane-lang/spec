@@ -396,6 +396,7 @@ if(wasDirty) {
 An `&T` argument is not a borrow. It names a settled owner, which an overwrite replaces in place (§2.2), so a write elsewhere in the call is one the reference observes. A subject is located only after the call's arguments are evaluated (§2.12), so an argument that writes the subject's place is not a conflict either.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
+> **Story:** [`stories/memory.md`](../stories/memory.md#overlap-through-a-reference-is-checked-where-the-reference-is-known) — "Overlap through a reference is checked where the reference is known".
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 
