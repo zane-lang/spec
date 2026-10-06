@@ -59,7 +59,7 @@ Every verb may also write storage it owns itself, which its caller never sees. W
 
 The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
 
-Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.2).
+Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
@@ -121,11 +121,11 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-One fact about a call is not in the signature: whether the call touches capability-backed state. It reads that state anywhere, or writes it in the root package (§3). The compiler derives the fact from the verb's body and from every verb it calls, and uses it only to decide what it may evaluate at compile time (§5.3) or run in parallel ([`concurrency.md`](concurrency.md) §2).
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2).
 
 ### 5.3 Compile-time evaluation
 
-A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes nothing the program prints or computes, only how long it takes to run.
+A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes.
 
 ```zane
 Int loud(n Int) {
@@ -242,6 +242,6 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime |
-| Derived fact | Capability access comes from the body and its callees, and governs only compile-time evaluation and parallelism |
-| Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes nothing a program prints or computes |
+| Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
