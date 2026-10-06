@@ -325,6 +325,15 @@ A call's **borrows** are its subject and every argument it passes to a borrow: a
 
 Two places **overlap** when they are the same place, or one is reached from the other by field steps, element steps, or a case payload. Any two elements of one container overlap, because an index is a runtime value. A part of a call **writes** a place when it assigns to it or makes it the subject of a `!` call ([`effects.md`](effects.md) §4.1), anywhere inside that part.
 
+A `!` call also writes everything its subject reaches through `&` fields, and passing a block parameter on to a call runs it, which writes whatever the block passed in writes.
+
+A place reached through an `&` is part of an object its path does not show, and another path may reach the same object. Where the checker can name that object, overlap is judged on it:
+
+- An `&` symbol stands for every place it is initialized from or repointed to (§2.5) anywhere in the body, including a repointing written after the call, since a loop body or a block argument may run it before the call runs again. With `r` initialized from `names` and never repointed, `r[Int(1)]` is `names[Int(1)]`.
+- An `&T` parameter names an object of the caller's that the body takes to be apart from the subject and from every block parameter. Where the body relies on that, the verb's signature records the pair, as it records where a parameter comes to rest ([`lifetimes.md`](lifetimes.md) §1.11), and each call checks it: the object its `&T` argument names may not overlap its subject, or a place the matching block argument writes. A call that passes its own `&T` parameter on records the pair in its own signature instead, so the check lands on the first caller that knows both places. A function type records no pairs, so a call through a function value keeps every `&T` argument apart from its `mut` subject and from each block argument.
+
+Any other place reached through an `&` — an `&` field, or a reference a call returns — may be any object of its type, so it overlaps every place that object could be, hold, or lie inside. A place the body owns lies inside no such object, and neither do the subject and the borrowed parameters, whose callers keep them apart from what the call writes.
+
 A call is a compile-time error when one of its borrows overlaps a place written by:
 
 - its subject, for a borrow argument of a `mut` call;
@@ -346,6 +355,29 @@ readLater(engines[Int(1)], engines!grow());     // ILLEGAL: the later argument w
 
 first String = names[Int(1)];
 names!push(first);                              // legal: first is a place of its own
+
+same &List<String> = names;
+same!push(names[Int(1)]);                       // ILLEGAL: same stands for names
+other &List<String> = spares;
+names!push(other[Int(1)]);                      // legal: other stands for spares
+this.left!push(this.right[Int(1)]);             // ILLEGAL: two & fields may name one list
+```
+
+An `&T` parameter moves the check to the call that knows what it names:
+
+```zane
+Unit append(this List<String>, from &List<String>) mut {
+    this!push(from[Int(1)]);                    // legal: from is apart from this; the signature records it
+    return Unit();
+}
+Unit relay(this List<String>, via &List<String>) mut {
+    this!append(via);                           // legal: relay records that via is apart from this
+    return Unit();
+}
+
+names!append(spares);                           // legal
+names!append(names);                            // ILLEGAL: from names the subject
+names!relay(names);                             // ILLEGAL: via names the subject
 ```
 
 A value-type argument is held to the same rule. A value parameter borrows the caller's slot, and passing a copy is an optimization the compiler makes only where no program can tell the difference (§2.9), so a block that writes a condition its own `if` borrows is refused like any other:
@@ -640,7 +672,7 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | Value-type parameter | Always a read-only borrow; copied only when the parameter is itself bound into a fresh slot |
 | Reference-type parameter | `T` borrows; `^T` takes a roaming owner or temporary, spending the caller's symbol, and is never filled with an `&` type; `&T` takes a reference and leaves the caller a full owner |
 | Subject | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T` |
-| Borrow overlap | Nothing else in a call writes a place the call borrows: not a `mut` subject a borrow argument overlaps, not a block argument, and not a later argument's evaluation; an `&T` argument is not a borrow |
+| Borrow overlap | Nothing else in a call writes a place the call borrows: not a `mut` subject a borrow argument overlaps, not a block argument, and not a later argument's evaluation; an `&T` argument is not a borrow, but its object is kept apart from the subject and block arguments where the callee's signature records it |
 | Value-downstream enforcement | Value types may contain only value types, value-type primitives among them, transitively — never a reference-type or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |

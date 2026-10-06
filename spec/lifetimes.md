@@ -334,7 +334,7 @@ A settled value may hold references into its own fields, wired after it settles 
 
 ### 1.11 A signature records where its parameters come to rest
 
-An `&T` parameter, and `this`, have no scope in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where a value comes to rest**: when a verb stores an `&T` parameter, or a reference a `^T` parameter carries, into a place reachable from `this` or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1.
+An `&T` parameter, and `this`, have no scope in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where a value comes to rest**: when a verb stores an `&T` parameter, or a reference a `^T` parameter carries, into a place reachable from `this` or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1. A signature records, the same way, each `&T` parameter its body keeps apart from the subject or from a block parameter, which each call checks against its arguments ([`memory.md`](memory.md) §2.9.1).
 
 ```zane
 type Terminal = #struct {
