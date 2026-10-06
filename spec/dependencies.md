@@ -45,7 +45,7 @@ remaps [
 
 Top-level fields:
 
-- **`name`** (required): the package's name, in camelCase under [`lexical.md`](lexical.md) §3. Every source file of the project declares it ([`packages.md`](packages.md) §2.2), and compiled symbols carry it (§6.1).
+- **`name`** (required): the package's name, in camelCase under [`lexical.md`](lexical.md) §3. It **MUST NOT** be `test`, the name of a library's test package ([`packages.md`](packages.md) §7.1). Every source file of the project's `src/` declares it ([`packages.md`](packages.md) §2.2), and compiled symbols carry it (§6.1).
 - **`kind`** (required): `library` or `application`. An application's root package declares `main` ([`packages.md`](packages.md) §6.2). Only a library may be a dependency: a dependency whose manifest says `application` fails dependency resolution with an error naming it (§9).
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
@@ -57,6 +57,30 @@ Each `deps` row records:
 - **from**: where the dependency's code comes from — `release` for the verified prebuilt archive (§5), `source` for local compilation of the verified checkout (§12.1), or a local project path beginning with `./`, `../`, or `/` (§12.2)
 
 The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
+
+The optional top-level **`test-deps`** block lists the dependencies that only a library's test package imports ([`packages.md`](packages.md) §7.3). It has the same columns as `deps`, and its rows follow the same rules:
+
+```zane
+name mathLib
+kind library
+zane-version v0.4.1
+version-pattern v*.+.++
+
+deps [
+    key  version  from
+    core v1.4.0   release
+]
+
+test-deps [
+    key      version  from
+    std      v0.2.0   release
+    zaneTest v1.1.0   release
+]
+```
+
+A `test-deps` block takes effect only in a test build of the project whose manifest holds it. In a transitively fetched manifest it is ignored, so a library's test dependencies never enter its consumers' dependency graphs. A `test-deps` block in a manifest whose `kind` is `application` is an error.
+
+No key appears in both `deps` and `test-deps`, and neither block uses the key `test`.
 
 The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). A URL listed in `remaps` that matches no package in the resolved dependency graph is a likely stale entry or typo; the toolchain emits an informational warning during dependency resolution (not an error) so the manifest can be kept clean. `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -75,13 +99,13 @@ resolutions [
 
 Each row records:
 
-- **key**: matches a `deps` key in `zane.coda`. The reserved key `zane` holds the resolution of the `zane-version` toolchain tag and **MUST NOT** be used as an ordinary dependency key.
+- **key**: matches a `deps` or `test-deps` key in `zane.coda`. The reserved key `zane` holds the resolution of the `zane-version` toolchain tag and **MUST NOT** be used as an ordinary dependency key.
 - **url**: the canonical package identity.
 - **commit**: the exact commit that the recorded tag must resolve to.
 
 The repository URL is the canonical identity; the key is only a local convenience for naming the package in source and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
-The two files **MUST** stay in sync: every `deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
+The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
 A dependency's `from` value leaves its pinned tag and its `resolutions` row unchanged. A `source` or path dependency keeps both, so setting `from` back to `release` returns to the pinned version.
 
@@ -89,7 +113,7 @@ This pair records a project's **direct** dependencies only; it is not a flattene
 
 ### 2.3 Files are recorded and updated by commands
 
-`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-lock.coda`. The user does not type the commit hash manually in the normal workflow. `zane add` records `release` in the `from` column unless asked for `source` (§12.1). `zane dev key path` sets a dependency's `from` to a local path (§12.2), and `zane dev off key` sets it back to `release`. Remap opt-in is recorded separately in the `remaps` block.
+`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-lock.coda`. The user does not type the commit hash manually in the normal workflow. `zane add` records `release` in the `from` column unless asked for `source` (§12.1), and writes the row into `test-deps` instead of `deps` when asked with `--test`. `zane dev key path` sets a dependency's `from` to a local path (§12.2), and `zane dev off key` sets it back to `release`. Remap opt-in is recorded separately in the `remaps` block.
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-lock.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
@@ -101,6 +125,7 @@ zane update math v6.2.9 --accept-tag-move
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#url-identity-and-the-two-file-manifest) — "URL identity and the two-file manifest" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from" explains why `from` is a manifest column rather than a command flag or a lock-file entry, and why the lock file is named `zane-lock.coda`.
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer" explains why test dependencies are a block of the root manifest.
 
 ---
 
@@ -111,12 +136,13 @@ Library repositories contain source and committed metadata:
 ```zane
 math/
   src/
+  test/
   zane.coda
   zane-lock.coda
   zane-artifacts.coda
 ```
 
-Source files live in the `src/` directory, and `zane.coda` names the package they form ([`packages.md`](packages.md) §2.1). Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
+Source files live in the `src/` directory, and `zane.coda` names the package they form ([`packages.md`](packages.md) §2.1). The optional `test/` directory holds the library's test package ([`packages.md`](packages.md) §7), which no release archive contains. Prebuilt object files are published outside the Git tree as release archives (§3.1). The source repository URL remains the package identity; the artifact download URL is only a location.
 
 ### 3.1 Artifact manifest (`zane-artifacts.coda`)
 
@@ -144,7 +170,7 @@ Each asset is a gzip-compressed tar archive containing a `build/` directory with
 
 The author builds the objects for each supported target from the release's source and dependency pins, packages them, and computes each archive's SHA-256. The author then commits the URLs and hashes in `zane-artifacts.coda`, tags that commit, and uploads the exact archives at the recorded GitHub Release URLs. The release is usable only after its assets are available. Archives contain the objects, not the artifact manifest, so recording their hashes creates no circular hash dependency.
 
-A release **MUST NOT** be published while any `deps` row of the package's manifest has a path `from` (§12.2), because no other machine can fetch the code such a row names.
+A release **MUST NOT** be published while any `deps` row of the package's manifest has a path `from` (§12.2), because no other machine can fetch the code such a row names. A `test-deps` row may keep a path `from`, since no consumer reads it.
 
 Changing an archive requires publishing a new package version with a new committed hash. Replacing an asset at an existing URL with different bytes does not update consumers' pins; verification fails (§5).
 
@@ -286,6 +312,8 @@ When a package is fetched, the toolchain recursively reads its `zane.coda` and i
 
 Every package in the dependency graph other than the root **MUST** declare `kind library` in its manifest (§2.1). Resolution aborts with an error naming any dependency whose manifest says `application`.
 
+A fetched package's `test-deps` block contributes nothing to the graph (§2.1).
+
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#a-project-says-what-it-is) — "A project says what it is".
 
 ---
@@ -363,6 +391,8 @@ At a high level, dependency resolution proceeds in this order:
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
 9. for any package listed in the top-level `remaps` block, group the required versions by declared `version-pattern`, collapse interchangeable versions onto the chosen version, and remap displaced references; keep non-interchangeable versions side by side, warning on divergent patterns (see [§15](#15-compatibility-patterns-and-remapping))
 10. link the locally compiled program against the selected target's cached objects, using the separate source-built entry for a `source` dependency and the path build for a path dependency
+
+A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `test-deps` rows counted among the project's direct dependencies. It compiles the library from the project's `src/` as a dependency of the test package and links the test package as the program.
 
 ---
 

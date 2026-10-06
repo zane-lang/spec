@@ -414,7 +414,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package at the root of the dependency graph being built — the application, or a library built on its own. Only it reaches `@program$`, and it holds `main`.
+- **Meaning:** The package at the root of the dependency graph being built — the application, a library built on its own, or a library's test package in a test build. Only it reaches `@program$`, and it holds `main`.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 
@@ -423,3 +423,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A fixed-length hash of a package's normalized URL, written into every rewritten symbol after the version tag. It keeps two packages that share a name distinct at link time.
 - **Why this name:** It is a hash of the package's identity — its URL — and stands in for that identity inside a symbol name.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
+
+### 4.14 test package
+
+- **Meaning:** The package named `test` in a library's `test/` directory. It imports the library as a consumer would and is the root package of a test build.
+- **Why this name:** It is the package that tests the library, and its name is fixed the way the `src/` directory's is, so the directory and the declaration both say `test`.
+- **Canonical home:** [`packages.md`](packages.md) §7

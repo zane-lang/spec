@@ -18,6 +18,7 @@ Zane packages are project-defined namespaces and compilation units that contain 
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
 - **`The root package starts the program`.** The package at the root of the build declares `main` and alone reaches the program's console and runtime.
+- **`A library is tested as a consumer`.** A library project's `test/` directory holds a second package, `test`, which imports the library and is the root of the build that runs it.
 
 ---
 
@@ -25,7 +26,7 @@ Zane packages are project-defined namespaces and compilation units that contain 
 
 ### 2.1 The manifest names the package
 
-Every project defines one package. Its source files are the `.zn` files directly in the project's `src/` directory ([`dependencies.md`](dependencies.md) §3). Its name is the `name` field of the project's `zane.coda` ([`dependencies.md`](dependencies.md) §2.1) and uses camelCase under [`lexical.md`](lexical.md) §3.
+Every project defines one package from its `src/` directory, and a library project may define the test package beside it (§7). The package's source files are the `.zn` files directly in the project's `src/` directory ([`dependencies.md`](dependencies.md) §3). Its name is the `name` field of the project's `zane.coda` ([`dependencies.md`](dependencies.md) §2.1) and uses camelCase under [`lexical.md`](lexical.md) §3.
 
 For example, every source file directly in `src/` of a project whose manifest says `name httpClient` belongs to the package `httpClient`.
 
@@ -35,7 +36,7 @@ A subdirectory of `src/` that contains a `.zn` file is a compile-time error.
 
 ### 2.2 Every source file declares its package
 
-Every source file **MUST** begin with a `package packageName` declaration whose name exactly matches the `name` field of the project's manifest. A missing or mismatched declaration is a compile-time error.
+Every source file in `src/` **MUST** begin with a `package packageName` declaration whose name exactly matches the `name` field of the project's manifest. A missing or mismatched declaration is a compile-time error.
 
 ```zane
 package httpClient
@@ -191,7 +192,7 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 ### 6.1 The root package is the root of the build
 
-The **root package** is the package at the root of the dependency graph being built: the package whose source files lie directly under the built project's `src/` ([`dependencies.md`](dependencies.md) §3). Every other package in the build is a dependency reached from it. Whether a package is the root depends on the build rather than on the package: a library built or tested on its own is the root of that build, and the same library consumed by another project is not.
+The **root package** is the package at the root of the dependency graph being built: the built project's `src/` package ([`dependencies.md`](dependencies.md) §3), or its test package in a test build (§7.2). Every other package in the build is a dependency reached from it. Whether a package is the root depends on the build rather than on the package: a library built on its own is the root of that build, and the same library is a dependency when another project consumes it or when its own test package runs it.
 
 Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6). Any other package reaches them only through an instance passed to it.
 
@@ -201,7 +202,7 @@ Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`]
 
 A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly. Its return type may be any type, and the value it returns is discarded. It declares no abort type, because no caller exists to handle an abort.
 
-A project whose manifest `kind` is `application` ([`dependencies.md`](dependencies.md) §2.1) **MUST** declare `main` in its package. Building one without it is a compile-time error.
+A project whose manifest `kind` is `application` ([`dependencies.md`](dependencies.md) §2.1) **MUST** declare `main` in its package, and a test package **MUST** declare `main` as well (§7.2). Building either without it is a compile-time error.
 
 ```zane
 package app
@@ -217,12 +218,68 @@ Unit main() {
 
 ---
 
-## 7. Summary
+## 7. The Test Package
+
+### 7.1 A library's `test/` directory holds its test package
+
+A project whose manifest `kind` is `library` may hold a `test/` directory beside `src/`. The `.zn` files directly in `test/` form the project's **test package**, whose name is `test`. Every one of them **MUST** begin with the declaration `package test`, and a missing or mismatched declaration is a compile-time error. The files form one order-independent compilation unit (§2.3). A subdirectory of `test/` that contains a `.zn` file is a compile-time error.
+
+```zane
+mathLib/
+  src/
+    vector.zn       // package mathLib
+  test/
+    main.zn         // package test
+  zane.coda         // name mathLib, kind library
+```
+
+A `.zn` file in the `test/` directory of an application project is a compile-time error. Because the test package takes the name `test`, no project's manifest may name its package `test` ([`dependencies.md`](dependencies.md) §2.1).
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer".
+
+### 7.2 The test package is the root of a test build
+
+A **test build** compiles the test package and the library together and runs the result. The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library is a dependency of the test package, compiled from the project's `src/` in every test build. It reaches the program's console and runtime only through an instance the test package passes to it, as it would in any consumer's build.
+
+The library under test is a package of its own, distinct from every release of the same library that the build's dependency graph also reaches. When a dependency of the test package itself depends on the library, the two copies coexist in one program as two versions do ([`dependencies.md`](dependencies.md) §11), and a type of one is not a type of the other.
+
+A build that is not a test build leaves `test/` uncompiled. The library's release archives hold only the objects compiled from `src/` ([`dependencies.md`](dependencies.md) §3.1).
+
+### 7.3 The test package imports the library like any consumer
+
+The test package imports the library by the `name` field of the project's manifest, under the import rules of §3. It may also import any key in the manifest's `deps` and `test-deps` blocks ([`dependencies.md`](dependencies.md) §2.1). An import of a `test-deps` key in the library's `src/` is a compile-time error.
+
+```zane
+package test
+
+import core$
+import std$
+import mathLib
+
+Unit main() {
+    console Console(@program$console);
+    v mathLib$Vector(3.0, 4.0);
+    len Float = v:mathLib$length();
+    console!print("length: \%len");
+    return Unit();
+}
+```
+
+The library's `_`-prefixed declarations are inaccessible from the test package, as they are from every other package (§4.1). The test package exercises the library through the members a consumer reaches.
+
+In a test build, the library's name and every key in `deps` and `test-deps` each name a distinct package. A key equal to the library's name is a compile-time error in a test build.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer".
+
+---
+
+## 8. Summary
 
 | Concept | Rule |
 |---|---|
 | Package identity | The `name` field of the project's manifest |
 | Package source | The `.zn` files directly in the project's `src/`; a subdirectory holding a `.zn` file is an error |
+| Test package | A library's `test/` directory holds the package `test`, which imports the library under its manifest name and reaches only what any consumer reaches |
 | Package declaration | Required in every source file and must match the manifest's `name` |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
@@ -234,8 +291,8 @@ Unit main() {
 | Import reach | Plain-name resolution only; never operator candidates, method lookup, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
-| Root package | The package at the root of the dependency graph being built; the only package that reaches `@program$` |
-| Entry point | `main()`, declared in any source file of the root package, with no parameters and no abort type; any return type, whose value is discarded; required in an application |
+| Root package | The package at the root of the dependency graph being built, the test package in a test build; the only package that reaches `@program$` |
+| Entry point | `main()`, declared in any source file of the root package, with no parameters and no abort type; any return type, whose value is discarded; required in an application and in a test package |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
 | Operators | Always public |
