@@ -222,7 +222,7 @@ Unit main() {
 
 ### 7.1 A library's `test/` directory holds its test package
 
-A project whose manifest `kind` is `library` may hold a `test/` directory beside `src/`. The `.zn` files directly in `test/` form the project's **test package**, whose name is `test`. Every one of them **MUST** begin with the declaration `package test`, and a missing or mismatched declaration is a compile-time error. The files form one order-independent compilation unit (§2.3). A subdirectory of `test/` that contains a `.zn` file is a compile-time error.
+A project that declares `kind library` in its manifest may hold a `test/` directory beside the `src/` directory. The `.zn` files directly in `test/` form the project's **test package**, whose name is `test`. Every one of them **MUST** begin with the declaration `package test`, and a missing or mismatched declaration is a compile-time error. The files form one order-independent compilation unit (§2.3). A subdirectory of `test/` that contains a `.zn` file is a compile-time error.
 
 ```zane
 mathLib/
@@ -233,7 +233,7 @@ mathLib/
   zane.coda         // name mathLib, kind library
 ```
 
-A `.zn` file in the `test/` directory of an application project is a compile-time error. Because the test package takes the name `test`, no project's manifest may name its package `test` ([`dependencies.md`](dependencies.md) §2.1).
+A `.zn` file in the `test/` directory of an application project is a compile-time error. Because the test package takes the name `test`, no project's manifest may declare `name test` ([`dependencies.md`](dependencies.md) §2.1).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer".
 
@@ -280,7 +280,7 @@ In a test build, the library's name and every key in `deps` and `test-deps` each
 | Package identity | The `name` field of the project's manifest |
 | Package source | The `.zn` files directly in the project's `src/`; a subdirectory holding a `.zn` file is an error |
 | Test package | A library's `test/` directory holds the package `test`, which imports the library under its manifest name and reaches only what any consumer reaches |
-| Package declaration | Required in every source file and must match the manifest's `name` |
+| Package declaration | Required in every source file; in `src/` it matches the manifest's `name`, and in a test package it is `package test` |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |

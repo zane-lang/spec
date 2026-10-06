@@ -371,7 +371,7 @@ zane dev geometry ../geometry
 - The compiled objects undergo the symbol rewriting of §6.1 with the dependency's pinned version tag and the identity hash of its locked URL, so they link exactly where the pinned release would.
 - Path builds never enter the global package cache (§7).
 - A path that does not exist, or holds no `zane.coda`, fails the build with an error naming the key and the path.
-- A package whose manifest has a path `from` cannot be released (§3.2).
+- A package whose manifest has a path `from` in a `deps` row cannot be released (§3.2).
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from".
 
