@@ -167,7 +167,7 @@ TypeName
 `&TypeName` is a **reference** type. It is legal in storage sites (local-variable declarations, fields, and nested storage types such as the example below), as well as in function and constructor parameter positions, return-type positions, and abort-type positions.
 
 ```zane
-List<&Node>
+ArrayRef<&Node, 4>
 ```
 
 `^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.

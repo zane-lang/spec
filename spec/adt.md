@@ -223,9 +223,23 @@ The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same 
 
 Because a group is just its arms written once, its cases need not share a payload type. Each expanded arm is checked independently against its own case's payload, so an operation on the binder — `nameOf(x)` above — must resolve for every grouped payload, ordinarily by being overloaded across them. A grouped arm that only ever wants the whole variant simply omits the binder and reads the scrutinee. Zane has no interfaces or constraints over arbitrary types, so a binder shared across *differing* payloads is useful exactly where such an overload family exists, and a heterogeneous "everything else" group is normally left unbound.
 
+A binder names its payload for the whole arm, so an arm with a binder **MUST NOT** write a place that overlaps its scrutinee ([`memory.md`](memory.md) §2.9.1), other than through the binder itself. It neither assigns to the scrutinee nor makes it the subject of a `!` call: either may change the case and destroy the payload the binder still names. A write through the binder changes the payload in place and leaves the case alone.
+
+```zane
+power Int = match slot {
+    e full => {
+        e!tune();                     // legal: writes the payload in place
+        slot = Slot.empty(Unit());    // ILLEGAL: destroys the payload e names
+        return e.power;
+    };
+    empty => Int(0);
+}
+```
+
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-group-is-sugar-not-a-widening) — "The group is sugar, not a widening".
+> **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
 
 ### 5.2 Exhaustive, with no default arm
 

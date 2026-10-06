@@ -230,7 +230,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.27 borrow
 
-- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call: a bare parameter of either kind of type, and every subject. It is the only way a value type is passed. A borrow is mutable only as a `mut` subject, and a value is copied only when bound into a fresh slot.
+- **Meaning:** Non-owning, non-escaping access to a caller's storage for the duration of a call: a bare parameter of either kind of type, and every subject. It is the only way a value type is passed. A borrow is mutable only as a `mut` subject, nothing else in the call writes the place it lends, and a value is copied only when bound into a fresh slot.
 - **Why this name:** The callee is lent the caller's storage for the call and gives it back at return — it does not own it and cannot keep it. Unlike a reference, the borrow itself cannot be stored, returned, or used as a move-source — a restriction on the borrow, not on the value read through it, which a value type may still copy into a fresh slot.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
@@ -272,7 +272,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.34 taken parameter
 
-- **Meaning:** A `^T` parameter with `T` a reference type, which takes a roaming owner or a temporary from the caller; filled with a value type, it is a borrow. Passing a roaming owner symbol spends it (§3.44). The parameter is then a roaming owner of the body, which moves it on or lets it die when the body drains.
+- **Meaning:** A `^T` parameter with `T` a reference type, which takes a roaming owner or a temporary from the caller; filled with a value type, it is a borrow, and it is never filled with an `&` type. Passing a roaming owner symbol spends it (§3.44). The parameter is then a roaming owner of the body, which moves it on or lets it die when the body drains.
 - **Why this name:** The callee *takes* the owner, plainly and for good, in contrast to a borrow it gives back and a reference it only names.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.8
 
