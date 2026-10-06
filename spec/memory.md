@@ -325,14 +325,14 @@ A call's **borrows** are its subject and every argument it passes to a borrow: a
 
 Two places **overlap** when they are the same place, or one is reached from the other by field steps, element steps, or a case payload. Any two elements of one container overlap, because an index is a runtime value. A part of a call **writes** a place when it assigns to it or makes it the subject of a `!` call ([`effects.md`](effects.md) §4.1), anywhere inside that part.
 
-A `!` call also writes everything its subject reaches through `&` fields, and passing a block parameter on to a call runs it, which writes whatever the block passed in writes.
+A `!` call also writes everything its subject reaches through a reference it holds, in an `&` field or an `&` element, and passing a block parameter on to a call runs it, which writes whatever the block passed in writes.
 
 A place reached through an `&` is part of an object its path does not show, and another path may reach the same object. Where the checker can name that object, overlap is judged on it:
 
 - An `&` symbol stands for every place it is initialized from or repointed to (§2.5) anywhere in the body, including a repointing written after the call, since a loop body or a block argument may run it before the call runs again. With `r` initialized from `names` and never repointed, `r[Int(1)]` is `names[Int(1)]`.
 - An `&T` parameter names an object of the caller's that the body takes to be apart from the subject and from every block parameter. Where the body relies on that, the verb's signature records the pair, as it records where a parameter comes to rest ([`lifetimes.md`](lifetimes.md) §1.11), and each call checks it: the object its `&T` argument names may not overlap its subject, or a place the matching block argument writes. A call that passes its own `&T` parameter on records the pair in its own signature instead, so the check lands on the first caller that knows both places. A function type records no pairs, so a call through a function value keeps every `&T` argument apart from its `mut` subject and from each block argument.
 
-Any other place reached through an `&` — an `&` field, or a reference a call returns — may be any object of its type, so it overlaps every place that object could be, hold, or lie inside. A place the body owns lies inside no such object, and neither do the subject and the borrowed parameters, whose callers keep them apart from what the call writes.
+Any other place reached through an `&` — an `&` field, an `&` element, or a reference a call returns — may be any object of its type, so it overlaps every place that object could be, hold, or lie inside. A place the body owns lies inside no such object, and neither do the subject and the borrowed parameters, whose callers keep them apart from what the call writes.
 
 A call is a compile-time error when one of its borrows overlaps a place written by:
 
