@@ -13,7 +13,7 @@ Zane eliminates dangling references by combining single ownership, an owner that
 - **`Settled and roaming owners`.** An owner is either **settled** — it may be referenced, and it never moves again — or **roaming** — it may move anywhere, and nothing references it. A roaming owner settles by moving into a settled place (§2.1, §2.8.1).
 - **`References name settled owners`.** An `&` — a **reference** — is a non-owning handle to a settled owner of a **reference type** (a `#`-marked type, or a reference-type intrinsic such as `@primitives$List<T>`). A value type has no identity to point at, so it is shared by copy or borrow, never by a stored reference (§2.4).
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its backing stores and boxed payloads into fresh storage instead of sharing them (§2.3, §2.10).
-- **`Three passing modes`.** A bare reference-type parameter, and every subject, is a **borrow**; `^T` takes the owner; `&T` takes a reference. A value-type parameter is always a borrow (§2.9).
+- **`Three passing modes`.** A bare reference-type parameter, and every subject, is a **borrow**; `^T` takes the owner; `&T` takes a reference. A value-type parameter is always a borrow, and nothing else in a call writes what the call borrows (§2.9, §2.9.1).
 - **`Lexical lifetime enforcement`.** Every store is checked against declaration scopes alone (see [`lifetimes.md`](lifetimes.md) §1), and objects are destroyed when their owner's scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
 - **`Regioned arena placement`.** Every scope has separate fixed-size and dynamic regions. Statically sized storage is placed inline in the fixed-size region; resizable data and the payloads of boxed members use the dynamic region (§3).
 - **`A reference is an address`.** A settled owner never moves, so a reference stores the owner's segmented offset directly (§4).
@@ -187,9 +187,13 @@ For a list element or a case payload, keep the reference at the settled containe
 Reading an `&T` value that is already stored behind such an access remains legal:
 
 ```zane
+type Rack = #struct {
+    weapon &Weapon;
+}
+
 armory Armory();
-weapons List<&Weapon> = [armory.primary, armory.backup];
-current &Weapon = weapons[1];  // legal: reads an `&Weapon` already stored in the list
+racks List<Rack> = [Rack(armory.primary), Rack(armory.backup)];
+current &Weapon = racks[1].weapon;  // legal: reads an `&Weapon` already stored in an element
 ```
 
 The last line copies an existing reference value; it does not mint a new `&` from an element.
@@ -261,7 +265,7 @@ spare ^Engine = Engine();
 t Float = topSpeed(spare);   // legal: a borrow takes a roaming owner too
 ```
 
-A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type. One written `&T` takes a reference, so `T` is always filled with a reference type there ([`generics.md`](generics.md) §3.6).
+A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type. `T` there is never an `&` type: a reference has no owner to hand over, so filling it with one is ill-formed ([`generics.md`](generics.md) §3.6). One written `&T` takes a reference, so `T` is always filled with a reference type there ([`generics.md`](generics.md) §3.6).
 
 Passing a value by borrow is the semantic model rather than an optimization; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
 
@@ -313,6 +317,86 @@ This rule preserves uniform call syntax. The call site writes `inspect(e)`, `set
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-borrow-comes-back-without-a-sigil) — "The borrow comes back, without a sigil".
+> **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
+
+### 2.9.1 Nothing else in a call writes what the call borrows
+
+A call's **borrows** are its subject and every argument it passes to a borrow: a bare parameter, or a `^T` parameter whose `T` is a value type. Each lends its place for the whole call ([`lifetimes.md`](lifetimes.md) §1.5). Other parts of the same call run while that loan stands, and a write from one of them can destroy the storage a borrow names: a list that grows moves its elements to a new block, and a variant that changes case destroys its payload. Even where nothing is destroyed, the callee would watch a parameter change under it. So nothing else in a call may write a place the call borrows.
+
+Two places **overlap** when they are the same place, or one is reached from the other by field steps, element steps, or a case payload. Any two elements of one container overlap, because an index is a runtime value. A part of a call **writes** a place when it assigns to it or makes it the subject of a `!` call ([`effects.md`](effects.md) §4.1), anywhere inside that part.
+
+A `!` call also writes everything its subject reaches through a reference it holds, in an `&` field or an `&` element, and passing a block parameter on to a call runs it, which writes whatever the block passed in writes.
+
+A place reached through an `&` is part of an object its path does not show, and another path may reach the same object. Where the checker can name that object, overlap is judged on it:
+
+- An `&` symbol stands for every place it is initialized from or repointed to (§2.5) anywhere in the body, including a repointing written after the call, since a loop body or a block argument may run it before the call runs again. With `r` initialized from `names` and never repointed, `r[Int(1)]` is `names[Int(1)]`.
+- An `&T` parameter names an object of the caller's that the body takes to be apart from the subject and from every block parameter. Where the body relies on that, the verb's signature records the pair, as it records where a parameter comes to rest ([`lifetimes.md`](lifetimes.md) §1.11), and each call checks it: the object its `&T` argument names may not overlap its subject, or a place the matching block argument writes. A call that passes its own `&T` parameter on records the pair in its own signature instead, so the check lands on the first caller that knows both places. A function type records no pairs, so a call through a function value keeps every `&T` argument apart from its `mut` subject and from each block argument.
+
+Any other place reached through an `&` — an `&` field, an `&` element, or a reference a call returns — may be any object of its type, so it overlaps every place that object could be, hold, or lie inside. A place the body owns lies inside no such object, and neither do the subject and the borrowed parameters, whose callers keep them apart from what the call writes.
+
+A call is a compile-time error when one of its borrows overlaps a place written by:
+
+- its subject, for a borrow argument of a `mut` call;
+- a block argument of the call, for the subject or a borrow argument;
+- an argument written after the borrow argument, while that argument is evaluated.
+
+```zane
+Unit setFrom(this V, other V) mut { ... }
+Unit readAfter(engine Engine, body @concepts$Block) { ... }
+Engine readLater(engine Engine, size Int) { ... }
+
+v!setFrom(v);                                   // ILLEGAL: other borrows the subject itself
+car!tune(car.engine);                           // ILLEGAL: the argument is part of the subject
+names!push(names[Int(1)]);                      // ILLEGAL: push may grow names and move the element
+readAfter(engines[Int(1)], {
+    engines = freshEngines();                   // ILLEGAL: the block destroys the borrowed element
+});
+readLater(engines[Int(1)], engines!grow());     // ILLEGAL: the later argument writes engines
+
+first String = names[Int(1)];
+names!push(first);                              // legal: first is a place of its own
+
+same &List<String> = names;
+same!push(names[Int(1)]);                       // ILLEGAL: same stands for names
+other &List<String> = spares;
+names!push(other[Int(1)]);                      // legal: other stands for spares
+this.left!push(this.right[Int(1)]);             // ILLEGAL: two & fields may name one list
+```
+
+An `&T` parameter moves the check to the call that knows what it names:
+
+```zane
+Unit append(this List<String>, from &List<String>) mut {
+    this!push(from[Int(1)]);                    // legal: from is apart from this; the signature records it
+    return Unit();
+}
+Unit relay(this List<String>, via &List<String>) mut {
+    this!append(via);                           // legal: relay records that via is apart from this
+    return Unit();
+}
+
+names!append(spares);                           // legal
+names!append(names);                            // ILLEGAL: from names the subject
+names!relay(names);                             // ILLEGAL: via names the subject
+```
+
+A value-type argument is held to the same rule. A value parameter borrows the caller's slot, and passing a copy is an optimization the compiler makes only where no program can tell the difference (§2.9), so a block that writes a condition its own `if` borrows is refused like any other:
+
+```zane
+if(dirty) {
+    dirty = Bool(false);                        // ILLEGAL: the block writes the borrowed condition
+}
+
+wasDirty Bool = dirty;
+if(wasDirty) {
+    dirty = Bool(false);                        // legal: the call borrows wasDirty
+}
+```
+
+An `&T` argument is not a borrow. It names a settled owner, which an overwrite replaces in place (§2.2), so a write elsewhere in the call is one the reference observes. A subject is located only after the call's arguments are evaluated (§2.12), so an argument that writes the subject's place is not a conflict either.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
+> **Story:** [`stories/memory.md`](../stories/memory.md#overlap-through-a-reference-is-checked-where-the-reference-is-known) — "Overlap through a reference is checked where the reference is known".
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 
@@ -373,6 +457,24 @@ if(runtimeBool()) {
     text = String("hi");
 }
 ```
+
+### 2.12 A destination is located after its value
+
+A store and a `!` call each name a place they write: a store its destination, a `!` call its subject. Evaluating the other side can move that place. An element store's right-hand side may grow the list, and a `!` call's argument may do the same to the list its subject is an element of. So the place is **located** last.
+
+A store evaluates the operands of its destination in written order, such as the index in `list[i]`, then its right-hand side, and only then locates the destination. A `!` call evaluates the operands of its subject, then its arguments in written order, and only then locates the subject. The write lands where the place is at that moment.
+
+```zane
+Int growBy(this List<Int>, count Int) mut { ... }  // appends count elements
+Unit bump(this Int, by Int) mut { ... }
+
+ints[Int(1)] = ints!growBy(Int(1000));     // the store lands in ints's block after it grew
+ints[Int(2)]!bump(ints!growBy(Int(1000)));  // and so does bump's write
+```
+
+The right-hand side still reads the destination's pre-overwrite state (§2.3): locating a place reads nothing from it.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#a-destination-is-located-after-its-value) — "A destination is located after its value".
 
 ---
 
@@ -569,11 +671,13 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | Field of a roaming root | May be moved out; the root is partly spent until refilled; a field is never declared roaming |
 | Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; not storable, not returnable, not a reference source, not a move-source |
 | Value-type parameter | Always a read-only borrow; copied only when the parameter is itself bound into a fresh slot |
-| Reference-type parameter | `T` borrows; `^T` takes a roaming owner or temporary, spending the caller's symbol; `&T` takes a reference and leaves the caller a full owner |
+| Reference-type parameter | `T` borrows; `^T` takes a roaming owner or temporary, spending the caller's symbol, and is never filled with an `&` type; `&T` takes a reference and leaves the caller a full owner |
 | Subject | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T` |
+| Borrow overlap | Nothing else in a call writes a place the call borrows: not a `mut` subject a borrow argument overlaps, not a block argument, and not a later argument's evaluation; an `&T` argument is not a borrow, but its object is kept apart from the subject and block arguments where the callee's signature records it |
 | Value-downstream enforcement | Value types may contain only value types, value-type primitives among them, transitively — never a reference-type or `&` field, because a reference type is made to be moved rather than copied; recursion is **not** barred, since a boxed member is placement rather than a reference-type field |
 | `&` targets reference types | An `&T` requires `T` to be a reference type; a value is shared by copy or borrow, never by a stored `&` |
 | Symbol declaration | Must be directly initialized |
+| Locating a destination | A store's destination and a `!` call's subject are located after the right-hand side and the arguments are evaluated |
 | Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; moving a roaming owner copies its inline bytes and handles, and its dynamic blocks stay put unless it escapes the scope holding them, which must first leave every block in a scope that lives as long as the destination |
 | Boxed member | A member whose type can lead back to the enclosing type is stored as a fixed-size handle inline with its enclosing instance, while the instance the handle names lives in the dynamic region; required on a containment cycle, permitted elsewhere, and nothing marks it in the source. In a reference type it moves with its enclosing instance; in a value type it is deep-copied with it. An overwrite reuses its block |
 | `&` representation | A reference is the `u32` segmented offset of the settled owner it names |

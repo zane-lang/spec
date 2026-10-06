@@ -15,7 +15,7 @@ Every place has a **scope**: the block whose lifetime bounds it.
 - a **symbol** — a local binding — has the block that declares it as its scope
 - a **field or element** reached from its root by **owning** steps takes that root symbol's scope, never one of its own. Every element of a container shares the container's scope, so which element it is does not enter the comparison.
 - a **`^T` parameter** is an owner of the body, scoped to the body's top block ([`memory.md`](memory.md) §2.9).
-- `this` and an **`&T` parameter**, and a constructor's `init{ }`, have no scope in the body. Each stands for a path in the caller's frame, so a store through one is settled at the call site (§1.11). A borrow parameter is read-only and is never a destination.
+- `this` and an **`&T` parameter**, and a constructor's `init{ }`, have no scope in the body. Each stands for a path in the caller's frame. A store through `this` or `init{ }` is settled at the call site (§1.11). Every other parameter, an `&T` parameter included, is read-only ([`effects.md`](effects.md) §4.1) and is never a destination.
 
 A path that steps *through* an `&` leaves the tree its root names. What lies beyond belongs to a different tree whose root the path does not mention, so no scope can be computed for it and it is not a place this rule can govern. Such a path may be **read** freely; it may not be the destination of a store:
 
@@ -138,7 +138,7 @@ A moved object is roaming, so nothing references it, and moving it strands nothi
 
 A reference-type parameter is one of three modes ([`memory.md`](memory.md) §2.9), and each has a fixed relation to the call:
 
-- A **borrow** (`T`, and every subject) is the caller's owner, lent for the call. It is not stored, returned, or moved, so nothing of it outlives the call, and the caller's owner is untouched.
+- A **borrow** (`T`, and every subject) is the caller's owner, lent for the call. It is not stored, returned, or moved, so nothing of it outlives the call, and the caller's owner is untouched. Nothing else in the call writes it ([`memory.md`](memory.md) §2.9.1).
 - A **take** (`^T`) moves the caller's roaming owner into the body. The parameter is then a roaming owner scoped to the body's top block (§1.1). The body moves it on — into another parameter's object, into the result, into a local — or it dies when the body drains (§2.1).
 - A **reference** (`&T`) is the caller's reference, copied. It stands for the caller's path, so a store that reaches it is settled at the call site (§1.11).
 
@@ -188,15 +188,21 @@ A parameter is never refilled. A store into one is a write, and a parameter is r
 
 A verb result (§1.2) has no symbol to spend. The temporary is consumed by the move and cannot be named again, so the double-move question never arises for it.
 
-### 1.7 Returned `&` values must be rooted in an `&T` parameter
+### 1.7 Returned `&` values must be rooted in an `&T` parameter or a package constant
 
-A return is a store into the call-site scope, so §1.1 governs it, and this is what the comparison comes to for a returned reference: a function may return an `&T` only when the returned reference is rooted in one of the function's **`&T` parameters** — the parameter used bare, or a field access whose base chain reaches it.
+A return is a store into the call-site scope, so §1.1 governs it, and this is what the comparison comes to for a returned reference: a function may return an `&T` only when the returned reference is rooted in one of the function's **`&T` parameters** or in a **package constant** — the root used bare, or a field access whose base chain reaches it.
 
 ```zane
 &Weapon weaponOf(player &Player) => player.weapon
 ```
 
-An `&T` parameter stands for a path in the caller's frame (§1.5), so it has no scope the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two scopes are finally both in view.
+An `&T` parameter stands for a path in the caller's frame (§1.5), so it has no scope the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two scopes are finally both in view. A package constant lives for the whole program, so it outlives every caller's scope and needs no comparison at the call site:
+
+```zane
+garage Garage(...);                    // a package constant
+
+&Engine spareEngine() => garage.spare  // legal: rooted in a package constant
+```
 
 Nothing else is a root. A **local** is excluded by lifetime: a body block does not outlive the call-site scope, so §1.1 rejects the store outright. A **`^T` parameter** is an owner of the body (§1.5), excluded the same way. A **borrow**, `this` included, is never returned at all ([`memory.md`](memory.md) §2.9).
 
@@ -227,6 +233,7 @@ The handler's binder is then what the call's result would have been: it names wh
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#simplifying-the-return-root-rule) — "Simplifying the return-root rule".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#package-constants-become-return-roots-and-an-t-parameter-stops-being-a-store-root) — "Package constants become return roots, and an `&T` parameter stops being a store root".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#running-the-examples) — "Running the examples".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
@@ -327,7 +334,7 @@ A settled value may hold references into its own fields, wired after it settles 
 
 ### 1.11 A signature records where its parameters come to rest
 
-An `&T` parameter, and `this`, have no scope in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where a value comes to rest**: when a verb stores an `&T` parameter, or a reference a `^T` parameter carries, into a place reachable from `this`, from another `&T` parameter, or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1.
+An `&T` parameter, and `this`, have no scope in the body (§1.5), so a store that reaches one cannot be settled there. What the body settles instead is **where a value comes to rest**: when a verb stores an `&T` parameter, or a reference a `^T` parameter carries, into a place reachable from `this` or from the result, the parameter and the path it lands in are part of that verb's signature. Each call substitutes its own argument paths for the parameters and applies §1.1. A signature records, the same way, each `&T` parameter its body keeps apart from the subject or from a block parameter, which each call checks against its arguments ([`memory.md`](memory.md) §2.9.1).
 
 ```zane
 type Terminal = #struct {
@@ -394,7 +401,7 @@ Unit relay(this Terminal, io &IO) mut {
 }
 ```
 
-A recorded path begins at a **root** — `this`, an `&T` parameter, or the result — and continues with the same **owning** steps §1.1 resolves a place by: field selections, and "an element of" for a container. No index is recorded, because every element of a container shares its scope. What a path may not do is step *through* an `&` after its root, for the reason §1.1 gives — beyond that point the path has left the tree its root names.
+A recorded path begins at a **root** — `this` or the result — and continues with the same **owning** steps §1.1 resolves a place by: field selections, and "an element of" for a container. No index is recorded, because every element of a container shares its scope. What a path may not do is step *through* an `&` after its root, for the reason §1.1 gives — beyond that point the path has left the tree its root names.
 
 ```zane
 Unit wire(this Main, io &IO) mut {
@@ -408,8 +415,25 @@ A call **substitutes** the path the caller supplied — an argument path, or the
 
 The summary is derived from the body and published with the signature, so a call can be checked without the body in hand. A verb whose parameters come to rest nowhere records nothing, which is the common case; its calls need no substitution.
 
+A call through a function value has no body to derive a summary from, and a function type records none ([`functions.md`](functions.md) §7.2). Such a call is checked as though every parameter came to rest in the result and, when the function type is `mut`, in `this`. Each `&T` argument, and each reference an argument carries, is then compared against the subject and against the place the result is bound into, wherever their types can hold a reference:
+
+```zane
+far Port(Int(1));
+plug Plug(far);
+wire Unit(this Plug, port &Port) mut {
+    this.port = port;
+    return Unit();
+}
+do() {
+    near Port(Int(2));
+    plug!wire(near);   // ILLEGAL: wire's type is `mut`, so near is taken to come to rest in plug
+}
+```
+
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-owner-lifetime-replaces-the-same-root-rule) — "The owner lifetime replaces the same-root rule".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-rejected-design-that-needed-no-signatures) — "The rejected design that needed no signatures".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#a-call-through-a-function-value-is-taken-to-store-every-reference) — "A call through a function value is taken to store every reference".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#package-constants-become-return-roots-and-an-t-parameter-stops-being-a-store-root) — "Package constants become return roots, and an `&T` parameter stops being a store root".
 
 ---
 
@@ -463,13 +487,13 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 |---|---|
 | Store | Legal only when every owner the stored value names — its own, and every owner reached through a reference it carries — has a scope that outlives the destination's scope; an assignment, a move, a return, an abort, and an argument are all stores |
 | Scope | A symbol's scope is its declaring block; a field or element reached by owning steps takes its root symbol's; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body and stand for a path in the caller's frame. A path stepping *through* an `&` has left its root's tree, has no scope, and may be read but never stored into. A block outlives every block nested in it |
-| `&` return | Returned or aborted `&T` must be rooted in an `&T` parameter; a local, a `^T` parameter, and a borrow, `this` included, are not roots |
+| `&` return | Returned or aborted `&T` must be rooted in an `&T` parameter or a package constant; a local, a `^T` parameter, and a borrow, `this` included, are not roots |
 | Reference assignment | Copies an existing `&T` value, or mints from a settled reference source ([`memory.md`](memory.md) §2.8): a bare settled symbol, or a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only |
 | Move-source | A roaming owner symbol (local or `^T` parameter), a field of a roaming root, a `^T` verb result, or a `#variant` case form; not a settled owner, an `&`, a borrow, a container element, or a case payload |
 | Move declaration-block restriction | A roaming owner symbol may only be moved in the exact lexical block where it was declared; `^T` parameters may be moved at the body top level |
 | Move destination scope | Needs no comparison of its own: nothing references a moved owner, and a symbol moves only in its declaration block |
 | Carried reference | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. Each keeps its scope and is compared at every store of the value |
-| Resting place | Where a verb stores an `&T` parameter, or a reference a `^T` parameter carries, is part of its signature: a path rooted at `this`, an `&T` parameter, or the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result |
+| Resting place | Where a verb stores an `&T` parameter, or a reference a `^T` parameter carries, is part of its signature: a path rooted at `this` or the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. A call through a function value takes every parameter to come to rest in the result and, under a `mut` function type, in `this` |
 | Spent symbol | After a move, a roaming source symbol is spent: any use is a compile-time error until a store refills it, and it changes between owning and spent only in its declaration block; a parameter is read-only and is never refilled |
 | Parameter modes | A borrow (`T`, and `this`) lasts for the call; a take (`^T`) moves the caller's roaming owner into the body, as an owner of the body; a reference (`&T`) stands for the caller's path |
 | Owning argument | A verb **borrows** an owner (`T`, caller keeps it), **relays** it (`^T` and returns `^T`, caller may bind it to own the object again), or **consumes** it (`^T`, no owner returned); passing to `^T` spends the caller's symbol whatever the body does |
