@@ -56,7 +56,7 @@ A library or program package's name is the name of its directory, in camelCase u
 
 The names within one project are kept apart:
 
-- No library or program package is named `test`.
+- No library package is named `test`.
 - A program package's name differs from every top-level library package's name, and does not begin with `_`.
 - A subpackage's name differs from every top-level library package's name of its project, and does not begin with `_`.
 
