@@ -348,6 +348,19 @@ first String = names[Int(1)];
 names!push(first);                              // legal: first is a place of its own
 ```
 
+A value-type argument is held to the same rule. A value parameter borrows the caller's slot, and passing a copy is an optimization the compiler makes only where no program can tell the difference (§2.9), so a block that writes a condition its own `if` borrows is refused like any other:
+
+```zane
+if(dirty) {
+    dirty = Bool(false);                        // ILLEGAL: the block writes the borrowed condition
+}
+
+wasDirty Bool = dirty;
+if(wasDirty) {
+    dirty = Bool(false);                        // legal: the call borrows wasDirty
+}
+```
+
 An `&T` argument is not a borrow. It names a settled owner, which an overwrite replaces in place (§2.2), so a write elsewhere in the call is one the reference observes. A subject is located only after the call's arguments are evaluated (§2.12), so an argument that writes the subject's place is not a conflict either.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
