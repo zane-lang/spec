@@ -1,13 +1,16 @@
-# Publishes the committed benchmark page. It deploys bench/benchmark.html as
-# rendered, and never runs the harness: the page shows the pinned run, and a
-# CI runner is not a machine a run is pinned from.
+# Publishes the committed benchmark pages: site/index.html at the root, and
+# each bench's rendered page beneath it. It deploys them as rendered, and
+# never runs a harness: each page shows its pinned run, and a CI runner is
+# not a machine a run is pinned from.
 name: bench-pages
 
 on:
   push:
     branches: [main]
     paths:
-      - "bench/benchmark.html"
+      - "site/index.html"
+      - "memorybench/benchmark.html"
+      - "langbench/langbench.html"
   workflow_dispatch:
 
 permissions:
@@ -30,8 +33,10 @@ jobs:
 
       - name: Stage the page
         run: |
-          mkdir -p _site
-          cp bench/benchmark.html _site/index.html
+          mkdir -p _site/memorybench _site/langbench
+          cp site/index.html _site/index.html
+          cp memorybench/benchmark.html _site/memorybench/index.html
+          cp langbench/langbench.html _site/langbench/index.html
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

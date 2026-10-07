@@ -10,10 +10,11 @@ This repository is a **prior art publication** for the Zane programming language
 spec/             ← the specification itself (start here): what the language does
 stories/          ← design stories: how each part of the spec came to be
 contributing/     ← style guides for writing spec docs and stories docs
-bench/            ← reference C harness used for runtime experiments
+memorybench/      ← reference C harness that models the memory design
+langbench/        ← compiled Zane programs timed against the same programs in other languages
 ```
 
-The rendered results of the pinned benchmark run are published at <https://zane-lang.github.io/spec/> and are redeployed whenever `bench/benchmark.html` changes on `main`.
+The rendered results of both benchmarks' pinned runs are published at <https://zane-lang.github.io/spec/> and are redeployed whenever one of their pages changes on `main`. [`memorybench/`](memorybench/) measures a C model of the memory design ([`spec/memory.md`](spec/memory.md)); [`langbench/`](langbench/README.md) measures what a released compiler builds.
 
 ## Specification documents
 

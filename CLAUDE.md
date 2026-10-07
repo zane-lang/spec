@@ -30,7 +30,7 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    editing one section ripples into cross-references elsewhere.
 2. When a change touches the **type system**, single-pass self-review has missed
    internal contradictions on this codebase before: re-read the *un-updated*
-   spec files and `bench/zane_bench.c` against the new design before opening a
+   spec files and `memorybench/zane_bench.c` against the new design before opening a
    PR, not just the file you changed.
 3. **A rule lives in more than one place. Changing its canonical home leaves
    every echo stale**, and an echo that still reads fluently is what ships a
@@ -84,9 +84,9 @@ next agent gets up to speed — keep it to durable, agent-facing facts.
    following owning edges" can be read as excluding it). A clause that looks
    like padding is sometimes a previous reviewer's fix.
 
-## The `bench/` harness
+## The `memorybench/` harness
 
-`bench/` is a reference **C** harness for runtime experiments — **not** Zane
+`memorybench/` is a reference **C** harness for runtime experiments — **not** Zane
 source; never treat its C as Zane. It *models* the memory design
 (`spec/memory.md`), so when that design changes the harness is updated to track
 it. The `.c` carries **no explanatory comments** (it holds no prose voice) —
@@ -156,7 +156,7 @@ The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.
 
 Run this one with `-R` on the directory, not a `spec/*.md` glob plus a bare
-directory argument: `grep` prints `bench/: Is a directory` and silently skips it
+directory argument: `grep` prints `memorybench/: Is a directory` and silently skips it
 otherwise.
 
 There used to be a guard here matching `&X = bareSymbol`. It is **gone** and
