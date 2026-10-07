@@ -1,0 +1,64 @@
+/// The primes up to N, counted by trial division against a table of small
+/// primes. The table is the same every run, so an optimized build may build
+/// it while it compiles; N is the program's first argument, so the division
+/// is left for the run.
+package trialdiv;
+
+import core$;
+import bench$;
+
+/// The primes below `bound`, by a sieve.
+^List<Int> primesBelow(bound Int) {
+	composite List<Bool> = List(Bool);
+	i Int = Int(1);
+	i!to(bound) {
+		composite!push(Bool(false));
+	}
+	primes ^List<Int> = List(Int);
+	p Int = Int(2);
+	p!to(bound - Int(1)) {
+		if(~composite[p]) {
+			primes!push(p);
+			start Int = p * p;
+			if(start < bound) {
+				j Int = Int(0);
+				j!to((bound - Int(1) - start) / p) {
+					composite[start + j * p] = Bool(true);
+				}
+			}
+		}
+	}
+	return primes;
+}
+
+/// Whether `k`, at least 2 and below the square of the table's bound, is
+/// prime.
+Bool isPrime(k Int, table List<Int>) {
+	i Int = Int(1);
+	i!to(table:size()) {
+		p Int = table[i];
+		if(k < p * p) {
+			return Bool(true);
+		}
+		if(k == k / p * p) {
+			return Bool(false);
+		}
+	}
+	return Bool(true);
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	table List<Int> = primesBelow(Int(4000));
+	n Int = size(runtime, Int(100000));
+	count Int = Int(0);
+	k Int = Int(2);
+	k!to(n) {
+		if(isPrime(k, table)) {
+			count = count + 1;
+		}
+	}
+	console!print(String(n) + " " + String(count));
+	return Unit();
+}

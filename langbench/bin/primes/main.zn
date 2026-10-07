@@ -1,0 +1,34 @@
+/// The primes below a fixed bound, found with a sieve, counted and summed.
+/// It reads no input, so an optimized build may compute all of it while it
+/// compiles.
+package primes;
+
+import core$;
+
+Unit main() {
+	console Console(@program$console);
+	bound Int = Int(20000);
+	composite List<Bool> = List(Bool);
+	i Int = Int(1);
+	i!to(bound) {
+		composite!push(Bool(false));
+	}
+	count Int = Int(0);
+	sum Int = Int(0);
+	p Int = Int(2);
+	p!to(bound - Int(1)) {
+		if(~composite[p]) {
+			count = count + 1;
+			sum = sum + p;
+			start Int = p * p;
+			if(start < bound) {
+				j Int = Int(0);
+				j!to((bound - Int(1) - start) / p) {
+					composite[start + j * p] = Bool(true);
+				}
+			}
+		}
+	}
+	console!print(String(count) + " " + String(sum));
+	return Unit();
+}

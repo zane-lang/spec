@@ -243,6 +243,27 @@ near @primitives$F64 = @primitives$F64.round(count);     // count is an I64 and 
 
 > **Story:** [`stories/types.md`](../stories/types.md#the-scalar-primitives-become-i32-i64-f32-and-f64-converted-by-constructor) — "The scalar primitives become `I32`, `I64`, `F32` and `F64`, converted by constructor".
 
+### 2.10 Reading a number from a string primitive
+
+Two methods of the string primitive read the number its text spells:
+
+```zane
+@primitives$I64?@primitives$Unit parseI64(this @primitives$String)
+@primitives$F64?@primitives$Unit parseF64(this @primitives$String)
+```
+
+`parseI64` accepts the text of an integer literal ([`lexical.md`](lexical.md) §7), optionally preceded by `-`. `parseF64` accepts the text of an integer or a float literal, optionally preceded by `-`. Nothing else is accepted: no whitespace, no `+`, and no other characters. Each gives the value the text spells. `parseF64` gives the `@primitives$F64` nearest to it, rounding half to even as `round` does (§2.9).
+
+A call aborts with `@primitives$Unit` when the text is not in its accepted form, and when its value does not fit: for `parseI64`, a value outside the range of `@primitives$I64`, and for `parseF64`, one too large in magnitude to round to a finite `@primitives$F64`.
+
+Reading can fail, so neither method is a constructor. A constructor cannot abort.
+
+```zane
+count @primitives$I64 = text:parseI64() ?? @primitives$I64(1000);
+```
+
+> **Story:** [`stories/types.md`](../stories/types.md#reading-a-number-from-text-is-a-method-because-it-can-fail) — "Reading a number from text is a method, because it can fail".
+
 ---
 
 ## 3. Constructors and Initialization
@@ -732,6 +753,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Literal storage primitive | `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, `@primitives$F64`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
 | Scalar conversion | Each scalar primitive converts to each other through a constructor of the target, never `implicit`; an exact one is the anonymous constructor, and a lossy one is named for its loss: `wrap`, `truncate`, or `round` |
 | String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored reference; copies are deep |
+| Reading a number | `parseI64` and `parseF64` on `@primitives$String` read a literal's text with an optional `-`, and abort with `@primitives$Unit` on any other text or a value that does not fit; they are methods, since a constructor cannot abort |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |

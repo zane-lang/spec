@@ -1,0 +1,957 @@
+{
+  "schema": 1,
+  "date": "2026-10-07",
+  "machine": {
+    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+    "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.39"
+  },
+  "zane": {
+    "version": "v0.6",
+    "compiler_commit": "fe056e2f11e5ed34c9e659dc2e31556b241bdb61",
+    "core_commit": "97beb743aa7e0cfec7b7b5afeb0df53fc97f9791"
+  },
+  "toolchains": {
+    "zane": "zane v0.4",
+    "c": "clang version 19.1.7",
+    "cpp": "clang version 19.1.7",
+    "rust": "rustc 1.98.1 (48a229cea 2026-09-01) (built from a source tarball)",
+    "go": "go version go1.27.1 linux/amd64",
+    "d": "LDC - the LLVM D compiler (1.42.0)",
+    "zig": "0.16.0"
+  },
+  "config": {
+    "runs": 5,
+    "warmup": 1,
+    "quick": false
+  },
+  "tests": [
+    {
+      "id": "primes",
+      "args": [],
+      "profile": "static",
+      "fold": {
+        "plain_loops": 3,
+        "optimized_loops": 3,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6517,
+          "samples_s": [
+            0.001895,
+            0.002283,
+            0.001816,
+            0.001454,
+            0.001351
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3644,
+          "samples_s": [
+            0.001478,
+            0.001132,
+            0.001522,
+            0.001111,
+            0.001424
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.5181,
+          "samples_s": [
+            0.001781,
+            0.002411,
+            0.002204,
+            0.002228,
+            0.002519
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "comptime",
+          "build_s": 0.8054,
+          "samples_s": [
+            0.00196,
+            0.001231,
+            0.002092,
+            0.001204,
+            0.001951
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4572,
+          "samples_s": [
+            0.001536,
+            0.001869,
+            0.002133,
+            0.001405,
+            0.001302
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "comptime",
+          "build_s": 0.4531,
+          "samples_s": [
+            0.000818,
+            0.001624,
+            0.001243,
+            0.001316,
+            0.001341
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.2824,
+          "samples_s": [
+            0.003177,
+            0.002638,
+            0.002913,
+            0.002725,
+            0.003373
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.7767,
+          "samples_s": [
+            0.002167,
+            0.001086,
+            0.001635,
+            0.001676,
+            0.001895
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "comptime",
+          "build_s": 0.8137,
+          "samples_s": [
+            0.001788,
+            0.00263,
+            0.002301,
+            0.001161,
+            0.001704
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.6314,
+          "samples_s": [
+            0.001531,
+            0.00142,
+            0.001284,
+            0.001014,
+            0.00159
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "comptime",
+          "build_s": 14.6741,
+          "samples_s": [
+            0.001435,
+            0.001333,
+            0.001088,
+            0.001211,
+            0.001273
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trialdiv",
+      "args": [
+        "10000000"
+      ],
+      "profile": "setup",
+      "fold": {
+        "plain_loops": 5,
+        "optimized_loops": 5,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6577,
+          "samples_s": [
+            5.587022,
+            5.593506,
+            5.565521,
+            5.490744,
+            5.445114
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3553,
+          "samples_s": [
+            0.413164,
+            0.418219,
+            0.414597,
+            0.407633,
+            0.407802
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.5564,
+          "samples_s": [
+            0.422995,
+            0.419544,
+            0.411607,
+            0.417775,
+            0.415365
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4803,
+          "samples_s": [
+            0.418559,
+            0.415374,
+            0.417252,
+            0.417001,
+            0.417785
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.3175,
+          "samples_s": [
+            0.651015,
+            0.65277,
+            0.653356,
+            0.647269,
+            0.646649
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.9368,
+          "samples_s": [
+            0.412508,
+            0.414801,
+            0.412535,
+            0.409601,
+            0.416298
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.9126,
+          "samples_s": [
+            0.421392,
+            0.416805,
+            0.417138,
+            0.416559,
+            0.417716
+          ]
+        }
+      ]
+    },
+    {
+      "id": "binarytrees",
+      "args": [
+        "16"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 3,
+        "optimized_loops": 3,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6991,
+          "samples_s": [
+            15.143844,
+            14.976949,
+            15.159635,
+            15.082207,
+            15.216197
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3694,
+          "samples_s": [
+            0.287828,
+            0.290037,
+            0.288409,
+            0.282657,
+            0.279215
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.7063,
+          "samples_s": [
+            0.370452,
+            0.374297,
+            0.373733,
+            0.371035,
+            0.372666
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4772,
+          "samples_s": [
+            0.354864,
+            0.340473,
+            0.347098,
+            0.342956,
+            0.350018
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.3238,
+          "samples_s": [
+            0.271253,
+            0.266226,
+            0.26845,
+            0.264919,
+            0.264645
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.9949,
+          "samples_s": [
+            0.425824,
+            0.538357,
+            0.422263,
+            0.555008,
+            0.54841
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.7654,
+          "samples_s": [
+            0.329775,
+            0.3332,
+            0.324129,
+            0.32519,
+            0.328556
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mandelbrot",
+      "args": [
+        "3000"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 3,
+        "optimized_loops": 3,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6457,
+          "samples_s": [
+            7.228003,
+            7.206077,
+            7.202114,
+            7.020347,
+            6.873439
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3582,
+          "samples_s": [
+            0.45334,
+            0.461112,
+            0.463434,
+            0.457452,
+            0.465573
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.383,
+          "samples_s": [
+            0.457808,
+            0.457036,
+            0.456632,
+            0.456156,
+            0.453835
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4423,
+          "samples_s": [
+            0.463031,
+            0.461119,
+            0.461026,
+            0.465646,
+            0.461558
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.2946,
+          "samples_s": [
+            0.45389,
+            0.455495,
+            0.461159,
+            0.47918,
+            0.466999
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.9799,
+          "samples_s": [
+            0.455554,
+            0.450976,
+            0.450208,
+            0.457089,
+            0.451277
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.756,
+          "samples_s": [
+            0.45415,
+            0.447784,
+            0.446476,
+            0.451892,
+            0.448273
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fannkuch",
+      "args": [
+        "10"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 8,
+        "optimized_loops": 8,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6695,
+          "samples_s": [
+            2.708749,
+            2.738682,
+            2.71224,
+            2.707069,
+            2.717362
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3871,
+          "samples_s": [
+            0.165651,
+            0.163538,
+            0.165947,
+            0.164556,
+            0.168375
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.6607,
+          "samples_s": [
+            0.193748,
+            0.19141,
+            0.196468,
+            0.194013,
+            0.195073
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4797,
+          "samples_s": [
+            0.180929,
+            0.189088,
+            0.185752,
+            0.189706,
+            0.192524
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.297,
+          "samples_s": [
+            0.173275,
+            0.170366,
+            0.171655,
+            0.174602,
+            0.169563
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 1.0202,
+          "samples_s": [
+            0.178783,
+            0.184043,
+            0.185378,
+            0.181701,
+            0.180793
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.5939,
+          "samples_s": [
+            0.247102,
+            0.2435,
+            0.25427,
+            0.24744,
+            0.241705
+          ]
+        }
+      ]
+    },
+    {
+      "id": "entities",
+      "args": [
+        "3000000"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 3,
+        "optimized_loops": 3,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6508,
+          "samples_s": [
+            1.869262,
+            1.849507,
+            1.867082,
+            1.853869,
+            1.834393
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3707,
+          "samples_s": [
+            0.481293,
+            0.48544,
+            0.478307,
+            0.490761,
+            0.496808
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.5719,
+          "samples_s": [
+            0.476044,
+            0.495062,
+            0.488237,
+            0.494122,
+            0.487091
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4663,
+          "samples_s": [
+            0.486924,
+            0.48417,
+            0.492464,
+            0.486887,
+            0.484501
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.2715,
+          "samples_s": [
+            0.527084,
+            0.522354,
+            0.525811,
+            0.522827,
+            0.524314
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.9065,
+          "samples_s": [
+            0.512644,
+            0.503838,
+            0.507111,
+            0.506721,
+            0.506481
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 12.0549,
+          "samples_s": [
+            0.549774,
+            0.578443,
+            0.564908,
+            0.563104,
+            0.561143
+          ]
+        }
+      ]
+    },
+    {
+      "id": "listgrowth",
+      "args": [
+        "2000000"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 2,
+        "optimized_loops": 2,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6575,
+          "samples_s": [
+            1.540275,
+            1.51093,
+            1.526721,
+            1.536006,
+            1.500153
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.357,
+          "samples_s": [
+            0.368714,
+            0.370224,
+            0.379335,
+            0.366906,
+            0.373327
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.5506,
+          "samples_s": [
+            0.831009,
+            0.819801,
+            0.840352,
+            0.83879,
+            0.816975
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4793,
+          "samples_s": [
+            0.422724,
+            0.415614,
+            0.421602,
+            0.43007,
+            0.425922
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.3175,
+          "samples_s": [
+            1.779195,
+            1.721062,
+            1.812931,
+            1.867437,
+            1.750716
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.8835,
+          "samples_s": [
+            1.596068,
+            1.621361,
+            1.803498,
+            1.815635,
+            1.836885
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.7959,
+          "samples_s": [
+            0.682002,
+            0.598721,
+            0.630075,
+            0.616452,
+            0.600643
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ntree",
+      "args": [
+        "10"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 3,
+        "optimized_loops": 3,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.6728,
+          "samples_s": [
+            4.899935,
+            4.888881,
+            4.815923,
+            4.788052,
+            4.827098
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3738,
+          "samples_s": [
+            0.47054,
+            0.471153,
+            0.476147,
+            0.474803,
+            0.47016
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.7657,
+          "samples_s": [
+            0.765184,
+            0.762511,
+            0.78232,
+            0.771619,
+            0.767222
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4534,
+          "samples_s": [
+            0.317821,
+            0.316883,
+            0.314184,
+            0.317077,
+            0.31496
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.2969,
+          "samples_s": [
+            0.494976,
+            0.526693,
+            0.53014,
+            0.535945,
+            0.531291
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.8567,
+          "samples_s": [
+            1.370473,
+            1.373992,
+            1.372478,
+            1.36396,
+            1.377529
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 11.8897,
+          "samples_s": [
+            0.796131,
+            0.792056,
+            0.790202,
+            0.780715,
+            0.783383
+          ]
+        }
+      ]
+    },
+    {
+      "id": "treecopy",
+      "args": [
+        "18"
+      ],
+      "profile": "input",
+      "fold": {
+        "plain_loops": 1,
+        "optimized_loops": 1,
+        "observed": "not folded"
+      },
+      "rows": [
+        {
+          "lang": "zane",
+          "variant": "plain",
+          "build_s": 0.7082,
+          "samples_s": [
+            1.676776,
+            1.682959,
+            1.669525,
+            1.656967,
+            1.636188
+          ]
+        },
+        {
+          "lang": "c",
+          "variant": "plain",
+          "build_s": 0.3714,
+          "samples_s": [
+            0.283183,
+            0.280327,
+            0.284505,
+            0.271513,
+            0.264787
+          ]
+        },
+        {
+          "lang": "cpp",
+          "variant": "plain",
+          "build_s": 0.6839,
+          "samples_s": [
+            0.334112,
+            0.328139,
+            0.335367,
+            0.329552,
+            0.336819
+          ]
+        },
+        {
+          "lang": "rust",
+          "variant": "plain",
+          "build_s": 0.4576,
+          "samples_s": [
+            0.410699,
+            0.401284,
+            0.403772,
+            0.400202,
+            0.415418
+          ]
+        },
+        {
+          "lang": "go",
+          "variant": "plain",
+          "build_s": 0.2768,
+          "samples_s": [
+            0.242987,
+            0.256597,
+            0.254065,
+            0.256182,
+            0.251888
+          ]
+        },
+        {
+          "lang": "d",
+          "variant": "plain",
+          "build_s": 0.9638,
+          "samples_s": [
+            0.381003,
+            0.380242,
+            0.385738,
+            0.4227,
+            0.388474
+          ]
+        },
+        {
+          "lang": "zig",
+          "variant": "plain",
+          "build_s": 12.2848,
+          "samples_s": [
+            0.315181,
+            0.305549,
+            0.319319,
+            0.313048,
+            0.302516
+          ]
+        }
+      ]
+    }
+  ]
+}

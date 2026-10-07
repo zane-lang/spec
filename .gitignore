@@ -1,3 +1,7 @@
-bench/__pycache__/
+memorybench/__pycache__/
+langbench/__pycache__/
+langbench/out/
+langbench/build/
 .mavis/
-bench/zane_bench
+memorybench/zane_bench
+langbench/.devbox/

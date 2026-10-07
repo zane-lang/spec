@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.2/.schema/devbox.schema.json",
+  "packages": {
+    "clang_19": "19.1.7",
+    "rustc": "1.98.1",
+    "go": "1.27.1",
+    "ldc": "1.42.0",
+    "zig": "0.16.0"
+  }
+}

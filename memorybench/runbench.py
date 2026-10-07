@@ -23,10 +23,10 @@ renders the page from what it just measured and leaves the file alone, and
 --save is the separate act of pinning.
 
 Usage:
-    python3 bench/runbench.py                 # compile, run, render
-    python3 bench/runbench.py --save          # ... and pin the run as committed results
-    python3 bench/runbench.py --from-file     # render from the committed JSON
-    python3 bench/runbench.py --json PATH     # render from an arbitrary results file
+    python3 memorybench/runbench.py                 # compile, run, render
+    python3 memorybench/runbench.py --save          # ... and pin the run as committed results
+    python3 memorybench/runbench.py --from-file     # render from the committed JSON
+    python3 memorybench/runbench.py --json PATH     # render from an arbitrary results file
 """
 
 import argparse

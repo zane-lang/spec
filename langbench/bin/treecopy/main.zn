@@ -1,0 +1,50 @@
+/// A perfect binary tree N levels deep, copied whole 20 times; each copy is
+/// checked and dropped. N is the program's first argument.
+package treecopy;
+
+import core$;
+import bench$;
+
+type Tree = variant {
+	leaf Int;
+	node Branch;
+}
+
+type Branch = struct {
+	value Int;
+	left Tree;
+	right Tree;
+}
+
+Branch(value Int, left Tree, right Tree) => init{ value; left; right; }
+
+/// A perfect tree `depth` levels below a root holding `value`; a node holding
+/// v has children holding 2v and 2v + 1.
+Tree make(depth Int, value Int) {
+	if(depth == 0) {
+		return Tree.leaf(value);
+	}
+	return Tree.node(Branch(value, make(depth - Int(1), value * 2),
+		make(depth - Int(1), value * 2 + 1)));
+}
+
+/// The sum of the values the tree holds.
+Int sum(tree Tree) => match (tree) {
+	v leaf => v;
+	b node => b.value + sum(b.left) + sum(b.right);
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	depth Int = size(runtime, Int(12));
+	original Tree = make(depth, Int(1));
+	total Int = Int(0);
+	round Int = Int(1);
+	round!to(Int(20)) {
+		copy Tree = original;
+		total = total + sum(copy);
+	}
+	console!print(String(depth) + " " + String(total) + " " + String(sum(original)));
+	return Unit();
+}

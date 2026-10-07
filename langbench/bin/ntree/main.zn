@@ -1,0 +1,51 @@
+/// Trees whose nodes own a growable list of children: a complete four-way
+/// tree N levels deep, built, counted and torn down 10 times. N is the
+/// program's first argument.
+package ntree;
+
+import core$;
+import bench$;
+
+type Node = #struct {
+	children List<Node>;
+}
+
+Node() => init{
+	children = List(Node);
+}
+
+/// A complete four-way tree `depth` levels below its root.
+^Node grow(depth Int) {
+	node ^Node = Node();
+	if(Int(0) < depth) {
+		k Int = Int(1);
+		k!to(Int(4)) {
+			node.children!push(grow(depth - Int(1)));
+		}
+	}
+	return node;
+}
+
+/// How many nodes the tree has.
+Int count(node Node) {
+	total Int = Int(1);
+	k Int = Int(1);
+	k!to(node.children:size()) {
+		total = total + count(node.children[k]);
+	}
+	return total;
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	depth Int = size(runtime, Int(6));
+	total Int = Int(0);
+	round Int = Int(1);
+	round!to(Int(10)) {
+		tree Node = grow(depth);
+		total = total + count(tree);
+	}
+	console!print(String(depth) + " " + String(total));
+	return Unit();
+}
