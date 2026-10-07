@@ -91,6 +91,7 @@ A leading `_` marks an identifier as private without changing the lexical class 
 
 - A field beginning with `_` is private to methods whose first parameter is `this` for that type. See [`types.md`](types.md) §2.3.
 - A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are symbol-named and remain public. See [`packages.md`](packages.md) §4.
+- A top-level library package whose name begins with `_` is private to its project. See [`packages.md`](packages.md) §4.4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
