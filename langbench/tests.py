@@ -137,6 +137,102 @@ TESTS = [
         "check_expected": None,
         "variants": {},
     },
+    {
+        "id": "mandelbrot",
+        "title": "Mandelbrot set, counted",
+        "profile": "input",
+        "summary": "Iterates z = z² + c for every point of an N by N grid and "
+                   "counts the points that stay within radius 2 for 50 "
+                   "iterations. Floating-point arithmetic in a tight loop "
+                   "with an early exit; every language does the same "
+                   "operations in the same order, so all count the same "
+                   "points. The Benchmarks Game version writes a bitmap; "
+                   "this one counts, since Zane has no bit operations.",
+        "args": ["3000"],
+        "expected": "3000 3572354\n",
+        "check_args": ["200"],
+        "check_expected": "200 15899\n",
+        "variants": {},
+    },
+    {
+        "id": "fannkuch",
+        "title": "Fannkuch-redux (Benchmarks Game)",
+        "profile": "input",
+        "summary": "Visits every permutation of N items and flips each one, "
+                   "reversing its first k + 1 items while its first item k "
+                   "is not 0, then prints a checksum and the most flips any "
+                   "permutation took. Small integer lists, indexed and "
+                   "rewritten in place. Zane has no while loop, so its "
+                   "version counts the N! permutations with a bounded loop "
+                   "and flips by recursion.",
+        "args": ["10"],
+        "expected": "73196 38\n",
+        "check_args": ["7"],
+        "check_expected": "228 16\n",
+        "variants": {},
+    },
+    {
+        "id": "entities",
+        "title": "Scanning entities held inline",
+        "profile": "input",
+        "summary": "Fills a list with N entities of four 8-byte fields each, "
+                   "held inline, then sums one field over all of them 100 "
+                   "times. A read-only scan over contiguous storage, the "
+                   "inline layout of memorybench's Test 4.",
+        "args": ["3000000"],
+        "expected": "3000000 149999950000000\n",
+        "check_args": ["100000"],
+        "check_expected": "100000 166665000000\n",
+        "variants": {},
+    },
+    {
+        "id": "listgrowth",
+        "title": "Growing a list by appending",
+        "profile": "input",
+        "summary": "Appends N entities to an empty list one at a time, then "
+                   "drops it, 20 times over. It measures how a growable list "
+                   "reallocates as it fills, as memorybench's Test 5 does "
+                   "for Zane's backing stores. Every language starts from "
+                   "an empty list and lets its own growth policy run.",
+        "args": ["2000000"],
+        "expected": "2000000 53333320\n",
+        "check_args": ["100000"],
+        "check_expected": "100000 2666660\n",
+        "variants": {},
+    },
+    {
+        "id": "ntree",
+        "title": "Building and tearing down a tree of lists",
+        "profile": "input",
+        "summary": "Builds a complete four-way tree N levels deep in which "
+                   "every node owns a growable list of its children, counts "
+                   "its nodes, and drops it, 10 times over. Teardown walks "
+                   "every node and frees every child list, the cascade of "
+                   "memorybench's Test 10. Go and D leave the work to their "
+                   "garbage collectors.",
+        "args": ["10"],
+        "expected": "10 13981010\n",
+        "check_args": ["6"],
+        "check_expected": "6 54610\n",
+        "variants": {},
+    },
+    {
+        "id": "treecopy",
+        "title": "Deep-copying a tree",
+        "profile": "input",
+        "summary": "Builds a perfect binary tree N levels deep once, then "
+                   "copies it whole 20 times, summing and dropping each "
+                   "copy. In Zane the tree is a value with boxed members, so "
+                   "an ordinary assignment copies all of it, the deep copy "
+                   "of memorybench's Test 14; the other languages call a "
+                   "clone written for the purpose or derived by the "
+                   "compiler.",
+        "args": ["18"],
+        "expected": "18 2748773826560 137438691328\n",
+        "check_args": ["12"],
+        "check_expected": "12 671006720 33550336\n",
+        "variants": {},
+    },
 ]
 
 

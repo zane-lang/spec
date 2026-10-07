@@ -1,0 +1,33 @@
+/// A growable list of entities, filled by appending N items one at a time,
+/// built and dropped 20 times. N is the program's first argument.
+package listgrowth;
+
+import core$;
+import bench$;
+
+type Entity = struct {
+	id Int;
+	x Float;
+	y Float;
+	hp Int;
+}
+
+Entity(id Int, x Float, y Float, hp Int) => init{ id; x; y; hp; }
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(100000));
+	total Int = Int(0);
+	round Int = Int(1);
+	round!to(Int(20)) {
+		list List<Entity> = List(Entity);
+		i Int = Int(1);
+		i!to(n) {
+			list!push(Entity(i, Float(0.5) * Float(i), Float(0.25) * Float(i), i / 3));
+		}
+		total = total + list[list:size()].hp + list:size();
+	}
+	console!print(String(n) + " " + String(total));
+	return Unit();
+}

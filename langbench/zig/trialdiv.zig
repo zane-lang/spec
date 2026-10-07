@@ -25,7 +25,7 @@ fn isPrime(k: u64, table: []const u64) bool {
 }
 
 pub fn main(init: std.process.Init) !void {
-    const gpa = init.gpa;
+    const gpa = std.heap.smp_allocator;
     const table = try primesBelow(gpa, 4000);
     defer gpa.free(table);
     const args = try init.minimal.args.toSlice(init.arena.allocator());

@@ -16,3 +16,21 @@ The prime table needs no input and could be computed while compiling; the count 
 
 [binarytrees]
 The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.
+
+[mandelbrot]
+Nothing here allocates, so the gap between Zane and the others is the cost of calling core for arithmetic: every multiplication, addition and comparison on a Float is a call into core's separately compiled object, where the other languages compile each to a single instruction.
+
+[fannkuch]
+The inner loops index and rewrite small lists in place. Zane's version also differs in shape: with no while loop, the flips are counted by recursion and the next permutation is found in a bounded loop that returns early, so part of its time is calls the other languages do not make.
+
+[entities]
+The entities are laid out inline in every language, so this is the plainest scan the bench has: one load and one add per entity. In Zane each list index and each addition is a call into core, and that is what the time shows.
+
+[listgrowth]
+Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md §3.6); C doubles from four elements through realloc, and the others follow their standard library.
+
+[ntree]
+Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown.
+
+[treecopy]
+A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md §2.3). The other languages do the same through a clone function. The original is read after the last copy, so no copy can be turned into a move.

@@ -4,8 +4,9 @@ const std = @import("std");
 const bound = 20000;
 
 pub fn main(init: std.process.Init) !void {
-    const composite = try init.gpa.alloc(bool, bound);
-    defer init.gpa.free(composite);
+    const gpa = std.heap.smp_allocator;
+    const composite = try gpa.alloc(bool, bound);
+    defer gpa.free(composite);
     @memset(composite, false);
     var count: u64 = 0;
     var sum: u64 = 0;

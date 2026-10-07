@@ -1,0 +1,36 @@
+/// N entities held inline in one list, scanned 100 times to sum their hit
+/// points. N is the program's first argument.
+package entities;
+
+import core$;
+import bench$;
+
+type Entity = struct {
+	id Int;
+	x Float;
+	y Float;
+	hp Int;
+}
+
+Entity(id Int, x Float, y Float, hp Int) => init{ id; x; y; hp; }
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(100000));
+	entities List<Entity> = List(Entity);
+	i Int = Int(1);
+	i!to(n) {
+		entities!push(Entity(i, Float(0.5) * Float(i), Float(0.25) * Float(i), i / 3));
+	}
+	total Int = Int(0);
+	pass Int = Int(1);
+	pass!to(Int(100)) {
+		k Int = Int(1);
+		k!to(n) {
+			total = total + entities[k].hp;
+		}
+	}
+	console!print(String(n) + " " + String(total));
+	return Unit();
+}

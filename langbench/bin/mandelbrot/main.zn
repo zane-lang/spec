@@ -1,0 +1,42 @@
+/// The Mandelbrot set on an N by N grid: how many points stay bounded for 50
+/// iterations. N is the program's first argument.
+package mandelbrot;
+
+import core$;
+import bench$;
+
+/// Whether the point stays within radius 2 for 50 iterations.
+Bool bounded(cr Float, ci Float) {
+	zr Float = Float(0.0);
+	zi Float = Float(0.0);
+	i Int = Int(1);
+	i!to(Int(50)) {
+		tr Float = zr * zr + ~(zi * zi) + cr;
+		zi = Float(2.0) * zr * zi + ci;
+		zr = tr;
+		if(Float(4.0) < zr * zr + zi * zi) {
+			return Bool(false);
+		}
+	}
+	return Bool(true);
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(200));
+	inside Int = Int(0);
+	y Int = Int(0);
+	y!to(n - Int(1)) {
+		x Int = Int(0);
+		x!to(n - Int(1)) {
+			cr Float = Float(2.0) * Float(x) / Float(n) + ~Float(1.5);
+			ci Float = Float(2.0) * Float(y) / Float(n) + ~Float(1.0);
+			if(bounded(cr, ci)) {
+				inside = inside + 1;
+			}
+		}
+	}
+	console!print(String(n) + " " + String(inside));
+	return Unit();
+}

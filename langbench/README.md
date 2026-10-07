@@ -56,4 +56,24 @@ in `explanations.txt` can describe, and update those notes in the same change.
 Every language builds at its level-2 optimization, keeps the safety checks it
 has by default, and is written the way that language is usually written.
 `primes` also has a variant that asks the compiler to evaluate the sieve, in
-the languages that can ask.
+the languages that can ask. The Zig programs allocate through
+`std.heap.smp_allocator`, because in ReleaseSafe the allocator `main` is
+handed is the leak-checking debug allocator.
+
+## Tests that need more of the language
+
+These tests are planned and cannot be written in idiomatic Zane with the
+compiler release this project pins. Each names what it is missing.
+
+| test | what it measures | what Zane needs first |
+| --- | --- | --- |
+| n-body | floating-point physics over a few bodies (Benchmarks Game) | a square root |
+| spectral-norm | repeated matrix-vector products (Benchmarks Game) | a square root, for the final norm |
+| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) | removing an element from a `List` |
+| game loop | entities spawned, updated and killed every frame (memorybench Test 7) | removing an element from a `List` |
+| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) | removing an element from a `List` |
+| concurrent scan | four shards of one array summed on four threads (memorybench Test 12) | `spawn` in the compiler |
+
+A square root is a math function, and the language has none yet. `core`'s
+`List` can be appended to, indexed and overwritten, but not shrunk.
+`concurrency.md` specifies `spawn`, but the compiler does not implement it.
