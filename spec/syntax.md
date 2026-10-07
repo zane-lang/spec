@@ -239,6 +239,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 ```zane
 @primitives$name
 @concepts$name
+@operators$name
 @controlflow$name
 @runtime$name
 @program$name
@@ -246,13 +247,20 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: the machine-word scalars `@primitives$Int`, `@primitives$Float`, and `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
+- `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
-Each intrinsic operation has exactly one signature, so intrinsics are not overloaded. Methods are the exception: a method's subject is one of its parameters, so intrinsic methods that share a name on different types are overloads, told apart by the subject's type like any other overload ([`functions.md`](functions.md) §4.1).
+An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
+
+- intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
+- each machine operation of `@operators$`, which has one signature per operand type it takes ([`operators.md`](operators.md) §2.6);
+- the constructors of a scalar primitive, one from its literal's concept and one from each scalar it converts from exactly ([`types.md`](types.md) §2.9).
+
+An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 
 A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
 
@@ -274,11 +282,13 @@ These compiler-provided concept types represent source literals before they are 
 
 The **leaf** concept types — `Type`, `@concepts$Int`, and `@concepts$Float` — each represent a single compile-time value wherever they appear, including as an argument to a verb. `@concepts$String` instead carries literal text and optional interpolation ([`types.md`](types.md) §2.8); an interpolation may be a runtime value. The entries of an array or map literal are ordinary expressions and may likewise be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no compile-time guarantee; a block argument (§2.12) is not a value at all.
 
-A number or string literal becomes storage through the one constructor of the matching storage primitive (see [`types.md`](types.md) §2.7):
+A number or string literal becomes storage through a storage primitive's constructor from its concept (see [`types.md`](types.md) §2.7). Each primitive has one, and an integer literal may become either integer primitive, a float literal either float primitive:
 
 ```zane
-@primitives$Int(value @concepts$Int)
-@primitives$Float(value @concepts$Float)
+@primitives$I32(value @concepts$Int)
+@primitives$I64(value @concepts$Int)
+@primitives$F32(value @concepts$Float)
+@primitives$F64(value @concepts$Float)
 @primitives$String(value @concepts$String)
 ```
 
@@ -845,7 +855,7 @@ Zane has no control-flow grammar. Branching, repetition, and exiting are all cal
 
 ```zane
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
-@controlflow$repeat(count @primitives$Int, body @concepts$Block)
+@controlflow$repeat(count @primitives$I64, body @concepts$Block)
 @controlflow$exitFromCall()
 ```
 
