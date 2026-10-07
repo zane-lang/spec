@@ -193,7 +193,15 @@ The console's own method borrows a string primitive ([`types.md`](types.md) §2.
 @primitives$Unit print(this @runtime$Console, text @primitives$String) mut
 ```
 
-Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can.
+The runtime's `arguments` method gives the arguments the program was started with:
+
+```zane
+^@primitives$List<@primitives$String> arguments(this @runtime$Runtime)
+```
+
+It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
+
+Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time (§5.3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 > **Story:** [`stories/effects.md`](../stories/effects.md#the-console-moves-into-core) — "The console moves into `core`".
@@ -246,3 +254,4 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
+| Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time |
