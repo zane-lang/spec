@@ -122,7 +122,7 @@ Zane does not specify a separate bitwise-complement meaning for `~`.
 
 ### 2.6 The machine operations operators are written over
 
-The **machine operations** on storage primitives are the functions of `@operators$` ([`syntax.md`](syntax.md) §2.7). They are called like any function. Each arithmetic operation and comparison has one overload per scalar primitive, `@primitives$I32`, `I64`, `F32`, and `F64`, and takes both operands of that one type:
+The **machine operations** on storage primitives are the functions of `@operators$` ([`syntax.md`](syntax.md) §2.7). They are called like any function. Each arithmetic operation and comparison has one overload per scalar primitive, `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, and takes both operands of that one type:
 
 | Operation | Signature |
 |---|---|

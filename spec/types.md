@@ -214,10 +214,10 @@ Every other conversion can lose a value, and is a named constructor (§3.4) whos
 
 | Constructor | Source | Result |
 |---|---|---|
-| `@primitives$I32.wrap` | `I64` | The source's low 32 bits, read as a signed integer |
-| `@primitives$I32.truncate`, `@primitives$I64.truncate` | `F32`, `F64` | The source rounded toward zero |
-| `@primitives$F32.round` | `I32`, `I64`, `F64` | The `F32` nearest the source |
-| `@primitives$F64.round` | `I64` | The `F64` nearest the source |
+| `@primitives$I32.wrap` | `@primitives$I64` | The source's low 32 bits, read as a signed integer |
+| `@primitives$I32.truncate`, `@primitives$I64.truncate` | `@primitives$F32`, `@primitives$F64` | The source rounded toward zero |
+| `@primitives$F32.round` | `@primitives$I32`, `@primitives$I64`, `@primitives$F64` | The `@primitives$F32` nearest the source |
+| `@primitives$F64.round` | `@primitives$I64` | The `@primitives$F64` nearest the source |
 
 A conversion rounds once, from the source straight to the target. `truncate` stops the program when its source is NaN, or when the source rounded toward zero lies outside the target's range: what the program wrote before is kept, and it ends with a failing status.
 

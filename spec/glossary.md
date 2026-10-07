@@ -344,7 +344,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.46 scalar primitive
 
-- **Meaning:** `@primitives$I32`, `I64`, `F32`, or `F64`: a signed integer or IEEE 754 float of the width its name gives. Each is built from its literal's concept, and converts to each other through a constructor of the target, named for its loss when it can lose a value.
+- **Meaning:** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, or `@primitives$F64`: a signed integer or IEEE 754 float of the width its name gives. Each is built from its literal's concept, and converts to each other through a constructor of the target, named for its loss when it can lose a value.
 - **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out the kind and the width, which is all that tells the four apart.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
 
