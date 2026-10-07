@@ -1,0 +1,60 @@
+/// The Benchmarks Game's binary-trees: perfect binary trees built, walked
+/// and torn down, many small ones and one that lives through the run.
+package binarytrees;
+
+import core$;
+import bench$;
+
+type Tree = variant {
+	leaf Unit;
+	node Pair;
+}
+
+type Pair = struct {
+	left Tree;
+	right Tree;
+}
+
+Pair(left Tree, right Tree) => init{ left; right; }
+
+/// A perfect tree `depth` levels below its root.
+Tree make(depth Int) {
+	if(depth == 0) {
+		return Tree.leaf(Unit());
+	}
+	return Tree.node(Pair(make(depth - Int(1)), make(depth - Int(1))));
+}
+
+/// How many nodes the tree has.
+Int check(tree Tree) => match (tree) {
+	l leaf => Int(1);
+	p node => Int(1) + check(p.left) + check(p.right);
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(10));
+	maxDepth Int = n;
+	if(maxDepth < 6) {
+		maxDepth = Int(6);
+	}
+	stretch Int = maxDepth + 1;
+	console!print("stretch " + String(stretch) + " " + String(check(make(stretch))));
+	longLived Tree = make(maxDepth);
+	depth Int = Int(4);
+	rounds Int = (maxDepth - Int(4)) / 2 + 1;
+	r Int = Int(1);
+	r!to(rounds) {
+		iterations Int = power(maxDepth - depth + 4);
+		total Int = Int(0);
+		i Int = Int(1);
+		i!to(iterations) {
+			total = total + check(make(depth));
+		}
+		console!print(String(iterations) + " " + String(depth) + " " + String(total));
+		depth = depth + 2;
+	}
+	console!print("long " + String(maxDepth) + " " + String(check(longLived)));
+	return Unit();
+}
