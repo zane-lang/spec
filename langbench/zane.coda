@@ -3,5 +3,5 @@ version-pattern v*.+
 
 deps [
     key version from
-    core v0.1 ../../core
+    core v0.0 source
 ]
