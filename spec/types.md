@@ -61,11 +61,11 @@ pos = Vec2(3.0, 4.0);    // legal: overwrites the whole value
 
 ### 2.3 Field visibility is name-based
 
-A field whose name begins with `_` is private to the package that declares its type. Any declaration in that package may name it — read it, write it, or assign it in `init{ }` — whether it is a method, function, operator, constructor, lambda, or constant. No declaration in another package may name it, a method whose subject is that type included ([`functions.md`](functions.md) §6.3).
+A field whose name begins with `_` is private to the package that declares its type. Any declaration in that package may name it — read it, write it, or assign it in `init{ }` — whether it is a method, function, operator, constructor, subscript, lambda, or constant. No declaration in another package may name it, a method whose subject is that type included ([`functions.md`](functions.md) §6.3).
 
 All fields whose names do not begin with `_` are public.
 
-A leading `_` thus draws the same boundary on a field as on a package-scope declaration ([`packages.md`](packages.md) §4.1): the package is the unit of privacy. A type and the verbs written alongside it in its package work on the same internals, so all of them reach its `_` fields.
+A leading `_` thus draws the same boundary on a field as on a package-scope declaration ([`packages.md`](packages.md) §4.1): the package is the unit of privacy. A type and the declarations written alongside it in its package work on the same internals, so all of them reach its `_` fields.
 
 ```zane
 package Graph
