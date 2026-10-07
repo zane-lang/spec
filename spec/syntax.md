@@ -258,7 +258,7 @@ An intrinsic operation has one signature, with three exceptions, each an overloa
 
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
 - each machine operation of `@operators$`, which has one signature per operand type it takes ([`operators.md`](operators.md) §2.6);
-- the constructors of a scalar primitive, one from its literal's concept and one from each scalar it converts from exactly ([`types.md`](types.md) §2.9).
+- the constructors of a scalar primitive: the anonymous one, with one signature from its literal's concept and one from each scalar it converts from exactly, and each named one, with one signature per scalar it converts from ([`types.md`](types.md) §2.9).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 
