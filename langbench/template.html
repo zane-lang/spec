@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zane Language Benchmark</title>
+<style>
+  :root {
+    --bg:#0d0f12;--surface:#151820;--border:#242830;--text:#e8eaf0;--muted:#6b7280;
+    --accent:#7c6ff7;--tab-bg:#1c2028;--tab-act:#242a35;--info-bg:#131820;--divider:#1e242e;--label:#8b92a0;
+    --track:#151a22;--whisker:#e8eaf0;--prose:#ccd1dc;--good:#3aab76;--warn:#d9a441;--bad:#d9625b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:40px 16px 60px;max-width:980px;margin:0 auto;}
+  header{margin-bottom:28px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+  header h1{font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px;}
+  header p{font-size:12px;color:var(--muted);}
+  header p span{color:var(--accent);}
+  .banner{background:var(--info-bg);border:1px dashed var(--border);border-radius:6px;padding:14px 16px;margin-bottom:18px;font-size:12px;color:var(--prose);}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px;}
+  .tab{padding:5px 11px;font-size:11px;font-family:inherit;font-weight:500;border-radius:4px;border:1px solid var(--border);background:var(--tab-bg);color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap;}
+  .tab.on{background:var(--tab-act);color:var(--text);border-color:#363d4d;}
+  .tab:hover:not(.on){border-color:#363d4d;color:var(--text);}
+  .info{background:var(--info-bg);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:18px;}
+  .info-title{font-size:13px;font-weight:600;margin-bottom:8px;}
+  .info p{font-size:11.5px;color:var(--prose);line-height:1.7;max-width:80ch;}
+  .facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:11.5px;}
+  .facts span{color:var(--label);}
+  .facts b{font-weight:500;color:var(--text);}
+  .fold{display:inline-block;padding:1px 7px;border-radius:3px;font-size:11px;border:1px solid currentColor;}
+  .fold.folded{color:var(--good);} .fold.partly{color:var(--warn);} .fold.not{color:var(--bad);} .fold.none{color:var(--muted);}
+
+  .chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:12px;flex-wrap:wrap;}
+  .chart-cap{font-size:11px;color:var(--muted);}
+  .toggle{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  .toggle button{padding:3px 10px;font-size:10.5px;font-family:inherit;border:none;background:var(--tab-bg);color:var(--muted);cursor:pointer;}
+  .toggle button.on{background:var(--tab-act);color:var(--text);}
+
+  .chart{display:flex;flex-direction:column;gap:8px;}
+  .row{display:grid;grid-template-columns:150px 1fr 190px;gap:12px;align-items:center;}
+  .rname{font-size:11.5px;color:var(--label);text-align:right;line-height:1.35;}
+  .row.zane .rname{color:var(--text);font-weight:600;}
+  .rtrack{position:relative;height:24px;background:var(--track);border-radius:4px;}
+  .rbar{position:absolute;left:0;top:0;bottom:0;border-radius:4px 3px 3px 4px;min-width:2px;transition:width .35s cubic-bezier(.2,.8,.2,1);}
+  .rwhisker{position:absolute;top:50%;transform:translateY(-50%);height:1px;background:var(--whisker);opacity:.4;}
+  .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-size:11.5px;}
+  .rmult{font-size:10.5px;color:var(--muted);}
+  .row.fastest .rmult{color:var(--good);}
+
+  .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
+  .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
+  .notes p{font-size:12.5px;line-height:1.85;color:var(--prose);max-width:74ch;margin-bottom:10px;}
+  .notes .stale{font-size:11.5px;font-style:italic;color:var(--muted);}
+
+  .about{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);font-size:11.5px;color:var(--muted);}
+  .about h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:10px;}
+  .about table{border-collapse:collapse;margin-bottom:12px;width:100%;}
+  .about td{padding:3px 12px 3px 0;vertical-align:top;}
+  .about td:first-child{color:var(--label);white-space:nowrap;}
+  .about td:last-child{color:var(--prose);overflow-wrap:anywhere;}
+  footer{margin-top:28px;font-size:10.5px;color:var(--muted);}
+  footer a{color:var(--label);}
+
+  @media (max-width:720px){
+    .row{grid-template-columns:1fr;gap:3px;}
+    .rname{text-align:left;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zane Language Benchmark</h1>
+  <p><span>the same programs in Zane, C, C++, Rust, Go, D and Zig</span> &mdash; each built by its own release compiler, timed as a whole process</p>
+</header>
+<div id="banner"></div>
+<div class="tabs" id="tabs"></div>
+<div class="info" id="info"></div>
+<div class="chart-head">
+  <span class="chart-cap" id="cap"></span>
+  <div class="toggle" id="metric">
+    <button data-m="run">run time</button>
+    <button data-m="build">build time</button>
+  </div>
+</div>
+<div class="chart" id="chart"></div>
+<div class="notes" id="notes"></div>
+<div class="about" id="about"></div>
+<footer>Source: <a href="https://github.com/zane-lang/spec/tree/main/langbench">zane-lang/spec, langbench/</a>. The pinned run comes from the maintainer's machine; absolute times do not compare across machines.</footer>
+
+<script>
+const DATA = __DATA_JSON__;
+
+const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441"};
+let current = 0, metric = "run";
+
+const el = (tag, cls, text) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+
+function seconds(s) {
+  if (s >= 10) return s.toFixed(1) + " s";
+  if (s >= 1) return s.toFixed(2) + " s";
+  if (s >= 0.001) return (s * 1000).toFixed(1) + " ms";
+  return (s * 1e6).toFixed(0) + " µs";
+}
+
+function foldClass(observed) {
+  return {"folded": "folded", "partly folded": "partly", "not folded": "not"}[observed] || "none";
+}
+
+function renderBanner() {
+  const box = document.getElementById("banner");
+  box.textContent = "";
+  if (!DATA.run) {
+    const p = el("div", "banner",
+      "No run is pinned yet. The page fills in once a run from the maintainer's machine is saved with langbench.py --save.");
+    box.appendChild(p);
+  } else if (!DATA.pinned) {
+    box.appendChild(el("div", "banner",
+      "These measurements are not the pinned run; the notes below describe the pinned one."));
+  }
+}
+
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.textContent = "";
+  DATA.tests.forEach((t, i) => {
+    const b = el("button", "tab" + (i === current ? " on" : ""), t.id);
+    b.onclick = () => { current = i; render(); };
+    tabs.appendChild(b);
+  });
+}
+
+function renderInfo(t) {
+  const info = document.getElementById("info");
+  info.textContent = "";
+  info.appendChild(el("div", "info-title", t.title));
+  info.appendChild(el("p", "", t.summary));
+  const facts = el("div", "facts");
+  const fact = (label, value) => {
+    const s = el("span", "", label + " ");
+    if (value instanceof Node) s.appendChild(value); else s.appendChild(el("b", "", value));
+    facts.appendChild(s);
+  };
+  fact("arguments", t.args.length ? t.args.join(" ") : "none");
+  fact("profile", t.profile);
+  fact("Zane build", el("span", "fold " + foldClass(t.fold.observed),
+    t.fold.observed + " (" + t.fold.optimized_loops + " of " + t.fold.plain_loops + " loops left)"));
+  info.appendChild(facts);
+  info.appendChild(el("p", "", t.profileText)).style.marginTop = "10px";
+}
+
+function renderChart(t) {
+  const chart = document.getElementById("chart");
+  chart.textContent = "";
+  const key = metric === "run" ? "median" : "build";
+  document.getElementById("cap").textContent = metric === "run"
+    ? "bar = median run · whisker = min–max · lower is faster"
+    : "bar = build time with the standard library and dependencies already built";
+  const rows = [...t.rows].sort((a, b) => a[key] - b[key]);
+  const top = Math.max(...rows.map(r => metric === "run" ? r.max : r.build));
+  const best = rows[0][key];
+  rows.forEach((r, i) => {
+    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") + (i === 0 ? " fastest" : ""));
+    row.appendChild(el("div", "rname", r.name + (r.variant === "plain" ? "" : " " + r.variant)));
+    const track = el("div", "rtrack");
+    const bar = el("div", "rbar");
+    bar.style.width = (100 * r[key] / top) + "%";
+    bar.style.background = COLORS[r.lang] || "#6b7280";
+    track.appendChild(bar);
+    if (metric === "run") {
+      const w = el("div", "rwhisker");
+      w.style.left = (100 * r.min / top) + "%";
+      w.style.width = Math.max(0.3, 100 * (r.max - r.min) / top) + "%";
+      track.appendChild(w);
+    }
+    row.appendChild(track);
+    const meta = el("div", "rmeta");
+    meta.appendChild(el("span", "", seconds(r[key])));
+    meta.appendChild(el("span", "rmult", i === 0 ? "fastest" : "×" + (r[key] / best).toFixed(1)));
+    row.appendChild(meta);
+    chart.appendChild(row);
+  });
+}
+
+function renderNotes(t) {
+  const notes = document.getElementById("notes");
+  notes.textContent = "";
+  if (!t.note.length) return;
+  notes.appendChild(el("h2", "", "Reading the results"));
+  if (!DATA.pinned) notes.appendChild(el("p", "stale", "These notes describe the pinned run, not the measurements shown."));
+  t.note.forEach(p => notes.appendChild(el("p", "", p)));
+}
+
+function renderAbout() {
+  const about = document.getElementById("about");
+  about.textContent = "";
+  about.appendChild(el("h2", "", "How it was run"));
+  const table = el("table");
+  const add = (k, v) => {
+    const tr = el("tr");
+    tr.appendChild(el("td", "", k));
+    tr.appendChild(el("td", "", v));
+    table.appendChild(tr);
+  };
+  const run = DATA.run;
+  if (run) {
+    add("date", run.date);
+    add("machine", run.machine.cpu + " · " + run.machine.os);
+    add("Zane release", run.zane.version + " · compiler " + (run.zane.compiler_commit || "?").slice(0, 10) +
+        " · core " + (run.zane.core_commit || "?").slice(0, 10));
+    add("runs", run.config.warmup + " untimed, then " + run.config.runs + " timed" + (run.config.quick ? " · quick sizes" : ""));
+  }
+  Object.entries(DATA.languages).forEach(([lang, l]) => {
+    const version = run && run.toolchains ? run.toolchains[lang] : "";
+    add(l.name, l.flags + (version ? " · " + version : ""));
+  });
+  about.appendChild(table);
+}
+
+function render() {
+  renderBanner();
+  renderTabs();
+  document.querySelectorAll("#metric button").forEach(b => b.classList.toggle("on", b.dataset.m === metric));
+  const t = DATA.tests[current];
+  const shown = !!t;
+  ["info", "chart", "notes"].forEach(id => document.getElementById(id).style.display = shown ? "" : "none");
+  document.querySelector(".chart-head").style.display = shown ? "" : "none";
+  if (shown) {
+    renderInfo(t);
+    renderChart(t);
+    renderNotes(t);
+  }
+  renderAbout();
+}
+
+document.querySelectorAll("#metric button").forEach(b => b.onclick = () => { metric = b.dataset.m; render(); });
+render();
+</script>
+</body>
+</html>

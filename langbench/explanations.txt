@@ -1,0 +1,18 @@
+# Notes on the results, one block per test, opened by "[test id]".
+# Lines starting with '#' are comments; a blank line starts a new paragraph.
+#
+# A note may quote numbers only from the pinned run in
+# langbench_results.json, and must be revised when a new run is pinned. No
+# run is pinned yet, so these notes describe what each test shows about the
+# compiler release the project pins (zane.coda), without figures.
+
+[primes]
+This program reads no input, so an optimized Zane build could compute it while compiling and leave only the print. The fold report shows it does not, yet: every operator the program uses is a function in core, and core is compiled separately, so the optimizer sees each call as unknown and stops there. The plain C++, Rust and D rows show what their optimizers do with the same loop unasked; the comptime rows show what the programmer writes to make them do it.
+
+Every row here runs in a few milliseconds, most of which is starting the process, so the run times barely separate the languages. The build times are the interesting column: the comptime rows pay for the sieve there.
+
+[trialdiv]
+The prime table needs no input and could be computed while compiling; the count needs N and cannot. In the Zane build neither happens at compile time, for the same reason as in primes. The run time also shows the cost of calling core: every comparison, division and list index in the inner loop is a call into core's separately compiled object, which no optimizer here can inline across.
+
+[binarytrees]
+The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.
