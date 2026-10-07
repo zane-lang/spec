@@ -102,10 +102,10 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The written constructor header is shaped around fields themselves rather than around separate parameter names.
 - **Canonical home:** [`types.md`](types.md) §3.3
 
-### 3.6 method-based privacy
+### 3.6 package privacy
 
-- **Meaning:** `_` fields are private to methods whose first parameter is `this` for that type, rather than to a package boundary.
-- **Why this name:** Privacy is granted by the method/subject relationship, not by where the function is declared.
+- **Meaning:** A `_` field is private to the package that declares its type: every verb in that package may name it, and none in another package may, a method on the type included.
+- **Why this name:** The package is the boundary, the same one a leading `_` draws on a package-scope declaration.
 - **Canonical home:** [`types.md`](types.md) §2.3
 
 ### 3.7 direct initialization
@@ -224,7 +224,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.26 capability marker
 
-- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants private-field access; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; a symbol name makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; a symbol name makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 
