@@ -351,7 +351,7 @@ const DATA = {
   {
    "id": "binarytrees",
    "title": "Binary trees (Benchmarks Game)",
-   "summary": "The Benchmarks Game's binary-trees at depth N: builds, walks and tears down perfect binary trees, many short-lived ones and one that lives through the run. It measures allocating and freeing many small owned objects. C, C++, Rust and Zig free each tree as it goes; Go and D leave theirs to a garbage collector; Zane's trees are values owned by their scope.",
+   "summary": "The Benchmarks Game's binary-trees at depth N: builds, walks and tears down perfect binary trees, many short-lived ones and one that lives through the run. It measures allocating and freeing many small owned objects. C, C++, Rust and Zig free each tree as it goes; Go and D leave theirs to a garbage collector; Zane's reference nodes own their children and transfer ownership into each parent.",
    "args": [
     "16"
    ],
@@ -428,8 +428,9 @@ const DATA = {
     }
    ],
    "note": [
-    "Zane's widest gap: 15.1 s against 0.27 s for Go, the fastest, 57 times slower. The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.",
-    "Go, which leaves its trees to a garbage collector, is the fastest row; C, which frees each tree as it goes, comes second at 0.29 s."
+    "The pinned timings in this row are historical: they measured the previous Zane program with value-type trees. The current source uses reference-type nodes, takes ownership of each child when building its parent, and borrows trees while checking them. Rerun and pin the benchmark before using this row to compare the current program.",
+    "In the pinned run, Zane took 15.1 s against 0.27 s for Go, the fastest, 57 times slower. The other languages built trees from heap nodes linked by pointers. The old Zane Pair constructor borrowed two value-type trees and deep-copied them into its fields, repeatedly copying completed subtrees as parents were assembled. Returning each tree also moved its blocks into the caller's scope. The row therefore included construction and scope-escape work that was not equivalent to transferring ownership of child pointers.",
+    "Go, which left its trees to a garbage collector, was the fastest row; C, which freed each tree as it went, came second at 0.29 s."
    ]
   },
   {

@@ -16,9 +16,11 @@ Every row runs in 1.3 to 2.9 ms, most of which is starting the process, so the r
 The prime table needs no input and could be computed while compiling; the count needs N and cannot. In the Zane build neither happens at compile time, for the same reason as in primes. C, C++, Rust, D and Zig all finish in 0.41 to 0.42 s and Go in 0.65 s; Zane takes 5.57 s, 13.5 times the fastest. Every comparison, division and list index in the inner loop is a call into core's separately compiled object, which no optimizer here can inline across.
 
 [binarytrees]
-Zane's widest gap: 15.1 s against 0.27 s for Go, the fastest, 57 times slower. The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.
+The pinned timings in this row are historical: they measured the previous Zane program with value-type trees. The current source uses reference-type nodes, takes ownership of each child when building its parent, and borrows trees while checking them. Rerun and pin the benchmark before using this row to compare the current program.
 
-Go, which leaves its trees to a garbage collector, is the fastest row; C, which frees each tree as it goes, comes second at 0.29 s.
+In the pinned run, Zane took 15.1 s against 0.27 s for Go, the fastest, 57 times slower. The other languages built trees from heap nodes linked by pointers. The old Zane Pair constructor borrowed two value-type trees and deep-copied them into its fields, repeatedly copying completed subtrees as parents were assembled. Returning each tree also moved its blocks into the caller's scope. The row therefore included construction and scope-escape work that was not equivalent to transferring ownership of child pointers.
+
+Go, which left its trees to a garbage collector, was the fastest row; C, which freed each tree as it went, came second at 0.29 s.
 
 [mandelbrot]
 Nothing here allocates, and the six other languages land within 3% of each other, 0.45 to 0.46 s, since each compiles the same arithmetic to the same instructions. Zane takes 7.20 s, 16 times longer: every multiplication, addition and comparison on a Float is a call into core's separately compiled object.

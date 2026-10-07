@@ -65,6 +65,16 @@ the languages that can ask. The Zig programs allocate through
 `std.heap.smp_allocator`, because in ReleaseSafe the allocator `main` is
 handed is the leak-checking debug allocator.
 
+`binarytrees` uses reference-type nodes with owning child fields. Building a
+parent transfers both children into it, matching the owning pointers in C++
+and Rust; checking a tree borrows it. `treecopy` intentionally uses value
+types, because copying the complete tree is the work that test measures.
+
+The pinned 2026-10-07 results were measured before this binary-tree change,
+when Zane used value nodes and copied completed subtrees during construction.
+Their binary-tree row is historical and must be remeasured before it describes
+the current program.
+
 ## Tests that need more of the language
 
 These tests are planned and cannot be written in idiomatic Zane with the

@@ -1,24 +1,26 @@
 /// The Benchmarks Game's binary-trees: perfect binary trees built, walked
 /// and torn down, many small ones and one that lives through the run.
+/// Reference nodes own their children, taking them rather than copying
+/// completed subtrees when a parent is built.
 package binarytrees;
 
 import core$;
 import bench$;
 
-type Tree = variant {
+type Tree = #variant {
 	leaf Unit;
 	node Pair;
 }
 
-type Pair = struct {
+type Pair = #struct {
 	left Tree;
 	right Tree;
 }
 
-Pair(left Tree, right Tree) => init{ left; right; }
+Pair(left ^Tree, right ^Tree) => init{ left; right; }
 
 /// A perfect tree `depth` levels below its root.
-Tree make(depth Int) {
+^Tree make(depth Int) {
 	if(depth == 0) {
 		return Tree.leaf(Unit());
 	}
