@@ -90,7 +90,32 @@
 <script>
 const DATA = {
  "pinned": true,
- "run": null,
+ "run": {
+  "date": "2026-10-07",
+  "machine": {
+   "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
+   "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.39"
+  },
+  "zane": {
+   "version": "v0.6",
+   "compiler_commit": "fe056e2f11e5ed34c9e659dc2e31556b241bdb61",
+   "core_commit": "97beb743aa7e0cfec7b7b5afeb0df53fc97f9791"
+  },
+  "toolchains": {
+   "zane": "zane v0.4",
+   "c": "clang version 19.1.7",
+   "cpp": "clang version 19.1.7",
+   "rust": "rustc 1.98.1 (48a229cea 2026-09-01) (built from a source tarball)",
+   "go": "go version go1.27.1 linux/amd64",
+   "d": "LDC - the LLVM D compiler (1.42.0)",
+   "zig": "0.16.0"
+  },
+  "config": {
+   "runs": 5,
+   "warmup": 1,
+   "quick": false
+  }
+ },
  "languages": {
   "zane": {
    "name": "Zane",
@@ -121,7 +146,790 @@ const DATA = {
    "flags": "zig build-exe -O ReleaseSafe"
   }
  },
- "tests": []
+ "tests": [
+  {
+   "id": "primes",
+   "title": "Sieve of Eratosthenes, fixed bound",
+   "summary": "Counts and sums the primes below 20,000 with a sieve. Nothing it computes depends on input, so it measures how much of a program each compiler finishes on its own. The comptime rows ask the compiler to run the sieve while it compiles: constexpr and consteval in C++, a const fn in Rust, an enum initializer in D and comptime in Zig. C and Go have no way to ask.",
+   "args": [],
+   "profile": "static",
+   "profileText": "Reads no input: an optimized build may compute the whole program while it compiles.",
+   "fold": {
+    "plain_loops": 3,
+    "optimized_loops": 3,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 0.001816,
+     "min": 0.001351,
+     "max": 0.002283,
+     "build": 0.6517
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.001424,
+     "min": 0.001111,
+     "max": 0.001522,
+     "build": 0.3644
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.002228,
+     "min": 0.001781,
+     "max": 0.002519,
+     "build": 0.5181
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "comptime",
+     "median": 0.001951,
+     "min": 0.001204,
+     "max": 0.002092,
+     "build": 0.8054
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.001536,
+     "min": 0.001302,
+     "max": 0.002133,
+     "build": 0.4572
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "comptime",
+     "median": 0.001316,
+     "min": 0.000818,
+     "max": 0.001624,
+     "build": 0.4531
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.002913,
+     "min": 0.002638,
+     "max": 0.003373,
+     "build": 0.2824
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.001676,
+     "min": 0.001086,
+     "max": 0.002167,
+     "build": 0.7767
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "comptime",
+     "median": 0.001788,
+     "min": 0.001161,
+     "max": 0.00263,
+     "build": 0.8137
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.00142,
+     "min": 0.001014,
+     "max": 0.00159,
+     "build": 11.6314
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "comptime",
+     "median": 0.001273,
+     "min": 0.001088,
+     "max": 0.001435,
+     "build": 14.6741
+    }
+   ],
+   "note": [
+    "This program reads no input, so an optimized Zane build could compute it while compiling and leave only the print. The fold report shows it does not, yet: every operator the program uses is a function in core, and core is compiled separately, so the optimizer sees each call as unknown and stops there. The plain C++, Rust and D rows show what their optimizers do with the same loop unasked; the comptime rows show what the programmer writes to make them do it.",
+    "Every row here runs in a few milliseconds, most of which is starting the process, so the run times barely separate the languages. The build times are the interesting column: the comptime rows pay for the sieve there."
+   ]
+  },
+  {
+   "id": "trialdiv",
+   "title": "Trial division against a prime table",
+   "summary": "Builds a table of the primes below 4,000 with a sieve, then counts the primes up to N by trial division against it. The table needs no input, so it may be computed while compiling; the count depends on N, the program's argument. Integer division and remainder dominate.",
+   "args": [
+    "10000000"
+   ],
+   "profile": "setup",
+   "profileText": "A fixed setup may be computed while compiling; the work its input drives runs when the program does.",
+   "fold": {
+    "plain_loops": 5,
+    "optimized_loops": 5,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 5.565521,
+     "min": 5.445114,
+     "max": 5.593506,
+     "build": 0.6577
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.413164,
+     "min": 0.407633,
+     "max": 0.418219,
+     "build": 0.3553
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.417775,
+     "min": 0.411607,
+     "max": 0.422995,
+     "build": 0.5564
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.417252,
+     "min": 0.415374,
+     "max": 0.418559,
+     "build": 0.4803
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.651015,
+     "min": 0.646649,
+     "max": 0.653356,
+     "build": 0.3175
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.412535,
+     "min": 0.409601,
+     "max": 0.416298,
+     "build": 0.9368
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.417138,
+     "min": 0.416559,
+     "max": 0.421392,
+     "build": 11.9126
+    }
+   ],
+   "note": [
+    "The prime table needs no input and could be computed while compiling; the count needs N and cannot. In the Zane build neither happens at compile time, for the same reason as in primes. The run time also shows the cost of calling core: every comparison, division and list index in the inner loop is a call into core's separately compiled object, which no optimizer here can inline across."
+   ]
+  },
+  {
+   "id": "binarytrees",
+   "title": "Binary trees (Benchmarks Game)",
+   "summary": "The Benchmarks Game's binary-trees at depth N: builds, walks and tears down perfect binary trees, many short-lived ones and one that lives through the run. It measures allocating and freeing many small owned objects. C, C++, Rust and Zig free each tree as it goes; Go and D leave theirs to a garbage collector; Zane's trees are values owned by their scope.",
+   "args": [
+    "16"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 3,
+    "optimized_loops": 3,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 15.143844,
+     "min": 14.976949,
+     "max": 15.216197,
+     "build": 0.6991
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.287828,
+     "min": 0.279215,
+     "max": 0.290037,
+     "build": 0.3694
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.372666,
+     "min": 0.370452,
+     "max": 0.374297,
+     "build": 0.7063
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.347098,
+     "min": 0.340473,
+     "max": 0.354864,
+     "build": 0.4772
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.266226,
+     "min": 0.264645,
+     "max": 0.271253,
+     "build": 0.3238
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.538357,
+     "min": 0.422263,
+     "max": 0.555008,
+     "build": 0.9949
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.328556,
+     "min": 0.324129,
+     "max": 0.3332,
+     "build": 11.7654
+    }
+   ],
+   "note": [
+    "The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes."
+   ]
+  },
+  {
+   "id": "mandelbrot",
+   "title": "Mandelbrot set, counted",
+   "summary": "Iterates z = z\u00b2 + c for every point of an N by N grid and counts the points that stay within radius 2 for 50 iterations. Floating-point arithmetic in a tight loop with an early exit; every language does the same operations in the same order, so all count the same points. The Benchmarks Game version writes a bitmap; this one counts, since Zane has no bit operations.",
+   "args": [
+    "3000"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 3,
+    "optimized_loops": 3,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 7.202114,
+     "min": 6.873439,
+     "max": 7.228003,
+     "build": 0.6457
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.461112,
+     "min": 0.45334,
+     "max": 0.465573,
+     "build": 0.3582
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.456632,
+     "min": 0.453835,
+     "max": 0.457808,
+     "build": 0.383
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.461558,
+     "min": 0.461026,
+     "max": 0.465646,
+     "build": 0.4423
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.461159,
+     "min": 0.45389,
+     "max": 0.47918,
+     "build": 0.2946
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.451277,
+     "min": 0.450208,
+     "max": 0.457089,
+     "build": 0.9799
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.448273,
+     "min": 0.446476,
+     "max": 0.45415,
+     "build": 11.756
+    }
+   ],
+   "note": [
+    "Nothing here allocates, so the gap between Zane and the others is the cost of calling core for arithmetic: every multiplication, addition and comparison on a Float is a call into core's separately compiled object, where the other languages compile each to a single instruction."
+   ]
+  },
+  {
+   "id": "fannkuch",
+   "title": "Fannkuch-redux (Benchmarks Game)",
+   "summary": "Visits every permutation of N items and flips each one, reversing its first k + 1 items while its first item k is not 0, then prints a checksum and the most flips any permutation took. Small integer lists, indexed and rewritten in place. Zane has no while loop, so its version counts the N! permutations with a bounded loop and flips by recursion.",
+   "args": [
+    "10"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 8,
+    "optimized_loops": 8,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 2.71224,
+     "min": 2.707069,
+     "max": 2.738682,
+     "build": 0.6695
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.165651,
+     "min": 0.163538,
+     "max": 0.168375,
+     "build": 0.3871
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.194013,
+     "min": 0.19141,
+     "max": 0.196468,
+     "build": 0.6607
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.189088,
+     "min": 0.180929,
+     "max": 0.192524,
+     "build": 0.4797
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.171655,
+     "min": 0.169563,
+     "max": 0.174602,
+     "build": 0.297
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.181701,
+     "min": 0.178783,
+     "max": 0.185378,
+     "build": 1.0202
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.247102,
+     "min": 0.241705,
+     "max": 0.25427,
+     "build": 11.5939
+    }
+   ],
+   "note": [
+    "The inner loops index and rewrite small lists in place. Zane's version also differs in shape: with no while loop, the flips are counted by recursion and the next permutation is found in a bounded loop that returns early, so part of its time is calls the other languages do not make."
+   ]
+  },
+  {
+   "id": "entities",
+   "title": "Scanning entities held inline",
+   "summary": "Fills a list with N entities of four 8-byte fields each, held inline, then sums one field over all of them 100 times. A read-only scan over contiguous storage, the inline layout of memorybench's Test 4.",
+   "args": [
+    "3000000"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 3,
+    "optimized_loops": 3,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 1.853869,
+     "min": 1.834393,
+     "max": 1.869262,
+     "build": 0.6508
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.48544,
+     "min": 0.478307,
+     "max": 0.496808,
+     "build": 0.3707
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.488237,
+     "min": 0.476044,
+     "max": 0.495062,
+     "build": 0.5719
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.486887,
+     "min": 0.48417,
+     "max": 0.492464,
+     "build": 0.4663
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.524314,
+     "min": 0.522354,
+     "max": 0.527084,
+     "build": 0.2715
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.506721,
+     "min": 0.503838,
+     "max": 0.512644,
+     "build": 0.9065
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.563104,
+     "min": 0.549774,
+     "max": 0.578443,
+     "build": 12.0549
+    }
+   ],
+   "note": [
+    "The entities are laid out inline in every language, so this is the plainest scan the bench has: one load and one add per entity. In Zane each list index and each addition is a call into core, and that is what the time shows."
+   ]
+  },
+  {
+   "id": "listgrowth",
+   "title": "Growing a list by appending",
+   "summary": "Appends N entities to an empty list one at a time, then drops it, 20 times over. It measures how a growable list reallocates as it fills, as memorybench's Test 5 does for Zane's backing stores. Every language starts from an empty list and lets its own growth policy run.",
+   "args": [
+    "2000000"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 2,
+    "optimized_loops": 2,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 1.526721,
+     "min": 1.500153,
+     "max": 1.540275,
+     "build": 0.6575
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.370224,
+     "min": 0.366906,
+     "max": 0.379335,
+     "build": 0.357
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.831009,
+     "min": 0.816975,
+     "max": 0.840352,
+     "build": 0.5506
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.422724,
+     "min": 0.415614,
+     "max": 0.43007,
+     "build": 0.4793
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 1.779195,
+     "min": 1.721062,
+     "max": 1.867437,
+     "build": 0.3175
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 1.803498,
+     "min": 1.596068,
+     "max": 1.836885,
+     "build": 0.8835
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.616452,
+     "min": 0.598721,
+     "max": 0.682002,
+     "build": 11.7959
+    }
+   ],
+   "note": [
+    "Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md \u00a73.6); C doubles from four elements through realloc, and the others follow their standard library."
+   ]
+  },
+  {
+   "id": "ntree",
+   "title": "Building and tearing down a tree of lists",
+   "summary": "Builds a complete four-way tree N levels deep in which every node owns a growable list of its children, counts its nodes, and drops it, 10 times over. Teardown walks every node and frees every child list, the cascade of memorybench's Test 10. Go and D leave the work to their garbage collectors.",
+   "args": [
+    "10"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 3,
+    "optimized_loops": 3,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 4.827098,
+     "min": 4.788052,
+     "max": 4.899935,
+     "build": 0.6728
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.471153,
+     "min": 0.47016,
+     "max": 0.476147,
+     "build": 0.3738
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.767222,
+     "min": 0.762511,
+     "max": 0.78232,
+     "build": 0.7657
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.316883,
+     "min": 0.314184,
+     "max": 0.317821,
+     "build": 0.4534
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.53014,
+     "min": 0.494976,
+     "max": 0.535945,
+     "build": 0.2969
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 1.372478,
+     "min": 1.36396,
+     "max": 1.377529,
+     "build": 0.8567
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.790202,
+     "min": 0.780715,
+     "max": 0.796131,
+     "build": 11.8897
+    }
+   ],
+   "note": [
+    "Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown."
+   ]
+  },
+  {
+   "id": "treecopy",
+   "title": "Deep-copying a tree",
+   "summary": "Builds a perfect binary tree N levels deep once, then copies it whole 20 times, summing and dropping each copy. In Zane the tree is a value with boxed members, so an ordinary assignment copies all of it, the deep copy of memorybench's Test 14; the other languages call a clone written for the purpose or derived by the compiler.",
+   "args": [
+    "18"
+   ],
+   "profile": "input",
+   "profileText": "Reads its size first, so nothing it computes is known while compiling.",
+   "fold": {
+    "plain_loops": 1,
+    "optimized_loops": 1,
+    "observed": "not folded"
+   },
+   "rows": [
+    {
+     "lang": "zane",
+     "name": "Zane",
+     "variant": "plain",
+     "median": 1.669525,
+     "min": 1.636188,
+     "max": 1.682959,
+     "build": 0.7082
+    },
+    {
+     "lang": "c",
+     "name": "C",
+     "variant": "plain",
+     "median": 0.280327,
+     "min": 0.264787,
+     "max": 0.284505,
+     "build": 0.3714
+    },
+    {
+     "lang": "cpp",
+     "name": "C++",
+     "variant": "plain",
+     "median": 0.334112,
+     "min": 0.328139,
+     "max": 0.336819,
+     "build": 0.6839
+    },
+    {
+     "lang": "rust",
+     "name": "Rust",
+     "variant": "plain",
+     "median": 0.403772,
+     "min": 0.400202,
+     "max": 0.415418,
+     "build": 0.4576
+    },
+    {
+     "lang": "go",
+     "name": "Go",
+     "variant": "plain",
+     "median": 0.254065,
+     "min": 0.242987,
+     "max": 0.256597,
+     "build": 0.2768
+    },
+    {
+     "lang": "d",
+     "name": "D",
+     "variant": "plain",
+     "median": 0.385738,
+     "min": 0.380242,
+     "max": 0.4227,
+     "build": 0.9638
+    },
+    {
+     "lang": "zig",
+     "name": "Zig",
+     "variant": "plain",
+     "median": 0.313048,
+     "min": 0.302516,
+     "max": 0.319319,
+     "build": 12.2848
+    }
+   ],
+   "note": [
+    "A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md \u00a72.3). The other languages do the same through a clone function. The original is read after the last copy, so no copy can be turned into a move."
+   ]
+  }
+ ]
 };
 
 const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441"};
