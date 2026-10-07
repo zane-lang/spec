@@ -796,10 +796,10 @@ ran Bool = if(ready) {
 
 A trailing argument **MUST** be the last thing in its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
 
-A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last:
+A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last. Given a verb declaring two `@concepts$Block` parameters:
 
 ```zane
-ran!elif({ expensive(); }) {
+attempt({ prepare(); }) {
     handle();
 }
 ```

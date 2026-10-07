@@ -93,7 +93,7 @@ The two primitives `Bool` leaves undeclared are the two a Boolean algebra has no
 
 Conjunction and disjunction are interderivable through `~`; see §4.4.
 
-Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when the other holds is written inside an `if` on the other, which shows the evaluation at the call site rather than implying it by the token.
+Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when it decides the result is written inside a branch on the other: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The evaluation then shows at the call site rather than being implied by the token.
 
 ```zane
 if(ready * check()) { ... }
