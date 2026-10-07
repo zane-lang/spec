@@ -27,8 +27,8 @@ measures what a released Zane compiler actually produces.
 compilers at the versions `devbox.json` pins: clang 19, the LLVM release the
 Zane compiler is built against, for C and C++, then Rust, Go, LDC for D, and
 Zig 0.16. Python 3 and the zane CLI come from the machine. The CLI must
-have `zane inspect`, and the compiler release `zane.coda` names must be
-installed (`zane toolchain install`). Run from `langbench/`:
+be v0.4 or later, the first release with `zane inspect`, and the compiler
+release `zane.coda` names must be installed (`zane toolchain install`). Run from `langbench/`:
 
 ```sh
 devbox run -- python3 langbench.py --quick        # small sizes, one run: check everything builds and agrees

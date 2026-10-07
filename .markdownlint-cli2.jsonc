@@ -1,0 +1,4 @@
+{
+  // Lint what the repository tracks, not local tool directories it ignores.
+  "gitignore": true
+}

@@ -2,35 +2,38 @@
 # Lines starting with '#' are comments; a blank line starts a new paragraph.
 #
 # A note may quote numbers only from the pinned run in
-# langbench_results.json, and must be revised when a new run is pinned. No
-# run is pinned yet, so these notes describe what each test shows about the
-# compiler release the project pins (zane.coda), without figures.
+# langbench_results.json, and must be revised when a new run is pinned.
+# The pinned run: 2026-10-07, a 13th Gen Intel Core i7-1355U laptop under
+# WSL2, Zane compiler v0.6 with core v0.0, zane CLI v0.4, and the other
+# compilers devbox.json pins. Times are medians of five runs.
 
 [primes]
-This program reads no input, so an optimized Zane build could compute it while compiling and leave only the print. The fold report shows it does not, yet: every operator the program uses is a function in core, and core is compiled separately, so the optimizer sees each call as unknown and stops there. The plain C++, Rust and D rows show what their optimizers do with the same loop unasked; the comptime rows show what the programmer writes to make them do it.
+This program reads no input, so an optimized Zane build could compute it while compiling and leave only the print. The fold report shows it does not, yet: the optimized build keeps all three of its loops, because every operator the program uses is a function in core, and core is compiled separately, so the optimizer sees each call as unknown and stops there.
 
-Every row here runs in a few milliseconds, most of which is starting the process, so the run times barely separate the languages. The build times are the interesting column: the comptime rows pay for the sieve there.
+Every row runs in 1.3 to 2.9 ms, most of which is starting the process, so the run times do not separate the languages; Zane's 1.8 ms sits among them. The build times show what asking for compile-time evaluation costs: Zig's comptime build takes 14.7 s against 11.6 s for its plain one, C++'s 0.81 s against 0.52 s, while Rust's and D's are within a few hundredths of a second of their plain builds.
 
 [trialdiv]
-The prime table needs no input and could be computed while compiling; the count needs N and cannot. In the Zane build neither happens at compile time, for the same reason as in primes. The run time also shows the cost of calling core: every comparison, division and list index in the inner loop is a call into core's separately compiled object, which no optimizer here can inline across.
+The prime table needs no input and could be computed while compiling; the count needs N and cannot. In the Zane build neither happens at compile time, for the same reason as in primes. C, C++, Rust, D and Zig all finish in 0.41 to 0.42 s and Go in 0.65 s; Zane takes 5.57 s, 13.5 times the fastest. Every comparison, division and list index in the inner loop is a call into core's separately compiled object, which no optimizer here can inline across.
 
 [binarytrees]
-The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.
+Zane's widest gap: 15.1 s against 0.27 s for Go, the fastest, 57 times slower. The other languages build each tree from heap nodes linked by pointers. Zane's trees are values: a node owns its two subtrees, and each call to make returns its tree out of its own scope. The runtime moves the tree into the caller's scope at every level of the recursion, so most of Zane's time goes to allocating, moving and freeing blocks rather than to building nodes.
+
+Go, which leaves its trees to a garbage collector, is the fastest row; C, which frees each tree as it goes, comes second at 0.29 s.
 
 [mandelbrot]
-Nothing here allocates, so the gap between Zane and the others is the cost of calling core for arithmetic: every multiplication, addition and comparison on a Float is a call into core's separately compiled object, where the other languages compile each to a single instruction.
+Nothing here allocates, and the six other languages land within 3% of each other, 0.45 to 0.46 s, since each compiles the same arithmetic to the same instructions. Zane takes 7.20 s, 16 times longer: every multiplication, addition and comparison on a Float is a call into core's separately compiled object.
 
 [fannkuch]
-The inner loops index and rewrite small lists in place. Zane's version also differs in shape: with no while loop, the flips are counted by recursion and the next permutation is found in a bounded loop that returns early, so part of its time is calls the other languages do not make.
+C is fastest at 0.17 s and Zig slowest of the others at 0.25 s; Zane takes 2.71 s, 16 times C. The inner loops index and rewrite small lists in place, and every index is a call into core. Zane's version also differs in shape: with no while loop, the flips are counted by recursion and the next permutation is found in a bounded loop that returns early, so part of its time is calls the other languages do not make.
 
 [entities]
-The entities are laid out inline in every language, so this is the plainest scan the bench has: one load and one add per entity. In Zane each list index and each addition is a call into core, and that is what the time shows.
+The plainest scan the bench has, one load and one add per entity, and Zane's narrowest gap among the input tests: 1.85 s against 0.49 s for C, Rust and C++, 3.8 times. The entities are laid out inline in every language, so each scan streams 96 MB through the cache in all of them; that cost is the same for every row, and core's calls for the index and the add come on top of it.
 
 [listgrowth]
-Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md §3.6); C doubles from four elements through realloc, and the others follow their standard library.
+The one test where Zane is not last: at 1.53 s it is ahead of Go at 1.78 s and D at 1.80 s, both of which grow their lists through a garbage-collected heap. C is fastest at 0.37 s and Rust next at 0.42 s. Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md §3.6); C doubles from four elements through realloc, and the others follow their standard library.
 
 [ntree]
-Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown.
+Rust is fastest at 0.32 s, C next at 0.47 s; D's collector makes it the slowest of the others at 1.37 s. Zane takes 4.83 s, 15 times Rust. Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown.
 
 [treecopy]
-A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md §2.3). The other languages do the same through a clone function. The original is read after the last copy, so no copy can be turned into a move.
+Zane takes 1.67 s against 0.25 s for Go and 0.28 s for C, 6.6 times the fastest, a much narrower gap than binarytrees although both allocate trees of boxed values. A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md §2.3). The other languages do the same through a clone function. The original is read after the last copy, so no copy can be turned into a move.
