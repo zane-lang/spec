@@ -20,7 +20,12 @@ fn main() {
     for _ in 1..=20 {
         let mut list = Vec::new();
         for i in 1..=n {
-            list.push(Entity { id: i, x: 0.5 * i as f64, y: 0.25 * i as f64, hp: i / 3 });
+            list.push(Entity {
+                id: i,
+                x: 0.5 * i as f64,
+                y: 0.25 * i as f64,
+                hp: i / 3,
+            });
         }
         total += list.last().unwrap().hp + list.len() as i64;
     }

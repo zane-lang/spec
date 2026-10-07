@@ -17,7 +17,12 @@ fn main() {
         .and_then(|a| a.parse().ok())
         .unwrap_or(100000);
     let entities: Vec<Entity> = (1..=n)
-        .map(|i| Entity { id: i, x: 0.5 * i as f64, y: 0.25 * i as f64, hp: i / 3 })
+        .map(|i| Entity {
+            id: i,
+            x: 0.5 * i as f64,
+            y: 0.25 * i as f64,
+            hp: i / 3,
+        })
         .collect();
     let mut total = 0i64;
     for _ in 1..=100 {
