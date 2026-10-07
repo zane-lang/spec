@@ -67,7 +67,7 @@ deps [
 
 test-deps [
     key      version  from
-    std      v0.2.0   release
+    mocks    v0.2.0   release
     zaneTest v1.1.0   release
 ]
 ```
@@ -396,7 +396,7 @@ A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `
 The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-lock.coda` records the commit that tag must resolve to.
 
 - The tag covers the compiler alone. What the compiler supplies is the grammar and the intrinsics — none of which name a declaration in any package ([`syntax.md`](syntax.md) §2.7, [`control-flow.md`](control-flow.md) §4.1) — so pinning it fixes the language without fixing any library.
-- **No library is coupled to the toolchain tag, `core` included.** `core`, `std`, and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
+- **No library is coupled to the toolchain tag, `core` included.** `core` and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
 - This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 - The `zane` command that reads the manifest is not part of the toolchain the tag pins. It installs the compiler the tag names and runs it, so one installed `zane` command builds projects pinned to any toolchain tag.

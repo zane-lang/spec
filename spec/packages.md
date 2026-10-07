@@ -268,7 +268,7 @@ Every program package and every test package **MUST** declare `main`. A package 
 ```zane
 package viewer
 
-import std$
+import core$
 
 Unit main() {
     console Console(@program$console);
@@ -312,7 +312,6 @@ A top-level test package may import every top-level library package of its proje
 package test
 
 import core$
-import std$
 import math
 
 Unit main() {
