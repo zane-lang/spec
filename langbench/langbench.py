@@ -25,13 +25,13 @@ renders the page from what it just measured and leaves the file alone, and
 The other languages' compilers come from langbench/devbox.json, so a run goes
 through `devbox run --` from langbench/ (README.md).
 
-Usage:
-    python3 langbench/langbench.py                # build, check, time, render
-    python3 langbench/langbench.py --save         # ... and pin the run
-    python3 langbench/langbench.py --from-file    # render from the committed JSON
-    python3 langbench/langbench.py --json PATH    # render from another results file
-    python3 langbench/langbench.py --quick        # small sizes, one run: check the pipeline
-    python3 langbench/langbench.py --only primes  # one test
+Usage, from langbench/:
+    devbox run -- python3 langbench.py                # build, check, time, render
+    devbox run -- python3 langbench.py --save         # ... and pin the run
+    devbox run -- python3 langbench.py --quick        # small sizes, one run: check the pipeline
+    devbox run -- python3 langbench.py --only primes  # one test
+    python3 langbench.py --from-file                  # render from the committed JSON
+    python3 langbench.py --json PATH                  # render from another results file
 """
 
 import argparse
@@ -71,10 +71,24 @@ def fill(value, slots):
     return value
 
 
+# How long any one build or run may take before the harness gives up on it.
+# The slowest step in a full run takes well under a minute.
+TIMEOUT_S = 600
+
+
+def run(cmd, **kwargs):
+    """subprocess.run with output captured, exiting if the command hangs."""
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=TIMEOUT_S, **kwargs)
+    except subprocess.TimeoutExpired:
+        sys.exit(f"ERROR: did not finish in {TIMEOUT_S} s:\n$ {' '.join(cmd)}")
+
+
 def run_checked(cmd, what, env=None, cwd=None):
     """Run a command that must succeed, returning how long it took in seconds."""
     start = time.perf_counter()
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=cwd)
+    result = run(cmd, env=env, cwd=cwd)
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
         sys.exit(f"ERROR: {what} failed:\n$ {' '.join(cmd)}\n{result.stdout}{result.stderr}")
@@ -117,7 +131,7 @@ class Toolchain:
 
 def zane(args, what):
     """Run the zane CLI in the project, returning its stdout."""
-    result = subprocess.run(["zane"] + args, capture_output=True, text=True, cwd=SCRIPT_DIR)
+    result = run(["zane", *args], cwd=SCRIPT_DIR)
     if result.returncode != 0:
         sys.exit(f"ERROR: {what} failed:\n$ zane {' '.join(args)}\n{result.stdout}{result.stderr}")
     return result.stdout
@@ -200,7 +214,7 @@ def fold(test_id):
 def run_once(binary, args):
     """Run a program once, returning (seconds, stdout)."""
     start = time.perf_counter()
-    result = subprocess.run([binary] + args, capture_output=True, text=True)
+    result = run([binary, *args])
     elapsed = time.perf_counter() - start
     if result.returncode != 0:
         sys.exit(f"ERROR: {binary} exited {result.returncode}:\n{result.stderr}")
@@ -229,8 +243,8 @@ def measure(test, rows, args, expected, runs, warmup):
 def first_line(cmd):
     """The first line a version command prints, or "unavailable"."""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
-    except FileNotFoundError:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return "unavailable"
     text = (result.stdout or result.stderr).strip()
     return text.splitlines()[0].rstrip(":") if text else "unavailable"

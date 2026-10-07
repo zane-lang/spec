@@ -844,7 +844,7 @@ const DATA = {
     }
    ],
    "note": [
-    "Rust is fastest at 0.32 s, C next at 0.47 s; D's collector makes it the slowest of the others at 1.37 s. Zane takes 4.83 s, 15 times Rust. Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown."
+    "Rust is fastest at 0.32 s, and does less work than the other rows: its Vec\u003cNode> holds each node's children inline, so it allocates once per internal node, where every other language allocates every node separately and holds a pointer to it. C is next at 0.47 s; D's collector makes it the slowest of the others at 1.37 s. Zane takes 4.83 s, 15 times Rust. Each node is a reference-type object that owns a list of its children. Dropping a tree tears down every node and returns every child list's block; in Go and D the garbage collector does that work at times of its own choosing, so their numbers include collection rather than explicit teardown."
    ]
   },
   {
