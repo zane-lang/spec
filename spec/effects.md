@@ -205,6 +205,7 @@ Writing to the console and changing the runtime's configuration are writes to ca
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 > **Story:** [`stories/effects.md`](../stories/effects.md#the-console-moves-into-core) — "The console moves into `core`".
+> **Story:** [`stories/effects.md`](../stories/effects.md#arguments-becomes-the-first-read-of-capability-backed-state) — "`arguments` becomes the first read of capability-backed state".
 
 ---
 
