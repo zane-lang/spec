@@ -61,7 +61,7 @@ pos = Vec2(3.0, 4.0);    // legal: overwrites the whole value
 
 ### 2.3 Field visibility is name-based
 
-A field whose name begins with `_` is private to the package that declares its type. Any declaration in that package may name it — read it, write it, or assign it in `init{ }` — whether it is a method, function, operator, constructor, subscript, lambda, or constant. No declaration in another package may name it, a method whose subject is that type included ([`functions.md`](functions.md) §6.3).
+A field whose name begins with `_` is private to the package that declares its type. Any declaration in that package may name it — read it, write it, or assign it in `init{ }` — whether it is a method, function, operator, constructor, subscript, lambda, or constant. No declaration in another package may name it, including methods whose subject has that type ([`functions.md`](functions.md) §6.3).
 
 All fields whose names do not begin with `_` are public.
 

@@ -86,6 +86,9 @@ One verb declaration wears neither order:
 
 A [subscript](https://github.com/zane-lang/spec/blob/a3760ba3179eb827acb0eefd7b885504e7db29e6/spec/functions.md#29-subscripts-are-place-projections) is a method — it takes a subject and it reaches that subject's private fields like one — so written as an ordinary method its parameters would sit together, `(this CustomList, index Int) => ...`. What pulls them apart is the call site. A subscript is invoked as `list[i]`, with the indices in a `[ ]` that trails the subject, and the declaration splits its parameters to match: subject in `( )`, indices in the trailing `[ ]`. The declaration is shaped like the call it answers. No return type is written because there is none to write — the body must be a place expression, so the result type is whatever the projected place already is, and declaring it would restate a field type the container has already fixed.
 
+> [!NOTE]
+> Superseded: a subscript reaching its subject's private fields because it is a method; `_` fields are now private to the package that declares the type. See "[Field privacy moves to the package](lexical.md#field-privacy-moves-to-the-package)".
+
 That is the honest account and it is thinner than the rest of this file, so it should be labelled as such: subscripts have not been revisited since they were first written down. Nothing has pushed on them, no alternative was weighed at length, and the shape above is a first draft that has survived by not being tested rather than by winning anything. If a later pass finds a better form it will not be overturning an argument, because there is not much of one here to overturn.
 
 > [!NOTE]

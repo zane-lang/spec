@@ -104,7 +104,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.6 package privacy
 
-- **Meaning:** A `_` field is private to the package that declares its type: any declaration in that package may name it, and none in another package may, a method on the type included.
+- **Meaning:** A `_` field is private to the package that declares its type: any declaration in that package may name it, and none in another package may, including methods on the type.
 - **Why this name:** The package is the boundary, the same one a leading `_` draws on a package-scope declaration.
 - **Canonical home:** [`types.md`](types.md) §2.3
 
