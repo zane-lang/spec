@@ -54,9 +54,10 @@ in `explanations.txt` can describe, and update those notes in the same change.
   build time includes them.
 - **Folding.** Each test declares a fold profile: `static` reads no input,
   `setup` has a fixed part that needs none, and `input` reads its size first.
-  `zane inspect cgt` shows how many loops the optimized build of the Zane
-  program keeps compared with the plain build, and the page reports what was
-  computed while compiling as it is.
+  `zane inspect cgt` supplies raw loop counts for the plain and optimized
+  CGT. Optimized builds now include imported dependency bodies that plain
+  builds omit, so these whole-tree counts do not measure how much was
+  computed while compiling. The page reports them without a folding score.
 
 Every language builds at its level-2 optimization, keeps the safety checks it
 has by default, and is written the way that language is usually written.
@@ -70,10 +71,9 @@ parent transfers both children into it, matching the owning pointers in C++
 and Rust; checking a tree borrows it. `treecopy` intentionally uses value
 types, because copying the complete tree is the work that test measures.
 
-The pinned 2026-10-07 results were measured before this binary-tree change,
-when Zane used value nodes and copied completed subtrees during construction.
-Their binary-tree row is historical and must be remeasured before it describes
-the current program.
+The pinned 2026-10-07 run uses compiler v0.7 with cross-package optimization
+and the reference-based binary-tree program. It was measured on an Intel
+Core i7-1355U laptop under WSL2; `explanations.txt` describes that run.
 
 ## Tests that need more of the language
 

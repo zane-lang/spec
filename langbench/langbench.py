@@ -3,8 +3,8 @@
 Zane language benchmark runner
 
 Builds every test in each language, checks that all of them print the output
-the test expects, reads how much of each Zane program an optimized build
-computed while compiling, times the programs, and renders langbench.html from
+the test expects, records plain and optimized CGT loop counts,
+times the programs, and renders langbench.html from
 the measurements.
 
 Layout:
@@ -191,20 +191,13 @@ def loops(test_id, optimize):
 
 
 def fold(test_id):
-    """What an optimized build computed while compiling, read from its code tree.
+    """Record CGT loop counts without inferring compile-time evaluation.
 
-    Every loop a Zane program runs is a repeat node in its code tree. A build
-    that computes a loop while compiling replaces it with the result, so
-    comparing the plain and the optimized tree says how much was folded.
+    Optimized builds include dependency bodies that plain builds omit.
+    The counts therefore describe different inventories of functions.
     """
     plain, optimized = loops(test_id, False), loops(test_id, True)
-    if optimized == 0:
-        observed = "folded"
-    elif optimized < plain:
-        observed = "partly folded"
-    else:
-        observed = "not folded"
-    return {"plain_loops": plain, "optimized_loops": optimized, "observed": observed}
+    return {"plain_loops": plain, "optimized_loops": optimized, "observed": "not inferred"}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -437,7 +430,7 @@ def page_data(doc, explanations, notes_pinned):
             "args": result["args"],
             "profile": result["profile"],
             "profileText": tests.PROFILES.get(result["profile"], ""),
-            "fold": result["fold"],
+            "fold": {**result["fold"], "observed": "not inferred"},
             "rows": rows,
             "note": explanations.get(result["id"], []),
         })
