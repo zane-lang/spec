@@ -13,7 +13,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 - **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
 - **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the subject.
-- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants private-field access (a method); naming the verb after a type grants `init{ }` and an implicit return type (a constructor). See §8.
+- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants the subject call (a method); naming the verb after a type grants `init{ }` and an implicit return type (a constructor). See §8.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
@@ -38,21 +38,21 @@ Int scaledId(this Node, factor Int) {
 > **Story:** [`stories/functions.md`](../stories/functions.md#renaming-the-receiver-to-the-subject) — "Renaming the receiver to the subject".
 > **Story:** [`stories/memory.md`](../stories/memory.md#bare-symbols-become-guest-sources-again) — "Bare symbols become guest sources again".
 
-### 2.2 `this` grants private-field access
+### 2.2 `this` grants the subject call
 
-Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants access to `_`-prefixed fields on the subject type regardless of which package declares the method; home-package status does not matter. The same parameter type written with another name is a function and does not grant private-field access.
+Naming the first parameter `this` is the only thing that makes a declaration a method. That token grants the subject call: the method is called on its subject with `:` or `!` (§2.5), and the subject reaches the body as a borrow of the caller's storage (§2.4). The same parameter type written with another name is a function, called by name (§3.3).
+
+Access to `_` fields is decided by package, for a method as for every other verb ([`types.md`](types.md) §2.3).
 
 ```zane
-Int scaledId(this Node, factor Int) {
-    return this._id * factor;
-}
+package Graph
 
-Int scaledIdWrong(node Node, factor Int) {
-    return node._id * factor;  // ILLEGAL: node is not `this`
-}
+Int scaledId(this Node, factor Int) => this._id * factor     // a method: node:scaledId(factor)
+Int scaledIdOf(node Node, factor Int) => node._id * factor   // a function: scaledIdOf(node, factor)
 ```
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+> **Story:** [`stories/functions.md`](../stories/functions.md#this-keeps-only-the-subject-call) — "`this` keeps only the subject call".
 
 ### 2.3 Read-only methods are the default
 
@@ -220,9 +220,9 @@ Float getScale(node Node) {
 }
 ```
 
-### 3.2 Functions cannot access private fields
+### 3.2 Functions reach private fields in their own package
 
-Functions may access only fields whose names do not begin with `_`. This rule is package-independent: a function declared in the same package as the type still cannot access `_`-prefixed fields unless its first parameter is named `this`.
+A function reaches a `_` field on the same terms as a method: when it is declared in the package that declares the field's type, and never from another package ([`types.md`](types.md) §2.3).
 
 ### 3.3 Functions use ordinary call syntax
 
@@ -332,9 +332,10 @@ vec:Physics$kineticEnergy();
 
 ### 6.3 Extension methods may be declared in any package
 
-Because methods are package-scope verbs, any package may define methods on imported types. This follows the same rule as [`types.md`](types.md) §2.3 and §2.2 above: if the first parameter is `this`, the declaration is a method and gets the same private-field access as any other method on that subject type.
+Because methods are package-scope verbs, any package may define methods on imported types. Such a method has the subject call of any other method (§2.2) and reaches only the type's public fields, because its `_` fields are private to the type's package ([`types.md`](types.md) §2.3).
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+> **Story:** [`stories/functions.md`](../stories/functions.md#this-keeps-only-the-subject-call) — "`this` keeps only the subject call".
 
 ---
 
@@ -429,7 +430,7 @@ Every callable in Zane is a verb (§1). What *kind* of verb a declaration is —
 
 | Marker | Verb kind | Capability unlocked |
 |---|---|---|
-| First parameter named `this` | Method | Private-field access on the subject; `:` / `!` call syntax |
+| First parameter named `this` | Method | `:` / `!` call syntax on a borrowed subject |
 | Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** |
 | Symbol name (operator token) | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
@@ -439,13 +440,13 @@ The markers are largely independent — a lambda may still declare a `this` subj
 
 ### 8.2 `init{ }` is to constructors what `this` is to methods
 
-The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks private-field access (§2.2).
+The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only thing that makes a verb a method, and that token alone unlocks the subject call (§2.2).
 
-So `init{ }` is a capability gated by a naming convention, exactly as `this` is. A plain function cannot use `init{ }` for the same reason it cannot read `_`-prefixed fields: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
+So `init{ }` is a capability gated by a naming convention, exactly as the subject call is. A plain function cannot use `init{ }` for the same reason it cannot be called on a subject: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
 
 ### 8.3 What is shared, and what the markers change
 
-All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two things: whether a return type is written, and which private-state capability (`this` private-field access or `init{ }` initialization) is granted. (The operator and lambda markers additionally change call syntax and value representation; see the §8.1 table.) Functions and constructors share the same verb model, separated only by the name-is-a-type marker.
+All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two things: whether a return type is written, and which capability is granted — the subject call for `this`, `init{ }` initialization for a type name. (The operator and lambda markers likewise change call syntax and value representation; see the §8.1 table.) Functions and constructors share the same verb model, separated only by the name-is-a-type marker.
 
 > **See also:** [`syntax.md`](syntax.md) §3 for the declaration forms of each verb kind. [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 
@@ -466,11 +467,11 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Concept | Rule |
 |---|---|
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
-| Capability markers | `this` first → method (private access); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
+| Capability markers | `this` first → method (subject call); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |
 | Read-only method | Called with `:`; may read but not write `this` |
-| Function | Identifier-named package-scope verb without `this`; no private-field privilege |
+| Function | Identifier-named package-scope verb without `this`; called by name |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller supplies a settled place or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
 | Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any reference derived from one |

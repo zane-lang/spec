@@ -89,11 +89,12 @@ Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, 
 
 A leading `_` marks an identifier as private without changing the lexical class set by the first letter.
 
-- A field beginning with `_` is private to methods whose first parameter is `this` for that type. See [`types.md`](types.md) §2.3.
+- A field beginning with `_` is private to the package that declares its type. See [`types.md`](types.md) §2.3.
 - A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are symbol-named and remain public. See [`packages.md`](packages.md) §4.
 - A top-level library package whose name begins with `_` is private to its project. See [`packages.md`](packages.md) §4.4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#field-privacy-moves-to-the-package) — "Field privacy moves to the package".
 
 ### 4.3 Reserved sigils
 
@@ -295,7 +296,7 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | Number parameter | A lowercase name (`n`) declared `n @concepts$Int` (in a type's `<>` header or inline in a verb); a compile-time integer, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
-| Leading `_` | A field is private to `this` methods for its type; a named package-scope declaration is private to its package |
+| Leading `_` | A field is private to its type's package; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a reference type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |

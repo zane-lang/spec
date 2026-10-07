@@ -202,6 +202,8 @@ A named package-scope declaration whose name begins with `_` is accessible from 
 
 An access from another package is illegal even when it uses an explicit `packageName$` qualifier.
 
+A `_` field draws the same boundary: it is private to the package that declares its type ([`types.md`](types.md) §2.3).
+
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
 
 ### 4.2 Operators are public

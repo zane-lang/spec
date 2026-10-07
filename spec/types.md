@@ -13,7 +13,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
-- **`Name-based field privacy`.** A leading `_` makes a field private to methods whose first parameter is `this` for that type.
+- **`Name-based field privacy`.** A leading `_` makes a field private to the package that declares its type.
 - **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8).
 - **`Fundamental and declared types`.** `Int`, `Float`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, and `List` are declared by the `core` package over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
@@ -61,15 +61,29 @@ pos = Vec2(3.0, 4.0);    // legal: overwrites the whole value
 
 ### 2.3 Field visibility is name-based
 
-Fields whose names begin with `_` are private to methods whose first parameter is `this` for that type, regardless of which package declares the method.
-
-The same subject type written under any other parameter name is a non-subject parameter and does not gain private-field access.
+A field whose name begins with `_` is private to the package that declares its type. Any declaration in that package may name it — read it, write it, or assign it in `init{ }` — whether it is a method, function, operator, constructor, subscript, lambda, or constant. No declaration in another package may name it, including methods whose subject has that type ([`functions.md`](functions.md) §6.3).
 
 All fields whose names do not begin with `_` are public.
 
-This is intentional: private-field access in Zane is method-based, not package-based.
+A leading `_` thus draws the same boundary on a field as on a package-scope declaration ([`packages.md`](packages.md) §4.1): the package is the unit of privacy. A type and the declarations written alongside it in its package work on the same internals, so all of them reach its `_` fields.
+
+```zane
+package Graph
+
+Int scaledId(this Node, factor Int) => this._id * factor   // a method in Graph
+Bool ==(left Node, right Node) => left._id == right._id     // an operator in Graph
+```
+
+```zane
+package render
+
+import Graph
+
+Int peek(this Graph$Node) => this._id   // ILLEGAL: _id is private to Graph
+```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#field-privacy-moves-to-the-package) — "Field privacy moves to the package".
 
 ### 2.4 Type bodies contain no behavior
 
@@ -720,7 +734,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored reference; copies are deep |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
-| Field visibility | Names starting with `_` are private to `this`-parameter methods on the subject type; all other names are public |
+| Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
