@@ -4,3 +4,4 @@ langbench/out/
 langbench/build/
 .mavis/
 memorybench/zane_bench
+langbench/.devbox/

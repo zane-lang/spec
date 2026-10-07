@@ -10,6 +10,7 @@ measures what a released Zane compiler actually produces.
 | path | what it is |
 | --- | --- |
 | `zane.coda`, `zane-lock.coda` | the Zane project: the pinned compiler release and `core` |
+| `devbox.json`, `devbox.lock` | the other languages' compilers, pinned |
 | `bin/<test>/main.zn` | each test's Zane program |
 | `lib/bench/` | what the Zane programs share: reading the size from the arguments |
 | `c/`, `cpp/`, `rust/`, `go/`, `d/`, `zig/` | the other languages, one file per program |
@@ -22,14 +23,18 @@ measures what a released Zane compiler actually produces.
 
 ## Running it
 
-The zane CLI must be on `PATH`, with the release `zane.coda` names installed
-(`zane toolchain install`), and so must every other language's compiler.
+[Devbox](https://www.jetify.com/devbox) supplies the other languages'
+compilers at the versions `devbox.json` pins: clang 19, the LLVM release the
+Zane compiler is built against, for C and C++, then Rust, Go, LDC for D, and
+Zig 0.16. Python 3 and the zane CLI come from the machine. The CLI must
+have `zane inspect`, and the compiler release `zane.coda` names must be
+installed (`zane toolchain install`). Run from `langbench/`:
 
 ```sh
-python3 langbench/langbench.py --quick        # small sizes, one run: check everything builds and agrees
-python3 langbench/langbench.py                # build, check, time, render
-python3 langbench/langbench.py --save         # ... and pin the run
-python3 langbench/langbench.py --from-file    # re-render the pinned run
+devbox run -- python3 langbench.py --quick        # small sizes, one run: check everything builds and agrees
+devbox run -- python3 langbench.py                # build, check, time, render
+devbox run -- python3 langbench.py --save         # ... and pin the run
+python3 langbench.py --from-file                  # re-render the pinned run
 ```
 
 A plain run renders the page from what it measured and leaves the pinned run

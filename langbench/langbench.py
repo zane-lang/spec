@@ -22,6 +22,9 @@ explanations.txt quote, so measuring never replaces it on its own: a plain run
 renders the page from what it just measured and leaves the file alone, and
 --save is the separate act of pinning.
 
+The other languages' compilers come from langbench/devbox.json, so a run goes
+through `devbox run --` from langbench/ (README.md).
+
 Usage:
     python3 langbench/langbench.py                # build, check, time, render
     python3 langbench/langbench.py --save         # ... and pin the run
