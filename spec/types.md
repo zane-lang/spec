@@ -215,11 +215,11 @@ Every other conversion can lose a value, and is a named constructor (§3.4) whos
 | Constructor | Source | Result |
 |---|---|---|
 | `@primitives$I32.wrap` | `@primitives$I64` | The source's low 32 bits, read as a signed integer |
-| `@primitives$I32.truncate`, `@primitives$I64.truncate` | `@primitives$F32`, `@primitives$F64` | The source rounded toward zero |
+| `@primitives$I32.truncate`, `@primitives$I64.truncate` | `@primitives$F32`, `@primitives$F64` | The source rounded toward zero, held to the target's range |
 | `@primitives$F32.round` | `@primitives$I32`, `@primitives$I64`, `@primitives$F64` | The `@primitives$F32` nearest the source |
 | `@primitives$F64.round` | `@primitives$I64` | The `@primitives$F64` nearest the source |
 
-A conversion rounds once, from the source straight to the target. A source exactly halfway between two values the target holds rounds to the one whose lowest significand bit is zero, IEEE 754's round half to even. `truncate` stops the program when its source is NaN, or when the source rounded toward zero lies outside the target's range: what the program wrote before is kept, and it ends with a failing status.
+A conversion rounds once, from the source straight to the target. A source exactly halfway between two values the target holds rounds to the one whose lowest significand bit is zero, IEEE 754's round half to even. When the source rounded toward zero lies outside the target's range, an infinity included, `truncate` gives the target's least or greatest value, whichever is nearer, and a NaN truncates to zero, so every conversion has a result.
 
 ```zane
 wide @primitives$I64 = @primitives$I64(small);           // exact: small is an I32

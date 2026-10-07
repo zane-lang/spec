@@ -133,9 +133,9 @@ The **machine operations** on storage primitives are the functions of `@operator
 | `equal` | `@primitives$Bool @operators$equal(left S, right S)` |
 | `lessThan` | `@primitives$Bool @operators$lessThan(left S, right S)` |
 
-On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact one reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero.
+On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact one reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero, and a division by zero gives zero, so every integer operation has a result.
 
-On `@primitives$F32` and `@primitives$F64`, an arithmetic operation whose exact result the type cannot hold rounds it to the nearest value the type holds, and a result exactly halfway between two rounds as a conversion does ([`types.md`](types.md) §2.9).
+On `@primitives$F32` and `@primitives$F64`, an arithmetic operation whose exact result the type cannot hold rounds it to the nearest value the type holds, and a result exactly halfway between two rounds as a conversion does ([`types.md`](types.md) §2.9). A division of a nonzero value by zero gives an infinity of the quotient's sign, and zero divided by zero gives a NaN, as IEEE 754 specifies.
 
 `@primitives$Bool` and `@primitives$String` have machine operations of their own:
 
