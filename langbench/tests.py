@@ -129,8 +129,8 @@ TESTS = [
                    "ones and one that lives through the run. It measures "
                    "allocating and freeing many small owned objects. C, C++, "
                    "Rust and Zig free each tree as it goes; Go and D leave "
-                   "theirs to a garbage collector; Zane's trees are values "
-                   "owned by their scope.",
+                   "theirs to a garbage collector; Zane's reference nodes "
+                   "own their children and transfer ownership into each parent.",
         "args": ["16"],
         "expected": None,
         "check_args": ["10"],

@@ -147,8 +147,8 @@ function renderInfo(t) {
   };
   fact("arguments", t.args.length ? t.args.join(" ") : "none");
   fact("profile", t.profile);
-  fact("Zane build", el("span", "fold " + foldClass(t.fold.observed),
-    t.fold.observed + " (" + t.fold.optimized_loops + " of " + t.fold.plain_loops + " loops left)"));
+  fact("CGT loop counts", el("span", "fold " + foldClass(t.fold.observed),
+    "plain " + t.fold.plain_loops + "; optimized " + t.fold.optimized_loops));
   info.appendChild(facts);
   info.appendChild(el("p", "", t.profileText)).style.marginTop = "10px";
 }
