@@ -32,7 +32,7 @@
       "fold": {
         "plain_loops": 3,
         "optimized_loops": 3,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -178,7 +178,7 @@
       "fold": {
         "plain_loops": 5,
         "optimized_loops": 6,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -276,7 +276,7 @@
       "fold": {
         "plain_loops": 3,
         "optimized_loops": 4,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -374,7 +374,7 @@
       "fold": {
         "plain_loops": 3,
         "optimized_loops": 4,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -472,7 +472,7 @@
       "fold": {
         "plain_loops": 8,
         "optimized_loops": 9,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -570,7 +570,7 @@
       "fold": {
         "plain_loops": 3,
         "optimized_loops": 4,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -668,7 +668,7 @@
       "fold": {
         "plain_loops": 2,
         "optimized_loops": 3,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -766,7 +766,7 @@
       "fold": {
         "plain_loops": 3,
         "optimized_loops": 4,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
@@ -864,7 +864,7 @@
       "fold": {
         "plain_loops": 1,
         "optimized_loops": 2,
-        "observed": "not folded"
+        "observed": "not inferred"
       },
       "rows": [
         {
