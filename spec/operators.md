@@ -133,6 +133,8 @@ The **machine operations** on storage primitives are the functions of `@operator
 | `equal` | `@primitives$Bool @operators$equal(left S, right S)` |
 | `lessThan` | `@primitives$Bool @operators$lessThan(left S, right S)` |
 
+On `@primitives$F32` and `@primitives$F64`, an arithmetic operation whose exact result the type cannot hold rounds it to the nearest value the type holds, and a result exactly halfway between two rounds as a conversion does ([`types.md`](types.md) §2.9).
+
 `@primitives$Bool` and `@primitives$String` have machine operations of their own:
 
 | Operation | Signature |

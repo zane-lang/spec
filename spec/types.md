@@ -219,7 +219,7 @@ Every other conversion can lose a value, and is a named constructor (§3.4) whos
 | `@primitives$F32.round` | `@primitives$I32`, `@primitives$I64`, `@primitives$F64` | The `@primitives$F32` nearest the source |
 | `@primitives$F64.round` | `@primitives$I64` | The `@primitives$F64` nearest the source |
 
-A conversion rounds once, from the source straight to the target. `truncate` stops the program when its source is NaN, or when the source rounded toward zero lies outside the target's range: what the program wrote before is kept, and it ends with a failing status.
+A conversion rounds once, from the source straight to the target. A source exactly halfway between two values the target holds rounds to the one whose lowest significand bit is zero, IEEE 754's round half to even. `truncate` stops the program when its source is NaN, or when the source rounded toward zero lies outside the target's range: what the program wrote before is kept, and it ends with a failing status.
 
 ```zane
 wide @primitives$I64 = @primitives$I64(small);           // exact: small is an I32
