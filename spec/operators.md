@@ -54,6 +54,7 @@ Vec2 +(left Int, right Vec2) {
 Because `Int` is fundamental, the example above is legal only in the home package of `Vec2`.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#imports-may-add-names-not-meanings) — "Imports may add names, not meanings".
+> **Story:** [`stories/operators.md`](../stories/operators.md#literal-operands-find-no-operator-and-the-home-package-stands-in-for-a-qualifier) — "Literal operands find no operator, and the home package stands in for a qualifier".
 
 ### 2.3 Derived operators
 
