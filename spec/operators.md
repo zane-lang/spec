@@ -41,6 +41,8 @@ Operator implementations are package-scope verb declarations whose names are ope
 
 A unary operator is legal only in the home package of its operand type. A binary operator `(left T, right U)` is legal only in the home package of `T` or `U`. `core` is the home package of the fundamental types, and a package may no more add declarations to it than to any other package it does not own; a fundamental operand therefore does not by itself grant permission to declare an operator. See [`functions.md`](functions.md) §6.1 for the corresponding method-resolution rule.
 
+A storage primitive's home is the intrinsic namespace that holds it, which is not a package ([`syntax.md`](syntax.md) §2.7). So no operator is declared over storage primitives alone, and a storage primitive has none: an operator is declared on a type of a package, and written over the machine operations of §2.6.
+
 Imported packages do not contribute new implicit operator candidates. This prevents the meaning of `a + b` or `a < b` from changing just because a different helper package was imported.
 
 ```zane
@@ -117,6 +119,46 @@ if((age > Int(18)) * hasId) { ... }
 Zane does not specify a separate bitwise-complement meaning for `~`.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#one-operator-for-flipping-a-value) — "One operator for flipping a value".
+
+### 2.6 The machine operations operators are written over
+
+The **machine operations** on storage primitives are the functions of `@operators$` ([`syntax.md`](syntax.md) §2.7). They are called like any function. Each arithmetic operation and comparison has one overload per scalar primitive, `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, and takes both operands of that one type:
+
+| Operation | Signature |
+|---|---|
+| `add` | `S @operators$add(left S, right S)` |
+| `multiply` | `S @operators$multiply(left S, right S)` |
+| `divide` | `S @operators$divide(left S, right S)` |
+| `negate` | `S @operators$negate(value S)` |
+| `equal` | `@primitives$Bool @operators$equal(left S, right S)` |
+| `lessThan` | `@primitives$Bool @operators$lessThan(left S, right S)` |
+
+On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact one reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero, and a division by zero gives zero, so every integer operation has a result.
+
+On `@primitives$F32` and `@primitives$F64`, each operation is IEEE 754's: `add`, `multiply`, and `divide` are its addition, multiplication, and division, rounded to nearest with ties to even as a conversion is ([`types.md`](types.md) §2.9), and `negate` flips the sign, of a zero and a NaN too. So an operation on infinities gives what IEEE 754 gives, an infinity or a NaN, a division of a nonzero value by zero gives an infinity of the quotient's sign, zero divided by zero gives a NaN, and an operation with a NaN operand gives a NaN. `equal` and `lessThan` are IEEE 754's quiet comparisons: both are false when either operand is a NaN, so a NaN equals nothing, itself included, and `equal` holds of a positive and a negative zero.
+
+`@primitives$Bool` and `@primitives$String` have machine operations of their own:
+
+| Operation | Signature |
+|---|---|
+| `and` | `@primitives$Bool @operators$and(left @primitives$Bool, right @primitives$Bool)` |
+| `or` | `@primitives$Bool @operators$or(left @primitives$Bool, right @primitives$Bool)` |
+| `not` | `@primitives$Bool @operators$not(value @primitives$Bool)` |
+| `concat` | `@primitives$String @operators$concat(left @primitives$String, right @primitives$String)` |
+| `equal` | `@primitives$Bool @operators$equal(left B, right B)`, for `B` either of the two |
+
+`concat` gives a new string holding the left operand's bytes followed by the right's. `equal` on `@primitives$String` compares contents: two strings are equal when they hold the same bytes in the same order, whatever storage holds them.
+
+No machine operation takes operands of two types; an operand is converted first ([`types.md`](types.md) §2.9). There is no subtraction, since `a - b` is `a + ~b` (§4.2).
+
+`core` writes the fundamental types' operators over these machine operations. Where its `Int` holds an `@primitives$I64` in a field `value`, and its `Bool` an `@primitives$Bool`:
+
+```zane
+Int +(left Int, right Int) => Int(@operators$add(left.value, right.value))
+Bool ~(value Bool) => Bool(@operators$not(value.value))
+```
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#primitives-lose-their-operators-to-operators-functions) — "Primitives lose their operators to `@operators$` functions".
 
 ---
 
@@ -238,7 +280,8 @@ An operator token may appear only in operator position; it has no value form. Th
 | Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
 | Operand order | The operands of every operator are evaluated left to right, in written order, whatever position the desugaring passes them in. |
-| Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`. |
+| Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`, and a storage primitive has none. |
+| Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `and`, `or`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement, and `==` as equality; `~=` is exclusive or and `-` is implication by derivation. It declares no `/` and no `<`, so those and the operators derived from `<` are no-match errors. Both operands are evaluated. |
 | Loose forms | A `'` prefix selects a binary operator at a mirrored level below every unprefixed one; one tier only, binary only, same implementation. |

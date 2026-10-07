@@ -208,7 +208,7 @@ The language provides exactly three control-flow operations:
 
 ```zane
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
-@controlflow$repeat(count @primitives$Int, body @concepts$Block)
+@controlflow$repeat(count @primitives$I64, body @concepts$Block)
 @controlflow$exitFromCall()
 ```
 
@@ -324,7 +324,7 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
-| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$Int`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
+| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$I64`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit`, and a lambda's body may not contain it |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

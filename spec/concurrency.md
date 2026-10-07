@@ -36,7 +36,7 @@ This parallelism is **unobservable**: it must not change output, only timing.
 The runtime uses a work-stealing thread pool. It starts sized to hardware concurrency, and the program's runtime ([`effects.md`](effects.md) §6.6) resizes it:
 
 ```zane
-@primitives$Unit?@primitives$Unit setThreads(this @runtime$Runtime, count @primitives$Int) mut
+@primitives$Unit?@primitives$Unit setThreads(this @runtime$Runtime, count @primitives$I64) mut
 @primitives$Unit setThreadsAuto(this @runtime$Runtime) mut
 ```
 

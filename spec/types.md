@@ -23,7 +23,7 @@ Zane keeps data layout and construction separate from behavior.
 
 ### 2.1 The value/reference axis and the `#` modifier
 
-Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: `@primitives$Int`, `@primitives$Float`, `@primitives$Bool`, `@primitives$String` (§2.7), and `@primitives$Array<T, n>` are value types, and `@primitives$ArrayRef<T, n>`, `@primitives$List<T>` ([`generics.md`](generics.md) §8), and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$Bool`, `@primitives$String` (§2.7), and `@primitives$Array<T, n>` are value types, and `@primitives$ArrayRef<T, n>`, `@primitives$List<T>` ([`generics.md`](generics.md) §8), and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -96,7 +96,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$Int`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String` and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$I64`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String` and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. A storage primitive has no operators, so `core` writes the fundamental types' operators over the machine operations of `@operators$` ([`operators.md`](operators.md) §2.6). None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
 `Int` converts only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Float`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
 
@@ -126,36 +126,40 @@ An implementation may erase only the runtime storage of `Unit` values, including
 
 ### 2.7 Literals and their storage primitives
 
-A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Three storage primitives take a literal directly: `@primitives$Int` and `@primitives$Float`, which are machine-word scalars, and `@primitives$String`, the string storage primitive described below. `@primitives$Bool` is a machine-word scalar as well.
+A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Five storage primitives take a literal directly: the integer scalars `@primitives$I32` and `@primitives$I64`, which take `@concepts$Int`; the float scalars `@primitives$F32` and `@primitives$F64`, which take `@concepts$Float`; and `@primitives$String`, the string storage primitive described below. `@primitives$Bool` is a machine-word scalar as well.
 
-Each of the three has exactly one compiler-provided constructor, and it takes the concept type of the matching literal. Packages may additionally declare conversions to primitives under §4:
+Each of the five has one compiler-provided constructor from its literal's concept type. A scalar also converts from each other scalar (§2.9), and packages may declare conversions to primitives under §4:
 
 ```zane
-@primitives$Int(value @concepts$Int)
-@primitives$Float(value @concepts$Float)
+@primitives$I32(value @concepts$Int)
+@primitives$I64(value @concepts$Int)
+@primitives$F32(value @concepts$Float)
+@primitives$F64(value @concepts$Float)
 @primitives$String(value @concepts$String)
 ```
+
+A concept is not storage, so the constructor it is passed to decides which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
 
 These constructors are not `implicit`, so a literal never becomes a primitive by itself. A literal is accepted where the parameter's type is the literal's own concept type, or a type with an implicit constructor from that concept type (§4.2). Such a type calls the primitive's constructor inside its own conversion:
 
 ```zane
-type Count = struct { value @primitives$Int; }
+type Count = struct { value @primitives$I64; }
 
-implicit Count(literal @concepts$Int) => init{value = @primitives$Int(literal);}
+implicit Count(literal @concepts$Int) => init{value = @primitives$I64(literal);}
 ```
 
 A parameter of a primitive type therefore takes a primitive, or a type with an implicit constructor to it, and never a bare literal. Implicit constructors do not chain (§4.3), so a literal does not pass through such a type on its way to the primitive either:
 
 ```zane
-@controlflow$repeat(@primitives$Int(3), { console!print("hi"); });   // legal: the primitive constructed explicitly
-@controlflow$repeat(Int(3), { console!print("hi"); });               // legal: Int converts implicitly to @primitives$Int
-@controlflow$repeat(3, { console!print("hi"); });                    // ILLEGAL: no implicit constructor from @concepts$Int to @primitives$Int
+@controlflow$repeat(@primitives$I64(3), { console!print("hi"); });   // legal: the primitive constructed explicitly
+@controlflow$repeat(Int(3), { console!print("hi"); });               // legal: Int converts implicitly to @primitives$I64
+@controlflow$repeat(3, { console!print("hi"); });                    // ILLEGAL: no implicit constructor from @concepts$Int to @primitives$I64
 ```
 
-The numeric arguments are values of leaf concept types, so they are known at compile time, and their constructors embed them in the primitives. A string concept may include runtime interpolation (§2.8); its constructor materializes the text when those values are available. A literal the primitive cannot represent is a compile-time error: an integer literal greater than the largest `@primitives$Int`, or a float literal whose magnitude exceeds the largest finite `@primitives$Float`.
+The numeric arguments are values of leaf concept types, so they are known at compile time, and their constructors embed them in the primitives. A string concept may include runtime interpolation (§2.8); its constructor materializes the text when those values are available. A literal the primitive cannot represent is a compile-time error: an integer literal outside the range of the integer primitive it builds, or a float literal whose magnitude exceeds the largest finite value of the float primitive it builds.
 
 ```zane
-big @primitives$Int(99999999999999999999);   // ILLEGAL: out of range for @primitives$Int
+big @primitives$I32(9999999999);   // ILLEGAL: out of range for @primitives$I32
 ```
 
 `@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the segmented offset of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no identity and cannot be targeted by an `&` reference.
@@ -193,6 +197,37 @@ literal @concepts$String = "hello";  // ILLEGAL: concepts cannot be stored
 The language recognizes quote escaping, backslash escaping, and interpolation as literal structure ([`lexical.md`](lexical.md) §7.1). Other backslash sequences remain text for the consumer to interpret. Consumer interpretation does not change the caller's scope or give the consumer access to variables named in the text.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#literal-structure-and-consumer-interpretation) — "Literal structure and consumer interpretation".
+
+### 2.9 Conversions between scalar primitives
+
+Each scalar primitive converts to each other one through a constructor of the target. None of them is `implicit`, so a conversion is always written where it happens.
+
+A conversion that is exact for every value of its source is the target's anonymous constructor:
+
+```zane
+@primitives$I64(value @primitives$I32)
+@primitives$F64(value @primitives$F32)
+@primitives$F64(value @primitives$I32)
+```
+
+Every other conversion can lose a value, and is a named constructor (§3.4) whose name says how it does:
+
+| Constructor | Source | Result |
+|---|---|---|
+| `@primitives$I32.wrap` | `@primitives$I64` | The source's low 32 bits, read as a signed integer |
+| `@primitives$I32.truncate`, `@primitives$I64.truncate` | `@primitives$F32`, `@primitives$F64` | The source rounded toward zero, held to the target's range |
+| `@primitives$F32.round` | `@primitives$I32`, `@primitives$I64`, `@primitives$F64` | The `@primitives$F32` nearest the source |
+| `@primitives$F64.round` | `@primitives$I64` | The `@primitives$F64` nearest the source |
+
+`round` rounds once, from the source straight to the target, and a source exactly halfway between two values the target holds rounds to the one whose lowest significand bit is zero, IEEE 754's round half to even. `@primitives$F32.round` of an `@primitives$F64` is IEEE 754's conversion between the two formats: a NaN gives a NaN, an infinity the infinity of its sign, and a finite source too large for rounding to nearest to give a finite `@primitives$F32` the infinity of its sign as well. When the source rounded toward zero lies outside the target's range, an infinity included, `truncate` gives the target's least or greatest value, whichever is nearer, and a NaN truncates to zero, so every conversion has a result.
+
+```zane
+wide @primitives$I64 = @primitives$I64(small);           // exact: small is an I32
+whole @primitives$I32 = @primitives$I32.truncate(ratio); // drops ratio's fraction
+near @primitives$F64 = @primitives$F64.round(count);     // count is an I64 and may be rounded
+```
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-scalar-primitives-become-i32-i64-f32-and-f64-converted-by-constructor) — "The scalar primitives become `I32`, `I64`, `F32` and `F64`, converted by constructor".
 
 ---
 
@@ -315,7 +350,7 @@ The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous:
 
 A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
 
-Because a named constructor builds through `init{ }`, it belongs to a type that has fields — a `struct`, in either its value or `#` reference form (§3). A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
+Because a named constructor builds through `init{ }`, a package declares one on a type that has fields — a `struct`, in either its value or `#` reference form (§3). A storage primitive's named constructors are the compiler's own, such as the lossy conversions of §2.9. A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
 
 > **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
 
@@ -680,7 +715,8 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
-| Literal storage primitive | `@primitives$Int`, `@primitives$Float`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
+| Literal storage primitive | `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, `@primitives$F64`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
+| Scalar conversion | Each scalar primitive converts to each other through a constructor of the target, never `implicit`; an exact one is the anonymous constructor, and a lossy one is named for its loss: `wrap`, `truncate`, or `round` |
 | String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored reference; copies are deep |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |

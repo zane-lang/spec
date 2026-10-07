@@ -93,7 +93,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.4 compiler concept types
 
 - **Meaning:** Compiler-provided types for source constructs, permitted in parameters but not storage. The leaf concepts `Type`, `@concepts$Int`, and `@concepts$Float` are compile-time values. String concepts may contain runtime interpolation; array and map concepts may contain runtime entries. A concept is not necessarily a compile-time value.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages, so `@concepts$Int` sits beside `@primitives$Int`, the storage primitive whose constructor takes it.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages: `@concepts$Int` is an integer literal, whichever integer primitive's constructor it is passed to.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor
@@ -342,13 +342,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It is the compiler-provided storage for string contents, underneath package-defined string types.
 - **Canonical home:** [`types.md`](types.md) §2.7
 
+### 3.46 scalar primitive
+
+- **Meaning:** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, or `@primitives$F64`: a signed integer or IEEE 754 float of the width its name gives. Each is built from its literal's concept, and converts to each other through a constructor of the target, named for its loss when it can lose a value.
+- **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out the kind and the width, which is all that tells the four apart.
+- **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
+
 ---
 
 ## 4. Packages, Operators, and Versioning
 
 ### 4.1 home-package operator rule
 
-- **Meaning:** A source operator implementation may be declared only in the home package of one of its user-defined operand types. Operators over the fundamental types alone live in `core`.
+- **Meaning:** A source operator implementation may be declared only in the home package of one of its user-defined operand types. Operators over the fundamental types alone live in `core`, and a storage primitive, whose home is no package, has none.
 - **Why this name:** The rule ties operator declarations to the package that "owns" one operand type and prevents unrelated helper imports from changing operator meaning.
 - **Canonical home:** [`operators.md`](operators.md) §2.2
 
@@ -441,3 +447,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A directory with `.zn` files inside a library package, nested to any depth. Only its parent imports it, and no other project sees it.
 - **Why this name:** It is a package in every respect, placed under another one that alone reaches it.
 - **Canonical home:** [`packages.md`](packages.md) §2.3
+
+### 4.17 machine operation
+
+- **Meaning:** A function of `@operators$`: the machine arithmetic, comparison, Boolean connective, or string join on storage primitives that a package writes its operators over. Each takes operands of one type, with one overload per type it takes.
+- **Why this name:** It is the operation the machine performs, which an operator presents in notation: it is called by name like any function, where an operator is written between its operands.
+- **Canonical home:** [`operators.md`](operators.md) §2.6
