@@ -135,7 +135,7 @@ The **machine operations** on storage primitives are the functions of `@operator
 
 On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact one reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero, and a division by zero gives zero, so every integer operation has a result.
 
-On `@primitives$F32` and `@primitives$F64`, an arithmetic operation whose exact result the type cannot hold rounds it to the nearest value the type holds, and a result exactly halfway between two rounds as a conversion does ([`types.md`](types.md) §2.9). A division of a nonzero value by zero gives an infinity of the quotient's sign, and zero divided by zero gives a NaN, as IEEE 754 specifies.
+On `@primitives$F32` and `@primitives$F64`, each operation is IEEE 754's: `add`, `multiply`, and `divide` are its addition, multiplication, and division, rounded to nearest with ties to even as a conversion is ([`types.md`](types.md) §2.9), and `negate` flips the sign, of a zero and a NaN too. So an operation on infinities gives what IEEE 754 gives, an infinity or a NaN, a division of a nonzero value by zero gives an infinity of the quotient's sign, zero divided by zero gives a NaN, and an operation with a NaN operand gives a NaN. `equal` and `lessThan` are IEEE 754's quiet comparisons: both are false when either operand is a NaN, so a NaN equals nothing, itself included, and `equal` holds of a positive and a negative zero.
 
 `@primitives$Bool` and `@primitives$String` have machine operations of their own:
 
@@ -146,6 +146,8 @@ On `@primitives$F32` and `@primitives$F64`, an arithmetic operation whose exact 
 | `not` | `@primitives$Bool @operators$not(value @primitives$Bool)` |
 | `concat` | `@primitives$String @operators$concat(left @primitives$String, right @primitives$String)` |
 | `equal` | `@primitives$Bool @operators$equal(left B, right B)`, for `B` either of the two |
+
+`concat` gives a new string holding the left operand's bytes followed by the right's. `equal` on `@primitives$String` compares contents: two strings are equal when they hold the same bytes in the same order, whatever storage holds them.
 
 No machine operation takes operands of two types; an operand is converted first ([`types.md`](types.md) §2.9). There is no subtraction, since `a - b` is `a + ~b` (§4.2).
 
