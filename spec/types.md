@@ -83,6 +83,7 @@ Int peek(this Graph$Node) => this._id   // ILLEGAL: _id is private to Graph
 ```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#field-privacy-moves-to-the-package) — "Field privacy moves to the package".
 
 ### 2.4 Type bodies contain no behavior
 

@@ -52,6 +52,7 @@ Int scaledIdOf(node Node, factor Int) => node._id * factor   // a function: scal
 ```
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+> **Story:** [`stories/functions.md`](../stories/functions.md#this-keeps-only-the-subject-call) — "`this` keeps only the subject call".
 
 ### 2.3 Read-only methods are the default
 
@@ -334,6 +335,7 @@ vec:Physics$kineticEnergy();
 Because methods are package-scope verbs, any package may define methods on imported types. Such a method has the subject call of any other method (§2.2) and reaches only the type's public fields, because its `_` fields are private to the type's package ([`types.md`](types.md) §2.3).
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
+> **Story:** [`stories/functions.md`](../stories/functions.md#this-keeps-only-the-subject-call) — "`this` keeps only the subject call".
 
 ---
 

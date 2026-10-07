@@ -94,6 +94,7 @@ A leading `_` marks an identifier as private without changing the lexical class 
 - A top-level library package whose name begins with `_` is private to its project. See [`packages.md`](packages.md) §4.4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#field-privacy-moves-to-the-package) — "Field privacy moves to the package".
 
 ### 4.3 Reserved sigils
 
