@@ -94,6 +94,8 @@ A block has no value. A callee runs it for what it does, through the control-flo
 
 `resolve` is transparent to a block in the same way as `return` and `abort` (§2.3). Written in a block that sits inside an abort handler, it finishes that handler ([`error-handling.md`](error-handling.md) §4). Written in a block with no handler around it, it is a compile-time error.
 
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-block-that-yields-nothing) — "A block that yields nothing".
+
 ---
 
 ## 3. Branching and Repetition
@@ -145,6 +147,7 @@ ran:else() {
 ```
 
 The nesting shows at the call site which conditions run unconditionally and which only when reached.
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-block-that-yields-nothing) — "A block that yields nothing".
 
 ### 3.4 Counted repetition advances ordinary storage
 
