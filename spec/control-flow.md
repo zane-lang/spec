@@ -23,7 +23,7 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 
 ### 2.1 A block argument is a run of statements passed to a call
 
-A **block argument** is a braced run of statements written at a call site and executed by the callee. Its type is the compiler concept type `@concepts$Block`, or `@concepts$Block<T>` when it yields a `T`.
+A **block argument** is a braced run of statements written at a call site and executed by the callee. Its type is the compiler concept type `@concepts$Block`.
 
 ```zane
 ran Bool = if(ready) {
@@ -88,17 +88,11 @@ An exit therefore names no scope and unwinds to none, which Zane does not do ([`
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 
 
-### 2.4 A block may yield a value
+### 2.4 A block yields nothing
 
-A `Block<T>` yields a `T`. Each of its yielding paths ends with `resolve`, which substitutes the value into the call that receives the block — the same keyword and the same meaning it carries in an abort handler ([`error-handling.md`](error-handling.md) §3.3).
+A block has no value. A callee runs it for what it does, through the control-flow intrinsics (§4.1), and nothing written in the block is handed back to the call that receives it.
 
-```zane
-ran!elif({ resolve cache:has(key) }) {
-    use(key);
-}
-```
-
-`return` inside a block still leaves the enclosing verb (§2.3). The two are not alternatives: `resolve` finishes the block, `return` finishes the verb.
+`resolve` is transparent to a block in the same way as `return` and `abort` (§2.3). Written in a block that sits inside an abort handler, it finishes that handler ([`error-handling.md`](error-handling.md) §4). Written in a block with no handler around it, it is a compile-time error.
 
 ---
 
@@ -138,16 +132,19 @@ Because a chain is a sequence of ordinary calls rather than one construct, its p
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#moving-if-and-loop-into-core) — "Moving `if` and `loop` into `core`".
 
 
-### 3.3 A condition is evaluated unless it is written as a block
+### 3.3 A condition is evaluated before the call
 
-The condition of an `elif` is an ordinary argument and is evaluated before the call, like any other (§2.4 of [`operators.md`](operators.md) states the same for the `Bool` operators). A condition that must not run when an earlier branch already matched is written as a block, selecting the `Block<Bool>` overload:
+The condition of an `elif` is an ordinary argument, so it is evaluated before the call even when an earlier branch already ran, like any other argument (§2.4 of [`operators.md`](operators.md) states the same for the `Bool` operators). A condition that must run only when it is reached is written inside the `else` of the chain so far, where it starts a chain of its own:
 
 ```zane
-ran!elif(cheapFlag) { ... }                        // evaluated
-ran!elif({ resolve expensiveCheck() }) { ... }     // evaluated only if reached
+ran!elif(cheapFlag) { ... }                         // evaluated whether or not an earlier branch ran
+ran:else() {
+    late Bool = if(expensiveCheck()) { ... }        // evaluated only if no earlier branch ran
+    late:else() { ... }
+}
 ```
 
-Deferral is therefore visible at the call site rather than implied by the name of the construct.
+The nesting shows at the call site which conditions run unconditionally and which only when reached.
 
 ### 3.4 Counted repetition advances ordinary storage
 
@@ -315,14 +312,14 @@ This document specifies the ordinal base only. The language-level behavior for o
 
 | Concept | Rule |
 |---|---|
-| Block argument | A braced run of statements passed to a call; type `@concepts$Block` or `Block<T>`; no parameters, no name, never a value |
+| Block argument | A braced run of statements passed to a call; type `@concepts$Block`; no parameters, no name, never a value |
 | Capture | A block reads and writes its enclosing scope's bindings |
 | Escape | A block may not be stored, returned, bound, placed in storage, or spawned; it may be handed to another verb |
 | Scope | A block is the scope of its own declarations but is transparent to `return` and `abort`, and a `guard` written in one exits the verb the block was written in |
 | Lowering | A verb taking a block parameter is expanded at its call site, transitively, so a block never crosses a call boundary and an exit inside one is a jump within one frame |
-| Yielding | A `Block<T>` ends its yielding paths with `resolve`; `return` still leaves the enclosing verb |
+| Yielding | A block yields nothing; `resolve` in one finishes the handler around the call, like `return` and `abort` |
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
-| Condition evaluation | An ordinary argument is evaluated; a `Block<Bool>` argument defers, and the choice is visible at the call site |
+| Condition evaluation | A condition is an ordinary argument and is evaluated before the call; one that must run only when reached is nested in the chain's `else` |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
 | Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`; the first two stated over `@primitives$Bool` and `@primitives$I64`, the third over nothing; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
 | Bounded repetition | `repeat` takes a count, so one invocation always terminates and every construct built on it carries a written bound; recursion remains the only unbounded path |

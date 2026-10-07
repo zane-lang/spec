@@ -344,11 +344,10 @@ The concept type `Type` declares a type parameter, and `@concepts$Int` — the c
 
 ### 2.12 The block-argument type
 
-`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.8). `Block<T>` yields a `T`; a bare `Block` yields nothing. It follows the rule of §2.8 and may never be stored.
+`@concepts$Block` is the type of a **block argument** — a braced run of statements written at a call site and executed by the callee (§4.8). It takes no type argument, since a block yields nothing. It follows the rule of §2.8 and may never be stored.
 
 ```zane
 @concepts$Block
-@concepts$Block<Bool>
 ```
 
 > **See also:** [`control-flow.md`](control-flow.md) §2 for what a block argument does.
@@ -815,13 +814,7 @@ if(true) {
 if(true, { console!print("hi"); });   // the same call, written in full
 ```
 
-A block takes no parameters and is never named. A block that yields a value ends its yielding paths with `resolve` (§6.2 uses the same keyword at a handler):
-
-```zane
-value Int = compute() {
-    resolve Int(3);
-}
-```
+A block takes no parameters, is never named, and yields nothing ([`control-flow.md`](control-flow.md) §2.4).
 
 ```zane
 f({ x; }, { y; });    // legal: two block arguments, neither trailing
