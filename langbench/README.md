@@ -71,7 +71,7 @@ parent transfers both children into it, matching the owning pointers in C++
 and Rust; checking a tree borrows it. `treecopy` intentionally uses value
 types, because copying the complete tree is the work that test measures.
 
-The pinned 2026-10-07 run uses compiler v0.7 with cross-package optimization
+The pinned 2026-10-08 run uses compiler v0.8 with cross-package optimization
 and the reference-based binary-tree program. It was measured on an Intel
 Core i7-1355U laptop under WSL2; `explanations.txt` describes that run.
 
