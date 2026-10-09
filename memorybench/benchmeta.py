@@ -203,8 +203,8 @@ TEST_META = {
         "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md §3.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
         "meta": [
             ("Tree", "complete binary, depth 12 — 8,191 nodes"),
-            ("Owned node", "16B — value and two handles"),
-            ("Value node", "16B — value and two handles"),
+            ("Owned node", "24B on a 64-bit target — value and two native handles"),
+            ("Value node", "24B on a 64-bit target — value and two native handles"),
             ("Boxed payload", "exact node size, node alignment; no size class, no floor"),
             ("Stack key", "resolved once from the member's type, not per allocation"),
             ("Escape", "recursive relocation; old blocks returned to their exact-size stacks"),
