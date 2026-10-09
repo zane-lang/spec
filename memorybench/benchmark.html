@@ -925,8 +925,12 @@ const TESTS=[
         "val": "a boxed payload indexes its stack directly; a backing store looks its up"
       },
       {
+        "label": "Small blocks",
+        "val": "blocks smaller than a native pointer keep return addresses in separate vectors; larger blocks copy link bytes without requiring pointer alignment"
+      },
+      {
         "label": "Asserted",
-        "val": "a freed block is handed back for the same size and alignment, and withheld from a different one"
+        "val": "exact-key LIFO reuse, separation of different keys, neighboring live bytes preserved for tiny blocks, weakly aligned 12-byte blocks, and empty stacks after drain"
       },
       {
         "label": "Runs",

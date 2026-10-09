@@ -226,7 +226,12 @@ static void workers_shutdown(void) {
 typedef void *ZRef;
 
 typedef struct { size_t off; int live; uint8_t *cbase; } ZBump;
-typedef struct { size_t size; size_t align; void *head; } ZSizeStack;
+typedef struct {
+    size_t size, align;
+    void *head;
+    void **small;
+    size_t small_count, small_capacity;
+} ZSizeStack;
 
 static struct {
     uint8_t   *base;
@@ -270,7 +275,7 @@ static ZSizeStack *zd_stack(size_t size, size_t align) {
     uint32_t i = h & (ZD_STACKS - 1);
     for (uint32_t probe = 0; probe < ZD_STACKS; probe++) {
         ZSizeStack *s = &zm.stacks[(i + probe) & (ZD_STACKS - 1)];
-        if (s->size == 0) {
+        if (s->align == 0) {
             s->size = size; s->align = align; s->head = ZD_NIL;
             return s;
         }
@@ -287,25 +292,39 @@ static void *zd_span(size_t bytes) {
     return first;
 }
 
-static void *zd_try_stack(size_t size, size_t align) {
-    ZSizeStack *s = zd_stack(size, align);
+static void *zd_pop(ZSizeStack *s) {
+    if (s->size < sizeof(void *))
+        return s->small_count ? s->small[--s->small_count] : NULL;
     if (s->head == ZD_NIL) return NULL;
     void *p = s->head;
-    s->head = *(void**)p;
+    memcpy(&s->head, p, sizeof s->head);
     return p;
 }
 
+static void *zd_try_stack(size_t size, size_t align) {
+    return zd_pop(zd_stack(size, align));
+}
+
 static void *zd_take(ZSizeStack *s) {
-    if (s->head != ZD_NIL) {
-        void *p = s->head;
-        s->head = *(void**)p;
-        return p;
-    }
+    void *p = zd_pop(s);
+    if (p) return p;
     if (s->size > ZM_CHUNK) return zd_span(s->size);
     return zm_bump(&zm.dyn, s->size, s->align);
 }
 static void zd_give(ZSizeStack *s, void *p) {
-    *(void**)p = s->head;
+    if (s->size < sizeof(void *)) {
+        if (s->small_count == s->small_capacity) {
+            size_t capacity = s->small_capacity ? s->small_capacity * 2 : 16;
+            assert(capacity > s->small_capacity && capacity <= SIZE_MAX / sizeof *s->small);
+            void **entries = realloc(s->small, capacity * sizeof *entries);
+            assert(entries);
+            s->small = entries;
+            s->small_capacity = capacity;
+        }
+        s->small[s->small_count++] = p;
+        return;
+    }
+    memcpy(p, &s->head, sizeof s->head);
     s->head = p;
 }
 
@@ -316,9 +335,7 @@ static void *zd_alloc(size_t size, size_t align) {
     return zm_bump(&zm.dyn, size, align);
 }
 static void zd_free(void *p, size_t size, size_t align) {
-    ZSizeStack *s = zd_stack(size, align);
-    *(void**)p = s->head;
-    s->head = p;
+    zd_give(zd_stack(size, align), p);
 }
 
 static int zd_grow_in_place(void *block, size_t old_bytes, size_t new_bytes) {
@@ -341,7 +358,10 @@ static void zm_reset(void) {
     zm.next_chunk = 0;
     zm.dyn.live = 0;
     zm.fixed_off = zm.dyn.off = 0;
-    for (int i = 0; i < ZD_STACKS; i++) zm.stacks[i].head = ZD_NIL;
+    for (int i = 0; i < ZD_STACKS; i++) {
+        zm.stacks[i].head = ZD_NIL;
+        zm.stacks[i].small_count = 0;
+    }
 }
 
 static void zm_init(void) {
@@ -1357,6 +1377,38 @@ static void test12(void) {
 #define REUSE_ROUNDS 10
 static const size_t REUSE_SIZES[3] = { 128, 256, 512 };
 
+static void check_exact_reuse(size_t size, size_t align) {
+    zm_reset();
+    ZSizeStack *s = zd_stack(size, align);
+    uint8_t *a = zd_take(s), *b = zd_alloc(size, align), *live = zd_take(s);
+    assert(b == a + size && live == b + size);
+    memset(b, 0x6b, size);
+    memset(live, 0xa5, size);
+    zd_give(s, a);
+    for (size_t i = 0; i < size; i++) assert(b[i] == 0x6b && live[i] == 0xa5);
+    zd_free(b, size, align);
+    for (size_t i = 0; i < size; i++) assert(live[i] == 0xa5);
+    assert(zd_try_stack(size, align) == b);
+    assert(zd_take(s) == a);
+    assert(zd_try_stack(size, align) == NULL);
+    zd_free(a, size, align);
+    zm_reset();
+    assert(zd_try_stack(size, align) == NULL);
+}
+
+static void check_many_small_blocks(void) {
+    zm_reset();
+    ZSizeStack *s = zd_stack(1, 1);
+    void *blocks[40];
+    for (size_t i = 0; i < 40; i++) blocks[i] = zd_take(s);
+    uint8_t *live = zd_alloc(1, 1);
+    *live = 0xa5;
+    for (size_t i = 0; i < 40; i++) zd_free(blocks[i], 1, 1);
+    assert(*live == 0xa5);
+    for (size_t i = 40; i > 0; i--) assert(zd_take(s) == blocks[i - 1]);
+    assert(zd_try_stack(1, 1) == NULL);
+}
+
 static void test13(void) {
     record_test("Test 13", "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]");
     double T[RUNS];
@@ -1423,6 +1475,10 @@ static void test13(void) {
         T[r] = now_ns() - t0; sink ^= (int64_t)(uintptr_t)blocks[0];
     }
     record_row("Pool (per-size free-list)", T);
+
+    for (size_t size = 1; size < sizeof(void *); size++) check_exact_reuse(size, 1);
+    check_exact_reuse(12, 4);
+    check_many_small_blocks();
 
     zm_reset();
     {
@@ -1653,6 +1709,7 @@ int main(void) {
     test13(); test14();
 
     workers_shutdown();
+    for (int i = 0; i < ZD_STACKS; i++) free(zm.stacks[i].small);
     emit_json(stdout);
     fprintf(stderr, "sink = %lld\n", (long long)sink);
     return 0;
