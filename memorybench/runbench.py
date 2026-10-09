@@ -80,7 +80,8 @@ def row_stats(row):
 def measurement_notes(test, config):
     """Describe missing variants and measurements from an older protocol."""
     meta = benchmeta.TEST_META.get(test["id"], {})
-    labels = {row["label"] for row in test["rows"]}
+    labels = {row["label"] for row in test["rows"]
+              if row_stats(row) is not None}
     missing = [label for label in meta.get("required_rows", []) if label not in labels]
     notes = []
     if missing:
