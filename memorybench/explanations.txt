@@ -1,168 +1,149 @@
 # Benchmark result explanations.
 #
-# Authored after inspecting a real run of zane_bench (see
-# zane_bench_results.json, and zane_bench_results.txt rendered from it).
+# Authored from the maintainer-supplied full-suite run committed on 9 October
+# 2026, after adding the arena variants in T8 and T10. This is not a container
+# pin. The JSON retains all 20 samples for every timed row; it records the
+# workload configuration but no machine identifier or CPU-affinity setting.
+# Compare rows within this run, not absolute times against an earlier pin.
 #
-# PROVENANCE AND NOISE. The committed run is a fresh full-suite run of the
-# settled/roaming harness, the first since the anchor pool, the per-object
-# backpointer and forwarding were removed (spec PR #212). It was taken on a
-# different and less powerful machine than the previous pin, which ran under
-# WSL2 with no core pinning on a hybrid desktop CPU of 8 performance and 16
-# efficiency cores. Rows whose code did not change came in 1.9-5.1x slower
-# here than in that pin, which is the machine, not the code, so no absolute
-# figure here should be compared with one from before. Every comparison below
-# is between rows of this run. The two threaded rows, T8 and T12, are the
-# noisiest on either machine.
+# T10 now sums node values during every allocator's timed teardown and checks
+# that checksum against an untimed validation walk that also counts nodes.
+# That validation walk warms the tree before timing. The previous pinned T10
+# had neither step, so its times describe a different measurement protocol.
+# The arena row includes the same traversal plus the final bulk reset; it is
+# not a reset-only timing.
 #
-# Every row carries all 20 per-run samples in zane_bench_results.json, so the
-# spread is checkable rather than asserted. In this run the first pass is the
-# slowest in only 10 of the 49 timed rows, but where it is, it can dominate:
-# 13x the median on T1's Zane row and 25x on T3's arena row. The median is
-# taken over all 20 samples, warm-up included, and barely moves when that pass
-# is dropped: T1's Zane row is 86.2us over all twenty and 85.0us over the last
-# nineteen. Treat each figure as one run's median, good to about one
-# significant figure. The durable content is the ratios, the orderings, and
-# effects large enough to survive that band; where two rows fall inside it the
-# note says they tie rather than picking a winner.
+# The median includes all twenty passes, including warm-up. The first pass is
+# the slowest in 16 of the 51 timed rows. T1's Zane first pass is ~16.8x its
+# median; T3's arena first pass is ~12.4x its median. Small differences and
+# overlapping sample ranges do not establish a repeatable ordering. All
+# interpretations below apply to this pin only, not every workload or machine.
 #
-# runbench.py reads this file alongside the results and renders each block as
-# the "Reading the result" note for its test — a section below that test's
-# chart. It interprets the numbers; the configuration lives in the panel above
-# the chart, and checked invariants live in that panel's meta rows.
-#
-# Format: one block per test, opened by "[Test N]". Lines starting with '#'
-# are comments; blank lines separate blocks.
-#
-# Keeping this in sync: these notes are pinned to the measurements in the
-# committed zane_bench_results.json. After editing them, rebuild the page with
-#   python3 runbench.py --from-file
-# which re-renders from that file instead of measuring again.
+# runbench.py renders each [Test N] block as that test's "Reading the result"
+# note. Configuration and checked invariants live in benchmeta.py.
+# After changing these notes, re-render without measuring:
+#   python3 memorybench/runbench.py --from-file
+# After pinning a new full-suite run, update these notes from that run first.
 
 [Test 1]
-Zane's bump (~86us) runs ~58x faster than malloc (~5.03ms) and ~6.5x faster
-than Pool (~559us), and since only Zane's release is free, its figure is
-allocation alone where the other two carry their frees inside it. Neither
-Zane nor the flat arena (~39us) writes to the memory it hands out now that an
-object carries no backpointer, so the ~2.2x between them is not cache-line
-fills: the only code that differs is Zane's chunk-boundary check and the
-frontier it keeps in its region record. The first of Zane's twenty passes
-took ~1.14ms, 13x its median; the harness touches every page of the region
-before any test runs, so that pass is warm-up of something other than page
-faults, and the median is the figure to read.
+Zane's fixed-region bump (~32.2us) is ~60.6x faster than malloc/free
+(~1.95ms) and ~6.9x faster than Pool (~223us) in this run. The flat arena
+(~14.9us) is ~2.2x faster again. Zane release is a no-op; the arena reclaims
+with a bulk reset, whereas malloc and Pool perform per-object frees inside
+timing. Neither bump writes per-object metadata. Zane additionally maintains
+a chunked frontier and checks chunk boundaries. Its first pass (~540us) is
+~16.8x its median, so the median rather than that single pass is the figure
+to read. These are allocator-model timings, not whole-program compiler results.
 
 [Test 2]
-Zane's row is not a fast release loop; it is no loop at all. zm_own_release
-is an empty function, so the compiler deletes the 100k-iteration loop outright,
-and the harness reports the row as eliminated rather than timing two
-timestamps around nothing. malloc (~2.27ms) and Pool (~681us) spend ~23ns and
-~6.8ns an object returning blocks to a structure that later allocations must
-search. Having the structure at all is the cost.
+Zane's row is an eliminated loop, not a measured zero-duration release.
+zm_own_release is empty, so the compiler removes the random-order free loop.
+malloc (~829us) and Pool (~178us) return individual blocks to reusable
+storage, at roughly 8.3ns and 1.8ns per object. Arena has no separate
+per-object release row in this test; a bulk reset would be a different operation.
 
 [Test 3]
-Mixed sizes cost Zane nothing structural: ~708us, ~7ns a block, against
-malloc (~9.90ms, ~14x) and Pool (~4.59ms, ~6.5x). Arena (~115us) is again
-the floor. The ordering is the one T1 shows at a single size and the one the
-previous two pins showed here; the multiples are the part to distrust, Pool's
-having moved from ~3.8x to ~6.5x between pins on unchanged code.
+With mixed sizes, Zane takes ~252us, malloc ~3.79ms (~15.0x Zane),
+Pool ~1.18ms (~4.7x), and the flat arena ~29.0us. Zane is still a pure
+fixed-region bump without size classes or coalescing. The arena's first pass
+(~358us) is ~12.4x its median. The large separations are clear within this
+run, but their exact multiples should not be transferred to other machines.
 
 [Test 4]
-Layout alone spans ~2.8x. Contiguous inline storage (~127us) is the floor,
-the chunked forms sit close behind (UList ~151us, CChunked ~171us), the
-scattered pointer array costs ~204us walked in order, and ~350us shuffled.
-The shuffle is back: ~1.7x the in-order walk, where the previous pin had the
-two tying and the one before that had ~1.5x. A finding that appears in two of
-three runs is a tendency rather than a result. The gap between contiguous
-storage and any scattered form is what all three agree on.
+Inline storage (~62.4us), UList (~58.6us), and CChunked (~59.4us) are close;
+the inline row has the lowest minimum (~49.2us), so the small median lead
+of the chunked forms is not a robust ranking. Sequential pointer chasing
+costs ~87.0us and shuffled pointer chasing ~119us, about 1.4x the
+sequential pointer row. Iteration includes no allocation or freeing here:
+this compares layouts and their scan loops, not allocator throughput.
 
 [Test 5]
-Zane's list (~473us) again leads C's realloc vector (~616us) by ~1.3x, and
-CChunked (~703us) follows; UList (~1.89ms) is clearly last. Two pins now put
-the same ~1.3x lead in front, which is enough to say growth at the dynamic
-frontier is not behind a realloc that extends its mapping, if not enough to
-call it a win. Bounding a block to one chunk is what forces relocation, and
-it stays cheap because only the two oversized spans copy at all.
+Zane's growing list takes ~203us, against ~243us for both the realloc
+vector and CChunked, a nominal ~1.2x lead. UList is clearly slower at
+~838us (~4.1x Zane). The realloc row's maximum (~1.36ms) is much larger
+than its median. Frontier growth avoids copying while a block can remain
+inside its chunk; oversized spans require relocation. The smaller gaps
+need repeated runs before being treated as stable advantages.
 
 [Test 6]
-A reference now costs what a pointer costs. Resolving a segmented offset (~195us
-with the chunk directory hoisted, ~168us re-fetched) ties dereferencing a raw
-pointer (~191us); the fastest passes, ~157us direct against ~163-166us
-offset, agree to within 6%, and the re-fetched row coming in ahead is noise.
-Under anchors the same test cost ~1.24x direct, which was the anchor-cell
-load a reference no longer makes. The shift and mask that turn an offset into an
-address are absorbed by the pipeline.
+The segmented-offset rows (~64.2us with the directory cached and ~62.8us
+reloaded) precede the direct-pointer row (~77.0us) in this run. Their best
+passes (~63.6us and ~62.3us) also precede the direct row's ~68.2us.
+This shows no slowdown for the offset representation in these scan loops;
+it does not establish that offset resolution is intrinsically faster than
+pointer dereferencing. The benchmark checks that every minted reference
+resolves to its intended object.
 
 [Test 7]
-Once entity counts stabilize the allocator stops mattering much: Zane
-(~4.28ms), Pool (~4.56ms) and malloc (~4.99ms) span ~17%, with Zane nominally
-in front of Pool by ~7%. The previous pin had Zane and Pool tied, so read
-that lead as inside the noise. The order-of-magnitude gaps of T1-T3 have gone
-into per-frame update work.
+Zane (~1.733ms) and Pool (~1.738ms) are effectively tied; malloc is
+~1.92ms, about 11% above Zane's median. Their sample ranges overlap.
+The allocator-only gaps of T1 and T3 are much smaller once frame scans,
+updates, and object maintenance are part of the timed workload.
 
 [Test 8]
-Maximum churn is the one workload where Zane comes last: Pool ~12.2ms,
-malloc ~15.1ms, Zane ~17.0ms, ~1.4x Pool. The fixed region never reuses a
-freed slot before the scope drains, so each frame's spawns land in memory
-the update loop has not touched, where Pool hands back the slots that just
-died and are still in cache; that is the likely cost, and it is the price of
-T9's flat refill. Zane's own passes spread from ~14.0ms to ~24.6ms, the
-widest of the three. The work-stealing row is ~145ms, ~8.5x plain Zane:
-per-frame particle work is too small to amortize scheduling, as both
-previous pins also found.
+The new arena row (~5.565ms), Zane (~5.561ms), and Pool (~5.551ms)
+are effectively tied: their medians span less than 0.3%, and their sample
+ranges overlap. malloc takes ~6.08ms, nominally about 9% longer. This
+run does not support the earlier pin's claim that Zane is last under this
+churn workload. Both bump allocators retain dead particles' storage until
+the run ends; Pool can recycle slots sooner, but that does not give a clear
+speed advantage here. Arena performs the same serial updates and a final
+bulk reset, never a reset between frames. The Zane work-stealing variant
+(~61.3ms) is ~11.0x slower than serial Zane; for this workload the measured
+parallel implementation does not amortize its per-frame scheduling costs.
 
 [Test 9]
-A bump frontier cannot be fragmented, and the refill shows it: Zane takes
-~49us for the 50k objects, ~1ns each, and holds between ~48us and ~54us
-across all 20 passes. It is also the one row in the suite that got faster
-than the previous pin in absolute terms, ~77us then, on a run where every
-unchanged row got slower: refilling no longer zeroes a backpointer in each
-object. malloc (~2.28ms) and Pool (~1.19ms) refill from freed slots at ~46x and
-~24x, and both degrade across the run: Pool's passes climb from ~379us to a
-~2.24ms worst and malloc's from ~1.49ms to ~3.01ms, each cycle handing the
-free list back in a worse order than it found it.
+Refilling 50,000 objects takes Zane ~23.2us, malloc ~965us (~41.7x),
+and Pool ~440us (~19.0x). Zane advances its frontier rather than searching
+freed slots. Pool's samples range from ~83us to ~950us and malloc's from
+~554us to ~2.14ms, so those medians conceal substantial variation. The
+large within-run separation survives that spread; the exact speedup is
+specific to this measurement and this refill pattern.
 
 [Test 10]
-Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc
-~152us (~2.5x). This is the first pin on the corrected topology, roughly
-1,070 branch points at depth ~20-26 rather than the 4,000-node chain the
-earlier figures measured, and the cross-allocator ordering survived the
-change. Reference density no longer has a row, because a reference leaves
-nothing in its owner for teardown to visit; what Zane's walk does per node is return the
-node's child list to its exact-size stack.
+The new arena traversal plus bulk reset takes ~23.2us, Zane ~24.9us,
+Pool ~28.8us, and malloc ~62.3us. Arena is nominally ~7% faster than
+Zane, but their sample ranges overlap; the clear separation is malloc at
+~2.5x Zane. Every variant visits the same seeded 4,000-node tree, sums
+node values during teardown, and checks the checksum after timing. An
+untimed validation walk counts nodes and warms the tree before every timed
+teardown. Arena reclaims nodes and child lists together with one reset;
+Zane returns dynamic child lists to size stacks, while node release is a
+no-op. These figures cannot be compared directly with the old T10 pin,
+which did not include the checksum or the preceding validation walk.
 
 [Test 11]
-The mixed workload compresses the field to a tie: Zane ~3.89ms, malloc
-~4.08ms, Pool ~4.12ms, ~6% end to end. Updates, scans and randomized
-maintenance dominate, so the allocator is a small slice of the total, and the
-ordering has moved between every pin.
+Zane (~1.63ms) and Pool (~1.64ms) are effectively tied. malloc (~1.78ms)
+is nominally about 9% slower, with overlapping sample ranges. Randomized
+scans, updates, list growth, and maintenance compress the allocator-only
+gaps seen elsewhere. This workload gives no repeatable ordering for Zane
+versus Pool from a single run.
 
 [Test 12]
-Concurrency loses. The scan splits into four equal shards and waits for all
-of them, so a pass runs at the speed of its slowest shard: concurrent passes
-run ~248us at best, ~398us median and ~647us at worst, against ~114us
-sequential (~89us best). Best against best is ~2.8x, close to the ~2.9x of
-the previous pin and the ~3.1x an earlier run measured with the process
-pinned to four cores, which is the figure to read; the median adds core
-placement on top. Distributing a ~100us scan costs several times more than
-doing it outright, because per-shard work this small cannot amortize the
-handoff.
+The sequential shard scan takes ~52.8us, whereas the four-worker scan
+is ~204us (~3.9x slower). Even best against best, ~145us concurrent
+versus ~52.6us sequential is ~2.8x slower. The concurrent samples span
+~145-348us, so scheduling variability adds to the median's disadvantage.
+This small read-only workload does not benefit from this parallel execution
+path; it says nothing about larger workloads that can amortize the overhead.
 
 [Test 13]
-Not knowing a size until runtime costs nothing measurable: ~688us for the
-runtime size class against ~755us for the static one over 60,000 pairs, the
-runtime row nominally ahead, as it was in the previous pin. The effect is
-inside the noise, so the reading is that a runtime size class is free. The
-stacks cost far more — the frontier-only row runs ~257us, ~2.7x under both —
-and what they buy is memory rather than time: frontier-only bumps through
-17.9 MB of fresh chunks to hold a 1 MB live set where the stack runs recycle
-inside ~1.8 MB. Pool (~473us) stays ahead, by ~1.5x this time, because its
-link is a raw pointer where §3.1 makes this one a segmented offset.
+Static-key boxed blocks take ~292us, runtime-key backing stores ~257us,
+and frontier-only allocation ~98.0us. The two stack-based rows overlap
+in their sample ranges, so the nominal runtime-key lead is not evidence
+that runtime lookup is inherently faster. The frontier is ~2.6-3.0x faster
+than these reusable-stack paths, but it consumes fresh storage each round.
+The stack variants reuse returned blocks. Pool (~186us) precedes both
+Zane stack rows; malloc (~1.68ms) is clearly slower. The assertions verify
+same-size, same-alignment reuse and separation of different stack keys.
 
 [Test 14]
-An escape costs what a deep copy costs. Relocating the roaming tree out of
-its scope (~84us) and deep-copying the value tree from an existing place
-(~81us) both walk all 8,191 nodes and allocate a block for each; the escape
-additionally returns each old block to its stack, and the two tie. A move
-that does not escape copies only the root's handles and is not timed.
-Constructing a fresh value tree in place (~46us) is the floor both sit ~1.8x
-above, which is the copy itself and why only an existing source or an escape
-pays it. malloc's deep copy is ~342us, ~4.2x.
+Roaming-tree relocation takes ~31.9us, deep-copying the value tree
+~23.9us, fresh in-place construction ~20.3us, and malloc deep copy
+~128us. Relocation is ~1.3x the value-copy median here; their sample
+ranges do not overlap, unlike the tie in the earlier pin. Both operations
+walk all 8,191 nodes and allocate destinations, but relocation also returns
+old blocks to their stacks. That extra work is a plausible contributor to
+the gap, not a causal conclusion proved by this timing alone. A move within
+the same scope remains a handle copy and is not timed. The assertions also
+check settled overwrites preserve the addresses seen by existing references.
