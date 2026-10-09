@@ -91,18 +91,18 @@
 const DATA = {
  "pinned": true,
  "run": {
-  "date": "2026-10-08",
+  "date": "2026-10-10",
   "machine": {
    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
    "os": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.39"
   },
   "zane": {
-   "version": "v0.8",
-   "compiler_commit": "cc48c780364a344bcdad87ff8a24bee434efe2fb",
+   "version": "v0.9",
+   "compiler_commit": "a6b95b34bdbabbf1709bf1998fe9c6de434c447c",
    "core_commit": "97beb743aa7e0cfec7b7b5afeb0df53fc97f9791"
   },
   "toolchains": {
-   "zane": "zane v0.5",
+   "zane": "zane v0.6",
    "c": "clang version 19.1.7",
    "cpp": "clang version 19.1.7",
    "rust": "rustc 1.98.1 (48a229cea 2026-09-01) (built from a source tarball)",
@@ -156,7 +156,7 @@ const DATA = {
    "profileText": "Reads no input: an optimized build may compute the whole program while it compiles.",
    "fold": {
     "plain_loops": 3,
-    "optimized_loops": 3,
+    "optimized_loops": 0,
     "observed": "not inferred"
    },
    "rows": [
@@ -164,100 +164,100 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.000681,
-     "min": 0.000624,
-     "max": 0.000996,
-     "build": 0.706
+     "median": 0.00048,
+     "min": 0.000422,
+     "max": 0.000809,
+     "build": 0.7845
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.000494,
-     "min": 0.000442,
-     "max": 0.000729,
-     "build": 0.3765
+     "median": 0.000468,
+     "min": 0.000423,
+     "max": 0.000724,
+     "build": 0.5434
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.000933,
-     "min": 0.000874,
-     "max": 0.001144,
-     "build": 0.546
+     "median": 0.000925,
+     "min": 0.000887,
+     "max": 0.001432,
+     "build": 0.5605
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "comptime",
-     "median": 0.000853,
-     "min": 0.000771,
-     "max": 0.001061,
-     "build": 0.7926
+     "median": 0.000868,
+     "min": 0.000802,
+     "max": 0.001354,
+     "build": 0.7624
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.000669,
-     "min": 0.000627,
-     "max": 0.000707,
-     "build": 0.4677
+     "median": 0.000572,
+     "min": 0.000546,
+     "max": 0.000585,
+     "build": 0.6482
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "comptime",
-     "median": 0.000722,
-     "min": 0.000535,
-     "max": 0.000928,
-     "build": 0.4787
+     "median": 0.000501,
+     "min": 0.000493,
+     "max": 0.000525,
+     "build": 0.4159
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.001157,
-     "min": 0.001047,
-     "max": 0.001559,
-     "build": 0.3368
+     "median": 0.001229,
+     "min": 0.001209,
+     "max": 0.001542,
+     "build": 0.339
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.001153,
-     "min": 0.000828,
-     "max": 0.001362,
-     "build": 0.9104
+     "median": 0.000842,
+     "min": 0.000753,
+     "max": 0.001353,
+     "build": 0.8827
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "comptime",
-     "median": 0.000799,
-     "min": 0.000749,
-     "max": 0.001309,
-     "build": 0.8668
+     "median": 0.000734,
+     "min": 0.000706,
+     "max": 0.001061,
+     "build": 0.5904
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.000626,
-     "min": 0.000587,
-     "max": 0.000706,
-     "build": 12.5105
+     "median": 0.000662,
+     "min": 0.000607,
+     "max": 0.000833,
+     "build": 10.5761
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "comptime",
-     "median": 0.000569,
-     "min": 0.000523,
-     "max": 0.000892,
-     "build": 15.8126
+     "median": 0.000539,
+     "min": 0.000507,
+     "max": 0.000898,
+     "build": 14.5829
     }
    ],
    "note": [
@@ -284,64 +284,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.4228,
-     "min": 0.418207,
-     "max": 0.425264,
-     "build": 0.7485
+     "median": 0.406142,
+     "min": 0.399201,
+     "max": 0.41096,
+     "build": 0.7258
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.391794,
-     "min": 0.387524,
-     "max": 0.393725,
-     "build": 0.425
+     "median": 0.375876,
+     "min": 0.374075,
+     "max": 0.37627,
+     "build": 0.3222
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.425914,
-     "min": 0.409609,
-     "max": 0.43685,
-     "build": 0.5524
+     "median": 0.380546,
+     "min": 0.378747,
+     "max": 0.382625,
+     "build": 0.5073
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.388316,
-     "min": 0.387049,
-     "max": 0.398106,
-     "build": 0.4986
+     "median": 0.383796,
+     "min": 0.378527,
+     "max": 0.392978,
+     "build": 0.4224
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.625754,
-     "min": 0.621477,
-     "max": 0.627766,
-     "build": 0.2958
+     "median": 0.631136,
+     "min": 0.626595,
+     "max": 0.635814,
+     "build": 0.2911
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.382161,
-     "min": 0.381346,
-     "max": 0.383146,
-     "build": 0.9799
+     "median": 0.383277,
+     "min": 0.381739,
+     "max": 0.388115,
+     "build": 0.7582
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.384212,
-     "min": 0.383243,
-     "max": 0.386844,
-     "build": 11.4566
+     "median": 0.382556,
+     "min": 0.38161,
+     "max": 0.386524,
+     "build": 10.9366
     }
    ],
    "note": [
@@ -368,64 +368,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 1.869394,
-     "min": 1.827331,
-     "max": 1.897959,
-     "build": 0.7069
+     "median": 0.076428,
+     "min": 0.075814,
+     "max": 0.077949,
+     "build": 0.7192
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.269356,
-     "min": 0.268098,
-     "max": 0.272015,
-     "build": 0.3885
+     "median": 0.253362,
+     "min": 0.250537,
+     "max": 0.255979,
+     "build": 0.3567
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.367967,
-     "min": 0.366348,
-     "max": 0.371865,
-     "build": 0.7538
+     "median": 0.32662,
+     "min": 0.321688,
+     "max": 0.329165,
+     "build": 0.7505
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.343016,
-     "min": 0.339834,
-     "max": 0.346272,
-     "build": 0.4714
+     "median": 0.31108,
+     "min": 0.305476,
+     "max": 0.326092,
+     "build": 0.4165
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.291769,
-     "min": 0.279192,
-     "max": 0.298035,
-     "build": 0.2955
+     "median": 0.24415,
+     "min": 0.243487,
+     "max": 0.270949,
+     "build": 0.2781
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.404596,
-     "min": 0.394736,
-     "max": 0.61705,
-     "build": 0.9175
+     "median": 0.368028,
+     "min": 0.365134,
+     "max": 0.468246,
+     "build": 0.8379
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.315905,
-     "min": 0.315463,
-     "max": 0.31861,
-     "build": 11.3619
+     "median": 0.305393,
+     "min": 0.304167,
+     "max": 0.307713,
+     "build": 10.7374
     }
    ],
    "note": [
@@ -452,64 +452,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.408141,
-     "min": 0.403925,
-     "max": 0.411365,
-     "build": 0.6588
+     "median": 0.402037,
+     "min": 0.399094,
+     "max": 0.402973,
+     "build": 0.7049
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.439419,
-     "min": 0.438076,
-     "max": 0.442412,
-     "build": 0.3658
+     "median": 0.43207,
+     "min": 0.431236,
+     "max": 0.435939,
+     "build": 0.4264
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.438349,
-     "min": 0.436557,
-     "max": 0.442037,
-     "build": 0.4448
+     "median": 0.442859,
+     "min": 0.439301,
+     "max": 0.446909,
+     "build": 0.4592
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.494579,
-     "min": 0.434579,
-     "max": 0.522438,
-     "build": 0.4488
+     "median": 0.435501,
+     "min": 0.433346,
+     "max": 0.439497,
+     "build": 0.4679
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.493692,
-     "min": 0.490114,
-     "max": 0.504649,
-     "build": 0.3138
+     "median": 0.42727,
+     "min": 0.426633,
+     "max": 0.435241,
+     "build": 0.2679
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.43147,
-     "min": 0.42958,
-     "max": 0.45288,
-     "build": 0.8761
+     "median": 0.426232,
+     "min": 0.420535,
+     "max": 0.436933,
+     "build": 0.9146
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.43956,
-     "min": 0.437964,
-     "max": 0.444271,
-     "build": 11.2878
+     "median": 0.42307,
+     "min": 0.421036,
+     "max": 0.428685,
+     "build": 10.6164
     }
    ],
    "note": [
@@ -536,64 +536,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.196122,
-     "min": 0.194701,
-     "max": 0.20213,
-     "build": 0.6755
+     "median": 0.182347,
+     "min": 0.180746,
+     "max": 0.186501,
+     "build": 0.7028
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.170373,
-     "min": 0.165115,
-     "max": 0.172199,
-     "build": 0.3764
+     "median": 0.150338,
+     "min": 0.148822,
+     "max": 0.153216,
+     "build": 0.3706
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.181093,
-     "min": 0.178175,
-     "max": 0.18473,
-     "build": 0.623
+     "median": 0.171739,
+     "min": 0.170158,
+     "max": 0.173704,
+     "build": 0.4405
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.173463,
-     "min": 0.172043,
-     "max": 0.175413,
-     "build": 0.5349
+     "median": 0.167044,
+     "min": 0.165601,
+     "max": 0.167891,
+     "build": 0.4323
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.163248,
-     "min": 0.161518,
-     "max": 0.165838,
-     "build": 0.3389
+     "median": 0.155979,
+     "min": 0.155052,
+     "max": 0.160002,
+     "build": 0.2624
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.16913,
-     "min": 0.167804,
-     "max": 0.16976,
-     "build": 0.9717
+     "median": 0.163766,
+     "min": 0.162365,
+     "max": 0.164731,
+     "build": 1.0147
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.230102,
-     "min": 0.223893,
-     "max": 0.231525,
-     "build": 11.4984
+     "median": 0.222678,
+     "min": 0.221354,
+     "max": 0.226112,
+     "build": 10.4954
     }
    ],
    "note": [
@@ -620,64 +620,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.504123,
-     "min": 0.492048,
-     "max": 0.535074,
-     "build": 0.9171
+     "median": 0.456083,
+     "min": 0.455128,
+     "max": 0.465345,
+     "build": 0.6516
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.496094,
-     "min": 0.492154,
-     "max": 0.52807,
-     "build": 0.4078
+     "median": 0.48895,
+     "min": 0.477713,
+     "max": 0.492577,
+     "build": 0.3894
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.512524,
-     "min": 0.499241,
-     "max": 0.523695,
-     "build": 0.5223
+     "median": 0.50052,
+     "min": 0.493734,
+     "max": 0.514551,
+     "build": 0.5485
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.506394,
-     "min": 0.499334,
-     "max": 0.513884,
-     "build": 0.5089
+     "median": 0.627657,
+     "min": 0.503942,
+     "max": 0.746294,
+     "build": 0.2809
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.572052,
-     "min": 0.553609,
-     "max": 0.673251,
-     "build": 0.3076
+     "median": 0.583474,
+     "min": 0.543965,
+     "max": 0.609407,
+     "build": 0.3093
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.560827,
-     "min": 0.539119,
-     "max": 0.588885,
-     "build": 0.8721
+     "median": 0.515769,
+     "min": 0.49943,
+     "max": 0.537871,
+     "build": 0.9177
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.603722,
-     "min": 0.59035,
-     "max": 0.627287,
-     "build": 14.2755
+     "median": 0.580477,
+     "min": 0.568857,
+     "max": 0.599776,
+     "build": 10.7888
     }
    ],
    "note": [
@@ -704,64 +704,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.810378,
-     "min": 0.806178,
-     "max": 0.830284,
-     "build": 0.6914
+     "median": 0.782913,
+     "min": 0.776824,
+     "max": 0.817431,
+     "build": 0.7024
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.381103,
-     "min": 0.369572,
-     "max": 0.39763,
-     "build": 0.3745
+     "median": 0.352388,
+     "min": 0.34233,
+     "max": 0.361606,
+     "build": 0.361
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.822926,
-     "min": 0.808069,
-     "max": 0.833551,
-     "build": 0.5414
+     "median": 0.812227,
+     "min": 0.769054,
+     "max": 0.821186,
+     "build": 0.5539
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.419253,
-     "min": 0.417611,
-     "max": 0.435891,
-     "build": 0.5122
+     "median": 0.407255,
+     "min": 0.39423,
+     "max": 0.410092,
+     "build": 0.3
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 1.923807,
-     "min": 1.787696,
-     "max": 1.959486,
-     "build": 0.3345
+     "median": 1.756015,
+     "min": 1.71143,
+     "max": 1.81052,
+     "build": 0.3579
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 1.773413,
-     "min": 1.733276,
-     "max": 1.81261,
-     "build": 0.9735
+     "median": 1.461184,
+     "min": 1.440656,
+     "max": 1.487631,
+     "build": 1.0171
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.575405,
-     "min": 0.549932,
-     "max": 0.590258,
-     "build": 12.1246
+     "median": 0.561226,
+     "min": 0.548129,
+     "max": 0.577781,
+     "build": 10.898
     }
    ],
    "note": [
@@ -788,64 +788,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 3.095162,
-     "min": 3.063221,
-     "max": 3.155309,
-     "build": 0.6957
+     "median": 0.220823,
+     "min": 0.216989,
+     "max": 0.221052,
+     "build": 0.699
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.445015,
-     "min": 0.4328,
-     "max": 0.46653,
-     "build": 0.3936
+     "median": 0.458819,
+     "min": 0.453771,
+     "max": 0.465962,
+     "build": 0.4218
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.722109,
-     "min": 0.713247,
-     "max": 0.744137,
-     "build": 0.7422
+     "median": 0.722687,
+     "min": 0.710905,
+     "max": 0.736573,
+     "build": 0.7385
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.311088,
-     "min": 0.298828,
-     "max": 0.312349,
-     "build": 0.4574
+     "median": 0.300841,
+     "min": 0.294639,
+     "max": 0.306031,
+     "build": 0.476
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.546418,
-     "min": 0.513105,
-     "max": 0.550558,
-     "build": 0.2802
+     "median": 0.498286,
+     "min": 0.49164,
+     "max": 0.50302,
+     "build": 0.2858
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 1.281751,
-     "min": 1.264345,
-     "max": 1.290386,
-     "build": 0.8777
+     "median": 1.241516,
+     "min": 1.232871,
+     "max": 1.263645,
+     "build": 0.896
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.821653,
-     "min": 0.809755,
-     "max": 0.850605,
-     "build": 11.8928
+     "median": 0.80766,
+     "min": 0.745519,
+     "max": 0.812023,
+     "build": 10.7831
     }
    ],
    "note": [
@@ -872,64 +872,64 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 1.636596,
-     "min": 1.624294,
-     "max": 1.878248,
-     "build": 0.697
+     "median": 0.099248,
+     "min": 0.097546,
+     "max": 0.104735,
+     "build": 0.7117
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.277,
-     "min": 0.254321,
-     "max": 0.292975,
-     "build": 0.4098
+     "median": 0.259659,
+     "min": 0.246906,
+     "max": 0.269322,
+     "build": 0.2785
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.314808,
-     "min": 0.304037,
-     "max": 0.325068,
-     "build": 0.6824
+     "median": 0.301742,
+     "min": 0.297037,
+     "max": 0.326494,
+     "build": 0.6645
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.400259,
-     "min": 0.396085,
-     "max": 0.405171,
-     "build": 0.4772
+     "median": 0.383919,
+     "min": 0.38078,
+     "max": 0.393144,
+     "build": 0.4773
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.258886,
-     "min": 0.252938,
-     "max": 0.262596,
-     "build": 0.2816
+     "median": 0.238144,
+     "min": 0.23564,
+     "max": 0.241147,
+     "build": 0.2966
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.384923,
-     "min": 0.373762,
-     "max": 0.419886,
-     "build": 0.896
+     "median": 0.383781,
+     "min": 0.364614,
+     "max": 0.409587,
+     "build": 0.8973
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.31085,
-     "min": 0.308018,
-     "max": 0.323171,
-     "build": 11.3547
+     "median": 0.33348,
+     "min": 0.32152,
+     "max": 0.355545,
+     "build": 10.7568
     }
    ],
    "note": [
