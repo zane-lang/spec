@@ -3,10 +3,11 @@
 #
 # A note may quote numbers only from the pinned run in
 # langbench_results.json, and must be revised when a new run is pinned.
-# The pinned run: 2026-10-08, a 13th Gen Intel Core i7-1355U laptop under
-# WSL2, Zane compiler v0.8 with core v0.0, zane CLI v0.5, and the other
+# The pinned run: 2026-10-10, a 13th Gen Intel Core i7-1355U laptop under
+# WSL2, Zane compiler v0.9 with core v0.0, zane CLI v0.6, and the other
 # compilers devbox.json pins. Run times are medians of five runs after one
 # warmup. Build times come from one build per row.
+# Compiler commit: a6b95b34bdbabbf1709bf1998fe9c6de434c447c.
 #
 # Cross-package optimization is enabled. Optimized CGT includes imported
 # dependency bodies that plain CGT omits, so whole-tree loop counts cannot
@@ -14,46 +15,48 @@
 # not a folding score.
 
 [primes]
-This fixed-bound sieve reads no input, so it is eligible for compile-time evaluation. The plain and optimized CGT each contain three loops, but the optimizer includes imported dependency bodies; these counts alone do not establish what the executable computes at runtime.
+This fixed-bound sieve reads no input, so it is eligible for compile-time evaluation. The plain CGT contains three loops and the optimized CGT contains none. That shows loop elimination at the CGT stage, including the imported dependency bodies present in the optimized tree. It does not by itself establish that every operation was evaluated while compiling; the page therefore keeps the folding status as "not inferred".
 
-The row medians range from 0.49 to 1.16 ms, with Zane at 0.68 ms. At this size, whole-process startup and timing variation prevent a useful ranking of sieve performance. The single build measurements are 0.706 s for Zane, 0.546 s and 0.793 s for plain and comptime C++, and 12.51 s and 15.81 s for plain and comptime Zig. D has a lower measured build time for its comptime variant than for its plain one; a single sample is not enough to establish a build-time advantage.
+The row medians range from 0.47 to 1.23 ms, with Zane at 0.48 ms. At this size, whole-process startup and timing variation prevent a useful ranking of sieve performance. The single build measurements are 0.785 s for Zane, 0.561 s and 0.762 s for plain and comptime C++, and 10.58 s and 14.58 s for plain and comptime Zig. Rust and D have lower measured build times for their comptime variants than for their plain ones; one sample per row is not enough to establish a build-time advantage.
 
 [trialdiv]
 The count reads N, while its prime-table setup has a fixed bound. The whole-tree CGT loop counts do not identify how much of that setup was evaluated while compiling. The compiler can evaluate and inline calls across core's package boundary, so those calls are not necessarily opaque.
 
-Zane takes 0.423 s. D, Zig, Rust and C take 0.382 to 0.392 s, C++ takes 0.426 s and Go 0.626 s. Zane is 1.11 times the fastest row, D, and its samples overlap those of C++. These timings show the remaining gap, but do not identify which operations account for it.
+Zane takes 0.406 s. C is fastest at 0.376 s; C++, Zig, D and Rust take 0.381 to 0.384 s, and Go takes 0.631 s. Zane takes 1.08 times as long as C and 1.07 times as long as C++. Its fastest sample, 0.399 s, is above the slowest sample of every row except Go. These timings show the remaining gap, but do not identify which operations account for it.
 
 [binarytrees]
 This test measures a reference-based Zane program. Each reference node owns its children, parent construction takes both children rather than deep-copying completed subtrees, and checking a tree borrows it. This matches the ownership transfer of child pointers in C++ and Rust.
 
-Zane takes 1.869 s, compared with 0.269 s for C, 0.292 s for Go, 0.343 s for Rust and 0.368 s for C++. Zane is 6.94 times the fastest row, C, and 5.08 times C++. Go leaves trees to its garbage collector, while C, C++ and Rust free them explicitly. Zane still performs allocation, traversal, scope-escape relocation and teardown; profiling is needed to attribute the remaining gap.
+Zane is fastest at 0.0764 s, compared with 0.244 s for Go, 0.253 s for C, 0.305 s for Zig, 0.311 s for Rust, 0.327 s for C++ and 0.368 s for D. Go, the next-fastest row, takes 3.19 times as long as Zane; C++ takes 4.27 times as long. Zane's slowest sample, 0.0779 s, is below every other row's fastest.
+
+Go and D leave trees to their garbage collectors, while C, C++, Rust and Zig free them explicitly. Zane uses scope-based storage and teardown. These are whole-program results for different allocation and reclamation strategies; they do not isolate the cost of allocating, traversing, relocating or dropping a node.
 
 [mandelbrot]
-The arithmetic workload uses no dynamic collections. Zane is the fastest row at 0.408 s, compared with 0.431 s for D and 0.438 to 0.440 s for C++, C and Zig; Go and Rust take 0.494 and 0.495 s. Zane's slowest sample, 0.411 s, is below every other row's fastest.
+The arithmetic workload uses no dynamic collections. Zane is fastest at 0.402 s, followed by Zig at 0.423 s, D at 0.426 s and Go at 0.427 s; C, Rust and C++ take 0.432, 0.436 and 0.443 s. Zig takes 1.05 times as long as Zane and C++ takes 1.10 times as long. Zane's slowest sample, 0.403 s, is below every other row's fastest.
 
 Cross-package optimization exposes core's arithmetic bodies to LLVM, so arithmetic does not remain an out-of-line call into a separately compiled object. The timing alone does not explain why Zane leads; the programs are not identical in how they express the inner loop.
 
 [fannkuch]
-Go is fastest at 0.163 s; D takes 0.169 s, C 0.170 s, Rust 0.173 s, C++ 0.181 s and Zig 0.230 s. Zane takes 0.196 s, 1.20 times Go and 1.08 times C++, and is faster than Zig.
+C is fastest at 0.150 s; Go takes 0.156 s, D 0.164 s, Rust 0.167 s, C++ 0.172 s and Zig 0.223 s. Zane takes 0.182 s, 1.21 times as long as C and 1.06 times as long as C++, and is faster than Zig. Its sample range does not overlap any other row's.
 
 The Zane program indexes and rewrites small lists in place. Its shape also differs: flips are counted by recursion and the next permutation is found in a bounded loop that returns early. Those source differences and the remaining list operations are candidates for the gap; this timing run does not isolate their costs.
 
 [entities]
-Each version stores entities inline and scans 96 MB of entity data. Zane takes 0.504 s, against 0.496 s for C, 0.506 s for Rust and 0.513 s for C++; D, Go and Zig take 0.561 to 0.604 s. Zane is 1.02 times C, the fastest row, and its samples overlap those of C, C++ and Rust.
+Each version stores entities inline and scans 96 MB of entity data. Zane is fastest at 0.456 s, followed by C at 0.489 s and C++ at 0.501 s. D takes 0.516 s, Zig 0.580 s, Go 0.583 s and Rust 0.628 s. C takes 1.07 times as long as Zane and C++ takes 1.10 times as long. Zane's slowest sample, 0.465 s, is below every other row's fastest. Rust's samples vary from 0.504 to 0.746 s, so its median deserves particular caution.
 
 Allocation, initialization and scanning all contribute to the whole-process measurement, which does not separate them.
 
 [listgrowth]
-Zane takes 0.810 s, within 2% of C++ at 0.823 s; their sample ranges overlap. It is faster than D at 1.773 s and Go at 1.924 s. C is fastest at 0.381 s, followed by Rust at 0.419 s and Zig at 0.575 s. Zane is 2.13 times C.
+Zane takes 0.783 s, about 4% less time than C++ at 0.812 s; their sample ranges overlap. It is faster than D at 1.461 s and Go at 1.756 s. C is fastest at 0.352 s, followed by Rust at 0.407 s and Zig at 0.561 s. Zane takes 2.22 times as long as C.
 
-Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md §3.6); C doubles from four elements through realloc. The measurement includes both growth and the final sum, and does not separate allocation costs from indexing or arithmetic.
+Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md §3.6); C doubles from four elements through realloc. Each round reads only the final entity's hp and the list's size into a checksum; there is no full-list sum. The measurement includes appending, initialization, growth and teardown, and does not separate allocation costs from indexing or arithmetic.
 
 [ntree]
-Rust is fastest at 0.311 s, followed by C at 0.445 s and Go at 0.546 s. C++ takes 0.722 s, Zig 0.822 s and D 1.282 s. Zane takes 3.095 s, 9.95 times Rust and 4.29 times C++.
+Zane is fastest at 0.221 s, followed by Rust at 0.301 s, C at 0.459 s and Go at 0.498 s. C++ takes 0.723 s, Zig 0.808 s and D 1.242 s. Rust takes 1.36 times as long as Zane and C++ takes 3.27 times as long. Zane's slowest sample, 0.221 s, is below every other row's fastest.
 
 Rust's Vec<Node> stores children inline, allocating once per internal node. The other versions allocate nodes separately and retain references or pointers to them, so the representations do different allocation work. Zane's nodes own lists of child references; constructing and dropping the tree includes both node and child-list storage. In Go and D the collector handles reclamation at times of its own choosing.
 
 [treecopy]
-Zane takes 1.637 s, compared with 0.259 s for Go, 0.277 s for C, 0.311 s for Zig, 0.315 s for C++, 0.385 s for D and 0.400 s for Rust. Zane is 6.32 times Go, the fastest row, and 5.20 times C++.
+Zane is fastest at 0.0992 s, compared with 0.238 s for Go, 0.260 s for C, 0.302 s for C++, 0.333 s for Zig and 0.384 s for both D and Rust. Go takes 2.40 times as long as Zane and C++ takes 3.04 times as long. Zane's slowest sample, 0.105 s, is below every other row's fastest.
 
 Unlike binarytrees, this test deliberately retains value types and full-tree copying. A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md §2.3); the other languages clone the tree as well. The original is read after the last copy, so replacing that copy with a move would change the workload. Allocation and deep-copy work remain even when calls across core's package boundary can be optimized.
