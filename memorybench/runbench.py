@@ -77,6 +77,22 @@ def row_stats(row):
     return median, row.get("min_ns", median), row.get("max_ns", median)
 
 
+def measurement_notes(test, config):
+    """Describe missing variants and measurements from an older protocol."""
+    meta = benchmeta.TEST_META.get(test["id"], {})
+    labels = {row["label"] for row in test["rows"]
+              if row_stats(row) is not None}
+    missing = [label for label in meta.get("required_rows", []) if label not in labels]
+    notes = []
+    if missing:
+        notes.append("Not measured in this results file: " + ", ".join(missing)
+                     + ". A fresh full-suite run is needed; missing timings are not zero.")
+    for key, (expected, note) in meta.get("required_config", {}).items():
+        if config.get(key) != expected:
+            notes.append(note)
+    return notes
+
+
 def load_results(path):
     """Read a results file and check it carries the schema this script renders."""
     with open(path) as f:
@@ -173,6 +189,8 @@ def render_text(doc, notes_pinned=True):
     for test in doc["tests"]:
         title = f"{test['id']} -- {test['title']}"
         out += ["", SECTION_RULE, "  |  %-96s|" % title, SECTION_RULE]
+        for note in measurement_notes(test, cfg):
+            out.append("    ! " + note)
         for row in test["rows"]:
             stats = row_stats(row)
             if stats is None:
@@ -252,7 +270,9 @@ def build_tests_json(doc, explanations, notes_pinned=True):
             "maxs":       [round(s[2] / 1000.0, 3) for _, s in timed],
             "colors":     [benchmeta.get_color(r["label"]) for r, _ in timed],
             "eliminated": eliminated,
-            "meta":       [{"label": k, "val": v} for k, v in meta.get("meta", [])],
+            "meta":       [{"label": k, "val": v} for k, v in meta.get("meta", [])]
+                          + [{"label": "Measurement status", "val": note}
+                             for note in measurement_notes(test, doc.get("config", {}))],
             "setup":      meta.get("setup", ""),
             "note":       explanations.get(key, ""),
             "noteStale":  not notes_pinned,
@@ -285,6 +305,8 @@ def report(doc, explanations):
         print(f"  {test['id']}: {len(test['rows'])} rows — {labels}")
 
     for test in doc["tests"]:
+        for note in measurement_notes(test, doc.get("config", {})):
+            print(f"  ! {test['id']}: {note}")
         if test.get("provenance_note"):
             print(f"  ! {test['id']}: {test['provenance_note']}")
 

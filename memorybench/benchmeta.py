@@ -109,12 +109,14 @@ TEST_META = {
     "Test 8": {
         "short": "T8 — particle system",
         "title": "Particle system: burst-spawn short-lifetime objects every frame",
-        "setup": "Maximum churn. Every death is a no-op release from the fixed-size region.",
+        "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
+        "required_rows": ["Arena (bump + end-of-run reset)"],
         "meta": [
             ("Particle size", "24B"),
             ("Frame count", "500 frames"),
             ("Spawns/frame", "60 particles"),
             ("Lifetime", "TTL = random 10–30 frames"),
+            ("Arena", "flat bump; retains dead particles' storage until all 500 frames finish"),
             ("Concurrent variant", "Zane-only work-stealing update; threads pre-started before benchmarks"),
             ("Runs", "20 — median reported"),
         ],
@@ -133,13 +135,18 @@ TEST_META = {
     },
     "Test 10": {
         "short": "T10 — tree teardown",
-        "title": "Cascade destruction — Zane vs malloc and pool",
-        "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A reference leaves nothing in its owner, so how many references a tree has cannot change its teardown.",
+        "title": "Cascade destruction — Zane vs malloc, pool and arena",
+        "setup": "The current harness visits every node in post-order and sums its value inside the timed teardown for every allocator; the checksum and the 4,000-node count are checked outside timing. Zane releases node payloads as no-ops and returns each 128-byte child list to its exact-size stack. The arena stores nodes and child lists together, visits the same tree, then resets once inside timing. This is traversal plus bulk reclaim, not a reset-only benchmark. A reference leaves nothing in its owner, so reference density cannot change teardown.",
+        "required_rows": ["Arena cascade visit + bulk reset"],
+        "required_config": {
+            "tree_teardown_checksum": (True, "These measurements predate the checksum-verified teardown and its untimed validation walk; rerun all allocators together before comparing the current harness."),
+        },
         "meta": [
             ("Tree size", "~4,000 nodes, branch 0–6"),
             ("Child lists", "128B dynamic blocks returned to the size stack"),
             ("Stack key", "resolved once — a child list's size and alignment are fixed"),
             ("malloc", "free(node) per node, coalescing on each"),
+            ("Arena", "post-order node visit plus O(1) bulk reset; no per-node free"),
             ("Runs", "20 — median reported"),
         ],
     },
