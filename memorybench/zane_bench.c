@@ -760,6 +760,8 @@ static void *ma_obj_alloc(size_t s){return malloc(s);}
 static void  ma_obj_free (void*p,size_t s){(void)s;free(p);}
 static void *po_obj_alloc(size_t s){return pool_alloc(s);}
 static void  po_obj_free (void*p,size_t s){pool_free(p,s);}
+static void *ar_obj_alloc(size_t s){return ar_alloc(s);}
+static void  ar_obj_free (void*p,size_t s){(void)p;(void)s;}
 
 static void game_loop_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     if (prewarm) { pool_flush(); pool_warm(sizeof(Entity), MAX_ENTITIES); }
@@ -811,6 +813,9 @@ static void test7(void) {
 #define MAX_PARTICLES 6000
 #define BURST_SPAWN   60
 
+_Static_assert((size_t)PART_FRAMES * BURST_SPAWN * sizeof(Particle) <= REGION_SIZE,
+               "Arena must hold all particles spawned during one run");
+
 typedef struct { Particle **slots; int count,cap; } PPool;
 static void pp_init(PPool*p,int cap){p->slots=(Particle**)calloc((size_t)cap,sizeof(Particle*));p->count=0;p->cap=cap;}
 static void pp_free(PPool*p){free(p->slots);}
@@ -844,6 +849,7 @@ static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
     if (prewarm) { pool_flush(); pool_warm(sizeof(Particle), MAX_PARTICLES); }
     for (int r=0; r<RUNS; r++) {
         if (!prewarm && af==zane_obj_alloc) zm_reset();
+        if (af==ar_obj_alloc) ar_reset();
         rng_state=0xde1e7edULL+(uint64_t)r;
         PPool pp; pp_init(&pp,MAX_PARTICLES);
         double t0=now_ns();
@@ -865,6 +871,7 @@ static void particle_run(double T[RUNS], AllocFn af, FreeFn ff, int prewarm) {
             sink^=(int64_t)ax;
         }
         for(int i=0;i<pp.cap;i++) if(pp.slots[i]) ff(pp.slots[i],sizeof(Particle));
+        if (af==ar_obj_alloc) ar_reset();
         T[r]=now_ns()-t0; pp_free(&pp);
     }
 }
@@ -929,6 +936,7 @@ static void test8(void) {
               particle_run_parallel(T, zane_obj_alloc, zane_obj_free, 0); record_row("Zane + work-stealing update", T);
               particle_run(T, ma_obj_alloc, ma_obj_free, 0); record_row("malloc / free", T);
               particle_run(T, po_obj_alloc, po_obj_free, 1); record_row("Pool (per-size free-list)", T);
+              particle_run(T, ar_obj_alloc, ar_obj_free, 0); record_row("Arena (bump + end-of-run reset)", T);
 }
 
 static void test9(void) {
@@ -983,6 +991,9 @@ static void test9(void) {
 #define TREE_NODES 4000
 #define MAX_BRANCH 6
 
+_Static_assert((size_t)TREE_NODES * (sizeof(TNode) + sizeof(TNode*)) <= REGION_SIZE,
+               "Arena must hold the tree nodes and child lists");
+
 typedef void*(*ChildAllocFn)(int);
 typedef void (*ChildFreeFn)(void*,int);
 
@@ -993,6 +1004,7 @@ static void *ma_children_alloc(int n){ return malloc((size_t)n*sizeof(TNode*)); 
 static void  ma_children_free(void*p,int n){ (void)n; free(p); }
 static void *po_children_alloc(int n){ return pool_alloc((size_t)n*sizeof(TNode*)); }
 static void  po_children_free(void*p,int n){ pool_free(p,(size_t)n*sizeof(TNode*)); }
+static void *ar_children_alloc(int n){ return ar_alloc((size_t)n*sizeof(TNode*)); }
 
 static TNode *build_tree(int n, AllocFn af, ChildAllocFn caf) {
     if (n <= 0) return NULL;
@@ -1014,15 +1026,67 @@ static TNode *build_tree(int n, AllocFn af, ChildAllocFn caf) {
     return node;
 }
 
-static void destroy_zane(TNode *n) {
-    if(!n) return;
-    for(int i=0;i<n->nchildren;i++) destroy_zane(n->children[i]);
+static int64_t destroy_zane(TNode *n) {
+    if(!n) return 0;
+    int64_t sum = n->value;
+    for(int i=0;i<n->nchildren;i++) sum += destroy_zane(n->children[i]);
     if(n->children) zane_children_free(n->children,n->nchildren);
     zm_own_release(n, sizeof(TNode));
+    return sum;
 }
 
-static void destroy_malloc(TNode *n){ if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_malloc(n->children[i]); if(n->children)ma_children_free(n->children,n->nchildren); free(n); }
-static void destroy_pool(TNode *n)  { if(!n)return; for(int i=0;i<n->nchildren;i++) destroy_pool(n->children[i]);  if(n->children)po_children_free(n->children,n->nchildren); pool_free(n,sizeof(TNode)); }
+static int64_t destroy_malloc(TNode *n) {
+    if(!n) return 0;
+    int64_t sum = n->value;
+    for(int i=0;i<n->nchildren;i++) sum += destroy_malloc(n->children[i]);
+    if(n->children) ma_children_free(n->children,n->nchildren);
+    free(n);
+    return sum;
+}
+
+static int64_t destroy_pool(TNode *n) {
+    if(!n) return 0;
+    int64_t sum = n->value;
+    for(int i=0;i<n->nchildren;i++) sum += destroy_pool(n->children[i]);
+    if(n->children) po_children_free(n->children,n->nchildren);
+    pool_free(n,sizeof(TNode));
+    return sum;
+}
+
+static int64_t destroy_arena(TNode *n) {
+    if(!n) return 0;
+    int64_t sum = n->value;
+    for(int i=0;i<n->nchildren;i++) sum += destroy_arena(n->children[i]);
+    return sum;
+}
+
+static int64_t tree_sum(TNode *n, int *count) {
+    if(!n) return 0;
+    (*count)++;
+    int64_t sum = n->value;
+    for(int i=0;i<n->nchildren;i++) sum += tree_sum(n->children[i], count);
+    return sum;
+}
+
+typedef int64_t (*TreeDestroyFn)(TNode*);
+
+static void tree_run(double T[RUNS], AllocFn af, ChildAllocFn caf, TreeDestroyFn df) {
+    for (int r=0;r<RUNS;r++) {
+        if (af==zane_obj_alloc) zm_reset();
+        if (af==ar_obj_alloc) ar_reset();
+        rng_state=0xbadf00dULL+(uint64_t)r;
+        TNode *root=build_tree(TREE_NODES,af,caf);
+        int count=0;
+        int64_t expected=tree_sum(root, &count);
+        assert(count==TREE_NODES);
+        double t0=now_ns();
+        int64_t sum=df(root);
+        if (af==ar_obj_alloc) ar_reset();
+        T[r]=now_ns()-t0;
+        assert(sum==expected);
+        sink^=sum;
+    }
+}
 
 
 static void test10(void) {
@@ -1030,16 +1094,19 @@ static void test10(void) {
     double T[RUNS];
     zane_children_stack = zd_stack(ZM_LIST_MIN, ZM_LINE);
 
-    for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbadf00dULL+(uint64_t)r;TNode*root=build_tree(TREE_NODES,zane_obj_alloc,zane_children_alloc);sink^=(int64_t)(uintptr_t)root;double t0=now_ns();destroy_zane(root);T[r]=now_ns()-t0;}
+    tree_run(T,zane_obj_alloc,zane_children_alloc,destroy_zane);
     record_row("Zane cascade destroy", T);
 
-    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;TNode*root=build_tree(TREE_NODES,ma_obj_alloc,ma_children_alloc);sink^=(int64_t)(uintptr_t)root;double t0=now_ns();destroy_malloc(root);T[r]=now_ns()-t0;}
+    tree_run(T,ma_obj_alloc,ma_children_alloc,destroy_malloc);
     record_row("malloc cascade destroy", T);
 
     pool_flush();pool_warm(sizeof(TNode),TREE_NODES);
     for(int b=1;b<MAX_BRANCH;b++) pool_warm((size_t)b*sizeof(TNode*),TREE_NODES/MAX_BRANCH);
-    for(int r=0;r<RUNS;r++){rng_state=0xbadf00dULL+(uint64_t)r;TNode*root=build_tree(TREE_NODES,po_obj_alloc,po_children_alloc);sink^=(int64_t)(uintptr_t)root;double t0=now_ns();destroy_pool(root);T[r]=now_ns()-t0;}
+    tree_run(T,po_obj_alloc,po_children_alloc,destroy_pool);
     record_row("Pool cascade destroy", T);
+
+    tree_run(T,ar_obj_alloc,ar_children_alloc,destroy_arena);
+    record_row("Arena cascade visit + bulk reset", T);
 }
 
 #define STRESS_CYCLES       200
@@ -1546,7 +1613,8 @@ static void emit_json(FILE *f) {
     fprintf(f, "    \"n\": %d,\n", N);
     fprintf(f, "    \"runs\": %d,\n", RUNS);
     fprintf(f, "    \"chunk_bytes\": %lu,\n", (unsigned long)ZM_CHUNK);
-    fprintf(f, "    \"region_bytes\": %lu\n", (unsigned long)REGION_SIZE);
+    fprintf(f, "    \"region_bytes\": %lu,\n", (unsigned long)REGION_SIZE);
+    fprintf(f, "    \"tree_teardown_checksum\": true\n");
     fprintf(f, "  },\n  \"tests\": [\n");
 
     for (int i = 0; i < bench_ntests; i++) {

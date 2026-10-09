@@ -61,6 +61,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]           |
   +--------------------------------------------------------------------------------------------------+
+    ! Not measured in this results file: Arena (bump + end-of-run reset). A fresh full-suite run is needed; missing timings are not zero.
     Zane (fixed-region bump)            median  17014056.50 ns  min  13992640.00 ns  max  24597277.00 ns  (17014.056 us)
     Zane + work-stealing update         median 144513756.50 ns  min 137437918.00 ns  max 222872869.00 ns  (144513.756 us)
     malloc / free                       median  15122530.50 ns  min  13145834.00 ns  max  18897091.00 ns  (15122.531 us)
@@ -76,6 +77,8 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 10 -- Ownership tree teardown  [~4000 nodes, cascade post-order destroy]                   |
   +--------------------------------------------------------------------------------------------------+
+    ! Not measured in this results file: Arena cascade visit + bulk reset. A fresh full-suite run is needed; missing timings are not zero.
+    ! These measurements predate the checksum-verified teardown and its untimed validation walk; rerun all allocators together before comparing the current harness.
     Zane cascade destroy                median     61770.00 ns  min     60185.00 ns  max    139085.00 ns  (   61.770 us)
     malloc cascade destroy              median    151595.00 ns  min    132747.00 ns  max   2204337.00 ns  (  151.595 us)
     Pool cascade destroy                median     79164.00 ns  min     75562.00 ns  max    185579.00 ns  (   79.164 us)

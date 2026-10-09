@@ -551,15 +551,23 @@ const TESTS=[
         "val": "TTL = random 10\u201330 frames"
       },
       {
+        "label": "Arena",
+        "val": "flat bump; retains dead particles' storage until all 500 frames finish"
+      },
+      {
         "label": "Concurrent variant",
         "val": "Zane-only work-stealing update; threads pre-started before benchmarks"
       },
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "Not measured in this results file: Arena (bump + end-of-run reset). A fresh full-suite run is needed; missing timings are not zero."
       }
     ],
-    "setup": "Maximum churn. Every death is a no-op release from the fixed-size region.",
+    "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
     "note": "Maximum churn is the one workload where Zane comes last: Pool ~12.2ms, malloc ~15.1ms, Zane ~17.0ms, ~1.4x Pool. The fixed region never reuses a freed slot before the scope drains, so each frame's spawns land in memory the update loop has not touched, where Pool hands back the slots that just died and are still in cache; that is the likely cost, and it is the price of T9's flat refill. Zane's own passes spread from ~14.0ms to ~24.6ms, the widest of the three. The work-stealing row is ~145ms, ~8.5x plain Zane: per-frame particle work is too small to amortize scheduling, as both previous pins also found.",
     "noteStale": false
   },
@@ -620,7 +628,7 @@ const TESTS=[
   },
   {
     "t": "T10 \u2014 tree teardown",
-    "title": "Cascade destruction \u2014 Zane vs malloc and pool",
+    "title": "Cascade destruction \u2014 Zane vs malloc, pool and arena",
     "labels": [
       "Zane cascade destroy",
       "Pool cascade destroy",
@@ -665,11 +673,23 @@ const TESTS=[
         "val": "free(node) per node, coalescing on each"
       },
       {
+        "label": "Arena",
+        "val": "post-order node visit plus O(1) bulk reset; no per-node free"
+      },
+      {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "Not measured in this results file: Arena cascade visit + bulk reset. A fresh full-suite run is needed; missing timings are not zero."
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the checksum-verified teardown and its untimed validation walk; rerun all allocators together before comparing the current harness."
       }
     ],
-    "setup": "A tree torn down by post-order DFS. Node payloads release as no-ops; each 128-byte child list goes back on its exact-size stack. A reference leaves nothing in its owner, so how many references a tree has cannot change its teardown.",
+    "setup": "The current harness visits every node in post-order and sums its value inside the timed teardown for every allocator; the checksum and the 4,000-node count are checked outside timing. Zane releases node payloads as no-ops and returns each 128-byte child list to its exact-size stack. The arena stores nodes and child lists together, visits the same tree, then resets once inside timing. This is traversal plus bulk reclaim, not a reset-only benchmark. A reference leaves nothing in its owner, so reference density cannot change teardown.",
     "note": "Teardown of the branching tree: Zane ~62us, Pool ~79us (~1.3x), malloc ~152us (~2.5x). This is the first pin on the corrected topology, roughly 1,070 branch points at depth ~20-26 rather than the 4,000-node chain the earlier figures measured, and the cross-allocator ordering survived the change. Reference density no longer has a row, because a reference leaves nothing in its owner for teardown to visit; what Zane's walk does per node is return the node's child list to its exact-size stack.",
     "noteStale": false
   },
