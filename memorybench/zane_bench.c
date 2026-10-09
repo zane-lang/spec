@@ -497,7 +497,27 @@ static void test1(void) {
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
     for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_own(32); for(int i=0;i<N;i++) zm_own_release(ptrs[i],32); T[r]=now_ns()-t0; }
-    record_row("Zane (fixed-region bump)", T);
+    record_row("Per-object fixed bump (baseline)", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        zm_reset();
+        double t0 = now_ns();
+        for (int i = 0; i < N; i += 4) {
+            uint8_t *frame = zm_fixed_alloc(4 * 32);
+            ptrs[i] = frame;
+            ptrs[i + 1] = frame + 32;
+            ptrs[i + 2] = frame + 64;
+            ptrs[i + 3] = frame + 96;
+        }
+        for (int i = 0; i < N; i++) zm_own_release(ptrs[i], 32);
+        sink ^= (int64_t)(uintptr_t)ptrs[N - 1];
+        size_t end = zm.fixed_off;
+        zm.fixed_off = 0;
+        T[r] = now_ns() - t0;
+        assert(end == N * 32 && zm.fixed_off == 0);
+        for (int i = 0; i < N; i++) assert(ptrs[i] == zm.fixed_base + i * 32);
+    }
+    record_row("Zane (four-owner scope frames)", T);
 
     for (int r=0;r<RUNS;r++) { double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=malloc(32); for(int i=0;i<N;i++) free(ptrs[i]); T[r]=now_ns()-t0; }
     record_row("malloc / free", T);
@@ -540,7 +560,35 @@ static void test3(void) {
     for(int i=0;i<N;i++) szseq[i]=MIXED_SIZES[i%NMS];
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=zm_fixed_alloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)zm_fixed_release(pairs[i].p,pairs[i].s);T[r]=now_ns()-t0;}
-    record_row("Zane (fixed-region bump)", T);
+    record_row("Per-object fixed bump (baseline)", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        zm_reset();
+        rng_state = 0xbabe0000ULL + (uint64_t)r;
+        double t0 = now_ns();
+        for (int i = 0; i < N; i += 4) {
+            uint8_t *frame = zm_fixed_alloc(128);
+            pairs[i] = (PS){frame, 8};
+            pairs[i + 1] = (PS){frame + 8, 16};
+            pairs[i + 2] = (PS){frame + 24, 32};
+            pairs[i + 3] = (PS){frame + 56, 64};
+        }
+        shuf_ps(pairs, N);
+        for (int i = 0; i < N; i++) zm_fixed_release(pairs[i].p, pairs[i].s);
+        sink ^= (int64_t)(uintptr_t)pairs[N - 1].p;
+        size_t end = zm.fixed_off;
+        zm.fixed_off = 0;
+        T[r] = now_ns() - t0;
+        assert(end == (N / 4) * 128 && zm.fixed_off == 0);
+        for (int i = 0; i < N; i++) {
+            size_t offset = (uint8_t *)pairs[i].p - zm.fixed_base;
+            size_t slot = offset % 128;
+            assert(offset < end);
+            assert((slot == 0 && pairs[i].s == 8) || (slot == 8 && pairs[i].s == 16) ||
+                   (slot == 24 && pairs[i].s == 32) || (slot == 56 && pairs[i].s == 64));
+        }
+    }
+    record_row("Zane (four-owner scope frames)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=malloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)free(pairs[i].p);T[r]=now_ns()-t0;}
     record_row("malloc / free", T);
@@ -1569,6 +1617,7 @@ static void emit_json(FILE *f) {
     fprintf(f, "    \"chunk_bytes\": %lu,\n", (unsigned long)ZM_CHUNK);
     fprintf(f, "    \"region_bytes\": %lu,\n", (unsigned long)REGION_SIZE);
     fprintf(f, "    \"addressing\": \"native\",\n");
+    fprintf(f, "    \"scope_frames\": true,\n");
     fprintf(f, "    \"tree_teardown_checksum\": true\n");
     fprintf(f, "  },\n  \"tests\": [\n");
 

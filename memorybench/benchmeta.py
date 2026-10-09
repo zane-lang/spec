@@ -23,12 +23,16 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "One fixed-region frontier bump per object, with a chunk-boundary check. An object carries no header, so allocation writes nothing into the object. Release is a no-op — the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
+        "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model. The retained pinned Zane row measured the older per-object chunked frontier.",
+        "required_rows": ["Zane (four-owner scope frames)"],
+        "required_config": {
+            "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+        },
         "meta": [
             ("Object size", "32B — no per-object metadata"),
-            ("Alloc cost", "one fixed-region bump"),
+            ("Alloc cost", "one bump per four-owner frame; fixed slot offsets"),
             ("Release cost", "no-op — fixed region reclaims only at drain"),
-            ("Arena row", "flat bump, no chunk boundary"),
+            ("Arena row", "one flat bump per object, then bulk reset"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -45,7 +49,11 @@ TEST_META = {
     "Test 3": {
         "short": "T3 — mixed sizes",
         "title": "Mixed-size alloc and random-order release",
-        "setup": "Raw fixed-region blocks of four sizes, released in random order. The region is a pure bump: no size classes, no free list, no coalescing.",
+        "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model; the pinned Zane row measured the older per-object frontier.",
+        "required_rows": ["Zane (four-owner scope frames)"],
+        "required_config": {
+            "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+        },
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),

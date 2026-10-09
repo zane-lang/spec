@@ -125,7 +125,7 @@ const TESTS=[
       },
       {
         "label": "Alloc cost",
-        "val": "one fixed-region bump"
+        "val": "one bump per four-owner frame; fixed slot offsets"
       },
       {
         "label": "Release cost",
@@ -133,7 +133,7 @@ const TESTS=[
       },
       {
         "label": "Arena row",
-        "val": "flat bump, no chunk boundary"
+        "val": "one flat bump per object, then bulk reset"
       },
       {
         "label": "Runs",
@@ -142,9 +142,17 @@ const TESTS=[
       {
         "label": "Measurement status",
         "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
+      },
+      {
+        "label": "Measurement status",
+        "val": "Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero."
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."
       }
     ],
-    "setup": "One fixed-region frontier bump per object, with a chunk-boundary check. An object carries no header, so allocation writes nothing into the object. Release is a no-op \u2014 the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
+    "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model. The retained pinned Zane row measured the older per-object chunked frontier.",
     "note": "Zane's fixed-region bump (~32.2us) is ~60.6x faster than malloc/free (~1.95ms) and ~6.9x faster than Pool (~223us) in this run. The flat arena (~14.9us) is ~2.2x faster again. Zane release is a no-op; the arena reclaims with a bulk reset, whereas malloc and Pool perform per-object frees inside timing. Neither bump writes per-object metadata. Zane additionally maintains a chunked frontier and checks chunk boundaries. Its first pass (~540us) is ~16.8x its median, so the median rather than that single pass is the figure to read. These are allocator-model timings, not whole-program compiler results.",
     "noteStale": false
   },
@@ -246,9 +254,17 @@ const TESTS=[
       {
         "label": "Measurement status",
         "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
+      },
+      {
+        "label": "Measurement status",
+        "val": "Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero."
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."
       }
     ],
-    "setup": "Raw fixed-region blocks of four sizes, released in random order. The region is a pure bump: no size classes, no free list, no coalescing.",
+    "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model; the pinned Zane row measured the older per-object frontier.",
     "note": "With mixed sizes, Zane takes ~252us, malloc ~3.79ms (~15.0x Zane), Pool ~1.18ms (~4.7x), and the flat arena ~29.0us. Zane is still a pure fixed-region bump without size classes or coalescing. The arena's first pass (~358us) is ~12.4x its median. The large separations are clear within this run, but their exact multiples should not be transferred to other machines.",
     "noteStale": false
   },

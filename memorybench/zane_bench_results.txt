@@ -8,6 +8,8 @@
   |  Test 1 -- Sequential alloc + sequential free  [32 bytes x 100k]                                 |
   +--------------------------------------------------------------------------------------------------+
     ! These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model.
+    ! Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero.
+    ! These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames.
     Zane (fixed-region bump)            median     32157.00 ns  min     32152.00 ns  max    539739.00 ns  (   32.157 us)
     malloc / free                       median   1947427.50 ns  min   1868606.00 ns  max   4097473.00 ns  ( 1947.428 us)
     Arena (bump + O(1) reset)           median     14938.00 ns  min     13739.00 ns  max     16717.00 ns  (   14.938 us)
@@ -25,6 +27,8 @@
   |  Test 3 -- Mixed sizes (8/16/32/64B) alloc + random-order free  [100k total]                     |
   +--------------------------------------------------------------------------------------------------+
     ! These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model.
+    ! Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero.
+    ! These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames.
     Zane (fixed-region bump)            median    252464.50 ns  min    249846.00 ns  max    489849.00 ns  (  252.464 us)
     malloc / free                       median   3793158.50 ns  min   3358464.00 ns  max   7223215.00 ns  ( 3793.159 us)
     Arena (bulk reset)                  median     28964.50 ns  min     28483.00 ns  max    358064.00 ns  (   28.965 us)

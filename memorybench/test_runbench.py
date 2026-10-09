@@ -15,8 +15,12 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
     def results_without_arena(self):
         doc = copy.deepcopy(self.pinned)
         doc["config"]["addressing"] = "native"
+        doc["config"]["scope_frames"] = True
         doc["config"].pop("tree_teardown_checksum", None)
         for test in doc["tests"]:
+            if test["id"] in ("Test 1", "Test 3"):
+                test["rows"].append({"label": "Zane (four-owner scope frames)",
+                                     "samples_ns": [1000.0] * 20})
             if test["id"] in ("Test 8", "Test 10"):
                 test["rows"] = [r for r in test["rows"]
                                 if not r["label"].startswith("Arena")]
@@ -106,6 +110,36 @@ class AddressingMeasurementStatusTests(unittest.TestCase):
         for test in doc["tests"]:
             notes = runbench.measurement_notes(test, doc["config"])
             self.assertFalse(any("earlier segmented-offset model" in note for note in notes))
+
+
+class ScopeFrameMeasurementStatusTests(unittest.TestCase):
+    def test_native_per_owner_run_still_requires_scope_frame_measurements(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"]["addressing"] = "native"
+        for test in doc["tests"]:
+            if test["id"] in ("Test 1", "Test 3"):
+                notes = runbench.measurement_notes(test, doc["config"])
+                self.assertTrue(any("Not measured" in note for note in notes))
+                self.assertTrue(any("predate per-scope" in note for note in notes))
+        self.assertIn("predate per-scope", runbench.render_text(doc))
+
+    def test_scope_marker_alone_cannot_supply_missing_measurements(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"].update(addressing="native", scope_frames=True)
+        for test in doc["tests"]:
+            if test["id"] in ("Test 1", "Test 3"):
+                notes = runbench.measurement_notes(test, doc["config"])
+                self.assertEqual(len(notes), 1)
+                self.assertIn("Not measured", notes[0])
+
+    def test_frame_rows_and_protocol_clear_the_status(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"].update(addressing="native", scope_frames=True)
+        for test in doc["tests"]:
+            if test["id"] in ("Test 1", "Test 3"):
+                test["rows"].append({"label": "Zane (four-owner scope frames)",
+                                     "samples_ns": [1000.0] * 20})
+                self.assertEqual(runbench.measurement_notes(test, doc["config"]), [])
 
 
 if __name__ == "__main__":
