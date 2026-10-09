@@ -56,7 +56,7 @@ Each `deps` row records:
 
 The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
 
-`fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. A transitively fetched manifest's are ignored, so a library never sets how much memory the program that uses it reserves.
+`fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
 
 ```zane
 zane-version v0.4.1
