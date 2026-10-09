@@ -603,7 +603,7 @@ Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a 
 
 ### 3.7 Nested scopes share a bounded fixed-size region
 
-Scopes open at once in one thread of execution nest last-in-first-out: the program's `main` and every call it makes, or one spawned call and every call it makes ([`concurrency.md`](concurrency.md) §3). Their fixed-size regions together hold at most a fixed number of bytes. The root package's manifest sets the bound: `fixed-region` for the program's own thread of execution, and `spawned-fixed-region` for each spawned call's ([`dependencies.md`](dependencies.md) §2.1). A spawned call's bound is its own, and holds while the call runs.
+Scopes open at once in one thread of execution nest last-in-first-out: the program's `main` and every call it makes, or one spawned call and every call it makes ([`concurrency.md`](concurrency.md) §3). Their fixed-size regions together hold at most a fixed number of bytes. The root package's manifest sets the bound: `fixed-region` for the program's own thread of execution, and `spawned-fixed-region` for each spawned call ([`dependencies.md`](dependencies.md) §2.1). A spawned call's bound is its own, and holds while the call runs.
 
 A program whose open scopes need more than the bound stops with an error that names the field. Calls also nest on the system's machine stack, whose size the language does not set, and a program that fills it stops with an error the same way. Neither is an abort ([`error-handling.md`](error-handling.md)): no handler sees it, and the program ends.
 
