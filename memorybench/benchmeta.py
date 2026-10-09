@@ -9,8 +9,8 @@ independently of how the page is built.
 # Test metadata: short name, title, setup, and per-impl facts.
 # These track spec/memory.md: ownership is the default and the reference (&)
 # is opt-in; a scope has a fixed-size region and a dynamic region that never
-# share a chunk; an owner is settled (referenceable, never moves) or roaming
-# (moves, referenced by nothing); and a reference is the u32 segmented offset
+# share storage; an owner is settled (referenceable, never moves) or roaming
+# (moves, referenced by nothing); and a reference is the native address
 # of the settled owner it names. An owned object carries no metadata of its own.
 #
 # The "Reading the result" note for each test is NOT stored here. It is read
@@ -23,12 +23,16 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "One fixed-region frontier bump per object, with a chunk-boundary check. An object carries no header, so allocation writes nothing into the object. Release is a no-op — the fixed-size region reclaims only when the scope drains. The arena row is a flat bump with no chunk boundary.",
+        "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model. The retained pinned Zane row measured the older per-object chunked frontier.",
+        "required_rows": ["Zane (four-owner scope frames)"],
+        "required_config": {
+            "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+        },
         "meta": [
             ("Object size", "32B — no per-object metadata"),
-            ("Alloc cost", "one fixed-region bump"),
+            ("Alloc cost", "one bump per four-owner frame; fixed slot offsets"),
             ("Release cost", "no-op — fixed region reclaims only at drain"),
-            ("Arena row", "flat bump, no chunk boundary"),
+            ("Arena row", "one flat bump per object, then bulk reset"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -45,7 +49,11 @@ TEST_META = {
     "Test 3": {
         "short": "T3 — mixed sizes",
         "title": "Mixed-size alloc and random-order release",
-        "setup": "Raw fixed-region blocks of four sizes, released in random order. The region is a pure bump: no size classes, no free list, no coalescing.",
+        "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model; the pinned Zane row measured the older per-object frontier.",
+        "required_rows": ["Zane (four-owner scope frames)"],
+        "required_config": {
+            "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+        },
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
             ("Count", "100,000 total (25k per size)"),
@@ -82,15 +90,14 @@ TEST_META = {
     },
     "Test 6": {
         "short": "T6 — reference access",
-        "title": "Reference access via a segmented offset vs a direct pointer",
-        "setup": "A reference is the u32 segmented offset of the settled owner it names (memory.md §4.1). Resolving it is a shift, a mask and one chunk-directory load, then the object itself. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
+        "title": "Reference access via a native address vs a direct pointer",
+        "setup": "A reference stores the native address of the settled owner it names (memory.md §4.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner. Pinned segmented-offset rows describe the earlier model, not the current harness.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Segmented offset, dir cached", "chunk directory hoisted; offset → object"),
-            ("Segmented offset, dir reloaded", "chunk directory re-fetched per access"),
-            ("Reference size", "u32 segmented offset — half a 64-bit pointer"),
-            ("Reference cost", "4B — the reference itself; the owner stores nothing"),
-            ("Asserted", "every reference resolves to the object it was minted from"),
+            ("Native reference", "the same direct access through the stored address"),
+            ("Reference size", "one native pointer — target-width storage"),
+            ("Reference cost", "the reference itself; the owner stores nothing"),
+            ("Asserted", "every reference names the object it was minted from"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -186,7 +193,8 @@ TEST_META = {
             ("Rounds", "10 — round 1 bumps, rounds 2-10 pop"),
             ("Reuse key", "(byte size, alignment) — never approximate"),
             ("Static vs runtime", "a boxed payload indexes its stack directly; a backing store looks its up"),
-            ("Asserted", "a freed block is handed back for the same size and alignment, and withheld from a different one"),
+            ("Small blocks", "blocks smaller than a native pointer keep return addresses in separate vectors; larger blocks copy link bytes without requiring pointer alignment"),
+            ("Asserted", "exact-key LIFO reuse, separation of different keys, neighboring live bytes preserved for tiny blocks, weakly aligned 12-byte blocks, and empty stacks after drain"),
             ("Runs", "20 — median reported"),
         ],
     },
@@ -196,8 +204,8 @@ TEST_META = {
         "setup": "A recursive tree whose members are boxed (adt.md §4): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md §3.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (§2.3); fresh construction builds each node in place and copies nothing.",
         "meta": [
             ("Tree", "complete binary, depth 12 — 8,191 nodes"),
-            ("Owned node", "16B — value and two handles"),
-            ("Value node", "16B — value and two handles"),
+            ("Owned node", "24B on a 64-bit target — value and two native handles"),
+            ("Value node", "24B on a 64-bit target — value and two native handles"),
             ("Boxed payload", "exact node size, node alignment; no size class, no floor"),
             ("Stack key", "resolved once from the member's type, not per allocation"),
             ("Escape", "recursive relocation; old blocks returned to their exact-size stacks"),

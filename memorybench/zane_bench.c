@@ -216,70 +216,56 @@ static void workers_shutdown(void) {
 #define ZM_NC         (ZM_MAXSZ / ZM_ALIGN)
 #define ZM_CHUNKBITS  20
 #define ZM_CHUNK      (1UL << ZM_CHUNKBITS)
-#define ZM_WORDBITS   (ZM_CHUNKBITS - 3)
-#define ZM_OFFMASK    ((1u << ZM_WORDBITS) - 1)
 #define ZM_NCHUNKS    (REGION_SIZE / ZM_CHUNK)
 #define ZM_LINE       64
 #define ZM_LIST_MIN   128
 
-#define ZD_NIL        0xFFFFFFFFu
+#define ZD_NIL        NULL
 #define ZD_STACKS     1024
 
-typedef uint32_t ZRef;
+typedef void *ZRef;
 
-typedef struct { uint32_t chunk; uint32_t off; int live; uint8_t *cbase; } ZBump;
-typedef struct { uint32_t size; uint32_t align; uint32_t head; } ZSizeStack;
+typedef struct { size_t off; int live; uint8_t *cbase; } ZBump;
+typedef struct {
+    size_t size, align;
+    void *head;
+    void **small;
+    size_t small_count, small_capacity;
+} ZSizeStack;
 
 static struct {
     uint8_t   *base;
-    uint32_t   next_chunk;
-    uint8_t   *dir[ZM_NCHUNKS];
-    ZBump      fixed;
+    size_t     next_chunk;
+    uint8_t   *fixed_base;
+    size_t     fixed_off;
     ZBump      dyn;
     ZSizeStack stacks[ZD_STACKS];
 } zm;
 
-static inline uint32_t zm_seg(void *p) {
-    assert((uint8_t*)p >= zm.base && (uint8_t*)p < zm.base + REGION_SIZE);
-    size_t bo = (uint8_t*)p - zm.base;
-    assert((bo & 7) == 0);
-    return ((uint32_t)(bo >> ZM_CHUNKBITS) << ZM_WORDBITS) | (uint32_t)((bo & (ZM_CHUNK - 1)) >> 3);
-}
-static inline void *zm_resolve(uint32_t seg) {
-    uint32_t chunk_id = seg >> ZM_WORDBITS;
-    assert(chunk_id < ZM_NCHUNKS);
-    return zm.dir[chunk_id] + ((size_t)(seg & ZM_OFFMASK) << 3);
-}
-
-static uint32_t zm_take_chunk(void) {
+static uint8_t *zm_take_chunk(void) {
     assert(zm.next_chunk < ZM_NCHUNKS);
-    return zm.next_chunk++;
+    return zm.base + zm.next_chunk++ * ZM_CHUNK;
 }
 
 static void *zm_bump(ZBump *b, size_t size, size_t align) {
     assert(size <= ZM_CHUNK);
-    if (!b->live) { b->chunk = zm_take_chunk(); b->cbase = zm.dir[b->chunk]; b->off = 0; b->live = 1; }
-    size_t off = ((size_t)b->off + (align - 1)) & ~(align - 1);
+    if (!b->live) { b->cbase = zm_take_chunk(); b->off = 0; b->live = 1; }
+    size_t off = (b->off + (align - 1)) & ~(align - 1);
     if (off + size > ZM_CHUNK) {
-        b->chunk = zm_take_chunk();
-        b->cbase = zm.dir[b->chunk];
+        b->cbase = zm_take_chunk();
         off = 0;
     }
     void *p = b->cbase + off;
-    b->off = (uint32_t)(off + size);
+    b->off = off + size;
     return p;
 }
 
 static inline void *zm_fixed_alloc(size_t s) {
     s = (s + ZM_ALIGN - 1) & ~(size_t)(ZM_ALIGN - 1);
-    size_t off = zm.fixed.off;
-    if (off + s > ZM_CHUNK) {
-        zm.fixed.chunk = zm_take_chunk();
-        zm.fixed.cbase = zm.dir[zm.fixed.chunk];
-        off = 0;
-    }
-    zm.fixed.off = (uint32_t)(off + s);
-    return zm.fixed.cbase + off;
+    size_t off = zm.fixed_off;
+    assert(s <= REGION_SIZE - off);
+    zm.fixed_off = off + s;
+    return zm.fixed_base + off;
 }
 static void zm_fixed_release(void *p, size_t s) { (void)p; (void)s; }
 static void zd_release(void *p, size_t s) { (void)p; (void)s; }
@@ -289,8 +275,8 @@ static ZSizeStack *zd_stack(size_t size, size_t align) {
     uint32_t i = h & (ZD_STACKS - 1);
     for (uint32_t probe = 0; probe < ZD_STACKS; probe++) {
         ZSizeStack *s = &zm.stacks[(i + probe) & (ZD_STACKS - 1)];
-        if (s->size == 0) {
-            s->size = (uint32_t)size; s->align = (uint32_t)align; s->head = ZD_NIL;
+        if (s->align == 0) {
+            s->size = size; s->align = align; s->head = ZD_NIL;
             return s;
         }
         if (s->size == size && s->align == align) return s;
@@ -301,31 +287,45 @@ static ZSizeStack *zd_stack(size_t size, size_t align) {
 
 static void *zd_span(size_t bytes) {
     size_t n = (bytes + ZM_CHUNK - 1) / ZM_CHUNK;
-    uint32_t first = zm_take_chunk();
+    uint8_t *first = zm_take_chunk();
     for (size_t i = 1; i < n; i++) (void)zm_take_chunk();
-    return zm.dir[first];
+    return first;
 }
 
-static void *zd_try_stack(size_t size, size_t align) {
-    ZSizeStack *s = zd_stack(size, align);
+static void *zd_pop(ZSizeStack *s) {
+    if (s->size < sizeof(void *))
+        return s->small_count ? s->small[--s->small_count] : NULL;
     if (s->head == ZD_NIL) return NULL;
-    void *p = zm_resolve(s->head);
-    s->head = *(uint32_t*)p;
+    void *p = s->head;
+    memcpy(&s->head, p, sizeof s->head);
     return p;
 }
 
+static void *zd_try_stack(size_t size, size_t align) {
+    return zd_pop(zd_stack(size, align));
+}
+
 static void *zd_take(ZSizeStack *s) {
-    if (s->head != ZD_NIL) {
-        void *p = zm_resolve(s->head);
-        s->head = *(uint32_t*)p;
-        return p;
-    }
+    void *p = zd_pop(s);
+    if (p) return p;
     if (s->size > ZM_CHUNK) return zd_span(s->size);
     return zm_bump(&zm.dyn, s->size, s->align);
 }
 static void zd_give(ZSizeStack *s, void *p) {
-    *(uint32_t*)p = s->head;
-    s->head = zm_seg(p);
+    if (s->size < sizeof(void *)) {
+        if (s->small_count == s->small_capacity) {
+            size_t capacity = s->small_capacity ? s->small_capacity * 2 : 16;
+            assert(capacity > s->small_capacity && capacity <= SIZE_MAX / sizeof *s->small);
+            void **entries = realloc(s->small, capacity * sizeof *entries);
+            assert(entries);
+            s->small = entries;
+            s->small_capacity = capacity;
+        }
+        s->small[s->small_count++] = p;
+        return;
+    }
+    memcpy(p, &s->head, sizeof s->head);
+    s->head = p;
 }
 
 static void *zd_alloc(size_t size, size_t align) {
@@ -335,38 +335,33 @@ static void *zd_alloc(size_t size, size_t align) {
     return zm_bump(&zm.dyn, size, align);
 }
 static void zd_free(void *p, size_t size, size_t align) {
-    ZSizeStack *s = zd_stack(size, align);
-    *(uint32_t*)p = s->head;
-    s->head = zm_seg(p);
+    zd_give(zd_stack(size, align), p);
 }
 
 static int zd_grow_in_place(void *block, size_t old_bytes, size_t new_bytes) {
     if (new_bytes > ZM_CHUNK) return 0;
     if (!zm.dyn.live) return 0;
-    uint32_t seg = zm_seg(block);
-    size_t off = (size_t)(seg & ZM_OFFMASK) << 3;
-    if ((seg >> ZM_WORDBITS) != zm.dyn.chunk) return 0;
-    if (off + old_bytes != zm.dyn.off) return 0;
+    if ((uint8_t*)block + old_bytes != zm.dyn.cbase + zm.dyn.off) return 0;
     size_t extra = new_bytes - old_bytes;
-    if ((size_t)zm.dyn.off + extra > ZM_CHUNK) return 0;
-    zm.dyn.off += (uint32_t)extra;
+    if (zm.dyn.off + extra > ZM_CHUNK) return 0;
+    zm.dyn.off += extra;
     return 1;
 }
 
 static inline void *zm_own(size_t obj_size) { return zm_fixed_alloc(obj_size); }
 static void zm_own_release(void *obj, size_t obj_size) { (void)obj; (void)obj_size; }
 
-static inline ZRef zm_mint_ref(void *obj) { return zm_seg(obj); }
-static inline void *zm_deref(ZRef r) { return zm_resolve(r); }
+static inline ZRef zm_mint_ref(void *obj) { return obj; }
+static inline void *zm_deref(ZRef r) { return r; }
 
 static void zm_reset(void) {
     zm.next_chunk = 0;
-    zm.fixed.live = zm.dyn.live = 0;
-    zm.fixed.off  = zm.dyn.off  = 0;
-    for (int i = 0; i < ZD_STACKS; i++) zm.stacks[i].head = ZD_NIL;
-    zm.fixed.chunk = zm_take_chunk();
-    zm.fixed.cbase = zm.dir[zm.fixed.chunk];
-    zm.fixed.live = 1;
+    zm.dyn.live = 0;
+    zm.fixed_off = zm.dyn.off = 0;
+    for (int i = 0; i < ZD_STACKS; i++) {
+        zm.stacks[i].head = ZD_NIL;
+        zm.stacks[i].small_count = 0;
+    }
 }
 
 static void zm_init(void) {
@@ -374,7 +369,10 @@ static void zm_init(void) {
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(zm.base != MAP_FAILED);
     for (size_t i = 0; i < REGION_SIZE; i += 4096) zm.base[i] = 0;
-    for (uint32_t c = 0; c < ZM_NCHUNKS; c++) zm.dir[c] = zm.base + (size_t)c * ZM_CHUNK;
+    zm.fixed_base = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    assert(zm.fixed_base != MAP_FAILED);
+    for (size_t i = 0; i < REGION_SIZE; i += 4096) zm.fixed_base[i] = 0;
     zm_reset();
 }
 
@@ -519,7 +517,27 @@ static void test1(void) {
     void **ptrs = (void**)malloc(N * sizeof(void *));
 
     for (int r=0;r<RUNS;r++) { zm_reset(); double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=zm_own(32); for(int i=0;i<N;i++) zm_own_release(ptrs[i],32); T[r]=now_ns()-t0; }
-    record_row("Zane (fixed-region bump)", T);
+    record_row("Per-object fixed bump (baseline)", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        zm_reset();
+        double t0 = now_ns();
+        for (int i = 0; i < N; i += 4) {
+            uint8_t *frame = zm_fixed_alloc(4 * 32);
+            ptrs[i] = frame;
+            ptrs[i + 1] = frame + 32;
+            ptrs[i + 2] = frame + 64;
+            ptrs[i + 3] = frame + 96;
+        }
+        for (int i = 0; i < N; i++) zm_own_release(ptrs[i], 32);
+        sink ^= (int64_t)(uintptr_t)ptrs[N - 1];
+        size_t end = zm.fixed_off;
+        zm.fixed_off = 0;
+        T[r] = now_ns() - t0;
+        assert(end == N * 32 && zm.fixed_off == 0);
+        for (int i = 0; i < N; i++) assert(ptrs[i] == zm.fixed_base + i * 32);
+    }
+    record_row("Zane (four-owner scope frames)", T);
 
     for (int r=0;r<RUNS;r++) { double t0=now_ns(); for(int i=0;i<N;i++) ptrs[i]=malloc(32); for(int i=0;i<N;i++) free(ptrs[i]); T[r]=now_ns()-t0; }
     record_row("malloc / free", T);
@@ -562,7 +580,35 @@ static void test3(void) {
     for(int i=0;i<N;i++) szseq[i]=MIXED_SIZES[i%NMS];
 
     for(int r=0;r<RUNS;r++){zm_reset();rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=zm_fixed_alloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)zm_fixed_release(pairs[i].p,pairs[i].s);T[r]=now_ns()-t0;}
-    record_row("Zane (fixed-region bump)", T);
+    record_row("Per-object fixed bump (baseline)", T);
+
+    for (int r = 0; r < RUNS; r++) {
+        zm_reset();
+        rng_state = 0xbabe0000ULL + (uint64_t)r;
+        double t0 = now_ns();
+        for (int i = 0; i < N; i += 4) {
+            uint8_t *frame = zm_fixed_alloc(128);
+            pairs[i] = (PS){frame, 8};
+            pairs[i + 1] = (PS){frame + 8, 16};
+            pairs[i + 2] = (PS){frame + 24, 32};
+            pairs[i + 3] = (PS){frame + 56, 64};
+        }
+        shuf_ps(pairs, N);
+        for (int i = 0; i < N; i++) zm_fixed_release(pairs[i].p, pairs[i].s);
+        sink ^= (int64_t)(uintptr_t)pairs[N - 1].p;
+        size_t end = zm.fixed_off;
+        zm.fixed_off = 0;
+        T[r] = now_ns() - t0;
+        assert(end == (N / 4) * 128 && zm.fixed_off == 0);
+        for (int i = 0; i < N; i++) {
+            size_t offset = (uint8_t *)pairs[i].p - zm.fixed_base;
+            size_t slot = offset % 128;
+            assert(offset < end);
+            assert((slot == 0 && pairs[i].s == 8) || (slot == 8 && pairs[i].s == 16) ||
+                   (slot == 24 && pairs[i].s == 32) || (slot == 56 && pairs[i].s == 64));
+        }
+    }
+    record_row("Zane (four-owner scope frames)", T);
 
     for(int r=0;r<RUNS;r++){rng_state=0xbabe0000ULL+(uint64_t)r;double t0=now_ns();for(int i=0;i<N;i++){pairs[i].p=malloc(szseq[i]);pairs[i].s=szseq[i];}shuf_ps(pairs,N);for(int i=0;i<N;i++)free(pairs[i].p);T[r]=now_ns()-t0;}
     record_row("malloc / free", T);
@@ -676,7 +722,7 @@ static void test5(void) {
 }
 
 static void test6(void) {
-    record_test("Test 6", "Reference access via segmented offset vs direct pointer  [100k accesses]");
+    record_test("Test 6", "Reference access via native address vs direct pointer  [100k accesses]");
     double T[RUNS];
 
     zm_reset();
@@ -700,36 +746,12 @@ static void test6(void) {
     record_row("Direct pointer (baseline)", T);
 
     for(int r=0;r<RUNS;r++){
-        uint8_t **dir = zm.dir;
-        for(int i=0;i<N;i++){
-            uint32_t g=refs[i];
-            sink^=(int64_t)((Entity*)(dir[g>>ZM_WORDBITS] + ((size_t)(g&ZM_OFFMASK)<<3)))->hp;
-        }
+        for(int i=0;i<N;i++) sink^=(int64_t)((Entity*)zm_deref(refs[i]))->hp;
         int64_t acc=0; double t0=now_ns();
-        for(int i=0;i<N;i++){
-            uint32_t g=refs[i];
-            Entity *e=(Entity*)(dir[g>>ZM_WORDBITS] + ((size_t)(g&ZM_OFFMASK)<<3));
-            acc+=e->hp;
-        }
+        for(int i=0;i<N;i++) acc+=((Entity*)zm_deref(refs[i]))->hp;
         T[r]=now_ns()-t0; sink^=acc;
     }
-    record_row("Segmented offset (chunk dir cached)", T);
-
-    for(int r=0;r<RUNS;r++){
-        for(int i=0;i<N;i++){
-            uint32_t g=refs[i];
-            sink^=(int64_t)((Entity*)(zm.dir[g>>ZM_WORDBITS] + ((size_t)(g&ZM_OFFMASK)<<3)))->hp;
-        }
-        int64_t acc=0; double t0=now_ns();
-        for(int i=0;i<N;i++){
-            __asm__ volatile("" ::: "memory");
-            uint32_t g=refs[i];
-            Entity *e=(Entity*)(zm.dir[g>>ZM_WORDBITS] + ((size_t)(g&ZM_OFFMASK)<<3));
-            acc+=e->hp;
-        }
-        T[r]=now_ns()-t0; sink^=acc;
-    }
-    record_row("Segmented offset (chunk dir reloaded)", T);
+    record_row("Native reference", T);
 
     for(int i=0;i<N;i++) assert(zm_deref(refs[i]) == (void*)direct[i]);
     for(int i=0;i<N;i++) zm_own_release(objs[i], sizeof(Entity));
@@ -1355,6 +1377,38 @@ static void test12(void) {
 #define REUSE_ROUNDS 10
 static const size_t REUSE_SIZES[3] = { 128, 256, 512 };
 
+static void check_exact_reuse(size_t size, size_t align) {
+    zm_reset();
+    ZSizeStack *s = zd_stack(size, align);
+    uint8_t *a = zd_take(s), *b = zd_alloc(size, align), *live = zd_take(s);
+    assert(b == a + size && live == b + size);
+    memset(b, 0x6b, size);
+    memset(live, 0xa5, size);
+    zd_give(s, a);
+    for (size_t i = 0; i < size; i++) assert(b[i] == 0x6b && live[i] == 0xa5);
+    zd_free(b, size, align);
+    for (size_t i = 0; i < size; i++) assert(live[i] == 0xa5);
+    assert(zd_try_stack(size, align) == b);
+    assert(zd_take(s) == a);
+    assert(zd_try_stack(size, align) == NULL);
+    zd_free(a, size, align);
+    zm_reset();
+    assert(zd_try_stack(size, align) == NULL);
+}
+
+static void check_many_small_blocks(void) {
+    zm_reset();
+    ZSizeStack *s = zd_stack(1, 1);
+    void *blocks[40];
+    for (size_t i = 0; i < 40; i++) blocks[i] = zd_take(s);
+    uint8_t *live = zd_alloc(1, 1);
+    *live = 0xa5;
+    for (size_t i = 0; i < 40; i++) zd_free(blocks[i], 1, 1);
+    assert(*live == 0xa5);
+    for (size_t i = 40; i > 0; i--) assert(zd_take(s) == blocks[i - 1]);
+    assert(zd_try_stack(1, 1) == NULL);
+}
+
 static void test13(void) {
     record_test("Test 13", "Dynamic-region block churn  [10 rounds x 2k blocks x 128/256/512B]");
     double T[RUNS];
@@ -1422,6 +1476,10 @@ static void test13(void) {
     }
     record_row("Pool (per-size free-list)", T);
 
+    for (size_t size = 1; size < sizeof(void *); size++) check_exact_reuse(size, 1);
+    check_exact_reuse(12, 4);
+    check_many_small_blocks();
+
     zm_reset();
     {
         void *a = zd_alloc(256, ZM_LINE);
@@ -1441,79 +1499,79 @@ static void test13(void) {
 
 #define BX_DEPTH 12
 
-typedef struct { int64_t value; uint32_t left, right; } HNode;
-_Static_assert(sizeof(HNode) == 16, "HNode must be 16 bytes");
-typedef struct { int64_t value; uint32_t left, right; } VNode;
-_Static_assert(sizeof(VNode) == 16, "VNode must be 16 bytes");
 typedef struct MNode { int64_t value; struct MNode *left, *right; } MNode;
+typedef struct { int64_t value; ZRef left, right; } HNode;
+_Static_assert(sizeof(HNode) == sizeof(MNode), "owned node uses native pointers");
+typedef struct { int64_t value; ZRef left, right; } VNode;
+_Static_assert(sizeof(VNode) == sizeof(MNode), "value node uses native pointers");
 
 static ZSizeStack *bh_stack = NULL;
 static ZSizeStack *bv_stack = NULL;
 
-static uint32_t bh_build(int depth) {
+static ZRef bh_build(int depth) {
     HNode *n = (HNode*)zd_take(bh_stack);
-    uint32_t off = zm_seg(n);
+    ZRef off = n;
     n->value = depth;
     n->left  = depth > 0 ? bh_build(depth - 1) : 0;
     n->right = depth > 0 ? bh_build(depth - 1) : 0;
     return off;
 }
-static uint32_t bh_relocate(uint32_t off) {
+static ZRef bh_relocate(ZRef off) {
     if (!off) return 0;
-    HNode *src = (HNode*)zm_resolve(off);
+    HNode *src = (HNode*)off;
     HNode *dst = (HNode*)zd_take(bh_stack);
     *dst = *src;
     dst->left  = bh_relocate(dst->left);
     dst->right = bh_relocate(dst->right);
     zd_give(bh_stack, src);
-    return zm_seg(dst);
+    return dst;
 }
-static int64_t bh_sum(uint32_t off) {
+static int64_t bh_sum(ZRef off) {
     if (!off) return 0;
-    HNode *n = (HNode*)zm_resolve(off);
+    HNode *n = (HNode*)off;
     return n->value + bh_sum(n->left) + bh_sum(n->right);
 }
 
-static uint32_t bv_build(int depth) {
+static ZRef bv_build(int depth) {
     VNode *n = (VNode*)zd_take(bv_stack);
-    uint32_t off = zm_seg(n);
+    ZRef off = n;
     n->value = depth;
     n->left  = depth > 0 ? bv_build(depth - 1) : 0;
     n->right = depth > 0 ? bv_build(depth - 1) : 0;
     return off;
 }
-static uint32_t bv_deepcopy(uint32_t off) {
+static ZRef bv_deepcopy(ZRef off) {
     if (!off) return 0;
-    VNode *src = (VNode*)zm_resolve(off);
+    VNode *src = (VNode*)off;
     VNode *dst = (VNode*)zd_take(bv_stack);
     dst->value = src->value;
     dst->left  = bv_deepcopy(src->left);
     dst->right = bv_deepcopy(src->right);
-    return zm_seg(dst);
+    return dst;
 }
-static int64_t bv_sum(uint32_t off) {
+static int64_t bv_sum(ZRef off) {
     if (!off) return 0;
-    VNode *n = (VNode*)zm_resolve(off);
+    VNode *n = (VNode*)off;
     return n->value + bv_sum(n->left) + bv_sum(n->right);
 }
 
 typedef struct { int64_t boost; } STurbo;
-typedef struct { int64_t power; uint32_t turbo; uint32_t _pad; } SEngine;
+typedef struct { int64_t power; ZRef turbo; } SEngine;
 
-static uint32_t se_build(ZSizeStack *es, ZSizeStack *ts, int64_t power, int64_t boost) {
+static ZRef se_build(ZSizeStack *es, ZSizeStack *ts, int64_t power, int64_t boost) {
     SEngine *e = (SEngine*)zd_take(es);
     STurbo  *t = (STurbo*)zd_take(ts);
     t->boost = boost;
     e->power = power;
-    e->turbo = zm_seg(t);
-    return zm_seg(e);
+    e->turbo = t;
+    return e;
 }
-static void se_overwrite(ZSizeStack *es, ZSizeStack *ts, uint32_t dst_off, uint32_t src_off) {
-    SEngine *dst = (SEngine*)zm_resolve(dst_off);
-    SEngine *src = (SEngine*)zm_resolve(src_off);
-    *(STurbo*)zm_resolve(dst->turbo) = *(STurbo*)zm_resolve(src->turbo);
+static void se_overwrite(ZSizeStack *es, ZSizeStack *ts, ZRef dst_off, ZRef src_off) {
+    SEngine *dst = (SEngine*)dst_off;
+    SEngine *src = (SEngine*)src_off;
+    *(STurbo*)dst->turbo = *(STurbo*)src->turbo;
     dst->power = src->power;
-    zd_give(ts, zm_resolve(src->turbo));
+    zd_give(ts, src->turbo);
     zd_give(es, src);
 }
 
@@ -1545,34 +1603,34 @@ static void test14(void) {
     bh_stack = zd_stack(sizeof(HNode), 8);
     bv_stack = zd_stack(sizeof(VNode), 8);
     zm_reset();
-    { uint32_t root = bv_build(BX_DEPTH); expected = bv_sum(root); }
+    { ZRef root = bv_build(BX_DEPTH); expected = bv_sum(root); }
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
-        uint32_t root = bh_build(BX_DEPTH);
+        ZRef root = bh_build(BX_DEPTH);
         double t0 = now_ns();
         root = bh_relocate(root);
         T[r] = now_ns() - t0;
-        assert(bh_sum(root) == expected); sink ^= root;
+        assert(bh_sum(root) == expected); sink ^= (int64_t)(uintptr_t)root;
     }
     record_row("Escape roaming owned tree (relocate)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
-        uint32_t root = bv_build(BX_DEPTH);
+        ZRef root = bv_build(BX_DEPTH);
         double t0 = now_ns();
-        uint32_t copy = bv_deepcopy(root);
+        ZRef copy = bv_deepcopy(root);
         T[r] = now_ns() - t0;
-        assert(bv_sum(copy) == expected); sink ^= copy;
+        assert(bv_sum(copy) == expected); sink ^= (int64_t)(uintptr_t)copy;
     }
     record_row("Deep-copy value tree (place source)", T);
 
     for (int r = 0; r < RUNS; r++) {
         zm_reset();
         double t0 = now_ns();
-        uint32_t root = bv_build(BX_DEPTH);
+        ZRef root = bv_build(BX_DEPTH);
         T[r] = now_ns() - t0;
-        assert(bv_sum(root) == expected); sink ^= root;
+        assert(bv_sum(root) == expected); sink ^= (int64_t)(uintptr_t)root;
     }
     record_row("Construct fresh value tree in place", T);
 
@@ -1590,20 +1648,20 @@ static void test14(void) {
     {
         ZSizeStack *es = zd_stack(sizeof(SEngine), 8);
         ZSizeStack *ts = zd_stack(sizeof(STurbo), 8);
-        uint32_t *car_engine = (uint32_t*)zm_own(sizeof(uint32_t));
+        ZRef *car_engine = (ZRef*)zm_own(sizeof(ZRef));
         *car_engine = se_build(es, ts, 1, 10);
         ZRef engine = *car_engine;
         ZRef turbo  = ((SEngine*)zm_deref(engine))->turbo;
-        uint32_t spare = se_build(es, ts, 2, 20);
-        uint32_t spare_turbo = ((SEngine*)zm_resolve(spare))->turbo;
+        ZRef spare = se_build(es, ts, 2, 20);
+        ZRef spare_turbo = ((SEngine*)spare)->turbo;
         se_overwrite(es, ts, *car_engine, spare);
         assert(*car_engine == engine);
         assert(((SEngine*)zm_deref(engine))->power == 2);
         assert(((SEngine*)zm_deref(engine))->turbo == turbo);
         assert(((STurbo*)zm_deref(turbo))->boost == 20);
-        assert(zd_take(es) == zm_resolve(spare));
-        assert(zd_take(ts) == zm_resolve(spare_turbo));
-        sink ^= (int64_t)engine ^ (int64_t)turbo;
+        assert(zd_take(es) == spare);
+        assert(zd_take(ts) == spare_turbo);
+        sink ^= (int64_t)(uintptr_t)engine ^ (int64_t)(uintptr_t)turbo;
     }
 }
 
@@ -1614,6 +1672,8 @@ static void emit_json(FILE *f) {
     fprintf(f, "    \"runs\": %d,\n", RUNS);
     fprintf(f, "    \"chunk_bytes\": %lu,\n", (unsigned long)ZM_CHUNK);
     fprintf(f, "    \"region_bytes\": %lu,\n", (unsigned long)REGION_SIZE);
+    fprintf(f, "    \"addressing\": \"native\",\n");
+    fprintf(f, "    \"scope_frames\": true,\n");
     fprintf(f, "    \"tree_teardown_checksum\": true\n");
     fprintf(f, "  },\n  \"tests\": [\n");
 
@@ -1649,6 +1709,7 @@ int main(void) {
     test13(); test14();
 
     workers_shutdown();
+    for (int i = 0; i < ZD_STACKS; i++) free(zm.stacks[i].small);
     emit_json(stdout);
     fprintf(stderr, "sink = %lld\n", (long long)sink);
     return 0;

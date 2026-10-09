@@ -16,7 +16,7 @@ Zane eliminates dangling references by combining single ownership, an owner that
 - **`Three passing modes`.** A bare reference-type parameter, and every subject, is a **borrow**; `^T` takes the owner; `&T` takes a reference. A value-type parameter is always a borrow, and nothing else in a call writes what the call borrows (§2.9, §2.9.1).
 - **`Lexical lifetime enforcement`.** Every store is checked against declaration scopes alone (see [`lifetimes.md`](lifetimes.md) §1), and objects are destroyed when their owner's scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
 - **`Regioned arena placement`.** Every scope has separate fixed-size and dynamic regions. Statically sized storage is placed inline in the fixed-size region; resizable data and the payloads of boxed members use the dynamic region (§3).
-- **`A reference is an address`.** A settled owner never moves, so a reference stores the owner's segmented offset directly (§4).
+- **`A reference is an address`.** A settled owner never moves, so a reference stores the owner's native address directly (§4).
 
 The source language uses two words for the relationship: an object is held by an **owner**, and a **reference** (`&T`) may access it without storing it or controlling its lifetime. A reference may point only at a settled owner, and a settled owner stays where it is until its scope drains, so a reference never needs to follow anything.
 
@@ -480,43 +480,24 @@ The right-hand side still reads the destination's pre-overwrite state (§2.3): l
 
 ## 3. Memory Layout
 
-### 3.1 Scope arenas and segmented offsets
+### 3.1 Scope arenas and native addresses
 
 Each lexical scope has an **arena** made from two independent allocation regions:
 
 - The **fixed-size region** stores materialized value-type slots, statically sized owners, and the fixed-size handles — of dynamically-sized types of either kind and of boxed members alike — that are materialized in **scope-level** slots.
 - The **dynamic region** stores the payloads behind those handles: the resizable backing stores of types such as `List` and `String`, and the payloads of boxed members (§3.6). A handle that sits *inside* a dynamic payload rather than in a scope slot — a boxed node's own boxed members, an element's owned storage — is part of that payload's block and is not separately placed.
 
-Each region is a separate chain of fixed-size **1 MiB chunks** mapped from the OS on demand. A chunk belongs to exactly one region: fixed-size slots and dynamic backing stores never coexist in the same chunk. A region maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region, assigns it the next **chunk id**, and makes it current.
+The fixed-size regions of nested scopes share one contiguous range of native addresses for the program's own execution, and a separate range for each spawned call (§3.7). Each scope's statically sized slots form a frame within that range. Opening a scope advances the frontier by its frame's size; draining it restores the previous frontier. Fixed-size slots and dynamic backing stores occupy separate storage.
 
-Scopes nest last-in-first-out, and their arenas nest with them: both regions of a scope are unmapped in full the moment the scope drains (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's memory is released together when that scope drains, and no reference ever resolves into released memory. A value that escapes is promoted out of the draining scope first (§3.5); only a roaming owner or a value escapes, and nothing references either.
+The **dynamic region** is a chain of **1 MiB chunks** mapped from the OS on demand. It maps no chunk until its first allocation. When its current chunk cannot satisfy an allocation, the runtime maps another chunk for that region and makes it current. An ordinary dynamic allocation never straddles a chunk boundary. A dynamic block of at most 1 MiB is wholly contained in one dynamic chunk; if the remaining bytes cannot hold it, allocation continues in a fresh chunk.
 
-```text
-one scope arena
-──────────────────────────────
-fixed-size region   dynamic region
-[F1] → [F2]         [D1] → [D2]
-```
+A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguous OS mapping of `ceil(block_size / 1 MiB)` dynamic chunks, all belonging exclusively to that block. Its handle stores the span's native base address and its exact block size, alongside the alignment that block was allocated at (§3.2). Elements are addressed by adding their byte offset to that base. Returning an oversized span pushes its base address onto the exact-size stack; the complete span remains mapped for reuse until the scope drains.
 
-An ordinary dynamic allocation never straddles a chunk boundary. A dynamic block of at most 1 MiB is wholly contained in one dynamic chunk; if the remaining bytes in the current chunk cannot hold it, allocation continues in a fresh dynamic chunk.
+References (§4.1), dynamic handles (§3.6), and size-stack entries (§3.2) store **native pointers**. Their width follows the target's pointer width. A dereference uses the stored address directly; it does not decode a chunk id or load a chunk directory. There is no language-wide limit on the number of live chunks or their combined byte size. Available address space, system reservation limits, and available memory bound allocation.
 
-A dynamic block larger than 1 MiB is an **oversized span**: a dedicated contiguous OS mapping made from `ceil(block_size / 1 MiB)` consecutive dynamic chunks, all belonging exclusively to that block and assigned consecutive chunk ids. Its handle stores the segmented offset of the span's first byte and its exact block size, alongside the alignment that block was allocated at (§3.2). After resolving that base, element addressing uses an ordinary byte offset across the contiguous mapping. Every constituent chunk also has a directory entry. Returning an oversized span pushes only its base offset onto the exact-size stack; the complete span remains mapped for reuse until the scope drains.
+Scopes nest last-in-first-out, and their arenas nest with them. When a scope drains, its fixed-size frame becomes reusable and its dynamic region is released in bulk (§3.2, [`lifetimes.md`](lifetimes.md) §2.1). The shared fixed-size reservation may remain for later scopes. Arena granularity is an implementation choice, like boolean packing (§3.4) and placement (§3.5) — the compiler may fold several lexical scopes into one arena. What the language fixes is the observable behavior: a scope's storage ceases to be live together when that scope drains, and no reference ever resolves into released storage. A value that escapes is promoted out of the draining scope first (§3.5); only a roaming owner or a value escapes, and nothing references either.
 
-Every chunk draws its id from one chunk directory, so payload locations, dynamic handles, references, and size-stack entries all use one **`u32` segmented offset**:
-
-```text
-   u32 segmented offset
-  ┌───────────────┬──────────────────────────┐
-  │   chunk id    │   in-chunk word offset   │
-  │  (high bits)  │       (low bits)         │
-  └───────────────┴──────────────────────────┘
-```
-
-Allocations are at least 8-byte aligned, so the low bits count 8-byte words: a 1 MiB chunk holds 2¹⁷ words, so **17 low bits** address any slot in a chunk and the remaining **15 high bits** select one of up to 32768 live chunks — a reach of 32 GiB. The chunk directory maps a chunk id to the chunk's native base address, so an address is materialized only at use, as `directory[chunk id] + word offset × 8`: splitting the `u32` is a shift and a mask, and the directory lookup is one load.
-
-References (§4.1), dynamic handles, and size-stack entries (§3.2) use segmented offsets. A payload may occupy segmented offset `0`, so a region's first allocation sits at a chunk base; no offset is reserved, because a reference is always initialized to an owner (§2.11).
-
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-last-table-problem-and-the-segmented-offset) — "The last table problem, and the segmented offset".
+> **Story:** [`stories/memory.md`](../stories/memory.md#native-addresses-replace-segmented-offsets) — "Native addresses replace segmented offsets".
 
 ### 3.2 Allocation, reuse, and teardown
 
@@ -526,9 +507,9 @@ The dynamic region adds exact-size reuse on top of its bump frontier. Each scope
 
 A block's size comes from what it holds, and the two kinds ask for different things. A **growable backing store** uses power-of-two byte sizes beginning at **128 bytes**, because that is where its doubling starts (§3.6); those sizes are a consequence of growth, not a classification imposed on the region. A **boxed payload** (§3.3) never grows, so it requests exactly the size of the one instance it holds — value type or reference type alike — and is aligned to that type's alignment requirement. There is no size class to round up to and no floor: a twelve-byte node occupies twelve bytes.
 
-Returning a dynamic block pushes its base segmented offset onto the stack for its own size and alignment. The stacks are shared by all dynamic payloads in the scope, whatever produced them: a 128-byte block previously used by a `List<Int64>` may later hold string bytes, another list's elements, or a boxed node that happens to match it on both keys. Reuse is therefore exact and never approximate — a freed block serves only a request for the same number of bytes. This suits boxed payloads particularly well, because every instance of one type is the same size (a sum is laid out at its widest case plus tag), so the block a destroyed node returns is precisely what the next node of that type needs. An oversized span participates in the same exact-size policy.
+Returning a dynamic block pushes its native base address onto the stack for its own size and alignment. The stacks are shared by all dynamic payloads in the scope, whatever produced them: a 128-byte block previously used by a `List<Int64>` may later hold string bytes, another list's elements, or a boxed node that happens to match it on both keys. Reuse is therefore exact and never approximate — a freed block serves only a request for the same number of bytes. This suits boxed payloads particularly well, because every instance of one type is the same size (a sum is laid out at its widest case plus tag), so the block a destroyed node returns is precisely what the next node of that type needs. An oversized span participates in the same exact-size policy.
 
-When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime unmaps its fixed-size and dynamic chunks in bulk, with no per-object teardown pass threaded through the exit. Logical destruction timing is independent of this: a value dies when its owner, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain.
+When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime restores the fixed-size frontier and releases the dynamic region in bulk, with no per-object teardown pass threaded through the exit. Logical destruction timing is independent of this: a value dies when its owner, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
 
@@ -571,7 +552,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
-Dynamically-sized types such as the reference type `List` and the value type `String` are represented as fixed-size **handles**. A handle records the payload's segmented offset and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized types such as the reference type `List` and the value type `String` are represented as fixed-size **handles**. A handle records the payload's native address and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -590,32 +571,48 @@ A list grows according to the following rules:
 2. The allocator first checks the size stack for that doubled size. If a block or oversized span is available, it is popped and the live elements are relocated into it.
 3. If that stack is empty, the current backing store is the dynamic frontier allocation, the doubled size is at most 1 MiB, and the additional bytes fit before the current chunk boundary, the frontier is bumped by the additional bytes and the store grows in place.
 4. Otherwise, a doubled block of at most 1 MiB is bump-allocated wholly inside one dynamic chunk. A doubled block larger than 1 MiB is allocated as a fresh dedicated oversized span (§3.1). The live elements are relocated into the new block or span.
-5. After relocation, the handle's backing-store offset and block size are updated and the old block's base offset is pushed onto the stack for its exact old byte size.
+5. After relocation, the handle's backing-store address and block size are updated and the old block's base address is pushed onto the stack for its exact old byte size.
 
 A block never grows in place across a chunk boundary, and an oversized span is never extended in place: further growth relocates into a doubled oversized span after checking that exact-size stack first. Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. References to the list remain valid because they reach the list's owner, whose fixed-size handle now names the current backing store.
 
-A **boxed member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's segmented offset; the payload is one instance of the member's declared type, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's enclosing instance is destroyed. Overwriting the member writes the replacement into the same block, which always fits because both are instances of the member's type, and the replacement's own boxed members are written into the blocks the occupant already holds, recursively (§2.2). A reference into a settled boxed member, or into any member below it, keeps its address. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is thereafter only relocated when its roaming owner escapes, or allocated afresh by a deep value copy (§2.3, §3.5).
+A **boxed member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's native address; the payload is one instance of the member's declared type, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's enclosing instance is destroyed. Overwriting the member writes the replacement into the same block, which always fits because both are instances of the member's type, and the replacement's own boxed members are written into the blocks the occupant already holds, recursively (§2.2). A reference into a settled boxed member, or into any member below it, keeps its address. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is thereafter only relocated when its roaming owner escapes, or allocated afresh by a deep value copy (§2.3, §3.5).
 
 Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a **growable backing store** — 128 bytes or larger — is cache-line aligned within them. Every other block takes its own type's alignment, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-free-zero-sentinel-and-cache-line-aligned-buffers) — "A free zero sentinel, and cache-line-aligned buffers".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 
+### 3.7 Nested scopes share a bounded fixed-size region
+
+Scopes open at once in one thread of execution nest last-in-first-out: the program's `main` and every call it makes, or one spawned call and every call it makes ([`concurrency.md`](concurrency.md) §3). Their fixed-size regions together hold at most a fixed number of bytes. The root package's manifest sets the bound: `fixed-region` for the program's own thread of execution, and `spawned-fixed-region` for each spawned call ([`dependencies.md`](dependencies.md) §2.1). A spawned call's bound is its own, and holds while the call runs. The bound sizes its contiguous address-space reservation (§3.1). Reserving the range does not commit physical memory for every byte; pages become usable as needed. The fields have no language-defined maximum: the target's native address range and the system's per-process reservation limits determine which reservations can succeed. A reservation that cannot be made stops the program with an error.
+
+A program whose open scopes need more than the bound stops with an error that names the field. Calls also nest on the system's machine stack, whose size the language does not set, and a program that fills it stops with an error the same way. Neither is an abort ([`error-handling.md`](error-handling.md)): no handler sees it, and the program ends.
+
+```zane
+Int depth(n Int) {
+    cells ArrayRef.fill(65536, Int(i Int) => i);   // 512 KiB of fixed-size region
+    return depth(n + 1);   // stops once 512 KiB per call fills the bound
+}
+```
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-fixed-size-region-gets-a-bound-the-root-manifest-sets) — "The fixed-size region gets a bound the root manifest sets".
+
 ---
 
 ## 4. References
 
-### 4.1 A reference is a settled owner's segmented offset
+### 4.1 A reference is a settled owner's native address
 
-A reference stores the **`u32` segmented offset** (§3.1) of the settled owner it names. At half the width of a 64-bit pointer, twice as many references fit in a cache line, and resolving one is the chunk-directory load every segmented offset needs. An explicitly declared `&T` slot contains only this offset.
+A reference stores the settled owner's **native address** (§3.1). An explicitly declared `&T` slot contains only this pointer, whose width follows the target. Dereferencing it accesses the owner directly.
 
-A reference minted from a field path such as `car.engine` stores the offset of `engine` inside `car`. A reference copied from another reference copies its offset (§2.6). Nothing is allocated to mint a reference, and nothing is recorded in the owner.
+A reference minted from a field path such as `car.engine` stores the native address of `engine` inside `car`. A reference copied from another reference copies its address (§2.6). Nothing is allocated to mint a reference, and nothing is recorded in the owner.
 
 ```zane
-dps Float = mainWeapon.dps;  // mainWeapon's offset → directory → owner → dps
+dps Float = mainWeapon.dps;  // mainWeapon's pointer → owner → dps
 ```
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#guests-without-anchors) — "Guests without anchors".
+> **Story:** [`stories/memory.md`](../stories/memory.md#native-addresses-replace-segmented-offsets) — "Native addresses replace segmented offsets".
 
 ### 4.2 Why a reference never dangles
 
@@ -680,9 +677,10 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | Locating a destination | A store's destination and a `!` call's subject are located after the right-hand side and the arguments are evaluated |
 | Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; moving a roaming owner copies its inline bytes and handles, and its dynamic blocks stay put unless it escapes the scope holding them, which must first leave every block in a scope that lives as long as the destination |
 | Boxed member | A member whose type can lead back to the enclosing type is stored as a fixed-size handle inline with its enclosing instance, while the instance the handle names lives in the dynamic region; required on a containment cycle, permitted elsewhere, and nothing marks it in the source. In a reference type it moves with its enclosing instance; in a value type it is deep-copied with it. An overwrite reuses its block |
-| `&` representation | A reference is the `u32` segmented offset of the settled owner it names |
-| Addressing | Every chunk shares one `u32` segmented-offset directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
+| `&` representation | A reference is a native pointer to the settled owner it names |
+| Addressing | References, dynamic handles, and size-stack entries use native pointers; address space and system limits bound allocation |
 | Dynamic allocation | Exact-size stack first, frontier second; a growable backing store uses power-of-two sizes from 128 bytes because it doubles, while a boxed payload asks for exactly its type's size and has no class; blocks above 1 MiB use dedicated contiguous oversized spans |
+| Nesting bound | The fixed-size regions of the scopes open at once in one thread of execution hold at most the root manifest's `fixed-region`, or `spawned-fixed-region` in a spawned call; reservations are limited by the target and system, and a program that needs more, or fills the machine stack, stops with an error that no handler sees |
 | Dynamic-block alignment | A growable backing store is cache-line aligned; a boxed payload takes its type's alignment; the frontier is rounded up before it is bumped (§3.6) |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.

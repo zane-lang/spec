@@ -44,6 +44,8 @@ remaps [
 Top-level fields:
 
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
+- **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB`. It is `256MiB` when omitted.
+- **`spawned-fixed-region`** (optional): the same bound for each spawned call ([`concurrency.md`](concurrency.md) §3). It is `8MiB` when omitted.
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 Each `deps` row records:
@@ -53,6 +55,17 @@ Each `deps` row records:
 - **from**: where the dependency's code comes from — `release` for the verified prebuilt archive (§5), `source` for local compilation of the verified checkout (§12.1), or a local project path beginning with `./`, `../`, or `/` (§12.2)
 
 The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
+
+Neither region field has a language-defined maximum. The toolchain checks that its byte count is representable for the target; whether the range can be reserved depends on the system's per-process address-space limits ([`memory.md`](memory.md) §3.7).
+
+`fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
+
+```zane
+zane-version v0.4.1
+version-pattern v*.+.++
+fixed-region 1GiB
+spawned-fixed-region 16MiB
+```
 
 The optional top-level **`test-deps`** block lists the dependencies whose packages only the project's test packages import ([`packages.md`](packages.md) §7.3). It has the same columns as `deps`, and its rows follow the same rules:
 
@@ -122,6 +135,7 @@ zane update math v6.2.9 --accept-tag-move
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#url-identity-and-the-two-file-manifest) — "URL identity and the two-file manifest" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from" explains why `from` is a manifest column rather than a command flag or a lock-file entry, and why the lock file is named `zane-lock.coda`.
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer" explains why test dependencies are a block of the root manifest.
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-fixed-size-region-gets-a-bound-the-root-manifest-sets) — "The fixed-size region gets a bound the root manifest sets" explains why the bound is a field of the root manifest, and why a spawned call has its own.
 
 ---
 

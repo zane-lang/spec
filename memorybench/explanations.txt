@@ -5,6 +5,11 @@
 # pin. The JSON retains all 20 samples for every timed row; it records the
 # workload configuration but no machine identifier or CPU-affinity setting.
 # Compare rows within this run, not absolute times against an earlier pin.
+# This pin measures the earlier segmented-offset representation and chunked
+# fixed-size frontier. The harness now uses native addresses and a contiguous
+# fixed-size range, with four-owner scope-frame variants in T1 and T3.
+# Those variants are not measured by this pin. These timings remain historical; a new run
+# from the maintainer's machine is needed to measure the updated model.
 #
 # T10 now sums node values during every allocator's timed teardown and checks
 # that checksum against an untimed validation walk that also counts nodes.

@@ -176,7 +176,7 @@ The numeric arguments are values of leaf concept types, so they are known at com
 big @primitives$I32(9999999999);   // ILLEGAL: out of range for @primitives$I32
 ```
 
-`@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the segmented offset of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no identity and cannot be targeted by an `&` reference.
+`@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the native address of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no identity and cannot be targeted by an `&` reference.
 
 The compiler-provided string constructor concatenates the string concept's literal fragments and interpolated string values in their written order (§2.8). It does not interpret any remaining backslash sequences. A package constructor accepting the concept may instead interpret its literal fragments, for example as regex syntax or text escapes. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
 
