@@ -603,7 +603,7 @@ Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a 
 
 ### 3.7 Nested scopes share a bounded fixed-size region
 
-Scopes open at once in one thread of execution nest last-in-first-out: the program's `main` and every call it makes, or one spawned call and every call it makes ([`concurrency.md`](concurrency.md) §3). Their fixed-size regions together hold at most a fixed number of bytes. The root package's manifest sets the bound: `fixed-region` for the program's own thread of execution, and `spawned-fixed-region` for each spawned call ([`dependencies.md`](dependencies.md) §2.1). A spawned call's bound is its own, and holds while the call runs.
+Scopes open at once in one thread of execution nest last-in-first-out: the program's `main` and every call it makes, or one spawned call and every call it makes ([`concurrency.md`](concurrency.md) §3). Their fixed-size regions together hold at most a fixed number of bytes. The root package's manifest sets the bound: `fixed-region` for the program's own thread of execution, and `spawned-fixed-region` for each spawned call ([`dependencies.md`](dependencies.md) §2.1). A spawned call's bound is its own, and holds while the call runs. A bound caps the regions and sets no memory aside: they draw their chunks from the same 32 GiB that every other live chunk does (§3.1), which is why neither field may exceed `32GiB`.
 
 A program whose open scopes need more than the bound stops with an error that names the field. Calls also nest on the system's machine stack, whose size the language does not set, and a program that fills it stops with an error the same way. Neither is an abort ([`error-handling.md`](error-handling.md)): no handler sees it, and the program ends.
 
@@ -698,7 +698,7 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | `&` representation | A reference is the `u32` segmented offset of the settled owner it names |
 | Addressing | Every chunk shares one `u32` segmented-offset directory; 8-byte-aligned offsets reach 32 GiB across up to 32768 1 MiB chunks |
 | Dynamic allocation | Exact-size stack first, frontier second; a growable backing store uses power-of-two sizes from 128 bytes because it doubles, while a boxed payload asks for exactly its type's size and has no class; blocks above 1 MiB use dedicated contiguous oversized spans |
-| Nesting bound | The fixed-size regions of the scopes open at once in one thread of execution hold at most the root manifest's `fixed-region`, or `spawned-fixed-region` in a spawned call; a program that needs more, or fills the machine stack, stops with an error that no handler sees |
+| Nesting bound | The fixed-size regions of the scopes open at once in one thread of execution hold at most the root manifest's `fixed-region`, or `spawned-fixed-region` in a spawned call, each at most 32 GiB; a program that needs more, or fills the machine stack, stops with an error that no handler sees |
 | Dynamic-block alignment | A growable backing store is cache-line aligned; a boxed payload takes its type's alignment; the frontier is rounded up before it is bumped (§3.6) |
 
 > **See also:** [`lifetimes.md`](lifetimes.md) §4 for the summary of scope, move, and destruction rules.
