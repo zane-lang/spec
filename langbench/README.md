@@ -71,9 +71,11 @@ parent transfers both children into it, matching the owning pointers in C++
 and Rust; checking a tree borrows it. `treecopy` intentionally uses value
 types, because copying the complete tree is the work that test measures.
 
-The pinned 2026-10-08 run uses compiler v0.8 with cross-package optimization
-and the reference-based binary-tree program. It was measured on an Intel
-Core i7-1355U laptop under WSL2; `explanations.txt` describes that run.
+The pinned 2026-10-10 run uses compiler v0.9
+([`a6b95b3`](https://github.com/zane-lang/compiler/commit/a6b95b34bdbabbf1709bf1998fe9c6de434c447c))
+with cross-package optimization and the reference-based binary-tree program.
+It was measured on an Intel Core i7-1355U laptop under WSL2 with zane CLI
+v0.6; `explanations.txt` describes that run.
 
 ## Tests that need more of the language
 
