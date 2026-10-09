@@ -94,22 +94,22 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      39.242,
-      86.189,
-      558.676,
-      5027.172
+      14.938,
+      32.157,
+      223.164,
+      1947.428
     ],
     "mins": [
-      38.551,
-      84.854,
-      498.53,
-      4176.877
+      13.739,
+      32.152,
+      222.51,
+      1868.606
     ],
     "maxs": [
-      60.107,
-      1143.628,
-      1015.797,
-      14718.426
+      16.717,
+      539.739,
+      319.653,
+      4097.473
     ],
     "colors": [
       "#3aab76",
@@ -152,16 +152,16 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      680.593,
-      2268.801
+      178.157,
+      829.468
     ],
     "mins": [
-      456.405,
-      1884.008
+      169.338,
+      788.459
     ],
     "maxs": [
-      1536.134,
-      4456.531
+      1006.863,
+      1011.344
     ],
     "colors": [
       "#c49a2a",
@@ -198,22 +198,22 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      114.675,
-      707.769,
-      4588.564,
-      9901.543
+      28.965,
+      252.464,
+      1182.299,
+      3793.159
     ],
     "mins": [
-      99.68,
-      659.098,
-      2950.57,
-      7949.306
+      28.483,
+      249.846,
+      1076.296,
+      3358.464
     ],
     "maxs": [
-      2835.043,
-      1164.136,
-      8647.932,
-      16677.762
+      358.064,
+      489.849,
+      1597.801,
+      7223.215
     ],
     "colors": [
       "#3aab76",
@@ -244,37 +244,37 @@ const TESTS=[
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
-      "Inline array  (Array\u003cEntity, 100000>)",
       "UList (chunk=8, linked)",
       "CChunked (chunk=64, ptr-array)",
+      "Inline array  (Array\u003cEntity, 100000>)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      126.731,
-      151.23,
-      170.807,
-      204.294,
-      349.937
+      58.562,
+      59.362,
+      62.389,
+      86.975,
+      118.979
     ],
     "mins": [
-      123.431,
-      150.125,
-      167.809,
-      188.414,
-      332.189
+      53.84,
+      58.846,
+      49.197,
+      86.414,
+      117.199
     ],
     "maxs": [
-      224.325,
-      267.417,
-      317.641,
-      275.812,
-      670.386
+      172.996,
+      182.211,
+      140.438,
+      199.949,
+      176.224
     ],
     "colors": [
       "#3aab76",
-      "#3aab76",
       "#c45a8a",
+      "#3aab76",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -318,32 +318,32 @@ const TESTS=[
     "title": "Growing a List backing store by appending 100k items",
     "labels": [
       "Zane List (128B start, doubling)",
-      "C realloc vector",
       "CChunked (chunk=64, ptr-array)",
+      "C realloc vector",
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      472.798,
-      615.963,
-      703.012,
-      1893.703
+      202.6,
+      242.417,
+      243.179,
+      838.177
     ],
     "mins": [
-      442.592,
-      567.132,
-      614.467,
-      1725.636
+      185.553,
+      206.578,
+      226.695,
+      812.842
     ],
     "maxs": [
-      677.57,
-      2515.129,
-      1058.061,
-      2428.461
+      493.133,
+      349.729,
+      1360.179,
+      974.332
     ],
     "colors": [
       "#7c6ff7",
-      "#e05a3a",
       "#c45a8a",
+      "#e05a3a",
       "#3aab76"
     ],
     "eliminated": [],
@@ -386,28 +386,28 @@ const TESTS=[
     "title": "Reference access via a segmented offset vs a direct pointer",
     "labels": [
       "Segmented offset (chunk dir reloaded)",
-      "Direct pointer (baseline)",
-      "Segmented offset (chunk dir cached)"
+      "Segmented offset (chunk dir cached)",
+      "Direct pointer (baseline)"
     ],
     "data": [
-      168.178,
-      190.864,
-      194.718
+      62.847,
+      64.224,
+      76.957
     ],
     "mins": [
-      163.319,
-      157.134,
-      166.223
+      62.315,
+      63.642,
+      68.24
     ],
     "maxs": [
-      309.192,
-      272.404,
-      307.789
+      67.215,
+      95.138,
+      119.719
     ],
     "colors": [
       "#7c6ff7",
-      "#4a9edd",
-      "#7c6ff7"
+      "#7c6ff7",
+      "#4a9edd"
     ],
     "eliminated": [],
     "meta": [
@@ -453,19 +453,19 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      4277.078,
-      4561.751,
-      4991.216
+      1732.749,
+      1737.736,
+      1919.521
     ],
     "mins": [
-      4031.397,
-      4309.099,
-      4533.574
+      1578.606,
+      1607.61,
+      1832.388
     ],
     "maxs": [
-      4804.259,
-      7243.243,
-      6664.26
+      2142.715,
+      1867.302,
+      2082.789
     ],
     "colors": [
       "#7c6ff7",
@@ -504,32 +504,37 @@ const TESTS=[
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
       "Pool (per-size free-list)",
-      "malloc / free",
       "Zane (fixed-region bump)",
+      "Arena (bump + end-of-run reset)",
+      "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      12155.292,
-      15122.531,
-      17014.056,
-      144513.756
+      5551.101,
+      5560.589,
+      5565.278,
+      6082.74,
+      61327.175
     ],
     "mins": [
-      11303.218,
-      13145.834,
-      13992.64,
-      137437.918
+      5253.556,
+      5184.683,
+      5250.365,
+      5741.743,
+      53143.791
     ],
     "maxs": [
-      16095.787,
-      18897.091,
-      24597.277,
-      222872.869
+      5882.894,
+      5799.806,
+      5771.017,
+      6721.227,
+      68170.334
     ],
     "colors": [
       "#c49a2a",
-      "#e05a3a",
       "#7c6ff7",
+      "#3aab76",
+      "#e05a3a",
       "#7c6ff7"
     ],
     "eliminated": [],
@@ -561,10 +566,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "Not measured in this results file: Arena (bump + end-of-run reset). A fresh full-suite run is needed; missing timings are not zero."
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
@@ -580,19 +581,19 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      48.68,
-      1189.349,
-      2280.93
+      23.175,
+      440.43,
+      965.311
     ],
     "mins": [
-      48.006,
-      379.128,
-      1382.38
+      21.764,
+      83.294,
+      553.538
     ],
     "maxs": [
-      54.443,
-      2237.458,
-      3005.184
+      32.953,
+      950.15,
+      2136.835
     ],
     "colors": [
       "#7c6ff7",
@@ -630,26 +631,31 @@ const TESTS=[
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 Zane vs malloc, pool and arena",
     "labels": [
+      "Arena cascade visit + bulk reset",
       "Zane cascade destroy",
       "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      61.77,
-      79.164,
-      151.595
+      23.215,
+      24.901,
+      28.845,
+      62.324
     ],
     "mins": [
-      60.185,
-      75.562,
-      132.747
+      22.374,
+      23.668,
+      26.578,
+      61.211
     ],
     "maxs": [
-      139.085,
-      185.579,
-      2204.337
+      23.988,
+      35.345,
+      29.435,
+      81.392
     ],
     "colors": [
+      "#3aab76",
       "#7c6ff7",
       "#c49a2a",
       "#e05a3a"
@@ -679,14 +685,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "Not measured in this results file: Arena cascade visit + bulk reset. A fresh full-suite run is needed; missing timings are not zero."
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the checksum-verified teardown and its untimed validation walk; rerun all allocators together before comparing the current harness."
       }
     ],
     "setup": "The current harness visits every node in post-order and sums its value inside the timed teardown for every allocator; the checksum and the 4,000-node count are checked outside timing. Zane releases node payloads as no-ops and returns each 128-byte child list to its exact-size stack. The arena stores nodes and child lists together, visits the same tree, then resets once inside timing. This is traversal plus bulk reclaim, not a reset-only benchmark. A reference leaves nothing in its owner, so reference density cannot change teardown.",
@@ -698,28 +696,28 @@ const TESTS=[
     "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
     "labels": [
       "Zane (fixed bump + size stacks)",
-      "malloc / free",
-      "Pool (per-size free-list)"
+      "Pool (per-size free-list)",
+      "malloc / free"
     ],
     "data": [
-      3891.697,
-      4079.432,
-      4124.523
+      1633.303,
+      1637.011,
+      1783.198
     ],
     "mins": [
-      3630.405,
-      3956.722,
-      3796.104
+      1557.334,
+      1603.009,
+      1736.832
     ],
     "maxs": [
-      4342.66,
-      4940.685,
-      4427.21
+      1803.126,
+      2011.877,
+      1920.402
     ],
     "colors": [
       "#7c6ff7",
-      "#e05a3a",
-      "#c49a2a"
+      "#c49a2a",
+      "#e05a3a"
     ],
     "eliminated": [],
     "meta": [
@@ -760,16 +758,16 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      113.7,
-      397.92
+      52.814,
+      203.903
     ],
     "mins": [
-      88.976,
-      248.006
+      52.587,
+      145.25
     ],
     "maxs": [
-      241.818,
-      647.31
+      86.055,
+      348.466
     ],
     "colors": [
       "#3aab76",
@@ -817,25 +815,25 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      257.114,
-      473.038,
-      687.962,
-      754.549,
-      4530.748
+      98.042,
+      186.049,
+      257.315,
+      292.193,
+      1680.851
     ],
     "mins": [
-      256.294,
-      449.745,
-      668.745,
-      661.638,
-      3982.579
+      97.935,
+      177.565,
+      256.461,
+      254.126,
+      1606.588
     ],
     "maxs": [
-      333.02,
-      1025.146,
-      1730.816,
-      1282.59,
-      5123.578
+      127.647,
+      206.338,
+      376.593,
+      393.154,
+      1914.822
     ],
     "colors": [
       "#3aab76",
@@ -889,22 +887,22 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      45.724,
-      80.871,
-      84.028,
-      341.562
+      20.325,
+      23.878,
+      31.916,
+      128.001
     ],
     "mins": [
-      45.459,
-      71.432,
-      83.354,
-      284.774
+      17.545,
+      22.819,
+      31.557,
+      110.185
     ],
     "maxs": [
-      46.373,
-      86.791,
-      106.732,
-      813.26
+      25.988,
+      29.929,
+      32.589,
+      197.543
     ],
     "colors": [
       "#3aab76",
