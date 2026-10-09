@@ -133,6 +133,7 @@ zane update math v6.2.9 --accept-tag-move
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#url-identity-and-the-two-file-manifest) — "URL identity and the two-file manifest" explains why intent and lock are split, and why drift is contained by a hard sync check rather than by merging the files.
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#where-a-dependencys-code-comes-from) — "Where a dependency's code comes from" explains why `from` is a manifest column rather than a command flag or a lock-file entry, and why the lock file is named `zane-lock.coda`.
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-librarys-tests-live-in-test-and-import-it-as-a-consumer) — "A library's tests live in `test/` and import it as a consumer" explains why test dependencies are a block of the root manifest.
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-fixed-size-region-gets-a-bound-the-root-manifest-sets) — "The fixed-size region gets a bound the root manifest sets" explains why the bound is a field of the root manifest, and why a spawned call has its own.
 
 ---
 
