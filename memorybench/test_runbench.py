@@ -14,6 +14,7 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
 
     def results_without_arena(self):
         doc = copy.deepcopy(self.pinned)
+        doc["config"]["addressing"] = "native"
         doc["config"].pop("tree_teardown_checksum", None)
         for test in doc["tests"]:
             if test["id"] in ("Test 8", "Test 10"):
@@ -87,6 +88,24 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
         notes = runbench.measurement_notes(tree, doc["config"])
         self.assertEqual(len(notes), 1)
         self.assertIn("predate the checksum", notes[0])
+
+
+class AddressingMeasurementStatusTests(unittest.TestCase):
+    def test_pinned_timings_are_marked_as_the_earlier_model_without_changes(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        original = copy.deepcopy(doc)
+        for test in doc["tests"]:
+            notes = runbench.measurement_notes(test, doc["config"])
+            self.assertTrue(any("earlier segmented-offset model" in note for note in notes))
+        self.assertIn("earlier segmented-offset model", runbench.render_text(doc))
+        self.assertEqual(doc, original)
+
+    def test_native_run_does_not_carry_the_old_addressing_warning(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"]["addressing"] = "native"
+        for test in doc["tests"]:
+            notes = runbench.measurement_notes(test, doc["config"])
+            self.assertFalse(any("earlier segmented-offset model" in note for note in notes))
 
 
 if __name__ == "__main__":

@@ -84,6 +84,11 @@ def measurement_notes(test, config):
               if row_stats(row) is not None}
     missing = [label for label in meta.get("required_rows", []) if label not in labels]
     notes = []
+    if config.get("addressing") != "native":
+        notes.append("These measurements use the earlier segmented-offset model and "
+                     "chunked fixed-size frontier. The current harness uses native "
+                     "addresses and a contiguous fixed-size range; rerun the full "
+                     "suite before attributing these timings to that model.")
     if missing:
         notes.append("Not measured in this results file: " + ", ".join(missing)
                      + ". A fresh full-suite run is needed; missing timings are not zero.")

@@ -9,8 +9,8 @@ independently of how the page is built.
 # Test metadata: short name, title, setup, and per-impl facts.
 # These track spec/memory.md: ownership is the default and the reference (&)
 # is opt-in; a scope has a fixed-size region and a dynamic region that never
-# share a chunk; an owner is settled (referenceable, never moves) or roaming
-# (moves, referenced by nothing); and a reference is the u32 segmented offset
+# share storage; an owner is settled (referenceable, never moves) or roaming
+# (moves, referenced by nothing); and a reference is the native address
 # of the settled owner it names. An owned object carries no metadata of its own.
 #
 # The "Reading the result" note for each test is NOT stored here. It is read
@@ -82,15 +82,14 @@ TEST_META = {
     },
     "Test 6": {
         "short": "T6 — reference access",
-        "title": "Reference access via a segmented offset vs a direct pointer",
-        "setup": "A reference is the u32 segmented offset of the settled owner it names (memory.md §4.1). Resolving it is a shift, a mask and one chunk-directory load, then the object itself. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
+        "title": "Reference access via a native address vs a direct pointer",
+        "setup": "A reference stores the native address of the settled owner it names (memory.md §4.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner. Pinned segmented-offset rows describe the earlier model, not the current harness.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
-            ("Segmented offset, dir cached", "chunk directory hoisted; offset → object"),
-            ("Segmented offset, dir reloaded", "chunk directory re-fetched per access"),
-            ("Reference size", "u32 segmented offset — half a 64-bit pointer"),
-            ("Reference cost", "4B — the reference itself; the owner stores nothing"),
-            ("Asserted", "every reference resolves to the object it was minted from"),
+            ("Native reference", "the same direct access through the stored address"),
+            ("Reference size", "one native pointer — target-width storage"),
+            ("Reference cost", "the reference itself; the owner stores nothing"),
+            ("Asserted", "every reference names the object it was minted from"),
             ("Runs", "20 — median reported"),
         ],
     },

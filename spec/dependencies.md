@@ -44,7 +44,7 @@ remaps [
 Top-level fields:
 
 - **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
-- **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB` and at most `32GiB`. It is `256MiB` when omitted.
+- **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB`. It is `256MiB` when omitted.
 - **`spawned-fixed-region`** (optional): the same bound for each spawned call ([`concurrency.md`](concurrency.md) §3). It is `8MiB` when omitted.
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -55,6 +55,8 @@ Each `deps` row records:
 - **from**: where the dependency's code comes from — `release` for the verified prebuilt archive (§5), `source` for local compilation of the verified checkout (§12.1), or a local project path beginning with `./`, `../`, or `/` (§12.2)
 
 The `from` column takes effect only in the manifest of the project being built. In a transitively fetched manifest it is ignored, and every dependency of that package is fetched as `release`.
+
+Neither region field has a language-defined maximum. The toolchain checks that its byte count is representable for the target; whether the range can be reserved depends on the system's per-process address-space limits ([`memory.md`](memory.md) §3.7).
 
 `fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
 
