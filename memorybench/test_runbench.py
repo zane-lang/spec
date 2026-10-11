@@ -17,6 +17,7 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
         doc = copy.deepcopy(self.pinned)
         doc["config"]["addressing"] = "native"
         doc["config"]["scope_frames"] = True
+        doc["config"]["fixed_guard"] = True
         doc["config"].pop("tree_teardown_checksum", None)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
@@ -139,7 +140,7 @@ class ScopeFrameMeasurementStatusTests(unittest.TestCase):
 
     def test_scope_marker_alone_cannot_supply_missing_measurements(self):
         doc = self.results_without_frames()
-        doc["config"].update(addressing="native", scope_frames=True)
+        doc["config"].update(addressing="native", scope_frames=True, fixed_guard=True)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
                 notes = runbench.measurement_notes(test, doc["config"])
@@ -148,13 +149,33 @@ class ScopeFrameMeasurementStatusTests(unittest.TestCase):
 
     def test_frame_rows_and_protocol_clear_the_status(self):
         doc = self.results_without_frames()
-        doc["config"].update(addressing="native", scope_frames=True)
+        doc["config"].update(addressing="native", scope_frames=True, fixed_guard=True)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
                 test["rows"].append({"label": "Zane (four-owner scope frames)",
                                      "samples_ns": [1000.0] * 20})
                 self.assertEqual(runbench.measurement_notes(test, doc["config"]), [])
 
+
+
+class FixedGuardMeasurementStatusTests(unittest.TestCase):
+    GUARDED = {"Test 1", "Test 3", "Test 7", "Test 8", "Test 9", "Test 11"}
+
+    def test_pin_without_guard_marks_every_timed_fixed_region_test(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"].pop("fixed_guard", None)
+        for test in doc["tests"]:
+            notes = runbench.measurement_notes(test, doc["config"])
+            marked = any("predate the guard region" in note for note in notes)
+            self.assertEqual(marked, test["id"] in self.GUARDED, test["id"])
+        self.assertIn("predate the guard region", runbench.render_text(doc))
+
+    def test_guard_marker_clears_the_status(self):
+        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"]["fixed_guard"] = True
+        for test in doc["tests"]:
+            notes = runbench.measurement_notes(test, doc["config"])
+            self.assertFalse(any("predate the guard region" in note for note in notes))
 
 if __name__ == "__main__":
     unittest.main()
