@@ -23,7 +23,7 @@ TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
         "title": "Sequential alloc then sequential free",
-        "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model. The retained pinned Zane row measured the older per-object chunked frontier.",
+        "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model.",
         "required_rows": ["Zane (four-owner scope frames)"],
         "required_config": {
             "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
@@ -49,7 +49,7 @@ TEST_META = {
     "Test 3": {
         "short": "T3 — mixed sizes",
         "title": "Mixed-size alloc and random-order release",
-        "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model; the pinned Zane row measured the older per-object frontier.",
+        "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model. The fixed-bump, malloc and Pool rows time pointer-size bookkeeping and shuffling; the arena row stores pointers and resets without shuffling.",
         "required_rows": ["Zane (four-owner scope frames)"],
         "required_config": {
             "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
@@ -91,7 +91,7 @@ TEST_META = {
     "Test 6": {
         "short": "T6 — reference access",
         "title": "Reference access via a native address vs a direct pointer",
-        "setup": "A reference stores the native address of the settled owner it names (memory.md §4.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner. Pinned segmented-offset rows describe the earlier model, not the current harness.",
+        "setup": "A reference stores the native address of the settled owner it names (memory.md §4.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
         "meta": [
             ("Direct", "raw C pointer dereference — baseline"),
             ("Native reference", "the same direct access through the stored address"),
@@ -224,6 +224,8 @@ IMPL_COLORS = {
     "Pool":    "#c49a2a",
     "malloc":  "#e05a3a",
     "Direct":  "#4a9edd",
+    "Per-object fixed bump": "#4a9edd",
+    "Native reference": "#7c6ff7",
     "Inline":  "#3aab76",
     "UList":   "#3aab76",
     "CChunk":  "#c45a8a",

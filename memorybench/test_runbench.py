@@ -19,6 +19,8 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
         doc["config"].pop("tree_teardown_checksum", None)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
+                test["rows"] = [row for row in test["rows"]
+                                if row["label"] != "Zane (four-owner scope frames)"]
                 test["rows"].append({"label": "Zane (four-owner scope frames)",
                                      "samples_ns": [1000.0] * 20})
             if test["id"] in ("Test 8", "Test 10"):
@@ -95,8 +97,9 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
 
 
 class AddressingMeasurementStatusTests(unittest.TestCase):
-    def test_pinned_timings_are_marked_as_the_earlier_model_without_changes(self):
+    def test_legacy_timings_are_marked_as_the_earlier_model_without_changes(self):
         doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"].pop("addressing", None)
         original = copy.deepcopy(doc)
         for test in doc["tests"]:
             notes = runbench.measurement_notes(test, doc["config"])
@@ -113,8 +116,17 @@ class AddressingMeasurementStatusTests(unittest.TestCase):
 
 
 class ScopeFrameMeasurementStatusTests(unittest.TestCase):
-    def test_native_per_owner_run_still_requires_scope_frame_measurements(self):
+    def results_without_frames(self):
         doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc["config"].pop("scope_frames", None)
+        for test in doc["tests"]:
+            if test["id"] in ("Test 1", "Test 3"):
+                test["rows"] = [row for row in test["rows"]
+                                if row["label"] != "Zane (four-owner scope frames)"]
+        return doc
+
+    def test_native_per_owner_run_still_requires_scope_frame_measurements(self):
+        doc = self.results_without_frames()
         doc["config"]["addressing"] = "native"
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
@@ -124,7 +136,7 @@ class ScopeFrameMeasurementStatusTests(unittest.TestCase):
         self.assertIn("predate per-scope", runbench.render_text(doc))
 
     def test_scope_marker_alone_cannot_supply_missing_measurements(self):
-        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc = self.results_without_frames()
         doc["config"].update(addressing="native", scope_frames=True)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
@@ -133,7 +145,7 @@ class ScopeFrameMeasurementStatusTests(unittest.TestCase):
                 self.assertIn("Not measured", notes[0])
 
     def test_frame_rows_and_protocol_clear_the_status(self):
-        doc = runbench.load_results(runbench.RESULTS_JSON)
+        doc = self.results_without_frames()
         doc["config"].update(addressing="native", scope_frames=True)
         for test in doc["tests"]:
             if test["id"] in ("Test 1", "Test 3"):
