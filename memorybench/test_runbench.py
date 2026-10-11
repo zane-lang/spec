@@ -13,6 +13,7 @@ class ArenaMeasurementStatusTests(unittest.TestCase):
         cls.pinned = runbench.load_results(runbench.RESULTS_JSON)
 
     def results_without_arena(self):
+        """Build native frame results without arena timings or teardown validation."""
         doc = copy.deepcopy(self.pinned)
         doc["config"]["addressing"] = "native"
         doc["config"]["scope_frames"] = True
@@ -117,6 +118,7 @@ class AddressingMeasurementStatusTests(unittest.TestCase):
 
 class ScopeFrameMeasurementStatusTests(unittest.TestCase):
     def results_without_frames(self):
+        """Remove frame timings and their protocol marker from the pinned results."""
         doc = runbench.load_results(runbench.RESULTS_JSON)
         doc["config"].pop("scope_frames", None)
         for test in doc["tests"]:

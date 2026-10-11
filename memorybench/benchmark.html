@@ -146,7 +146,7 @@ const TESTS=[
       }
     ],
     "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model.",
-    "note": "Four-owner scope frames take ~13.4us, versus ~26.3us for the per-object fixed bump, ~15.1us for the flat arena, ~274us for Pool and ~2.31ms for malloc/free. The frame row is nominally ~2.0x faster than per-object bumps, ~1.13x faster than the arena, ~20.5x faster than Pool and ~172x faster than malloc. It reserves one 128-byte frame for every four owners and places them at fixed offsets, then resets the frontier after the batch. The arena bumps once per object; malloc and Pool also perform per-object frees inside timing. The per-object bump's first pass (~1.24ms) is ~47.2x its median. Placement alone is modeled: scope records, object initialization and first- touch faults in the fixed region are excluded. This is not a measurement of complete scope entry and exit or whole-program compiler performance.",
+    "note": "Four-owner scope frames take ~13.4us, versus ~26.3us for the per-object fixed bump, ~15.1us for the flat arena, ~274us for Pool and ~2.31ms for malloc/free. The frame row is nominally ~2.0x faster than per-object bumps, ~1.13x faster than the arena, ~20.5x faster than Pool and ~172x faster than malloc. It reserves one 128-byte frame for every four owners and places them at fixed offsets, then resets the frontier after the batch. The arena bumps once per object; malloc and Pool also perform per-object frees inside timing. The per-object bump's first pass (~1.24ms) is ~47.2x its median. Placement alone is modeled: scope records, object initialization and first-touch faults in the fixed region are excluded. This is not a measurement of complete scope entry and exit or whole-program compiler performance.",
     "noteStale": false
   },
   {
@@ -497,7 +497,7 @@ const TESTS=[
       }
     ],
     "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
-    "note": "Zane (~1.691ms) and Pool (~1.696ms) are effectively tied; malloc takes ~1.980ms, about 17% longer than Zane's median. Their sample ranges overlap. The allocator-only gaps of T1 are much smaller once frame scans, updates and object maintenance are part of the timed workload. This game-loop model uses per-object fixed bumps rather than T1's four-owner scope frames.",
+    "note": "Zane (~1.691ms) and Pool (~1.696ms) are effectively tied; malloc takes ~1.980ms, about 17% longer than Zane's median. Zane's sample range overlaps both other rows. Pool's maximum (~1.762ms) is below malloc's minimum (~1.881ms), so those two ranges do not overlap. The allocator-only gaps of T1 are much smaller once frame scans, updates and object maintenance are part of the timed workload. This game-loop model uses per-object fixed bumps rather than T1's four-owner scope frames.",
     "noteStale": false
   },
   {
