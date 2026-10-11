@@ -374,7 +374,7 @@ static void zm_init(void) {
     zm.fixed_base = mmap(NULL, REGION_SIZE + ZM_GUARD, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(zm.fixed_base != MAP_FAILED);
-    assert(mprotect(zm.fixed_base + REGION_SIZE, ZM_GUARD, PROT_NONE) == 0);
+    if (mprotect(zm.fixed_base + REGION_SIZE, ZM_GUARD, PROT_NONE) != 0) abort();
     for (size_t i = 0; i < REGION_SIZE; i += 4096) zm.fixed_base[i] = 0;
     zm_reset();
 }
