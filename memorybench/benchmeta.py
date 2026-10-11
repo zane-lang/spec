@@ -19,6 +19,11 @@ independently of how the page is built.
 # It renders as its own section below the chart, not as a caption on the panel.
 # ─────────────────────────────────────────────────────────────
 
+FIXED_GUARD_NOTE = ("These measurements predate the guard region after the fixed-size range: "
+                    "every fixed-region bump still compared the frontier against the range's "
+                    "end. Rerun the full suite before comparing fixed-region rows with the "
+                    "arena.")
+
 TEST_META = {
     "Test 1": {
         "short": "T1 — seq alloc+free",
@@ -27,6 +32,7 @@ TEST_META = {
         "required_rows": ["Zane (four-owner scope frames)"],
         "required_config": {
             "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
         },
         "meta": [
             ("Object size", "32B — no per-object metadata"),
@@ -53,6 +59,7 @@ TEST_META = {
         "required_rows": ["Zane (four-owner scope frames)"],
         "required_config": {
             "scope_frames": (True, "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."),
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
         },
         "meta": [
             ("Sizes", "8, 16, 32, 64 bytes — cycled evenly"),
@@ -105,6 +112,9 @@ TEST_META = {
         "short": "T7 — game loop",
         "title": "Simulated game loop: spawn, kill, and update entities each frame",
         "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
+        "required_config": {
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
+        },
         "meta": [
             ("Entity size", "32B"),
             ("Frame count", "500 frames"),
@@ -118,6 +128,9 @@ TEST_META = {
         "title": "Particle system: burst-spawn short-lifetime objects every frame",
         "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
         "required_rows": ["Arena (bump + end-of-run reset)"],
+        "required_config": {
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
+        },
         "meta": [
             ("Particle size", "24B"),
             ("Frame count", "500 frames"),
@@ -132,6 +145,9 @@ TEST_META = {
         "short": "T9 — fragmentation",
         "title": "Checkerboard fragmentation then refill — only refill timed",
         "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
+        "required_config": {
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
+        },
         "meta": [
             ("Object size", "32B"),
             ("Phase A (prep)", "alloc 100k objects"),
@@ -161,6 +177,9 @@ TEST_META = {
         "short": "T11 — stress test",
         "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
         "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
+        "required_config": {
+            "fixed_guard": (True, FIXED_GUARD_NOTE),
+        },
         "meta": [
             ("Object size", "32B"),
             ("List blocks", "128 / 256 / 512B, cache-line aligned"),

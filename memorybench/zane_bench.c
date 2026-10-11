@@ -219,6 +219,9 @@ static void workers_shutdown(void) {
 #define ZM_NCHUNKS    (REGION_SIZE / ZM_CHUNK)
 #define ZM_LINE       64
 #define ZM_LIST_MIN   128
+#define ZM_GUARD      (64UL * 1024)
+
+_Static_assert(ZM_MAXSZ <= ZM_GUARD, "a fixed-size slot must not reach past the guard");
 
 #define ZD_NIL        NULL
 #define ZD_STACKS     1024
@@ -263,7 +266,6 @@ static void *zm_bump(ZBump *b, size_t size, size_t align) {
 static inline void *zm_fixed_alloc(size_t s) {
     s = (s + ZM_ALIGN - 1) & ~(size_t)(ZM_ALIGN - 1);
     size_t off = zm.fixed_off;
-    assert(s <= REGION_SIZE - off);
     zm.fixed_off = off + s;
     return zm.fixed_base + off;
 }
@@ -369,9 +371,10 @@ static void zm_init(void) {
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(zm.base != MAP_FAILED);
     for (size_t i = 0; i < REGION_SIZE; i += 4096) zm.base[i] = 0;
-    zm.fixed_base = mmap(NULL, REGION_SIZE, PROT_READ | PROT_WRITE,
+    zm.fixed_base = mmap(NULL, REGION_SIZE + ZM_GUARD, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(zm.fixed_base != MAP_FAILED);
+    assert(mprotect(zm.fixed_base + REGION_SIZE, ZM_GUARD, PROT_NONE) == 0);
     for (size_t i = 0; i < REGION_SIZE; i += 4096) zm.fixed_base[i] = 0;
     zm_reset();
 }
@@ -1674,6 +1677,7 @@ static void emit_json(FILE *f) {
     fprintf(f, "    \"region_bytes\": %lu,\n", (unsigned long)REGION_SIZE);
     fprintf(f, "    \"addressing\": \"native\",\n");
     fprintf(f, "    \"scope_frames\": true,\n");
+    fprintf(f, "    \"fixed_guard\": true,\n");
     fprintf(f, "    \"tree_teardown_checksum\": true\n");
     fprintf(f, "  },\n  \"tests\": [\n");
 

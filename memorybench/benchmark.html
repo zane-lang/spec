@@ -143,6 +143,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model.",
@@ -244,6 +248,10 @@ const TESTS=[
       {
         "label": "Release order",
         "val": "Fisher-Yates shuffle"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model. The fixed-bump, malloc and Pool rows time pointer-size bookkeeping and shuffling; the arena row stores pointers and resets without shuffling.",
@@ -494,6 +502,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
@@ -567,6 +579,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
@@ -622,6 +638,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
@@ -745,6 +765,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
+      },
+      {
+        "label": "Measurement status",
+        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",

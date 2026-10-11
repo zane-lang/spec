@@ -7,6 +7,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 1 -- Sequential alloc + sequential free  [32 bytes x 100k]                                 |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Per-object fixed bump (baseline)    median     26345.50 ns  min     25759.00 ns  max   1244559.00 ns  (   26.346 us)
     Zane (four-owner scope frames)      median     13373.00 ns  min     13340.00 ns  max     17506.00 ns  (   13.373 us)
     malloc / free                       median   2306173.50 ns  min   2044087.00 ns  max   4945509.00 ns  ( 2306.173 us)
@@ -23,6 +24,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 3 -- Mixed sizes (8/16/32/64B) alloc + random-order free  [100k total]                     |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Per-object fixed bump (baseline)    median    272690.50 ns  min    270010.00 ns  max    539701.00 ns  (  272.690 us)
     Zane (four-owner scope frames)      median    267148.00 ns  min    262139.00 ns  max    288637.00 ns  (  267.148 us)
     malloc / free                       median   3559449.50 ns  min   3224779.00 ns  max  10420175.00 ns  ( 3559.450 us)
@@ -55,6 +57,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 7 -- Game loop  [500 frames: 30 spawns + 20+ kills + update per frame]                     |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Zane (fixed-region bump)            median   1691240.00 ns  min   1629630.00 ns  max   2701883.00 ns  ( 1691.240 us)
     malloc / free                       median   1979632.00 ns  min   1881387.00 ns  max   2341756.00 ns  ( 1979.632 us)
     Pool (per-size free-list)           median   1696183.00 ns  min   1650110.00 ns  max   1761662.00 ns  ( 1696.183 us)
@@ -62,6 +65,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 8 -- Particle system  [500 frames, 60 spawns/frame, TTL 10-30, update all alive]           |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Zane (fixed-region bump)            median   5488574.50 ns  min   5329073.00 ns  max   6392381.00 ns  ( 5488.574 us)
     Zane + work-stealing update         median  72067457.00 ns  min  69135970.00 ns  max  78928273.00 ns  (72067.457 us)
     malloc / free                       median   6033121.50 ns  min   5842393.00 ns  max   8228414.00 ns  ( 6033.122 us)
@@ -71,6 +75,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 9 -- Checkerboard fragmentation + refill  [alloc 100k, free evens, alloc 50k (timed)]      |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Zane -- refill (fixed-region bump)  median     13260.00 ns  min     12447.00 ns  max     26519.00 ns  (   13.260 us)
     malloc -- refill fragmented heap    median   1187980.50 ns  min    646917.00 ns  max   2309123.00 ns  ( 1187.980 us)
     Pool -- refill from free-list       median    596195.00 ns  min    114119.00 ns  max   2590065.00 ns  (  596.195 us)
@@ -86,6 +91,7 @@
   +--------------------------------------------------------------------------------------------------+
   |  Test 11 -- Fragmentation stress  [200 cycles: spawn+list-create+push+update+kill]               |
   +--------------------------------------------------------------------------------------------------+
+    ! These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena.
     Zane (fixed bump + size stacks)     median   1708265.00 ns  min   1647822.00 ns  max   1832394.00 ns  ( 1708.265 us)
     malloc / free                       median   1835328.50 ns  min   1794105.00 ns  max   2610957.00 ns  ( 1835.329 us)
     Pool (per-size free-list)           median   1686842.00 ns  min   1659885.00 ns  max   2212152.00 ns  ( 1686.842 us)
