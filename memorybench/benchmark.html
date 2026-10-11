@@ -88,32 +88,37 @@ const TESTS=[
     "t": "T1 \u2014 seq alloc+free",
     "title": "Sequential alloc then sequential free",
     "labels": [
+      "Zane (four-owner scope frames)",
       "Arena (bump + O(1) reset)",
-      "Zane (fixed-region bump)",
+      "Per-object fixed bump (baseline)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      14.938,
-      32.157,
-      223.164,
-      1947.428
+      13.373,
+      15.128,
+      26.346,
+      274.033,
+      2306.173
     ],
     "mins": [
-      13.739,
-      32.152,
-      222.51,
-      1868.606
+      13.34,
+      14.391,
+      25.759,
+      242.53,
+      2044.087
     ],
     "maxs": [
-      16.717,
-      539.739,
-      319.653,
-      4097.473
+      17.506,
+      32.803,
+      1244.559,
+      365.297,
+      4945.509
     ],
     "colors": [
-      "#3aab76",
       "#7c6ff7",
+      "#3aab76",
+      "#6b7280",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -138,18 +143,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
-      },
-      {
-        "label": "Measurement status",
-        "val": "Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero."
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."
       }
     ],
     "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model. The retained pinned Zane row measured the older per-object chunked frontier.",
@@ -164,16 +157,16 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      178.157,
-      829.468
+      220.657,
+      935.706
     ],
     "mins": [
-      169.338,
-      788.459
+      174.825,
+      859.524
     ],
     "maxs": [
-      1006.863,
-      1011.344
+      512.7,
+      1485.629
     ],
     "colors": [
       "#c49a2a",
@@ -194,10 +187,6 @@ const TESTS=[
       {
         "label": "Release path",
         "val": "no-op \u2014 bulk reclaim at scope drain"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
@@ -209,31 +198,36 @@ const TESTS=[
     "title": "Mixed-size alloc and random-order release",
     "labels": [
       "Arena (bulk reset)",
-      "Zane (fixed-region bump)",
+      "Zane (four-owner scope frames)",
+      "Per-object fixed bump (baseline)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      28.965,
-      252.464,
-      1182.299,
-      3793.159
+      28.731,
+      267.148,
+      272.69,
+      1732.993,
+      3559.45
     ],
     "mins": [
-      28.483,
-      249.846,
-      1076.296,
-      3358.464
+      28.154,
+      262.139,
+      270.01,
+      1074.257,
+      3224.779
     ],
     "maxs": [
-      358.064,
-      489.849,
-      1597.801,
-      7223.215
+      309.799,
+      288.637,
+      539.701,
+      2193.046,
+      10420.175
     ],
     "colors": [
       "#3aab76",
       "#7c6ff7",
+      "#6b7280",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -250,18 +244,6 @@ const TESTS=[
       {
         "label": "Release order",
         "val": "Fisher-Yates shuffle"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
-      },
-      {
-        "label": "Measurement status",
-        "val": "Not measured in this results file: Zane (four-owner scope frames). A fresh full-suite run is needed; missing timings are not zero."
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate per-scope frame placement. Rerun the full suite before attributing per-owner allocator timings to scope frames."
       }
     ],
     "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model; the pinned Zane row measured the older per-object frontier.",
@@ -272,32 +254,32 @@ const TESTS=[
     "t": "T4 \u2014 iteration",
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
-      "UList (chunk=8, linked)",
-      "CChunked (chunk=64, ptr-array)",
       "Inline array  (Array\u003cEntity, 100000>)",
+      "CChunked (chunk=64, ptr-array)",
+      "UList (chunk=8, linked)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      58.562,
-      59.362,
-      62.389,
-      86.975,
-      118.979
+      50.601,
+      70.454,
+      81.341,
+      92.146,
+      108.13
     ],
     "mins": [
-      53.84,
-      58.846,
-      49.197,
-      86.414,
-      117.199
+      49.235,
+      60.633,
+      72.683,
+      87.401,
+      103.604
     ],
     "maxs": [
-      172.996,
-      182.211,
-      140.438,
-      199.949,
-      176.224
+      148.959,
+      216.571,
+      360.394,
+      186.136,
+      164.357
     ],
     "colors": [
       "#3aab76",
@@ -335,10 +317,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Five layouts iterated; no alloc or release inside the timed loop.",
@@ -350,32 +328,32 @@ const TESTS=[
     "title": "Growing a List backing store by appending 100k items",
     "labels": [
       "Zane List (128B start, doubling)",
-      "CChunked (chunk=64, ptr-array)",
       "C realloc vector",
+      "CChunked (chunk=64, ptr-array)",
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      202.6,
-      242.417,
-      243.179,
-      838.177
+      203.004,
+      367.644,
+      379.526,
+      923.63
     ],
     "mins": [
-      185.553,
-      206.578,
-      226.695,
-      812.842
+      184.098,
+      359.313,
+      375.014,
+      904.826
     ],
     "maxs": [
-      493.133,
-      349.729,
-      1360.179,
-      974.332
+      490.508,
+      1300.687,
+      426.287,
+      983.842
     ],
     "colors": [
       "#7c6ff7",
-      "#c45a8a",
       "#e05a3a",
+      "#c45a8a",
       "#3aab76"
     ],
     "eliminated": [],
@@ -407,10 +385,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "The growth rules of memory.md \u00a73.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
@@ -421,28 +395,23 @@ const TESTS=[
     "t": "T6 \u2014 reference access",
     "title": "Reference access via a native address vs a direct pointer",
     "labels": [
-      "Segmented offset (chunk dir reloaded)",
-      "Segmented offset (chunk dir cached)",
+      "Native reference",
       "Direct pointer (baseline)"
     ],
     "data": [
-      62.847,
-      64.224,
-      76.957
+      68.45,
+      69.925
     ],
     "mins": [
-      62.315,
-      63.642,
-      68.24
+      67.706,
+      69.451
     ],
     "maxs": [
-      67.215,
-      95.138,
-      119.719
+      85.809,
+      115.794
     ],
     "colors": [
-      "#7c6ff7",
-      "#7c6ff7",
+      "#6b7280",
       "#4a9edd"
     ],
     "eliminated": [],
@@ -470,10 +439,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "A reference stores the native address of the settled owner it names (memory.md \u00a74.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner. Pinned segmented-offset rows describe the earlier model, not the current harness.",
@@ -489,19 +454,19 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1732.749,
-      1737.736,
-      1919.521
+      1691.24,
+      1696.183,
+      1979.632
     ],
     "mins": [
-      1578.606,
-      1607.61,
-      1832.388
+      1629.63,
+      1650.11,
+      1881.387
     ],
     "maxs": [
-      2142.715,
-      1867.302,
-      2082.789
+      2701.883,
+      1761.662,
+      2341.756
     ],
     "colors": [
       "#7c6ff7",
@@ -529,10 +494,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
@@ -543,36 +504,36 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Pool (per-size free-list)",
       "Zane (fixed-region bump)",
+      "Pool (per-size free-list)",
       "Arena (bump + end-of-run reset)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      5551.101,
-      5560.589,
-      5565.278,
-      6082.74,
-      61327.175
+      5488.574,
+      5607.547,
+      5726.704,
+      6033.122,
+      72067.457
     ],
     "mins": [
-      5253.556,
-      5184.683,
-      5250.365,
-      5741.743,
-      53143.791
+      5329.073,
+      5374.868,
+      5349.779,
+      5842.393,
+      69135.97
     ],
     "maxs": [
-      5882.894,
-      5799.806,
-      5771.017,
-      6721.227,
-      68170.334
+      6392.381,
+      7942.42,
+      8154.545,
+      8228.414,
+      78928.273
     ],
     "colors": [
-      "#c49a2a",
       "#7c6ff7",
+      "#c49a2a",
       "#3aab76",
       "#e05a3a",
       "#7c6ff7"
@@ -606,10 +567,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
@@ -625,19 +582,19 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      23.175,
-      440.43,
-      965.311
+      13.26,
+      596.195,
+      1187.98
     ],
     "mins": [
-      21.764,
-      83.294,
-      553.538
+      12.447,
+      114.119,
+      646.917
     ],
     "maxs": [
-      32.953,
-      950.15,
-      2136.835
+      26.519,
+      2590.065,
+      2309.123
     ],
     "colors": [
       "#7c6ff7",
@@ -665,10 +622,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
@@ -679,32 +632,32 @@ const TESTS=[
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 Zane vs malloc, pool and arena",
     "labels": [
-      "Arena cascade visit + bulk reset",
       "Zane cascade destroy",
+      "Arena cascade visit + bulk reset",
       "Pool cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      23.215,
-      24.901,
-      28.845,
-      62.324
+      27.664,
+      29.692,
+      30.86,
+      65.538
     ],
     "mins": [
-      22.374,
-      23.668,
-      26.578,
-      61.211
+      26.7,
+      23.653,
+      27.922,
+      61.264
     ],
     "maxs": [
-      23.988,
-      35.345,
-      29.435,
-      81.392
+      28.492,
+      41.787,
+      32.334,
+      224.037
     ],
     "colors": [
-      "#3aab76",
       "#7c6ff7",
+      "#3aab76",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -733,10 +686,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "The current harness visits every node in post-order and sums its value inside the timed teardown for every allocator; the checksum and the 4,000-node count are checked outside timing. Zane releases node payloads as no-ops and returns each 128-byte child list to its exact-size stack. The arena stores nodes and child lists together, visits the same tree, then resets once inside timing. This is traversal plus bulk reclaim, not a reset-only benchmark. A reference leaves nothing in its owner, so reference density cannot change teardown.",
@@ -747,28 +696,28 @@ const TESTS=[
     "t": "T11 \u2014 stress test",
     "title": "Fragmentation stress: objects + lists, random spawn / push / kill cycles",
     "labels": [
-      "Zane (fixed bump + size stacks)",
       "Pool (per-size free-list)",
+      "Zane (fixed bump + size stacks)",
       "malloc / free"
     ],
     "data": [
-      1633.303,
-      1637.011,
-      1783.198
+      1686.842,
+      1708.265,
+      1835.329
     ],
     "mins": [
-      1557.334,
-      1603.009,
-      1736.832
+      1659.885,
+      1647.822,
+      1794.105
     ],
     "maxs": [
-      1803.126,
-      2011.877,
-      1920.402
+      2212.152,
+      1832.394,
+      2610.957
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -796,10 +745,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
@@ -814,16 +759,16 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      52.814,
-      203.903
+      61.679,
+      282.132
     ],
     "mins": [
-      52.587,
-      145.25
+      56.458,
+      169.229
     ],
     "maxs": [
-      86.055,
-      348.466
+      108.626,
+      375.531
     ],
     "colors": [
       "#3aab76",
@@ -854,10 +799,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Four read-only shards of one owned inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
@@ -875,25 +816,25 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      98.042,
-      186.049,
-      257.315,
-      292.193,
-      1680.851
+      103.808,
+      184.369,
+      251.881,
+      307.812,
+      1755.001
     ],
     "mins": [
-      97.935,
-      177.565,
-      256.461,
-      254.126,
-      1606.588
+      103.418,
+      179.988,
+      238.655,
+      288.525,
+      1718.951
     ],
     "maxs": [
-      127.647,
-      206.338,
-      376.593,
-      393.154,
-      1914.822
+      118.197,
+      203.794,
+      512.592,
+      691.717,
+      2122.982
     ],
     "colors": [
       "#3aab76",
@@ -935,10 +876,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
@@ -955,22 +892,22 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      20.325,
-      23.878,
-      31.916,
-      128.001
+      18.367,
+      24.513,
+      24.851,
+      115.844
     ],
     "mins": [
-      17.545,
-      22.819,
-      31.557,
-      110.185
+      18.194,
+      24.316,
+      24.169,
+      112.309
     ],
     "maxs": [
-      25.988,
-      29.929,
-      32.589,
-      197.543
+      20.527,
+      34.458,
+      32.889,
+      129.987
     ],
     "colors": [
       "#3aab76",
@@ -1019,10 +956,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements use the earlier segmented-offset model and chunked fixed-size frontier. The current harness uses native addresses and a contiguous fixed-size range; rerun the full suite before attributing these timings to that model."
       }
     ],
     "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
