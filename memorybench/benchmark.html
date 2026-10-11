@@ -95,25 +95,25 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      13.373,
-      15.128,
-      26.346,
-      274.033,
-      2306.173
+      12.979,
+      16.492,
+      17.158,
+      274.132,
+      2121.59
     ],
     "mins": [
-      13.34,
-      14.391,
-      25.759,
-      242.53,
-      2044.087
+      12.253,
+      14.678,
+      14.294,
+      260.689,
+      2082.448
     ],
     "maxs": [
-      17.506,
-      32.803,
-      1244.559,
-      365.297,
-      4945.509
+      15.964,
+      25.411,
+      434.587,
+      317.67,
+      4787.753
     ],
     "colors": [
       "#7c6ff7",
@@ -143,14 +143,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model.",
-    "note": "Four-owner scope frames take ~13.4us, versus ~26.3us for the per-object fixed bump, ~15.1us for the flat arena, ~274us for Pool and ~2.31ms for malloc/free. The frame row is nominally ~2.0x faster than per-object bumps, ~1.13x faster than the arena, ~20.5x faster than Pool and ~172x faster than malloc. It reserves one 128-byte frame for every four owners and places them at fixed offsets, then resets the frontier after the batch. The arena bumps once per object; malloc and Pool also perform per-object frees inside timing. The per-object bump's first pass (~1.24ms) is ~47.2x its median. Placement alone is modeled: scope records, object initialization and first-touch faults in the fixed region are excluded. This is not a measurement of complete scope entry and exit or whole-program compiler performance.",
+    "note": "Four-owner scope frames take ~13.0us, versus ~17.2us for the per-object fixed bump, ~16.5us for the flat arena, ~274us for Pool and ~2.12ms for malloc/free. The frame row is nominally ~1.32x faster than per-object bumps, ~1.27x faster than the arena, ~21.1x faster than Pool and ~163x faster than malloc. Its sample range overlaps both bump rows. It reserves one 128-byte frame for every four owners and places them at fixed offsets, then resets the frontier after the batch. The per-object bump and the arena both bump once per object, and their medians differ by only ~4%, with overlapping ranges; malloc and Pool also perform per-object frees inside timing. The per-object bump's first pass (~435us) is ~25.3x its median. Placement alone is modeled: scope records, object initialization and first-touch faults in the fixed region are excluded. This is not a measurement of complete scope entry and exit or whole-program compiler performance.",
     "noteStale": false
   },
   {
@@ -161,16 +157,16 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      220.657,
-      935.706
+      201.626,
+      954.16
     ],
     "mins": [
-      174.825,
-      859.524
+      185.834,
+      897.608
     ],
     "maxs": [
-      512.7,
-      1485.629
+      343.034,
+      1402.704
     ],
     "colors": [
       "#c49a2a",
@@ -194,7 +190,7 @@ const TESTS=[
       }
     ],
     "setup": "Alloc and shuffle untimed. The fixed-size region has no free list and no coalescing, so release is a no-op regardless of order.",
-    "note": "Zane's row is an eliminated loop, not a measured zero-duration release. zm_own_release is empty, so there is no per-object release work to time. malloc (~936us) and Pool (~221us) return individual blocks to reusable storage, at roughly 9.4ns and 2.2ns per object. Arena has no separate per-object release row in this test; a bulk reset would be a different operation.",
+    "note": "Zane's row is an eliminated loop, not a measured zero-duration release. zm_own_release is empty, so there is no per-object release work to time. malloc (~954us) and Pool (~202us) return individual blocks to reusable storage, at roughly 9.5ns and 2.0ns per object. Arena has no separate per-object release row in this test; a bulk reset would be a different operation.",
     "noteStale": false
   },
   {
@@ -202,36 +198,36 @@ const TESTS=[
     "title": "Mixed-size alloc and random-order release",
     "labels": [
       "Arena (bulk reset)",
-      "Zane (four-owner scope frames)",
       "Per-object fixed bump (baseline)",
+      "Zane (four-owner scope frames)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      28.731,
-      267.148,
-      272.69,
-      1732.993,
-      3559.45
+      31.76,
+      295.842,
+      298.91,
+      1221.245,
+      4208.989
     ],
     "mins": [
-      28.154,
-      262.139,
-      270.01,
-      1074.257,
-      3224.779
+      29.754,
+      274.348,
+      287.119,
+      1152.416,
+      3722.212
     ],
     "maxs": [
-      309.799,
-      288.637,
-      539.701,
-      2193.046,
-      10420.175
+      586.07,
+      492.955,
+      365.516,
+      1460.44,
+      5288.788
     ],
     "colors": [
       "#3aab76",
-      "#7c6ff7",
       "#4a9edd",
+      "#7c6ff7",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -248,14 +244,10 @@ const TESTS=[
       {
         "label": "Release order",
         "val": "Fisher-Yates shuffle"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model. The fixed-bump, malloc and Pool rows time pointer-size bookkeeping and shuffling; the arena row stores pointers and resets without shuffling.",
-    "note": "Four-owner scope frames take ~267us, close to the per-object bump's ~273us: their medians differ by only ~2%, with overlapping sample ranges. malloc takes ~3.56ms (~13.3x the frame row) and Pool ~1.73ms (~6.5x). The frame row reserves 128 bytes for each 8/16/32/64-byte group, including 8 bytes of padding. Both fixed-bump rows and malloc/Pool also write size metadata into the benchmark's pointer-size array and shuffle it inside timing. The arena (~28.7us) writes a pointer array and resets without that shuffle, so its ~9.3x lead over the frame row is not an allocator-only comparison. Its first pass (~310us) is ~10.8x its median. As in T1, the frame row excludes scope records, object initialization and fixed-region first-touch faults.",
+    "note": "Four-owner scope frames take ~299us, close to the per-object bump's ~296us: their medians differ by only ~1%, with overlapping sample ranges. malloc takes ~4.21ms (~14.1x the frame row) and Pool ~1.22ms (~4.1x). The frame row reserves 128 bytes for each 8/16/32/64-byte group, including 8 bytes of padding. Both fixed-bump rows and malloc/Pool also write size metadata into the benchmark's pointer-size array and shuffle it inside timing. The arena (~31.8us) writes a pointer array and resets without that shuffle, so its ~9.4x lead over the frame row is not an allocator-only comparison. Its first pass (~586us) is ~18.5x its median. As in T1, the frame row excludes scope records, object initialization and fixed-region first-touch faults.",
     "noteStale": false
   },
   {
@@ -263,36 +255,36 @@ const TESTS=[
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
       "Inline array  (Array\u003cEntity, 100000>)",
-      "CChunked (chunk=64, ptr-array)",
       "UList (chunk=8, linked)",
+      "CChunked (chunk=64, ptr-array)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      50.601,
-      70.454,
-      81.341,
-      92.146,
-      108.13
+      58.743,
+      62.617,
+      68.565,
+      101.346,
+      170.357
     ],
     "mins": [
-      49.235,
-      60.633,
-      72.683,
-      87.401,
-      103.604
+      52.135,
+      57.828,
+      62.306,
+      95.216,
+      157.515
     ],
     "maxs": [
-      148.959,
-      216.571,
-      360.394,
-      186.136,
-      164.357
+      174.453,
+      189.146,
+      198.913,
+      223.382,
+      260.248
     ],
     "colors": [
       "#3aab76",
-      "#c45a8a",
       "#3aab76",
+      "#c45a8a",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -328,7 +320,7 @@ const TESTS=[
       }
     ],
     "setup": "Five layouts iterated; no alloc or release inside the timed loop.",
-    "note": "Inline storage has the lowest median (~50.6us), followed by CChunked (~70.5us), UList (~81.3us), sequential pointers (~92.1us) and shuffled pointers (~108us). Sequential pointer access takes ~1.8x the inline median; shuffling adds a nominal ~17% over sequential pointers. The sample ranges overlap, so these medians alone do not prove a repeatable ranking for every layout. Iteration includes no allocation or freeing here: this compares layouts and their scan loops, not allocator throughput.",
+    "note": "Inline storage has the lowest median (~58.7us), followed by UList (~62.6us), CChunked (~68.6us), sequential pointers (~101us) and shuffled pointers (~170us). Sequential pointer access takes ~1.7x the inline median; shuffling adds a nominal ~68% over sequential pointers. All five sample ranges overlap, so these medians alone do not prove a repeatable ranking for every layout. Iteration includes no allocation or freeing here: this compares layouts and their scan loops, not allocator throughput.",
     "noteStale": false
   },
   {
@@ -341,22 +333,22 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      203.004,
-      367.644,
-      379.526,
-      923.63
+      210.584,
+      248.157,
+      263.664,
+      833.399
     ],
     "mins": [
-      184.098,
-      359.313,
-      375.014,
-      904.826
+      186.755,
+      231.357,
+      211.47,
+      796.939
     ],
     "maxs": [
-      490.508,
-      1300.687,
-      426.287,
-      983.842
+      3301.192,
+      1306.634,
+      798.632,
+      959.327
     ],
     "colors": [
       "#7c6ff7",
@@ -396,7 +388,7 @@ const TESTS=[
       }
     ],
     "setup": "The growth rules of memory.md \u00a73.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
-    "note": "Zane's growing list takes ~203us, against ~368us for the realloc vector (~1.8x), ~380us for CChunked (~1.9x), and ~924us for UList (~4.5x). Zane's maximum (~491us) overlaps the other contiguous/chunked rows' ranges; the realloc row reaches ~1.30ms. Frontier growth avoids copying while the block remains at the dynamic frontier inside its chunk; oversized spans require relocation. These model timings do not imply the same ordering for lists compiled by the Zane compiler.",
+    "note": "Zane's growing list takes ~211us, against ~248us for the realloc vector (~1.18x), ~264us for CChunked (~1.25x), and ~833us for UList (~4.0x). All four sample ranges overlap. Zane's first pass (~3.30ms) is ~15.7x its median and the realloc vector's (~1.31ms) ~5.3x. Frontier growth avoids copying while the block remains at the dynamic frontier inside its chunk; oversized spans require relocation. These model timings do not imply the same ordering for lists compiled by the Zane compiler.",
     "noteStale": false
   },
   {
@@ -407,16 +399,16 @@ const TESTS=[
       "Direct pointer (baseline)"
     ],
     "data": [
-      68.45,
-      69.925
+      66.144,
+      69.68
     ],
     "mins": [
-      67.706,
-      69.451
+      63.412,
+      64.268
     ],
     "maxs": [
-      85.809,
-      115.794
+      94.568,
+      164.727
     ],
     "colors": [
       "#7c6ff7",
@@ -450,35 +442,35 @@ const TESTS=[
       }
     ],
     "setup": "A reference stores the native address of the settled owner it names (memory.md \u00a74.1). Dereferencing it accesses that owner directly, without decoding an offset or loading a chunk directory. Nothing is allocated to mint a reference and nothing is recorded in the owner.",
-    "note": "Native references take ~68.4us versus ~69.9us for direct pointers, a nominal difference of ~2.1%, with overlapping sample ranges. In this C model a reference stores the native pointer itself, and dereferencing it returns that pointer directly: there is no segmented-offset decoding or chunk-directory lookup. The small timing difference is not evidence of an intrinsically faster access path. The benchmark checks that every minted reference names its intended object.",
+    "note": "Native references take ~66.1us versus ~69.7us for direct pointers, a nominal difference of ~5%, with overlapping sample ranges. In this C model a reference stores the native pointer itself, and dereferencing it returns that pointer directly: there is no segmented-offset decoding or chunk-directory lookup. The small timing difference is not evidence of an intrinsically faster access path. The benchmark checks that every minted reference names its intended object.",
     "noteStale": false
   },
   {
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (fixed-region bump)",
       "Pool (per-size free-list)",
+      "Zane (fixed-region bump)",
       "malloc / free"
     ],
     "data": [
-      1691.24,
-      1696.183,
-      1979.632
+      1713.417,
+      1723.094,
+      2007.179
     ],
     "mins": [
-      1629.63,
-      1650.11,
-      1881.387
+      1672.586,
+      1669.178,
+      1909.578
     ],
     "maxs": [
-      2701.883,
-      1761.662,
-      2341.756
+      1953.906,
+      1953.779,
+      2077.605
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -502,51 +494,47 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
-    "note": "Zane (~1.691ms) and Pool (~1.696ms) are effectively tied; malloc takes ~1.980ms, about 17% longer than Zane's median. Zane's sample range overlaps both other rows. Pool's maximum (~1.762ms) is below malloc's minimum (~1.881ms), so those two ranges do not overlap. The allocator-only gaps of T1 are much smaller once frame scans, updates and object maintenance are part of the timed workload. This game-loop model uses per-object fixed bumps rather than T1's four-owner scope frames.",
+    "note": "Pool (~1.713ms) and Zane (~1.723ms) are effectively tied; malloc takes ~2.007ms, about 16% longer than Zane's median. All three sample ranges overlap, although malloc's minimum (~1.910ms) lies above both other medians. The allocator-only gaps of T1 are much smaller once frame scans, updates and object maintenance are part of the timed workload. This game-loop model uses per-object fixed bumps rather than T1's four-owner scope frames.",
     "noteStale": false
   },
   {
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Zane (fixed-region bump)",
-      "Pool (per-size free-list)",
       "Arena (bump + end-of-run reset)",
+      "Pool (per-size free-list)",
+      "Zane (fixed-region bump)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      5488.574,
-      5607.547,
-      5726.704,
-      6033.122,
-      72067.457
+      5339.078,
+      5343.715,
+      5635.437,
+      5847.7,
+      73132.823
     ],
     "mins": [
-      5329.073,
-      5374.868,
-      5349.779,
-      5842.393,
-      69135.97
+      5147.73,
+      5209.239,
+      5474.411,
+      5662.68,
+      68996.15
     ],
     "maxs": [
-      6392.381,
-      7942.42,
-      8154.545,
-      8228.414,
-      78928.273
+      7205.057,
+      5831.01,
+      5976.944,
+      6078.359,
+      82045.037
     ],
     "colors": [
-      "#7c6ff7",
-      "#c49a2a",
       "#3aab76",
+      "#c49a2a",
+      "#7c6ff7",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -579,14 +567,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
-    "note": "Serial Zane (~5.489ms), Pool (~5.608ms) and the arena (~5.727ms) have medians within ~4.3% of one another, with overlapping sample ranges. malloc takes ~6.033ms, nominally ~10% longer than Zane. This single run does not establish a stable ordering among the serial variants. Both bump allocators retain dead particles' storage until the run ends; Pool can recycle slots sooner. Arena performs the same serial updates and a final bulk reset, never a reset between frames. The Zane work-stealing variant (~72.1ms) is ~13.1x slower than serial Zane; for this workload the measured parallel implementation does not amortize its per-frame scheduling costs.",
+    "note": "The arena (~5.339ms), Pool (~5.344ms) and serial Zane (~5.635ms) have medians within ~5.5% of one another, with overlapping sample ranges. malloc takes ~5.848ms, nominally ~4% longer than Zane, also overlapping. This single run does not establish a stable ordering among the serial variants. Both bump allocators retain dead particles' storage until the run ends; Pool can recycle slots sooner. Arena performs the same serial updates and a final bulk reset, never a reset between frames. The Zane work-stealing variant (~73.1ms) is ~13.0x slower than serial Zane; for this workload the measured parallel implementation does not amortize its per-frame scheduling costs.",
     "noteStale": false
   },
   {
@@ -598,19 +582,19 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      13.26,
-      596.195,
-      1187.98
+      9.056,
+      498.877,
+      962.332
     ],
     "mins": [
-      12.447,
-      114.119,
-      646.917
+      8.941,
+      68.255,
+      663.849
     ],
     "maxs": [
-      26.519,
-      2590.065,
-      2309.123
+      20.759,
+      592.912,
+      1116.647
     ],
     "colors": [
       "#7c6ff7",
@@ -638,47 +622,43 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
-    "note": "Refilling 50,000 objects takes Zane ~13.3us, malloc ~1.19ms (~89.6x), and Pool ~596us (~45.0x). Zane advances its frontier past dead storage rather than reusing the released slots. Pool's samples range from ~114us to ~2.59ms and malloc's from ~647us to ~2.31ms, so those medians conceal substantial variation. The large within-run separation survives that spread; the exact speedup is specific to this measurement and this refill pattern. Only refill is timed, not the initial allocation or checkerboard releases.",
+    "note": "Refilling 50,000 objects takes Zane ~9.1us, malloc ~962us (~106x), and Pool ~499us (~55x). Zane advances its frontier past dead storage rather than reusing the released slots. Pool's samples range from ~68us to ~593us and malloc's from ~664us to ~1.12ms, so those medians conceal substantial variation. The large within-run separation survives that spread; the exact speedup is specific to this measurement and this refill pattern. Only refill is timed, not the initial allocation or checkerboard releases.",
     "noteStale": false
   },
   {
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 Zane vs malloc, pool and arena",
     "labels": [
-      "Zane cascade destroy",
       "Arena cascade visit + bulk reset",
       "Pool cascade destroy",
+      "Zane cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      27.664,
-      29.692,
-      30.86,
-      65.538
+      23.948,
+      28.209,
+      28.668,
+      60.858
     ],
     "mins": [
-      26.7,
-      23.653,
-      27.922,
-      61.264
+      22.975,
+      26.836,
+      27.987,
+      58.885
     ],
     "maxs": [
-      28.492,
-      41.787,
-      32.334,
-      224.037
+      57.669,
+      31.521,
+      37.861,
+      72.158
     ],
     "colors": [
-      "#7c6ff7",
       "#3aab76",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -709,7 +689,7 @@ const TESTS=[
       }
     ],
     "setup": "The current harness visits every node in post-order and sums its value inside the timed teardown for every allocator; the checksum and the 4,000-node count are checked outside timing. Zane releases node payloads as no-ops and returns each 128-byte child list to its exact-size stack. The arena stores nodes and child lists together, visits the same tree, then resets once inside timing. This is traversal plus bulk reclaim, not a reset-only benchmark. A reference leaves nothing in its owner, so reference density cannot change teardown.",
-    "note": "Zane teardown takes ~27.7us, arena traversal plus bulk reset ~29.7us, Pool ~30.9us and malloc ~65.5us (~2.4x Zane). The arena median is nominally ~7% above Zane, but their sample ranges overlap, as do Zane and Pool. Every variant visits the same seeded 4,000-node tree, sums node values during teardown and checks the checksum after timing. An untimed validation walk counts nodes and warms the tree before every timed teardown. Arena reclaims nodes and child lists together with one reset; Zane returns dynamic child lists to size stacks, while node release is a no-op. These figures describe traversal plus reclamation, not the reset operation alone.",
+    "note": "Arena traversal plus bulk reset takes ~23.9us, Pool ~28.2us, Zane teardown ~28.7us and malloc ~60.9us (~2.1x Zane). The arena median is nominally ~17% below Zane, but their sample ranges overlap, as do Zane and Pool. Every variant visits the same seeded 4,000-node tree, sums node values during teardown and checks the checksum after timing. An untimed validation walk counts nodes and warms the tree before every timed teardown. Arena reclaims nodes and child lists together with one reset; Zane returns dynamic child lists to size stacks, while node release is a no-op. These figures describe traversal plus reclamation, not the reset operation alone.",
     "noteStale": false
   },
   {
@@ -721,19 +701,19 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1686.842,
-      1708.265,
-      1835.329
+      1722.42,
+      1732.052,
+      1872.201
     ],
     "mins": [
-      1659.885,
-      1647.822,
-      1794.105
+      1679.658,
+      1693.777,
+      1833.015
     ],
     "maxs": [
-      2212.152,
-      1832.394,
-      2610.957
+      2522.552,
+      1835.401,
+      1953.643
     ],
     "colors": [
       "#c49a2a",
@@ -765,14 +745,10 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
-    "note": "Pool (~1.687ms) and Zane (~1.708ms) differ by only ~1.3%, with overlapping sample ranges. malloc (~1.835ms) is nominally ~7% above Zane, also with overlapping ranges. Randomized scans, updates, list growth and maintenance compress the allocator-only gaps seen elsewhere. This workload gives no repeatable ordering for Zane versus Pool from a single run.",
+    "note": "Pool (~1.722ms) and Zane (~1.732ms) differ by only ~0.6%, with overlapping sample ranges. malloc (~1.872ms) is nominally ~8% above Zane, also with overlapping ranges. Randomized scans, updates, list growth and maintenance compress the allocator-only gaps seen elsewhere. This workload gives no repeatable ordering for Zane versus Pool from a single run.",
     "noteStale": false
   },
   {
@@ -783,16 +759,16 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      61.679,
-      282.132
+      82.344,
+      256.281
     ],
     "mins": [
-      56.458,
-      169.229
+      44.616,
+      161.809
     ],
     "maxs": [
-      108.626,
-      375.531
+      235.032,
+      503.513
     ],
     "colors": [
       "#3aab76",
@@ -826,7 +802,7 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of one owned inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
-    "note": "The sequential shard scan takes ~61.7us, whereas the four-worker scan is ~282us (~4.6x slower). Even best against best, ~169us concurrent versus ~56.5us sequential is ~3.0x slower. The concurrent samples span ~169-376us. This small read-only workload does not benefit from this parallel execution path, despite the persistent workers being pre-started and warmed; it says nothing about larger workloads that amortize scheduling.",
+    "note": "The sequential shard scan takes ~82.3us, whereas the four-worker scan is ~256us (~3.1x slower). Even best against best, ~162us concurrent versus ~44.6us sequential is ~3.6x slower. The concurrent samples span ~162-504us. This small read-only workload does not benefit from this parallel execution path, despite the persistent workers being pre-started and warmed; it says nothing about larger workloads that amortize scheduling.",
     "noteStale": false
   },
   {
@@ -835,36 +811,36 @@ const TESTS=[
     "labels": [
       "Frontier bump only (no reuse)",
       "Pool (per-size free-list)",
-      "Backing store (runtime size class)",
       "Boxed payload (static size class)",
+      "Backing store (runtime size class)",
       "malloc / free"
     ],
     "data": [
-      103.808,
-      184.369,
-      251.881,
-      307.812,
-      1755.001
+      97.489,
+      288.959,
+      482.354,
+      494.266,
+      1693.729
     ],
     "mins": [
-      103.418,
-      179.988,
-      238.655,
-      288.525,
-      1718.951
+      97.105,
+      171.959,
+      262.024,
+      222.107,
+      1630.665
     ],
     "maxs": [
-      118.197,
-      203.794,
-      512.592,
-      691.717,
-      2122.982
+      102.576,
+      350.708,
+      1418.528,
+      553.701,
+      1864.735
     ],
     "colors": [
       "#3aab76",
       "#c49a2a",
-      "#b8a4ff",
       "#7c6ff7",
+      "#b8a4ff",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -903,7 +879,7 @@ const TESTS=[
       }
     ],
     "setup": "Repeated create-and-destroy of equal-size dynamic blocks. memory.md \u00a73.2 gives the region one LIFO stack per (byte size, alignment): an allocation pops that stack and bumps the frontier only when it is empty. A boxed payload takes its key from its declared type; a growable backing store's size is a runtime value. The frontier-only row bypasses the stacks, which is what the fixed-size region does.",
-    "note": "Static-key boxed blocks take ~308us, runtime-key backing stores ~252us, and frontier-only allocation ~104us. The two stack-based rows overlap in their sample ranges, so the nominal runtime-key lead is not evidence that runtime lookup is inherently faster. The frontier is ~2.4-3.0x faster than these reusable-stack paths, but it consumes fresh storage each round. The stack variants reuse returned blocks. Pool (~184us) precedes both Zane stack rows; malloc (~1.76ms) is clearly slower. The assertions verify exact-size, exact-alignment LIFO reuse and separation of different stack keys, including tiny and weakly aligned blocks outside the timed churn rows.",
+    "note": "Static-key boxed blocks take ~482us, runtime-key backing stores ~494us, and frontier-only allocation ~97.5us. The two stack-based rows overlap in their sample ranges, so the nominal static-key lead is not evidence that static lookup is inherently faster. The frontier is ~4.9-5.1x faster than these reusable-stack paths, but it consumes fresh storage each round. The stack variants reuse returned blocks. Pool (~289us) has a lower median than both Zane stack rows, with overlapping ranges; malloc (~1.69ms) is clearly slower. The static-key first pass (~1.42ms) is ~2.9x its median. The assertions verify exact-size, exact-alignment LIFO reuse and separation of different stack keys, including tiny and weakly aligned blocks outside the timed churn rows.",
     "noteStale": false
   },
   {
@@ -916,22 +892,22 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      18.367,
-      24.513,
-      24.851,
-      115.844
+      15.178,
+      24.445,
+      25.697,
+      107.251
     ],
     "mins": [
-      18.194,
-      24.316,
-      24.169,
-      112.309
+      14.991,
+      22.514,
+      24.339,
+      106.176
     ],
     "maxs": [
-      20.527,
-      34.458,
-      32.889,
-      129.987
+      15.305,
+      30.533,
+      29.972,
+      122.168
     ],
     "colors": [
       "#3aab76",
@@ -983,7 +959,7 @@ const TESTS=[
       }
     ],
     "setup": "A recursive tree whose members are boxed (adt.md \u00a74): a fixed-size handle inline, the payload in the dynamic region at exactly the node size. A move within the scope that holds the blocks copies only the root's handles, so it is not timed. An escape out of that scope relocates every boxed descendant recursively and returns each old block (memory.md \u00a73.5); nothing inside a roaming owner is referenced, so nothing else is updated. A value copy reallocates every payload so the two share no storage (\u00a72.3); fresh construction builds each node in place and copies nothing.",
-    "note": "Roaming-tree relocation (~24.9us) and deep value copy (~24.5us) are effectively tied: their medians differ by ~1.4%, and their sample ranges overlap. Fresh in-place construction takes ~18.4us, while malloc deep copy takes ~116us (~4.7x the Zane value-copy median). Both relocation and value copy walk all 8,191 nodes and allocate destinations; relocation also returns old blocks to their stacks, but this run does not show a clear timing penalty for that extra work. A move within the same scope remains a handle copy and is not timed. The assertions also check settled overwrites preserve the addresses seen by existing references.",
+    "note": "Roaming-tree relocation (~25.7us) and deep value copy (~24.4us) are effectively tied: their medians differ by ~5%, and their sample ranges overlap. Fresh in-place construction takes ~15.2us, while malloc deep copy takes ~107us (~4.4x the Zane value-copy median). Both relocation and value copy walk all 8,191 nodes and allocate destinations; relocation also returns old blocks to their stacks, but this run does not show a clear timing penalty for that extra work. A move within the same scope remains a handle copy and is not timed. The assertions also check settled overwrites preserve the addresses seen by existing references.",
     "noteStale": false
   }
 ];
