@@ -95,25 +95,25 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      13.373,
-      15.128,
-      26.346,
-      274.033,
-      2306.173
+      12.979,
+      16.492,
+      17.158,
+      274.132,
+      2121.59
     ],
     "mins": [
-      13.34,
-      14.391,
-      25.759,
-      242.53,
-      2044.087
+      12.253,
+      14.678,
+      14.294,
+      260.689,
+      2082.448
     ],
     "maxs": [
-      17.506,
-      32.803,
-      1244.559,
-      365.297,
-      4945.509
+      15.964,
+      25.411,
+      434.587,
+      317.67,
+      4787.753
     ],
     "colors": [
       "#7c6ff7",
@@ -143,10 +143,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places four 32-byte owners at fixed offsets in one 128-byte frame: one frontier bump per scope, no per-owner bump, and bulk reset after the batch. The per-object bump row is an allocator baseline. Placement alone is timed; scope records, slot initialization and first-touch faults are outside this model.",
@@ -161,16 +157,16 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      220.657,
-      935.706
+      201.626,
+      954.16
     ],
     "mins": [
-      174.825,
-      859.524
+      185.834,
+      897.608
     ],
     "maxs": [
-      512.7,
-      1485.629
+      343.034,
+      1402.704
     ],
     "colors": [
       "#c49a2a",
@@ -202,36 +198,36 @@ const TESTS=[
     "title": "Mixed-size alloc and random-order release",
     "labels": [
       "Arena (bulk reset)",
-      "Zane (four-owner scope frames)",
       "Per-object fixed bump (baseline)",
+      "Zane (four-owner scope frames)",
       "Pool (per-size free-list)",
       "malloc / free"
     ],
     "data": [
-      28.731,
-      267.148,
-      272.69,
-      1732.993,
-      3559.45
+      31.76,
+      295.842,
+      298.91,
+      1221.245,
+      4208.989
     ],
     "mins": [
-      28.154,
-      262.139,
-      270.01,
-      1074.257,
-      3224.779
+      29.754,
+      274.348,
+      287.119,
+      1152.416,
+      3722.212
     ],
     "maxs": [
-      309.799,
-      288.637,
-      539.701,
-      2193.046,
-      10420.175
+      586.07,
+      492.955,
+      365.516,
+      1460.44,
+      5288.788
     ],
     "colors": [
       "#3aab76",
-      "#7c6ff7",
       "#4a9edd",
+      "#7c6ff7",
       "#c49a2a",
       "#e05a3a"
     ],
@@ -248,10 +244,6 @@ const TESTS=[
       {
         "label": "Release order",
         "val": "Fisher-Yates shuffle"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "The scope-frame row places an 8-, 16-, 32- and 64-byte owner at offsets 0, 8, 24 and 56 in one 128-byte frame (120 bytes of slots and 8 bytes of alignment padding), with one frontier bump per scope. Pointers are shuffled, releases are no-ops, and the batch drains in bulk. The per-object bump row remains an allocator baseline. Scope records, initialization and first-touch faults are outside this placement model. The fixed-bump, malloc and Pool rows time pointer-size bookkeeping and shuffling; the arena row stores pointers and resets without shuffling.",
@@ -263,36 +255,36 @@ const TESTS=[
     "title": "Iterating 100k entity objects \u2014 five layouts",
     "labels": [
       "Inline array  (Array\u003cEntity, 100000>)",
-      "CChunked (chunk=64, ptr-array)",
       "UList (chunk=8, linked)",
+      "CChunked (chunk=64, ptr-array)",
       "Pointer array, sequential",
       "Pointer array, shuffled"
     ],
     "data": [
-      50.601,
-      70.454,
-      81.341,
-      92.146,
-      108.13
+      58.743,
+      62.617,
+      68.565,
+      101.346,
+      170.357
     ],
     "mins": [
-      49.235,
-      60.633,
-      72.683,
-      87.401,
-      103.604
+      52.135,
+      57.828,
+      62.306,
+      95.216,
+      157.515
     ],
     "maxs": [
-      148.959,
-      216.571,
-      360.394,
-      186.136,
-      164.357
+      174.453,
+      189.146,
+      198.913,
+      223.382,
+      260.248
     ],
     "colors": [
       "#3aab76",
-      "#c45a8a",
       "#3aab76",
+      "#c45a8a",
       "#e05a3a",
       "#e05a3a"
     ],
@@ -341,22 +333,22 @@ const TESTS=[
       "UList (chunk=8, no realloc)"
     ],
     "data": [
-      203.004,
-      367.644,
-      379.526,
-      923.63
+      210.584,
+      248.157,
+      263.664,
+      833.399
     ],
     "mins": [
-      184.098,
-      359.313,
-      375.014,
-      904.826
+      186.755,
+      231.357,
+      211.47,
+      796.939
     ],
     "maxs": [
-      490.508,
-      1300.687,
-      426.287,
-      983.842
+      3301.192,
+      1306.634,
+      798.632,
+      959.327
     ],
     "colors": [
       "#7c6ff7",
@@ -407,16 +399,16 @@ const TESTS=[
       "Direct pointer (baseline)"
     ],
     "data": [
-      68.45,
-      69.925
+      66.144,
+      69.68
     ],
     "mins": [
-      67.706,
-      69.451
+      63.412,
+      64.268
     ],
     "maxs": [
-      85.809,
-      115.794
+      94.568,
+      164.727
     ],
     "colors": [
       "#7c6ff7",
@@ -457,28 +449,28 @@ const TESTS=[
     "t": "T7 \u2014 game loop",
     "title": "Simulated game loop: spawn, kill, and update entities each frame",
     "labels": [
-      "Zane (fixed-region bump)",
       "Pool (per-size free-list)",
+      "Zane (fixed-region bump)",
       "malloc / free"
     ],
     "data": [
-      1691.24,
-      1696.183,
-      1979.632
+      1713.417,
+      1723.094,
+      2007.179
     ],
     "mins": [
-      1629.63,
-      1650.11,
-      1881.387
+      1672.586,
+      1669.178,
+      1909.578
     ],
     "maxs": [
-      2701.883,
-      1761.662,
-      2341.756
+      1953.906,
+      1953.779,
+      2077.605
     ],
     "colors": [
-      "#7c6ff7",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -502,10 +494,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Each spawn is a fixed-region bump; each kill is a no-op release. These are statically sized objects in the fixed-size region, which reclaims in bulk at drain.",
@@ -516,37 +504,37 @@ const TESTS=[
     "t": "T8 \u2014 particle system",
     "title": "Particle system: burst-spawn short-lifetime objects every frame",
     "labels": [
-      "Zane (fixed-region bump)",
-      "Pool (per-size free-list)",
       "Arena (bump + end-of-run reset)",
+      "Pool (per-size free-list)",
+      "Zane (fixed-region bump)",
       "malloc / free",
       "Zane + work-stealing update"
     ],
     "data": [
-      5488.574,
-      5607.547,
-      5726.704,
-      6033.122,
-      72067.457
+      5339.078,
+      5343.715,
+      5635.437,
+      5847.7,
+      73132.823
     ],
     "mins": [
-      5329.073,
-      5374.868,
-      5349.779,
-      5842.393,
-      69135.97
+      5147.73,
+      5209.239,
+      5474.411,
+      5662.68,
+      68996.15
     ],
     "maxs": [
-      6392.381,
-      7942.42,
-      8154.545,
-      8228.414,
-      78928.273
+      7205.057,
+      5831.01,
+      5976.944,
+      6078.359,
+      82045.037
     ],
     "colors": [
-      "#7c6ff7",
-      "#c49a2a",
       "#3aab76",
+      "#c49a2a",
+      "#7c6ff7",
       "#e05a3a",
       "#7c6ff7"
     ],
@@ -579,10 +567,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Maximum churn. Every death is a no-op release from the fixed-size region. The arena variant runs the same serial spawn/update/death loop, with no-op per-particle releases and a bulk reset after the final cleanup. It does not reset between frames while particles are still alive.",
@@ -598,19 +582,19 @@ const TESTS=[
       "malloc -- refill fragmented heap"
     ],
     "data": [
-      13.26,
-      596.195,
-      1187.98
+      9.056,
+      498.877,
+      962.332
     ],
     "mins": [
-      12.447,
-      114.119,
-      646.917
+      8.941,
+      68.255,
+      663.849
     ],
     "maxs": [
-      26.519,
-      2590.065,
-      2309.123
+      20.759,
+      592.912,
+      1116.647
     ],
     "colors": [
       "#7c6ff7",
@@ -638,10 +622,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Phases A and B untimed, phase C timed. Phase B's releases are no-ops, so the refill simply bumps the frontier past the dead space.",
@@ -652,33 +632,33 @@ const TESTS=[
     "t": "T10 \u2014 tree teardown",
     "title": "Cascade destruction \u2014 Zane vs malloc, pool and arena",
     "labels": [
-      "Zane cascade destroy",
       "Arena cascade visit + bulk reset",
       "Pool cascade destroy",
+      "Zane cascade destroy",
       "malloc cascade destroy"
     ],
     "data": [
-      27.664,
-      29.692,
-      30.86,
-      65.538
+      23.948,
+      28.209,
+      28.668,
+      60.858
     ],
     "mins": [
-      26.7,
-      23.653,
-      27.922,
-      61.264
+      22.975,
+      26.836,
+      27.987,
+      58.885
     ],
     "maxs": [
-      28.492,
-      41.787,
-      32.334,
-      224.037
+      57.669,
+      31.521,
+      37.861,
+      72.158
     ],
     "colors": [
-      "#7c6ff7",
       "#3aab76",
       "#c49a2a",
+      "#7c6ff7",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -721,19 +701,19 @@ const TESTS=[
       "malloc / free"
     ],
     "data": [
-      1686.842,
-      1708.265,
-      1835.329
+      1722.42,
+      1732.052,
+      1872.201
     ],
     "mins": [
-      1659.885,
-      1647.822,
-      1794.105
+      1679.658,
+      1693.777,
+      1833.015
     ],
     "maxs": [
-      2212.152,
-      1832.394,
-      2610.957
+      2522.552,
+      1835.401,
+      1953.643
     ],
     "colors": [
       "#c49a2a",
@@ -765,10 +745,6 @@ const TESTS=[
       {
         "label": "Runs",
         "val": "20 \u2014 median reported"
-      },
-      {
-        "label": "Measurement status",
-        "val": "These measurements predate the guard region after the fixed-size range: every fixed-region bump still compared the frontier against the range's end. Rerun the full suite before comparing fixed-region rows with the arena."
       }
     ],
     "setup": "Entities are fixed-region objects whose release is a no-op; list backing stores are dynamic blocks that start at 128B, double, and return to their exact-size stacks. Both regions run at once here.",
@@ -783,16 +759,16 @@ const TESTS=[
       "Owned Array shards, concurrent (4 workers)"
     ],
     "data": [
-      61.679,
-      282.132
+      82.344,
+      256.281
     ],
     "mins": [
-      56.458,
-      169.229
+      44.616,
+      161.809
     ],
     "maxs": [
-      108.626,
-      375.531
+      235.032,
+      503.513
     ],
     "colors": [
       "#3aab76",
@@ -835,36 +811,36 @@ const TESTS=[
     "labels": [
       "Frontier bump only (no reuse)",
       "Pool (per-size free-list)",
-      "Backing store (runtime size class)",
       "Boxed payload (static size class)",
+      "Backing store (runtime size class)",
       "malloc / free"
     ],
     "data": [
-      103.808,
-      184.369,
-      251.881,
-      307.812,
-      1755.001
+      97.489,
+      288.959,
+      482.354,
+      494.266,
+      1693.729
     ],
     "mins": [
-      103.418,
-      179.988,
-      238.655,
-      288.525,
-      1718.951
+      97.105,
+      171.959,
+      262.024,
+      222.107,
+      1630.665
     ],
     "maxs": [
-      118.197,
-      203.794,
-      512.592,
-      691.717,
-      2122.982
+      102.576,
+      350.708,
+      1418.528,
+      553.701,
+      1864.735
     ],
     "colors": [
       "#3aab76",
       "#c49a2a",
-      "#b8a4ff",
       "#7c6ff7",
+      "#b8a4ff",
       "#e05a3a"
     ],
     "eliminated": [],
@@ -916,22 +892,22 @@ const TESTS=[
       "malloc deep copy"
     ],
     "data": [
-      18.367,
-      24.513,
-      24.851,
-      115.844
+      15.178,
+      24.445,
+      25.697,
+      107.251
     ],
     "mins": [
-      18.194,
-      24.316,
-      24.169,
-      112.309
+      14.991,
+      22.514,
+      24.339,
+      106.176
     ],
     "maxs": [
-      20.527,
-      34.458,
-      32.889,
-      129.987
+      15.305,
+      30.533,
+      29.972,
+      122.168
     ],
     "colors": [
       "#3aab76",
