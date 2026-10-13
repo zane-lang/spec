@@ -434,6 +434,8 @@ grid ArrayRef.fill(100, ^Enemy(i Int) => Enemy(i));
 
 The second form declares its element type as an explicit `T Type` parameter (§5.3) after the literal. The element type is fixed by that argument, and each element is passed into a `T` slot as an argument is passed to a `T` parameter. With an `&` element type, each element is a settled place that mints a reference, or an existing `&` value that is copied ([`memory.md`](memory.md) §2.8). Above, `ally` and `rival` are settled owners and `targets` is an `ArrayRef<&Enemy, 2>`. Built from the literal alone, `[ally, rival]` reads its element type off the elements, and an `ArrayRef<Enemy, 2>` would move each settled owner, which is illegal ([`memory.md`](memory.md) §2.1).
 
+Each element of the literal comes to rest in the matching element of the result, in either literal form. An `ArrayRef` with `&` elements therefore carries a reference to each owner its literal named ([`lifetimes.md`](lifetimes.md) §1.10), and every store of it compares those owners' scopes with the destination's, as for a resting place a verb's signature records ([`lifetimes.md`](lifetimes.md) §1.11).
+
 Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be referenced. An element is overwritten in place and is never moved out, under either kind of root.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
