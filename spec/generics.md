@@ -424,12 +424,15 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 
 `@primitives$ArrayRef<T, n>` is a reference-type storage primitive: `n` contiguous elements of type `T`, laid out as `@primitives$Array<T, n>` is. `T` may be a value type, a reference type, or an `&` type, since a reference type may contain any of them ([`memory.md`](memory.md) §2.10). `core` declares `ArrayRef<T, n>` over it as a `#` reference type. Its size is statically known, so it lives inline in the fixed-size region like any other statically sized owner ([`memory.md`](memory.md) §3.5).
 
-An `ArrayRef` is built from an array literal, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
+An `ArrayRef` is built from an array literal, from an array literal followed by its element type, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
 
 ```zane
 squad ArrayRef([Enemy(Int(1)), Enemy(Int(2)), Enemy(Int(3))]);
+targets ArrayRef([ally, rival], &Enemy);
 grid ArrayRef.fill(100, ^Enemy(i Int) => Enemy(i));
 ```
+
+The second form declares its element type as an explicit `T Type` parameter (§5.3) after the literal. The element type is fixed by that argument, and each element is passed into a `T` slot as an argument is passed to a `T` parameter. With an `&` element type, each element is a settled place that mints a reference, or an existing `&` value that is copied ([`memory.md`](memory.md) §2.8). Above, `ally` and `rival` are settled owners and `targets` is an `ArrayRef<&Enemy, 2>`. Built from the literal alone, `[ally, rival]` reads its element type off the elements, and an `ArrayRef<Enemy, 2>` would move each settled owner, which is illegal ([`memory.md`](memory.md) §2.1).
 
 Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be referenced. An element is overwritten in place and is never moved out, under either kind of root.
 
@@ -468,6 +471,6 @@ The following are intentionally not specified in this version:
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
-| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
+| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal, a literal and its explicit element type (`ArrayRef([a, b], &Enemy)`), or `fill`; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; its element type is never an `&` type; `core` declares `List` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |
