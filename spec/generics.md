@@ -437,6 +437,7 @@ The second form declares its element type as an explicit `T Type` parameter (§5
 Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be referenced. An element is overwritten in place and is never moved out, under either kind of root.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
+> **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
 
 ---
 
