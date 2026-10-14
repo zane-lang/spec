@@ -136,6 +136,7 @@ A nested introduction carries a marker in one place: the element of a value para
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
