@@ -131,6 +131,8 @@ Box<T>(value ^T Type) => init{value;}   // takes the owner, to store it
 Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 ```
 
+A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction is bare, since no other type argument is passed.
+
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
@@ -250,7 +252,7 @@ T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing int
                                                // so the bare names are undefined
 ```
 
-So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). A type definition's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
+So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
 
 ---
 
@@ -438,6 +440,8 @@ The three literal constructors differ only in the passing mode their parameter w
 - **`ArrayRef`** takes `@concepts$Array<T Type, n @concepts$Int>`, so each element is borrowed. Storing through a borrow copies a value, so a value is copied in, and so is an existing `&` value, which makes `T` an `&` type. An owner of a reference type cannot be stored through a borrow, so it is illegal here.
 - **`ArrayRef.roaming`** takes `@concepts$Array<^T Type, n @concepts$Int>`, so each element is taken. An owner moves in, so it is a roaming owner or a temporary ([`lifetimes.md`](lifetimes.md) §1.2), and a value is copied. `T` is never an `&` type (§3.6).
 - **`ArrayRef.refs`** takes `@concepts$Array<&T Type, n @concepts$Int>` and builds an `ArrayRef<&T, n>`, so each element is a settled place that mints a reference, or an existing `&T` value that is copied ([`memory.md`](memory.md) §2.8). `T` is a reference type (§3.6).
+
+These are ordinary parameter types (§3.2), so a constructor or function declared in Zane may write any of the three and passes a literal's elements the same way.
 
 Above, `ally` and `rival` are settled owners and `targets` is an `ArrayRef<&Enemy, 2>`. Since `ArrayRef.refs` takes each element on its own, one literal may hold both kinds: with `scout` an `&Enemy`, `ArrayRef.refs([ally, scout])` mints a reference from `ally` and copies `scout`. Such a literal has no element type of its own ([`syntax.md`](syntax.md) §2.9), so it is passed only as `&T` elements.
 

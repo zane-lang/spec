@@ -170,7 +170,7 @@ TypeName
 ArrayRef<&Node, 4>
 ```
 
-`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
+`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments, except on the introduction that is the element of a parameter's own `@concepts$Array`, where it is the mode each literal element is passed in ([`generics.md`](generics.md) §3.2). `^` and `&` are the only markers a type may carry, and never together.
 
 ```zane
 spare ^Engine = Engine();
@@ -439,7 +439,7 @@ ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 
 A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type carries `^` or `&` (`^ReturnType`, `&AbortType`); a bare one is ill-formed, because a borrow is never returned or aborted.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
