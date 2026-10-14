@@ -319,6 +319,7 @@ This rule preserves uniform call syntax. The call site writes `inspect(e)`, `set
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-borrow-comes-back-without-a-sigil) — "The borrow comes back, without a sigil".
 > **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ### 2.9.1 Nothing else in a call writes what the call borrows
 

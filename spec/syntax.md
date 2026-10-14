@@ -306,6 +306,8 @@ empty Array(Int, 0);                   // legal: the type is named, not inferred
 empty [];                              // ILLEGAL: an empty literal fixes no element type
 ```
 
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
+
 ### 2.10 Map literals
 
 A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`lexical.md`](lexical.md)), each entry exactly two `,`-separated expressions — a key and a value. It carries `@concepts$Map<K, V>`, where `K` is the type of every key and `V` the type of every value. As with an array literal, every key **MUST** already have type `K` and every value type `V`; there is no search for a common type. A map literal **MUST** hold at least one entry, since an empty one fixes neither `K` nor `V`.

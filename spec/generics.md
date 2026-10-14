@@ -447,6 +447,7 @@ Its elements are fixed storage: they are all present from construction and never
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ---
 
