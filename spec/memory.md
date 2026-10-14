@@ -178,7 +178,7 @@ weapon &Weapon = players[100].weapon;  // ILLEGAL: players is a List; its elemen
 ```
 
 ```zane
-squad ArrayRef([Player(), Player()]);
+squad ArrayRef.roaming([Player(), Player()]);
 lead &Weapon = squad[1].weapon;        // legal: squad is settled, and its elements are too
 ```
 

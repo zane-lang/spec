@@ -296,7 +296,7 @@ A number or string literal becomes storage through a storage primitive's constru
 
 ### 2.9 Array literals
 
-An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
+An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. The one exception is a literal whose elements are of a reference type `T` and of `&T`, both: it carries no element type of its own, and is legal only where it is passed as `&T` elements, which take each element on its own ([`generics.md`](generics.md) §8.4). Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
 
 A literal with no elements fixes no `T`, so an array literal **MUST** hold at least one element. An empty collection is built by naming its type, which supplies the element type the literal cannot:
 
@@ -483,13 +483,6 @@ TypeName<T, n>(param Container<T Type, n @concepts$Int>, ...) { return init{ fie
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
-
-A type passed explicitly is written as a whole argument: a type name, or a reference type with its `&` marker. A roaming `^` type is never one (§2.3).
-
-```zane
-vec Vector(Int)
-targets ArrayRef([ally, rival], &Enemy)
-```
 
 A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
 
