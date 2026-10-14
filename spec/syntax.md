@@ -484,6 +484,13 @@ Constructors use the same package-scope declaration shapes as other functions, e
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
 
+A type passed explicitly is written as a whole argument: a type name, or a reference type with its `&` marker. A roaming `^` type is never one (§2.3).
+
+```zane
+vec Vector(Int)
+targets ArrayRef([ally, rival], &Enemy)
+```
+
 A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
 
 ```zane
