@@ -258,10 +258,10 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 
 ### 3.6 A computation is a function, an operation on a subject is a method
 
-A verb that computes its result from its inputs is declared as a function, even when its first parameter has the type the result is computed from. A verb that reads its subject's own state or acts on its subject is declared as a method. `core` follows this rule, and a package **SHOULD** follow it too.
+A verb that computes its result from its inputs is declared as a function, even when its first parameter has the type the result is computed from. A verb that reads its subject's own state or acts on its subject is declared as a method. `core` and `math` follow this rule, and a package **SHOULD** follow it too.
 
 ```zane
-Float sqrt(value Float) => Float(@math$sqrt(value._value))  // a computation: sqrt(x)
+Float sqrt(value Float) => Float(@math$sqrt(value))         // a computation: sqrt(x)
 Float scale(this Node) => this.scale                        // a read of the subject: node:scale()
 Unit setScale(this Node, scale Float) mut {                 // an act on the subject: node!setScale(s)
     this.scale = scale;
