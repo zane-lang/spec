@@ -180,4 +180,3 @@ Roaming owners arrived [as a state of the memory model](memory.md#settled-and-ro
 
 There is no `&` counterpart, because it would not make sense. A new `&` is minted only from a settled place ([`memory.md` §2.8](https://github.com/zane-lang/spec/blob/ccfbf10049231aa918050ac48eea79fd4b5ee85a/spec/memory.md#28-place-expressions-and-new--values)), and the value an instantiation builds is a temporary, so `car &Car(Int(1))` would describe nothing. Each instantiation form has two meanings, unmarked and roaming, and a `^` on a value type is refused here for the reason it is refused on the long form.
 
-The cost is small. A lambda variable returning a roaming owner, `make ^Car(power Int) { ... }`, opens with the same three tokens as `car ^Car(Int(1))`, and a reader tells them apart by the parameter list, which is how the unmarked `make Car(power Int) { ... }` and `car Car(Int(1))` were already told apart.
