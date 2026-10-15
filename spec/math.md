@@ -133,9 +133,9 @@ Compile-time evaluation ([`effects.md`](effects.md) §5.3) changes nothing a pro
 The project that holds `core` holds a second public library package, `math` ([`packages.md`](packages.md) §2.1). It imports `core` and declares a function over each `@math$` function `core`'s fundamental types can use: the integer ones over `Int`, which holds an `@primitives$I64`, and the float ones over `Float`, which holds an `@primitives$F64`. Each has the name and the parameters of the intrinsic it calls, and passes its operands to the intrinsic through `core`'s implicit conversions to the storage primitives ([`types.md`](types.md) §2.6).
 
 ```zane
-package math;
+package math
 
-import core$;
+import core$
 
 Float sqrt(value Float) => Float(@math$sqrt(value))
 Int shiftLeft(value Int, count Int) => Int(@math$shiftLeft(value, count))
@@ -150,8 +150,8 @@ A program that depends on `core`'s project reaches `math` as it reaches `core`, 
 The math functions are functions rather than methods, because each computes its result from its inputs ([`functions.md`](functions.md) §3.6). A call is an ordinary function call:
 
 ```zane
-import core$;
-import math$;
+import core$
+import math$
 
 distance Float = sqrt(dx * dx + dy * dy);
 angle Float = atan2(y, x);
