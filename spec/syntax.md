@@ -255,6 +255,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 @primitives$name
 @concepts$name
 @operators$name
+@math$name
 @controlflow$name
 @runtime$name
 @program$name
@@ -265,6 +266,7 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
+- `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
@@ -272,7 +274,7 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
-- each machine operation of `@operators$`, which has one signature per operand type it takes ([`operators.md`](operators.md) §2.6);
+- each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
 - the constructors of a scalar primitive: the anonymous one, with one signature from its literal's concept and one from each scalar it converts from exactly, and each named one, with one signature per scalar it converts from ([`types.md`](types.md) §2.9).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
