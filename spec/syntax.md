@@ -55,6 +55,7 @@ name = expr
 ```
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#the-order-assignment-forced) — "The order assignment forced".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-instantiation-forms-take-) — "The instantiation forms take `^`".
 
 ### 1.2 Package constants
 
