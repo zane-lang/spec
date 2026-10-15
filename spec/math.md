@@ -96,8 +96,8 @@ Each is IEEE 754's operation of that name: `sqrt` is *squareRoot*, `floor`, `cei
 
 - `sqrt` and `fma` are correctly rounded, to nearest with ties to even, like the arithmetic of [`operators.md`](operators.md) §2.6.
 - `sqrt` of a value below zero is a NaN, and `sqrt` of a negative zero is that zero.
-- The rounding functions keep the operand's sign, so `floor` of `-0.5` is a negative zero, and give back an infinity or a NaN unchanged.
-- `abs` and `copySign` act on the sign bit alone, of a NaN too.
+- The rounding functions keep the operand's sign, so `ceil` of `-0.5` is a negative zero, and give back an infinity or a NaN unchanged.
+- `abs` and `copySign` act on the sign bit alone. A NaN's sign is not observable, so `copySign` takes a NaN `sign` operand as positive.
 - `min` and `max` give a NaN when either operand is one, and order a negative zero below a positive zero.
 
 ```zane
