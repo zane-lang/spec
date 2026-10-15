@@ -290,7 +290,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.37 passing mode
 
-- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **reference** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one.
+- **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **reference** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one. An array literal's elements each travel in the mode written on its parameter's `@concepts$Array` element.
 - **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in each, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 

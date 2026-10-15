@@ -170,7 +170,7 @@ TypeName
 ArrayRef<&Node, 4>
 ```
 
-`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments. `^` and `&` are the only markers a type may carry, and never together.
+`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments, except on the introduction that is the element of a parameter's own `@concepts$Array`, where it is the mode each literal element is passed in ([`generics.md`](generics.md) §3.2). `^` and `&` are the only markers a type may carry, and never together.
 
 ```zane
 spare ^Engine = Engine();
@@ -296,7 +296,7 @@ A number or string literal becomes storage through a storage primitive's constru
 
 ### 2.9 Array literals
 
-An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
+An **array literal** — a `[ ]` list of values, not an `enum` body or a `match` case group — carries `@concepts$Array<T, n>`, where `T` is the type of its elements and `n` is how many there are. Every element **MUST** already have type `T`; there is no search for a common type across elements that differ. The one exception is a literal whose elements are of a reference type `T` and of `&T`, both: it carries no element type of its own, and is legal only where it is passed as `&T` elements, which take each element on its own ([`generics.md`](generics.md) §8.4). Carrying both parameters is what lets a constructor read an element type and a length off a literal — `Array([Int(1), Int(2), Int(3)])` fixes `T = Int` and `n = 3` (see [`generics.md`](generics.md) §8.1).
 
 A literal with no elements fixes no `T`, so an array literal **MUST** hold at least one element. An empty collection is built by naming its type, which supplies the element type the literal cannot:
 
@@ -305,6 +305,8 @@ nums Array([Int(1), Int(2), Int(3)]);  // legal: T and n read from the literal
 empty Array(Int, 0);                   // legal: the type is named, not inferred
 empty [];                              // ILLEGAL: an empty literal fixes no element type
 ```
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ### 2.10 Map literals
 
@@ -437,7 +439,7 @@ ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 
 A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type carries `^` or `&` (`^ReturnType`, `&AbortType`); a bare one is ill-formed, because a borrow is never returned or aborted.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
@@ -483,13 +485,6 @@ TypeName<T, n>(param Container<T Type, n @concepts$Int>, ...) { return init{ fie
 Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
-
-A type passed explicitly is written as a whole argument: a type name, or a reference type with its `&` marker. A roaming `^` type is never one (§2.3).
-
-```zane
-vec Vector(Int)
-targets ArrayRef([ally, rival], &Enemy)
-```
 
 A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
 

@@ -262,14 +262,16 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 
 Two declarations in the same package conflict when they have the same ordered parameter types. Parameter names, `this`, `mut`, and return type do not distinguish overloads.
 
-Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `^T`, or `&T`. Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
+Two overloads **MUST NOT** differ only by the **passing mode** at the same parameter position — that is, only by whether that position is `T`, `^T`, or `&T`, or, for a parameter of `@concepts$Array` type, only by whether its element is ([`generics.md`](generics.md) §3.2). Such declarations are illegal and the compiler **MUST** reject them with a compile-time error, for example: "illegal overload set: differs only by the passing mode on a parameter; rename one declaration or choose a single signature."
 
 ```zane
 Unit consume(this Car, engine ^Engine)
 Unit consume(this Car, engine &Engine)  // ERROR: differs only by the passing mode
+Unit fleet(engines @concepts$Array<^T Type, n @concepts$Int>)
+Unit fleet(engines @concepts$Array<T Type, n @concepts$Int>)  // ERROR: the same, on each element
 ```
 
-The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart.
+The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart, and `fleet([e])` the same about each element.
 
 Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter at the same parameter position either. A function value that does not declare `mut` may be passed where a `mut` function type is expected (§7.2), so it would match both.
 
@@ -479,7 +481,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | `^T` method parameter | Takes: caller supplies a move-source — a roaming owner symbol, which is spent, or a temporary, which has no symbol to spend; callee owns it |
 | `this` | Always a borrow, mutable under `mut`; never moved, stored, or returned as `&T`, and nothing is written on it to select a mode |
 | Subscript | Package-scope place projection written `(this T)[...] => placeExpr`; no explicit return type |
-| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `^T` / `&T`), or by the `mut` of a function-type parameter, at one position are illegal |
+| Overload identity | Parameter types only; not names, return type, or `mut`; overloads differing only by the passing mode (`T` / `^T` / `&T`, on a parameter or its `@concepts$Array` element), or by the `mut` of a function-type parameter, at one position are illegal |
 | Overload resolution phases | Direct match, then generic match, then implicit match; ambiguity within any one phase is an error |
 | Callable reference | Illegal; methods, functions, and operators are call-only and have no value form |
 | Lambda | Self-typed function value: explicit parameter types, return type, abort type, and `mut`; no capture |

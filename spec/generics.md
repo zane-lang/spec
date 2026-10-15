@@ -131,9 +131,12 @@ Box<T>(value ^T Type) => init{value;}   // takes the owner, to store it
 Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 ```
 
+A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction is bare, since no other type argument is passed.
+
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
@@ -250,7 +253,7 @@ T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing int
                                                // so the bare names are undefined
 ```
 
-So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). A type definition's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
+So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
 
 ---
 
@@ -424,22 +427,32 @@ Other fixed-size containers (vectors, matrices) are defined in terms of `Array` 
 
 `@primitives$ArrayRef<T, n>` is a reference-type storage primitive: `n` contiguous elements of type `T`, laid out as `@primitives$Array<T, n>` is. `T` may be a value type, a reference type, or an `&` type, since a reference type may contain any of them ([`memory.md`](memory.md) §2.10). `core` declares `ArrayRef<T, n>` over it as a `#` reference type. Its size is statically known, so it lives inline in the fixed-size region like any other statically sized owner ([`memory.md`](memory.md) §3.5).
 
-An `ArrayRef` is built from an array literal, from an array literal followed by its element type, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
+An `ArrayRef` is built from an array literal by one of three constructors, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
 
 ```zane
-squad ArrayRef([Enemy(Int(1)), Enemy(Int(2)), Enemy(Int(3))]);
-targets ArrayRef([ally, rival], &Enemy);
+counts ArrayRef([Int(1), Int(2), Int(3)]);
+squad ArrayRef.roaming([Enemy(Int(1)), Enemy(Int(2)), Enemy(Int(3))]);
+targets ArrayRef.refs([ally, rival]);
 grid ArrayRef.fill(100, ^Enemy(i Int) => Enemy(i));
 ```
 
-The second form declares its element type as an explicit `T Type` parameter (§5.3) after the literal. The element type is fixed by that argument, and each element is stored into an element of that type as a value is stored into any place declared with it. An owner of a reference type moves in, so it is a roaming owner or a temporary ([`lifetimes.md`](lifetimes.md) §1.2); a value is copied; and with an `&` element type, each element is a settled place that mints a reference, or an existing `&` value that is copied ([`memory.md`](memory.md) §2.8). Above, `ally` and `rival` are settled owners and `targets` is an `ArrayRef<&Enemy, 2>`. Built from the literal alone, `[ally, rival]` reads its element type off the elements, and an `ArrayRef<Enemy, 2>` would move each settled owner, which is illegal ([`memory.md`](memory.md) §2.1).
+The three literal constructors differ only in the passing mode their parameter writes on the element type, and each element of the literal is passed in that mode, as an argument is passed to a parameter declared with it ([`memory.md`](memory.md) §2.9), then stored into the matching element of the result:
 
-Each element of the literal comes to rest in the matching element of the result, in either literal form. An `ArrayRef` with `&` elements therefore carries a reference to each owner its literal named ([`lifetimes.md`](lifetimes.md) §1.10), and every store of it compares those owners' scopes with the destination's, as for a resting place a verb's signature records ([`lifetimes.md`](lifetimes.md) §1.11).
+- **`ArrayRef`** takes `@concepts$Array<T Type, n @concepts$Int>`, so each element is borrowed. Storing through a borrow copies a value, so a value is copied in, and so is an existing `&` value, which makes `T` an `&` type. An owner of a reference type cannot be stored through a borrow, so it is illegal here.
+- **`ArrayRef.roaming`** takes `@concepts$Array<^T Type, n @concepts$Int>`, so each element is taken. An owner moves in, so it is a roaming owner or a temporary ([`lifetimes.md`](lifetimes.md) §1.2), and a value is copied. `T` is never an `&` type (§3.6).
+- **`ArrayRef.refs`** takes `@concepts$Array<&T Type, n @concepts$Int>` and builds an `ArrayRef<&T, n>`, so each element is a settled place that mints a reference, or an existing `&T` value that is copied ([`memory.md`](memory.md) §2.8). `T` is a reference type (§3.6).
+
+These are ordinary parameter types (§3.2), so a constructor or function declared in Zane may write any of the three and passes a literal's elements the same way.
+
+Above, `ally` and `rival` are settled owners and `targets` is an `ArrayRef<&Enemy, 2>`. Since `ArrayRef.refs` takes each element on its own, one literal may hold both kinds: with `scout` an `&Enemy`, `ArrayRef.refs([ally, scout])` mints a reference from `ally` and copies `scout`. Such a literal has no element type of its own ([`syntax.md`](syntax.md) §2.9), so it is passed only as `&T` elements.
+
+Each element of the literal comes to rest in the matching element of the result, under every literal constructor. An `ArrayRef` with `&` elements therefore carries a reference to each owner its literal named ([`lifetimes.md`](lifetimes.md) §1.10), and every store of it compares those owners' scopes with the destination's, as for a resting place a verb's signature records ([`lifetimes.md`](lifetimes.md) §1.11).
 
 Its elements are fixed storage: they are all present from construction and never come or go, so each element takes its root's state, settled or roaming, as a struct field does ([`memory.md`](memory.md) §2.8.1). An element of a settled `ArrayRef` of a reference type may be referenced. An element is overwritten in place and is never moved out, under either kind of root.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
 ---
 
@@ -474,6 +487,6 @@ The following are intentionally not specified in this version:
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
-| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal, a literal and its explicit element type (`ArrayRef([a, b], &Enemy)`), or `fill`; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
+| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal by `ArrayRef`, which borrows each element and so copies values and `&` values, by `ArrayRef.roaming`, which takes owners, or by `ArrayRef.refs`, which mints or copies references and may mix the two in one literal, or by `fill`; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; its element type is never an `&` type; `core` declares `List` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |
