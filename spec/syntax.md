@@ -16,7 +16,11 @@ New symbol declarations:
 name VarType(args, ...)
 name VarType{field = expr; ...}
 name VarType{fieldA; fieldB; ...}
+name ^VarType(args, ...)
+name ^VarType{field = expr; ...}
+name ^VarType{fieldA; fieldB; ...}
 name VarType = expr
+name ^VarType = expr
 name &VarType = expr
 name ReturnType(param ParamType, ...) { body }
 name ReturnType(param ParamType, ...) => expr
@@ -25,6 +29,16 @@ name ReturnType(param ParamType, ...) => expr
 `VarType{fieldA; fieldB;}` is shorthand for `VarType{fieldA = fieldA; fieldB = fieldB;}`.
 
 The `VarType` position of `name VarType(args, ...)` may be a qualified `Type.member` — a **named constructor** (see [`types.md`](types.md) §3.4) or a variant **case** (see [`adt.md`](adt.md) §3.2). `v Vector2.diagonal(Float(3.0))` and `e Expr.intLit("5")` both instantiate at the base type: the declared symbol holds `Vector2` / `Expr`, never `Vector2.diagonal` or a per-case type.
+
+The first six forms are the instantiation forms. Each is shorthand for `name VarType = expr`, with the type written once and the value built from it, and a `^` before `VarType` stays on the declared type. So `name ^VarType(args, ...)` declares the same roaming owner (§2.3) as `name ^VarType = VarType(args, ...)`:
+
+```zane
+car ^Car(Int(1));                        // car ^Car = Car(Int(1));
+v ^Vehicle.truck(Int(4));                // v ^Vehicle = Vehicle.truck(Int(4));
+e ^Expr.intLit("5");                     // e ^Expr = Expr.intLit("5");
+car ^Car{id = Int(1); seats = Int(4);}   // car ^Car = Car{id = Int(1); seats = Int(4);}
+car ^Car{id; seats;}                     // car ^Car = Car{id = id; seats = seats;}
+```
 
 The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
@@ -41,6 +55,7 @@ name = expr
 ```
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#the-order-assignment-forced) — "The order assignment forced".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#the-instantiation-forms-take-) — "The instantiation forms take `^`".
 
 ### 1.2 Package constants
 
