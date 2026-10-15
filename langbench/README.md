@@ -86,11 +86,14 @@ compiler release this project pins. Each names what it is missing.
 | --- | --- | --- |
 | n-body | floating-point physics over a few bodies (Benchmarks Game) | a square root |
 | spectral-norm | repeated matrix-vector products (Benchmarks Game) | a square root, for the final norm |
-| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) | removing an element from a `List` |
-| game loop | entities spawned, updated and killed every frame (memorybench Test 7) | removing an element from a `List` |
-| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) | removing an element from a `List` |
+| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) | a compiler release with `List` removal |
+| game loop | entities spawned, updated and killed every frame (memorybench Test 7) | a compiler release with `List` removal |
+| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) | a compiler release with `List` removal |
 | concurrent scan | four shards of one array summed on four threads (memorybench Test 12) | `spawn` in the compiler |
 
 A square root is a math function, and the language has none yet. `core`'s
-`List` can be appended to, indexed and overwritten, but not shrunk.
+`List` removes an element with `remove`, which keeps the order of the rest,
+and `swapRemove`, which moves the last element into its place; both arrive
+with the compiler release after v0.9, and the pinned v0.9 cannot shrink a
+`List`.
 `concurrency.md` specifies `spawn`, but the compiler does not implement it.
