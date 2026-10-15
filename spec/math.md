@@ -143,6 +143,8 @@ Int shiftLeft(value Int, count Int) => Int(@math$shiftLeft(value, count))
 
 A program that depends on `core`'s project reaches `math` as it reaches `core`, and imports it by name ([`dependencies.md`](dependencies.md) §8). Examples in this document are written as though `import math$` were present beside `import core$`.
 
+> **Story:** [`stories/math.md`](../stories/math.md#the-math-functions-move-out-of-core-into-a-math-package) — "The math functions move out of `core` into a `math` package".
+
 ### 3.2 Functions, not methods
 
 The math functions are functions rather than methods, because each computes its result from its inputs ([`functions.md`](functions.md) §3.6). A call is an ordinary function call:
