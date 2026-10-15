@@ -98,7 +98,7 @@ Each is IEEE 754's operation of that name: `sqrt` is *squareRoot*, `floor`, `cei
 - `sqrt` of a value below zero is a NaN, and `sqrt` of a negative zero is that zero.
 - The rounding functions keep the operand's sign, so `ceil` of `-0.5` is a negative zero, and give back an infinity or a NaN unchanged.
 - `abs` and `copySign` act on the sign bit alone. A NaN's sign is not observable, so `copySign` takes a NaN `sign` operand as positive.
-- `min` and `max` give a NaN when either operand is one, and order a negative zero below a positive zero.
+- `min` and `max` give a NaN when either operand is a NaN, and order a negative zero below a positive zero.
 
 ```zane
 length @primitives$F64 = @math$sqrt(@math$fma(dx, dx, @operators$multiply(dy, dy)));
@@ -117,7 +117,7 @@ length @primitives$F64 = @math$sqrt(@math$fma(dx, dx, @operators$multiply(dy, dy
 | `pow` | `F @math$pow(base F, exponent F)` | `base` raised to `exponent` |
 | `hypot` | `F @math$hypot(x F, y F)` | `sqrt(x * x + y * y)`, without overflow or underflow in between |
 
-All are approximate (§2.2). For a NaN, an infinity, a zero, or an operand outside the function's domain, the result is the one IEEE 754 §9.2 gives for the function of that name, with `cbrt` taken as its `rootn` of `value` and `3`. So `cbrt` of a negative zero is that zero, `log` of a negative value and `asin` of `2` are a NaN, `log` of zero is negative infinity, and `pow` of any base to a zero exponent is `1`.
+All are approximate (§2.2). For a NaN, an infinity, a zero, or an operand outside the function's domain, the result is the one IEEE 754 §9.2 gives for the function of that name, with `cbrt` taken as its `rootn` of `value` and `3`. So `cbrt` of a negative zero is that zero, `log` of a negative value and `asin` of `2` give a NaN, `log` of zero is negative infinity, and `pow` of any base to a zero exponent is `1`.
 
 Compile-time evaluation ([`effects.md`](effects.md) §5.3) changes nothing a program computes, so an approximate function evaluated at compile time gives the result it gives where the program runs.
 
