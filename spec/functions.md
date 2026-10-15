@@ -215,8 +215,10 @@ lead &Player = squad[1];     // legal: the projection ends at an ArrayRef elemen
 A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`. (Operators are symbol-named and constructors are named after their type, so neither is a function even though they also take no `this`.)
 
 ```zane
-Float getScale(node Node) {
-    return node.scale;
+Float distance(from Vec2, to Vec2) {
+    dx Float = to.x - from.x;
+    dy Float = to.y - from.y;
+    return sqrt(dx * dx + dy * dy);
 }
 ```
 
@@ -253,6 +255,23 @@ Unit noOperation() {
 The return checker does not synthesize a constructor call for `Unit` or any other singleton type.
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#every-return-carries-a-value) — "Every return carries a value".
+
+### 3.6 A computation is a function, an operation on a subject is a method
+
+A verb that computes its result from its inputs is declared as a function, even when its first parameter has the type the result is computed from. A verb that reads its subject's own state or acts on its subject is declared as a method. `core` follows this rule, and a package **SHOULD** follow it too.
+
+```zane
+Float sqrt(value Float) => Float(@math$sqrt(value._value))  // a computation: sqrt(x)
+Float scale(this Node) => this.scale                        // a read of the subject: node:scale()
+Unit setScale(this Node, scale Float) mut {                 // an act on the subject: node!setScale(s)
+    this.scale = scale;
+    return Unit();
+}
+```
+
+So `sqrt(x)`, `min(a, b)`, and `atan2(y, x)` are calls by name, with every input written in the same position, and a method's subject is always the object whose state it reads or writes.
+
+> **Story:** [`stories/functions.md`](../stories/functions.md#computations-are-functions-and-math-functions-with-them) — "Computations are functions, and math functions with them".
 
 ---
 
@@ -474,6 +493,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |
 | Read-only method | Called with `:`; may read but not write `this` |
 | Function | Identifier-named package-scope verb without `this`; called by name |
+| Function or method | A computation from inputs is a function; a read of, or act on, a subject's own state is a method |
 | Block-bodied return | Every returning path uses `return expr`; `Unit` receives no fallthrough or bare-return exception |
 | `&` method parameter | Caller supplies a settled place or an existing `&T` value; callee may read it, store it into `&` fields, or return it |
 | Parameters other than `this` | Read-only: never assigned and never the subject of a `!` call, and neither is any reference derived from one |

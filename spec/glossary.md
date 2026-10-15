@@ -453,3 +453,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A function of `@operators$`: the machine arithmetic, comparison, Boolean connective, or string join on storage primitives that a package writes its operators over. Each takes operands of one type, with one overload per type it takes.
 - **Why this name:** It is the operation the machine performs, which an operator presents in notation: it is called by name like any function, where an operator is written between its operands.
 - **Canonical home:** [`operators.md`](operators.md) §2.6
+
+### 4.18 math function / exact / approximate
+
+- **Meaning:** A function of `@math$`, on scalar primitives. An **exact** one's result is fully specified and the same on every platform; an **approximate** one's is close to the true value and may differ between platforms.
+- **Why this name:** The everyday words: the namespace holds what a math library holds, and exact and approximate say how far its result can be trusted to the last bit.
+- **Canonical home:** [`math.md`](math.md) §2.2
