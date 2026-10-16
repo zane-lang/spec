@@ -24,7 +24,7 @@ LANGUAGES = {
         "ext": "c",
         "version": ["clang", "--version"],
         "build": ["clang", "-O2", "-o", "{out}", "{src}", "-lm"],
-        "flags": "clang -O2 -lm",
+        "flags": "clang -O2",
     },
     "cpp": {
         "name": "C++",
