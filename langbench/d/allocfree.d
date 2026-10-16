@@ -32,6 +32,7 @@ void main(string[] args) {
 			size_t index = rng.below(items.length);
 			Item* item = items[index];
 			items[index] = items[$ - 1];
+			items[$ - 1] = null;
 			items = items[0 .. $ - 1];
 			hash = (hash * 31 + item.id) & 2147483647;
 		}

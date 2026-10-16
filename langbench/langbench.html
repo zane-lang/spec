@@ -70,7 +70,7 @@
 <body>
 <header>
   <h1>Zane Language Benchmark</h1>
-  <p><span>the same programs in Zane, C, C++, Rust, Go, D, Zig and OCaml</span> &mdash; each built by its own release compiler, timed as a whole process</p>
+  <p><span id="langs">the same programs in several languages</span> &mdash; each built by its own release compiler, timed as a whole process</p>
 </header>
 <div id="banner"></div>
 <div class="tabs" id="tabs"></div>
@@ -1088,6 +1088,9 @@ function render() {
   renderAbout();
 }
 
+const langNames = Object.values(DATA.languages).map(l => l.name);
+document.getElementById("langs").textContent = "the same programs in " +
+  langNames.slice(0, -1).join(", ") + " and " + langNames[langNames.length - 1];
 document.querySelectorAll("#metric button").forEach(b => b.onclick = () => { metric = b.dataset.m; render(); });
 render();
 </script>

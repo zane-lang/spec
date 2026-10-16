@@ -52,6 +52,7 @@ void main(string[] args) {
 			p.ttl = p.ttl - 1;
 			if (p.ttl < 1) {
 				particles[k] = particles[$ - 1];
+				particles[$ - 1] = null;
 				particles = particles[0 .. $ - 1];
 			} else {
 				p.x = p.x + p.vx;
