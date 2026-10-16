@@ -67,7 +67,10 @@ without it, so OCaml builds at its one level.
 the languages that can ask. It is the only test whose whole result is fixed
 when the program is built. The fixed setup in `trialdiv` and `nbody` could be
 marked the same way, but code in these languages rarely marks setup for
-compile-time evaluation, so those tests have no such variant. The Zig programs allocate through
+compile-time evaluation, so those tests have no such variant. `gameloop`
+removes one entity at a time in every language, even where a language could
+remove a range in one call, because it measures ordered single-entry removal.
+The Zig programs allocate through
 `std.heap.smp_allocator`, because in ReleaseSafe the allocator `main` is
 handed is the leak-checking debug allocator.
 

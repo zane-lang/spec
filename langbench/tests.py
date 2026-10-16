@@ -304,6 +304,9 @@ TESTS = [
                    "removing those whose hit points run out. Entities are "
                    "separate objects in a list that keeps them in spawn "
                    "order, so every removal shifts the ones after it. "
+                   "Every language removes one entity at a time, even where "
+                   "it could remove a range in one call, so the test "
+                   "measures ordered single-entry removal. "
                    "memorybench's Test 7.",
         "args": ["50000"],
         "expected": "50000 1863 4019734260\n",

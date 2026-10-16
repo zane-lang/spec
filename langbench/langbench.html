@@ -1305,7 +1305,7 @@ const DATA = {
   {
    "id": "gameloop",
    "title": "Game loop",
-   "summary": "Runs F frames of a game loop: each frame spawns 30 entities, kills the 20 oldest, and updates the rest, removing those whose hit points run out. Entities are separate objects in a list that keeps them in spawn order, so every removal shifts the ones after it. memorybench's Test 7.",
+   "summary": "Runs F frames of a game loop: each frame spawns 30 entities, kills the 20 oldest, and updates the rest, removing those whose hit points run out. Entities are separate objects in a list that keeps them in spawn order, so every removal shifts the ones after it. Every language removes one entity at a time, even where it could remove a range in one call, so the test measures ordered single-entry removal. memorybench's Test 7.",
    "args": [
     "50000"
    ],
