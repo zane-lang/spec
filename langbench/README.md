@@ -71,31 +71,26 @@ parent transfers both children into it, matching the owning pointers in C++
 and Rust; checking a tree borrows it. `treecopy` intentionally uses value
 types, because copying the complete tree is the work that test measures.
 
-The pinned 2026-10-10 run uses compiler v0.9
+The project builds with compiler v0.12
+([`a490ae4`](https://github.com/zane-lang/compiler/commit/a490ae476163df4716eb0e94cd447b73b08fca8b))
+and `core` v0.1. The pinned 2026-10-10 run predates both: it used compiler
+v0.9
 ([`a6b95b3`](https://github.com/zane-lang/compiler/commit/a6b95b34bdbabbf1709bf1998fe9c6de434c447c))
-with cross-package optimization and the reference-based binary-tree program.
-It was measured on an Intel Core i7-1355U laptop under WSL2 with zane CLI
-v0.6; `explanations.txt` describes that run.
+with cross-package optimization and the reference-based binary-tree program,
+`core` v0.0, and Go 1.27.1. It was measured on an Intel Core i7-1355U laptop
+under WSL2 with zane CLI v0.6; `explanations.txt` describes that run.
 
-## Tests that need more of the language
+## Planned tests
 
-These tests are planned and cannot be written in idiomatic Zane with the
-compiler release this project pins. Each names what it is missing.
+These tests are planned. Compiler v0.12 and `core` v0.1 supply what each
+needs: `core`'s `math` package has `sqrt`, `List` has `remove` and
+`swapRemove`, and the compiler runs `spawn`.
 
-| test | what it measures | what Zane needs first |
-| --- | --- | --- |
-| n-body | floating-point physics over a few bodies (Benchmarks Game) | a square root |
-| spectral-norm | repeated matrix-vector products (Benchmarks Game) | a square root, for the final norm |
-| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) | a compiler release and a `core` version with `List` removal |
-| game loop | entities spawned, updated and killed every frame (memorybench Test 7) | a compiler release and a `core` version with `List` removal |
-| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) | a compiler release and a `core` version with `List` removal |
-| concurrent scan | four shards of one array summed on four threads (memorybench Test 12) | `spawn` in the compiler |
-
-A square root is a math function, and the language has none yet. `core`'s
-`List` removes an element with `remove`, which keeps the order of the rest,
-and `swapRemove`, which moves the last element into its place. They wrap
-compiler intrinsics that arrive with the compiler release after v0.9, so
-the tests need that release and a `core` version built on it; this project
-pins the two separately (`dependencies.md` §14), and neither pin here has
-them.
-`concurrency.md` specifies `spawn`, but the compiler does not implement it.
+| test | what it measures |
+| --- | --- |
+| n-body | floating-point physics over a few bodies (Benchmarks Game) |
+| spectral-norm | repeated matrix-vector products (Benchmarks Game) |
+| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) |
+| game loop | entities spawned, updated and killed every frame (memorybench Test 7) |
+| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) |
+| concurrent scan | four shards of one array summed on four threads (memorybench Test 12) |
