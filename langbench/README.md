@@ -64,7 +64,10 @@ has by default, and is written the way that language is usually written.
 OCaml's level-2 optimization needs flambda, and nixpkgs builds `ocamlopt`
 without it, so OCaml builds at its one level.
 `primes` also has a variant that asks the compiler to evaluate the sieve, in
-the languages that can ask. The Zig programs allocate through
+the languages that can ask. It is the only test whose whole result is fixed
+when the program is built. The fixed setup in `trialdiv` and `nbody` could be
+marked the same way, but code in these languages rarely marks setup for
+compile-time evaluation, so those tests have no such variant. The Zig programs allocate through
 `std.heap.smp_allocator`, because in ReleaseSafe the allocator `main` is
 handed is the leak-checking debug allocator.
 
