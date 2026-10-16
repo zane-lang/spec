@@ -98,4 +98,10 @@ Every heading in every Markdown file here — `spec/`, `stories/`, `contributing
 devbox run lint
 ```
 
+On Intel macOS, [Devbox currently fails because its default Nixpkgs no longer supports that platform](https://github.com/jetify-com/devbox/issues/2937). With Node.js installed, the same linter and committed rules can be run directly:
+
+```sh
+npx --yes markdownlint-cli2 "**/*.md"
+```
+
 A [workflow](.github/workflows/markdownlint.yml) runs that same command on every pull request. It names no rules itself — it finds the config the way the local run does.

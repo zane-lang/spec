@@ -248,6 +248,8 @@ change:
 devbox run lint
 ```
 
+For Intel macOS, use the Node.js fallback documented under README.md § Markdown formatting while Devbox does not support that platform.
+
 Committed `.markdownlint.jsonc` is the canonical statement of which rules are
 on; `README.md` § "Markdown formatting" says why exactly one is. A fix here is
 whitespace only, so it does not touch what a merged chapter claims, which is
