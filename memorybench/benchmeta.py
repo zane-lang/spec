@@ -84,12 +84,12 @@ TEST_META = {
     "Test 5": {
         "short": "T5 — list growth",
         "title": "Growing a List backing store by appending 100k items",
-        "setup": "The growth rules of memory.md §3.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
+        "setup": "The growth rules of memory.md §3.6: start at a 128-byte block, ask for double on exhaustion. Up to 1 MiB, check that size's exact-size stack first, then grow in place at the dynamic frontier within the 1 MiB chunk, and otherwise relocate. Past 1 MiB, relocate once into an oversized span with a reservation 64 times its size, and grow in place within it.",
         "meta": [
             ("Element type", "Entity { id: i64, x: f64, y: f64, hp: i32 }"),
             ("First block", "128B — capacity floor(128 / 32) = 4 elements"),
             ("Growth", "13 in-place frontier doublings, 128B → 1 MiB"),
-            ("Oversized spans", "2 relocations: 1→2 MiB and 2→4 MiB"),
+            ("Oversized spans", "1 relocation, 1→2 MiB into a reserved span; 2→4 MiB in place"),
             ("Alignment", "cache-line (64B) — a growable backing store"),
             ("Old blocks", "returned to the (size, 64) exact-size stacks"),
             ("Runs", "20 — median reported"),

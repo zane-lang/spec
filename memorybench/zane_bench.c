@@ -225,6 +225,7 @@ _Static_assert(ZM_MAXSZ <= ZM_GUARD, "a fixed-size slot must not reach past the 
 
 #define ZD_NIL        NULL
 #define ZD_STACKS     1024
+#define ZD_HEADROOM   64
 
 typedef void *ZRef;
 
@@ -291,6 +292,15 @@ static void *zd_span(size_t bytes) {
     size_t n = (bytes + ZM_CHUNK - 1) / ZM_CHUNK;
     uint8_t *first = zm_take_chunk();
     for (size_t i = 1; i < n; i++) (void)zm_take_chunk();
+    return first;
+}
+
+static void *zd_growable_span(size_t bytes, size_t *reserved) {
+    size_t n = (bytes + ZM_CHUNK - 1) / ZM_CHUNK, room = n * ZD_HEADROOM;
+    if (zm.next_chunk + room > ZM_NCHUNKS) room = n;
+    uint8_t *first = zm_take_chunk();
+    for (size_t i = 1; i < room; i++) (void)zm_take_chunk();
+    *reserved = room * ZM_CHUNK;
     return first;
 }
 
@@ -669,7 +679,7 @@ static void test4(void) {
     free(inl);for(int i=0;i<N;i++)free(sp[i]);free(sp);free(sh);
 }
 
-typedef struct { Entity *base; size_t len, cap, block; } ZList;
+typedef struct { Entity *base; size_t len, cap, block, reserved; } ZList;
 typedef struct { Entity *base; size_t len, cap; } CVec;
 
 static size_t zlist_first_block(size_t stride) {
@@ -682,14 +692,18 @@ static void zlist_init(ZList *l) {
     l->base  = (Entity*)zd_alloc(l->block, ZM_LINE);
     l->len   = 0;
     l->cap   = l->block / sizeof(Entity);
+    l->reserved = 0;
 }
 static void zlist_push(ZList *l, Entity e) {
     if (l->len == l->cap) {
         size_t want = l->block * 2;
-        Entity *nb = (Entity*)zd_try_stack(want, ZM_LINE);
-        if (!nb && !zd_grow_in_place(l->base, l->block, want)) {
-            nb = (want > ZM_CHUNK) ? (Entity*)zd_span(want)
-                                   : (Entity*)zm_bump(&zm.dyn, want, ZM_LINE);
+        Entity *nb = NULL;
+        if (want > ZM_CHUNK) {
+            if (want > l->reserved) nb = (Entity*)zd_growable_span(want, &l->reserved);
+        } else {
+            nb = (Entity*)zd_try_stack(want, ZM_LINE);
+            if (!nb && !zd_grow_in_place(l->base, l->block, want))
+                nb = (Entity*)zm_bump(&zm.dyn, want, ZM_LINE);
         }
         if (nb) {
             memcpy(nb, l->base, l->len * sizeof(Entity));

@@ -568,7 +568,8 @@
             287155.0
           ]
         }
-      ]
+      ],
+      "provenance_note": "The pinned Zane row predates in-place growth of oversized list spans (spec/memory.md §3.6): it relocates the list at 2 MiB and 4 MiB, which the harness no longer does. Re-pin to replace it."
     },
     {
       "id": "Test 6",
