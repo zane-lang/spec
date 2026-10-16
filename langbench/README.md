@@ -81,10 +81,6 @@ types, because copying the complete tree is the work that test measures.
 
 The project builds with compiler v0.12
 ([`a490ae4`](https://github.com/zane-lang/compiler/commit/a490ae476163df4716eb0e94cd447b73b08fca8b))
-and `core` v0.1. The pinned 2026-10-10 run predates both, OCaml, and the
-`nbody`, `spectralnorm`, `allocfree`, `gameloop`, `particles` and `concscan`
-tests: it used compiler v0.9
-([`a6b95b3`](https://github.com/zane-lang/compiler/commit/a6b95b34bdbabbf1709bf1998fe9c6de434c447c))
-with cross-package optimization and the reference-based binary-tree program,
-`core` v0.0, and Go 1.27.1. It was measured on an Intel Core i7-1355U laptop
-under WSL2 with zane CLI v0.6; `explanations.txt` describes that run.
+and `core` v0.1. The pinned 2026-10-16 run used both, with every language and
+test above, and was measured on an Intel Core i7-1355U laptop under WSL2 with
+zane CLI v0.6; `explanations.txt` describes that run.
