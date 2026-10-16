@@ -372,7 +372,7 @@ const TESTS=[
       },
       {
         "label": "Oversized spans",
-        "val": "2 relocations: 1\u21922 MiB and 2\u21924 MiB"
+        "val": "1 relocation, 1\u21922 MiB into a reserved span; 2\u21924 MiB in place"
       },
       {
         "label": "Alignment",
@@ -387,8 +387,8 @@ const TESTS=[
         "val": "20 \u2014 median reported"
       }
     ],
-    "setup": "The growth rules of memory.md \u00a73.6: start at a 128-byte block, ask for double on exhaustion, check that size's exact-size stack first. In-place growth only at the dynamic frontier and only within the 1 MiB chunk; otherwise relocate.",
-    "note": "Zane's growing list takes ~211us, against ~248us for the realloc vector (~1.18x), ~264us for CChunked (~1.25x), and ~833us for UList (~4.0x). All four sample ranges overlap. Zane's first pass (~3.30ms) is ~15.7x its median and the realloc vector's (~1.31ms) ~5.3x. Frontier growth avoids copying while the block remains at the dynamic frontier inside its chunk; oversized spans require relocation. These model timings do not imply the same ordering for lists compiled by the Zane compiler.",
+    "setup": "The growth rules of memory.md \u00a73.6: start at a 128-byte block, ask for double on exhaustion. Up to 1 MiB, check that size's exact-size stack first, then grow in place at the dynamic frontier within the 1 MiB chunk, and otherwise relocate. Past 1 MiB, relocate once into an oversized span with a reservation 64 times its size, and grow in place within it.",
+    "note": "Zane's growing list takes ~211us, against ~248us for the realloc vector (~1.18x), ~264us for CChunked (~1.25x), and ~833us for UList (~4.0x). All four sample ranges overlap. Zane's first pass (~3.30ms) is ~15.7x its median and the realloc vector's (~1.31ms) ~5.3x. Frontier growth avoids copying while the block remains at the dynamic frontier inside its chunk. In this pin the list also relocated at 2 MiB and 4 MiB; the harness now moves it once into a reserved oversized span at 2 MiB and grows it in place at 4 MiB (memory.md \u00a73.6), so the Zane row predates that and needs a re-pin. These model timings do not imply the same ordering for lists compiled by the Zane compiler.",
     "noteStale": false
   },
   {
