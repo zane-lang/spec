@@ -1,0 +1,59 @@
+/// A particle system over F frames: each frame spawns a burst of 60
+/// particles with 10 to 30 frames to live, then moves the living and
+/// expires the rest. Order does not matter, so an expired particle's slot
+/// takes the last one. F is the program's first argument.
+package particles;
+
+import core$;
+import bench$;
+
+type Particle = #struct {
+	x Float;
+	y Float;
+	vx Float;
+	vy Float;
+	ttl Int;
+	color Int;
+}
+
+Particle(x Float, y Float, vx Float, vy Float, ttl Int, color Int) => init{ x; y; vx; vy; ttl; color; }
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	frames Int = size(runtime, Int(500));
+	rng Rng = Rng(Int(42));
+	particles List<Particle> = List(Particle);
+	total Int = Int(0);
+	frame Int = Int(1);
+	frame!to(frames) {
+		s Int = Int(1);
+		s!to(Int(60)) {
+			x Float = Float(rng!below(Int(800)));
+			y Float = Float(rng!below(Int(600)));
+			vx Float = Float(rng!below(Int(11)) - Int(5));
+			vy Float = Float(rng!below(Int(11)) - Int(5));
+			ttl Int = Int(10) + rng!below(Int(21));
+			color Int = rng!below(Int(8));
+			particles!push(Particle(x, y, vx, vy, ttl, color));
+		}
+		sum Float = Float(0.0);
+		k Int = Int(1);
+		u Int = Int(1);
+		u!to(particles:size()) {
+			particles[k].ttl = particles[k].ttl - Int(1);
+			expired Bool = if(particles[k].ttl < 1) {
+				particles!swapRemove(k);
+			}
+			expired:else() {
+				particles[k].x = particles[k].x + particles[k].vx;
+				particles[k].y = particles[k].y + particles[k].vy;
+				sum = sum + particles[k].x;
+				k = k + 1;
+			}
+		}
+		total = total + Int.truncate(sum);
+	}
+	console!print(String(frames) + " " + String(particles:size()) + " " + String(total));
+	return Unit();
+}

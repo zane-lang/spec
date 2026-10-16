@@ -10,7 +10,8 @@ the measurements.
 Layout:
     zane.coda, zane-lock.coda   the Zane project: the pinned compiler and core
     bin/<test>/, lib/bench/     the Zane programs and what they share
-    c/ cpp/ rust/ go/ d/ zig/   the other languages, one file per program
+    c/ cpp/ rust/ go/ d/ zig/ ocaml/
+                                the other languages, one file per program
     tests.py                    per-test metadata and per-language build rules
     template.html               the page skeleton
     explanations.txt            result interpretation, one block per test
@@ -121,6 +122,8 @@ class Toolchain:
     def build(self, src, out):
         """Build *src* into *out*, returning the build time in seconds."""
         tmp = tempfile.mkdtemp(dir=self.cache)
+        if self.rule.get("copy_src"):
+            src = shutil.copy(src, tmp)
         slots = {"src": src, "out": out, "tmp": tmp, "cache": self.cache}
         cmd = [fill(part, slots) for part in self.rule["build"]]
         try:
@@ -285,6 +288,7 @@ def provenance():
                  "core_commit": commits.get("core")},
         "toolchains": {lang: first_line(tests.LANGUAGES[lang]["version"])
                        for lang in tests.LANGUAGE_ORDER},
+        "flags": {lang: tests.LANGUAGES[lang]["flags"] for lang in tests.LANGUAGE_ORDER},
     }
 
 
@@ -441,10 +445,24 @@ def page_data(doc, explanations, notes_pinned):
             "zane": doc.get("zane"), "toolchains": doc.get("toolchains"),
             "config": doc.get("config"),
         },
-        "languages": {lang: {"name": spec["name"], "flags": spec["flags"]}
-                      for lang, spec in tests.LANGUAGES.items()},
+        "languages": run_languages(doc),
         "tests": out_tests,
     }
+
+
+def run_languages(doc):
+    """The languages a run was measured in, with the flags it recorded.
+
+    A results file pinned before a language joined the bench lists no
+    toolchain for it, and one pinned before runs recorded their flags falls
+    back to tests.py's, so the page describes the run it shows.
+    """
+    langs = tests.LANGUAGE_ORDER if doc is None else [
+        lang for lang in tests.LANGUAGE_ORDER if lang in doc.get("toolchains", {})]
+    recorded = (doc or {}).get("flags", {})
+    return {lang: {"name": tests.LANGUAGES[lang]["name"],
+                   "flags": recorded.get(lang, tests.LANGUAGES[lang]["flags"])}
+            for lang in langs}
 
 
 def render_html(data):
