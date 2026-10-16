@@ -26,6 +26,14 @@ jobs:
         with:
           enable-cache: true
 
+      # Temporary capture to commit the resolved, reproducible toolchain.
+      - name: Capture resolved Devbox lock for review
+        run: |
+          echo 'DEVBOX_LOCK_B64_BEGIN'
+          base64 -w0 devbox.lock
+          echo
+          echo 'DEVBOX_LOCK_B64_END'
+
       # Quote the glob so markdownlint-cli2 searches recursively itself.
       - name: Lint all Markdown
         run: devbox run -- markdownlint-cli2 "**/*.md"
