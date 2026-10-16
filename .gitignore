@@ -5,3 +5,5 @@ langbench/build/
 .mavis/
 memorybench/zane_bench
 langbench/.devbox/
+
+/.devbox/

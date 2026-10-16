@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.4/.schema/devbox.schema.json",
+  "packages": {
+    "markdownlint-cli2": "latest"
+  },
+  "shell": {
+    "scripts": {
+      "lint": "markdownlint-cli2 \"**/*.md\""
+    }
+  }
+}

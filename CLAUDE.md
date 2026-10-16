@@ -245,7 +245,7 @@ as a design call — don't paper over it with a footnote.
 change:
 
 ```sh
-npx markdownlint-cli2 "**/*.md"
+devbox run lint
 ```
 
 Committed `.markdownlint.jsonc` is the canonical statement of which rules are
