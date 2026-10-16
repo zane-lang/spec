@@ -93,13 +93,13 @@ const DATA = {
  "run": {
   "date": "2026-10-16",
   "machine": {
-   "cpu": "13th Gen Intel(R) Core(TM) i7-1355U",
-   "os": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39"
+   "cpu": "Intel(R) Core(TM) Ultra 9 285K",
+   "os": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39"
   },
   "zane": {
-   "version": "v0.12",
-   "compiler_commit": "a490ae476163df4716eb0e94cd447b73b08fca8b",
-   "core_commit": "0b37a243ca36818ff607e57e98b9c10365a022f2"
+   "version": "v0.13",
+   "compiler_commit": "090bc709ef1226501422b6b20aa7549bff40b20e",
+   "core_commit": "a8a279c64746ee5a9d37076bd9898c400d05f9fe"
   },
   "toolchains": {
    "zane": "zane v0.6",
@@ -169,114 +169,114 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.000566,
-     "min": 0.000516,
-     "max": 0.000591,
-     "build": 0.7901
+     "median": 0.000507,
+     "min": 0.000417,
+     "max": 0.00055,
+     "build": 0.546
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.00063,
-     "min": 0.000588,
-     "max": 0.000751,
-     "build": 0.4133
+     "median": 0.000428,
+     "min": 0.00039,
+     "max": 0.000463,
+     "build": 0.1825
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.00101,
-     "min": 0.000969,
-     "max": 0.001274,
-     "build": 0.4134
+     "median": 0.000782,
+     "min": 0.000752,
+     "max": 0.000918,
+     "build": 0.3177
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "comptime",
-     "median": 0.00097,
-     "min": 0.000897,
-     "max": 0.001112,
-     "build": 0.66
+     "median": 0.000773,
+     "min": 0.000695,
+     "max": 0.000817,
+     "build": 0.5068
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.000649,
-     "min": 0.000624,
-     "max": 0.000748,
-     "build": 0.5854
+     "median": 0.000557,
+     "min": 0.000465,
+     "max": 0.000613,
+     "build": 0.2201
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "comptime",
-     "median": 0.000575,
-     "min": 0.000562,
-     "max": 0.000628,
-     "build": 0.2995
+     "median": 0.000549,
+     "min": 0.000503,
+     "max": 0.00101,
+     "build": 0.2532
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.002039,
-     "min": 0.001227,
-     "max": 0.003788,
-     "build": 0.2898
+     "median": 0.001172,
+     "min": 0.001081,
+     "max": 0.001287,
+     "build": 0.1175
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.000936,
-     "min": 0.000891,
-     "max": 0.001093,
-     "build": 0.5687
+     "median": 0.001188,
+     "min": 0.000732,
+     "max": 0.001218,
+     "build": 0.3603
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "comptime",
-     "median": 0.000957,
-     "min": 0.000876,
-     "max": 0.000975,
-     "build": 0.6638
+     "median": 0.000842,
+     "min": 0.00063,
+     "max": 0.00121,
+     "build": 0.3682
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.000807,
-     "min": 0.000748,
-     "max": 0.000841,
-     "build": 12.7418
+     "median": 0.000666,
+     "min": 0.000631,
+     "max": 0.001005,
+     "build": 7.571
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "comptime",
-     "median": 0.000742,
-     "min": 0.000723,
-     "max": 0.000756,
-     "build": 14.2684
+     "median": 0.00059,
+     "min": 0.000534,
+     "max": 0.000874,
+     "build": 9.6219
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.00138,
-     "min": 0.001186,
-     "max": 0.001881,
-     "build": 0.3109
+     "median": 0.000897,
+     "min": 0.000802,
+     "max": 0.00125,
+     "build": 0.2249
     }
    ],
    "note": [
     "This fixed-bound sieve reads no input, so it is eligible for compile-time evaluation. The plain CGT contains three loops and the optimized CGT contains none. That shows loop elimination at the CGT stage, including the imported dependency bodies present in the optimized tree. It does not by itself establish that every operation was evaluated while compiling; the page therefore keeps the folding status as \"not inferred\".",
-    "The row medians range from 0.566 to 2.04 ms, with Zane at 0.566 ms. At this size, whole-process startup and timing variation prevent a useful ranking of sieve performance; Go's samples alone run from 1.23 to 3.79 ms. The single build measurements are 0.790 s for Zane, 0.413 s and 0.660 s for plain and comptime C++, and 12.74 s and 14.27 s for plain and comptime Zig. Rust's comptime variant has a lower measured build time than its plain one; one sample per row is not enough to establish a build-time advantage."
+    "The row medians range from 0.428 to 1.19 ms, with Zane at 0.507 ms. At this size, whole-process startup and timing variation prevent a useful ranking of sieve performance; plain D's samples alone run from 0.732 to 1.22 ms. The single build measurements are 0.546 s for Zane, 0.318 s and 0.507 s for plain and comptime C++, and 7.57 s and 9.62 s for plain and comptime Zig."
    ]
   },
   {
@@ -298,78 +298,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.437536,
-     "min": 0.432966,
-     "max": 0.4432,
-     "build": 0.798
+     "median": 0.385323,
+     "min": 0.382501,
+     "max": 0.386842,
+     "build": 0.5708
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.403072,
-     "min": 0.398718,
-     "max": 0.407279,
-     "build": 0.2827
+     "median": 0.347964,
+     "min": 0.336506,
+     "max": 0.352151,
+     "build": 0.1558
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.406866,
-     "min": 0.401707,
-     "max": 0.419782,
-     "build": 0.6185
+     "median": 0.350618,
+     "min": 0.336615,
+     "max": 0.353044,
+     "build": 0.2907
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.405713,
-     "min": 0.400536,
-     "max": 0.40858,
-     "build": 0.6442
+     "median": 0.350681,
+     "min": 0.348306,
+     "max": 0.355738,
+     "build": 0.2537
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.634532,
-     "min": 0.628286,
-     "max": 0.635249,
-     "build": 0.444
+     "median": 0.568571,
+     "min": 0.566267,
+     "max": 0.573585,
+     "build": 0.1116
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.403995,
-     "min": 0.395474,
-     "max": 0.410388,
-     "build": 0.834
+     "median": 0.337123,
+     "min": 0.336159,
+     "max": 0.337869,
+     "build": 0.4343
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.411587,
-     "min": 0.407061,
-     "max": 0.415339,
-     "build": 11.6329
+     "median": 0.3413,
+     "min": 0.340047,
+     "max": 0.350174,
+     "build": 7.7285
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.688171,
-     "min": 0.672986,
-     "max": 0.695698,
-     "build": 0.4699
+     "median": 0.580315,
+     "min": 0.577267,
+     "max": 0.607999,
+     "build": 0.2263
     }
    ],
    "note": [
     "The count reads N, while its prime-table setup has a fixed bound. The whole-tree CGT loop counts do not identify how much of that setup was evaluated while compiling. The compiler can evaluate and inline calls across core's package boundary, so those calls are not necessarily opaque.",
-    "Zane takes 0.438 s. C is fastest at 0.403 s; D, Rust, C++ and Zig take 0.404 to 0.412 s, Go takes 0.635 s and OCaml 0.688 s. Zane takes 1.09 times as long as C and 1.08 times as long as C++. Its fastest sample, 0.433 s, is above the slowest sample of every row except Go and OCaml. These timings show the remaining gap, but do not identify which operations account for it."
+    "Zane takes 0.385 s. D is fastest at 0.337 s; Zig, C, C++ and Rust take 0.341 to 0.351 s, Go 0.569 s and OCaml 0.580 s. Zane takes 1.11 times as long as C and 1.10 times as long as C++. Its fastest sample, 0.383 s, is above the slowest sample of every row except Go and OCaml. These timings show the remaining gap, but do not identify which operations account for it."
    ]
   },
   {
@@ -391,78 +391,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.083364,
-     "min": 0.081307,
-     "max": 0.083639,
-     "build": 0.5764
+     "median": 0.047638,
+     "min": 0.045418,
+     "max": 0.049787,
+     "build": 0.4371
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.273133,
-     "min": 0.268254,
-     "max": 0.28983,
-     "build": 0.3685
+     "median": 0.169102,
+     "min": 0.167227,
+     "max": 0.171285,
+     "build": 0.164
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.356163,
-     "min": 0.339408,
-     "max": 0.358018,
-     "build": 0.5594
+     "median": 0.211103,
+     "min": 0.202088,
+     "max": 0.217352,
+     "build": 0.3792
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.334835,
-     "min": 0.332396,
-     "max": 0.337284,
-     "build": 0.2606
+     "median": 0.211193,
+     "min": 0.209525,
+     "max": 0.214832,
+     "build": 0.2286
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.258474,
-     "min": 0.253393,
-     "max": 0.260871,
-     "build": 0.3272
+     "median": 0.160764,
+     "min": 0.160324,
+     "max": 0.162508,
+     "build": 0.1105
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.403198,
-     "min": 0.38955,
-     "max": 0.521628,
-     "build": 0.5829
+     "median": 0.260311,
+     "min": 0.256634,
+     "max": 0.26395,
+     "build": 0.4342
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.324223,
-     "min": 0.319902,
-     "max": 0.326957,
-     "build": 11.4574
+     "median": 0.286376,
+     "min": 0.276077,
+     "max": 0.289753,
+     "build": 7.647
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.055359,
-     "min": 0.054379,
-     "max": 0.065083,
-     "build": 0.2826
+     "median": 0.037735,
+     "min": 0.036776,
+     "max": 0.038297,
+     "build": 0.2241
     }
    ],
    "note": [
     "This test measures a reference-based Zane program. Each reference node owns its children, parent construction takes both children rather than deep-copying completed subtrees, and checking a tree borrows it. This matches the ownership transfer of child pointers in C++ and Rust.",
-    "OCaml is fastest at 0.0554 s, and Zane follows at 0.0834 s. The rest are well behind: Go takes 0.259 s, C 0.273 s, Zig 0.324 s, Rust 0.335 s, C++ 0.356 s and D 0.403 s. Go, the next row after Zane, takes 3.10 times as long as Zane; C++ takes 4.27 times as long. Zane's slowest sample, 0.0836 s, is below the fastest of every row except OCaml.",
+    "OCaml is fastest at 0.0377 s, and Zane follows at 0.0476 s. The rest are well behind: Go takes 0.161 s, C 0.169 s, C++ and Rust 0.211 s, D 0.260 s and Zig 0.286 s. Go, the next row after Zane, takes 3.37 times as long as Zane; C++ takes 4.43 times as long. Zane's slowest sample, 0.0498 s, is below the fastest of every row except OCaml.",
     "OCaml allocates the short-lived trees in its minor heap and collects them generationally; Go and D leave trees to their garbage collectors, while C, C++, Rust and Zig free them explicitly. Zane uses scope-based storage and teardown. These are whole-program results for different allocation and reclamation strategies; they do not isolate the cost of allocating, traversing, relocating or dropping a node."
    ]
   },
@@ -485,77 +485,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.415475,
-     "min": 0.413246,
-     "max": 0.420327,
-     "build": 0.5345
+     "median": 0.285348,
+     "min": 0.283631,
+     "max": 0.289541,
+     "build": 0.4466
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.453242,
-     "min": 0.440493,
-     "max": 0.454617,
-     "build": 0.1778
+     "median": 0.29772,
+     "min": 0.297322,
+     "max": 0.312455,
+     "build": 0.1616
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.451717,
-     "min": 0.442726,
-     "max": 0.458038,
-     "build": 0.231
+     "median": 0.29839,
+     "min": 0.297087,
+     "max": 0.31247,
+     "build": 0.1774
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.458357,
-     "min": 0.450361,
-     "max": 0.45853,
-     "build": 0.2608
+     "median": 0.302842,
+     "min": 0.300968,
+     "max": 0.319763,
+     "build": 0.2208
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.452221,
-     "min": 0.433261,
-     "max": 0.453984,
-     "build": 0.2451
+     "median": 0.326335,
+     "min": 0.325011,
+     "max": 0.33004,
+     "build": 0.108
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.433354,
-     "min": 0.431675,
-     "max": 0.442827,
-     "build": 0.5249
+     "median": 0.314232,
+     "min": 0.299121,
+     "max": 0.316766,
+     "build": 0.4171
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.431651,
-     "min": 0.42573,
-     "max": 0.43884,
-     "build": 11.4202
+     "median": 0.323091,
+     "min": 0.320954,
+     "max": 0.324126,
+     "build": 7.6048
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.767037,
-     "min": 0.747542,
-     "max": 0.769951,
-     "build": 0.2704
+     "median": 0.635249,
+     "min": 0.617746,
+     "max": 0.643708,
+     "build": 0.2154
     }
    ],
    "note": [
-    "The arithmetic workload uses no dynamic collections. Zane is fastest at 0.416 s, followed by Zig at 0.432 s and D at 0.433 s; C++, Go, C and Rust take 0.452 to 0.458 s, and OCaml 0.767 s. Zig takes 1.04 times as long as Zane and C++ takes 1.09 times as long. Zane's slowest sample, 0.420 s, is below every other row's fastest.",
+    "The arithmetic workload uses no dynamic collections. Zane is fastest at 0.285 s, followed by C and C++ at 0.298 s; Rust, D, Zig and Go take 0.303 to 0.326 s, and OCaml 0.635 s. C takes 1.04 times as long as Zane and C++ takes 1.05 times as long. Zane's slowest sample, 0.290 s, is below every other row's fastest.",
     "Optimized builds expose core's arithmetic bodies to LLVM, so arithmetic does not remain an out-of-line call into a separately compiled object. The timing alone does not explain why Zane leads; the programs are not identical in how they express the inner loop."
    ]
   },
@@ -578,78 +578,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.197188,
-     "min": 0.190859,
-     "max": 0.202749,
-     "build": 0.5524
+     "median": 0.119735,
+     "min": 0.119161,
+     "max": 0.126754,
+     "build": 0.4537
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.158505,
-     "min": 0.155332,
-     "max": 0.161179,
-     "build": 0.1836
+     "median": 0.127909,
+     "min": 0.127474,
+     "max": 0.129911,
+     "build": 0.1608
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.184458,
-     "min": 0.179339,
-     "max": 0.189346,
-     "build": 0.4608
+     "median": 0.128565,
+     "min": 0.128296,
+     "max": 0.136296,
+     "build": 0.3555
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.180586,
-     "min": 0.17299,
-     "max": 0.184012,
-     "build": 0.2871
+     "median": 0.141323,
+     "min": 0.138455,
+     "max": 0.148719,
+     "build": 0.2529
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.170529,
-     "min": 0.167984,
-     "max": 0.173453,
-     "build": 0.2082
+     "median": 0.12617,
+     "min": 0.125579,
+     "max": 0.126668,
+     "build": 0.1091
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.177165,
-     "min": 0.170063,
-     "max": 0.178159,
-     "build": 0.6477
+     "median": 0.133376,
+     "min": 0.13268,
+     "max": 0.134287,
+     "build": 0.4712
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.238801,
-     "min": 0.231495,
-     "max": 0.244908,
-     "build": 11.3381
+     "median": 0.165773,
+     "min": 0.165472,
+     "max": 0.169214,
+     "build": 7.6472
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.204284,
-     "min": 0.194685,
-     "max": 0.205847,
-     "build": 0.2972
+     "median": 0.135131,
+     "min": 0.134916,
+     "max": 0.136796,
+     "build": 0.2324
     }
    ],
    "note": [
-    "C is fastest at 0.159 s; Go takes 0.171 s, D 0.177 s, Rust 0.181 s and C++ 0.185 s. Zane takes 0.197 s, 1.24 times as long as C and 1.07 times as long as C++. It is faster than Zig at 0.239 s, and its samples overlap OCaml's, whose median is 0.204 s.",
-    "The Zane program indexes and rewrites small lists in place. Its shape also differs: flips are counted by recursion and the next permutation is found in a bounded loop that returns early. Those source differences and the remaining list operations are candidates for the gap; this timing run does not isolate their costs."
+    "Zane is fastest at 0.120 s, followed by Go at 0.126 s, C at 0.128 s and C++ at 0.129 s. D takes 0.133 s, OCaml 0.135 s, Rust 0.141 s and Zig 0.166 s. Go takes 1.05 times as long as Zane and C++ 1.07 times as long. Zane's slowest sample, 0.127 s, overlaps Go's samples and is below the fastest of every other row.",
+    "The Zane program indexes and rewrites small lists in place. Its shape also differs: flips are counted by recursion and the next permutation is found in a bounded loop that returns early. Those source differences make this a comparison of whole programs; this timing run does not isolate the cost of the list operations."
    ]
   },
   {
@@ -671,78 +671,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.464746,
-     "min": 0.45383,
-     "max": 0.499938,
-     "build": 0.573
+     "median": 0.458882,
+     "min": 0.457586,
+     "max": 0.480636,
+     "build": 0.4296
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.531169,
-     "min": 0.521165,
-     "max": 0.558203,
-     "build": 0.1843
+     "median": 0.468525,
+     "min": 0.464456,
+     "max": 0.474978,
+     "build": 0.1618
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.517967,
-     "min": 0.498801,
-     "max": 0.524306,
-     "build": 0.3655
+     "median": 0.493742,
+     "min": 0.489872,
+     "max": 0.501651,
+     "build": 0.2808
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.52679,
-     "min": 0.520048,
-     "max": 0.543029,
-     "build": 0.2965
+     "median": 0.461051,
+     "min": 0.460268,
+     "max": 0.465949,
+     "build": 0.2551
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.544288,
-     "min": 0.531538,
-     "max": 0.56002,
-     "build": 0.2039
+     "median": 0.520839,
+     "min": 0.515295,
+     "max": 0.525436,
+     "build": 0.1107
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.541536,
-     "min": 0.528276,
-     "max": 0.572114,
-     "build": 0.5775
+     "median": 0.470189,
+     "min": 0.466113,
+     "max": 0.47655,
+     "build": 0.4204
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.567087,
-     "min": 0.555724,
-     "max": 0.577263,
-     "build": 11.3212
+     "median": 0.499546,
+     "min": 0.498793,
+     "max": 0.505588,
+     "build": 7.6037
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 1.108116,
-     "min": 1.102598,
-     "max": 1.204569,
-     "build": 0.3
+     "median": 1.23157,
+     "min": 1.220303,
+     "max": 1.273816,
+     "build": 0.2255
     }
    ],
    "note": [
-    "Each version except OCaml stores entities inline and scans 96 MB of entity data. OCaml's array holds pointers to records, and a record mixing ints and floats boxes each float, so it reads more memory through more indirection. Zane is fastest at 0.465 s, followed by C++ at 0.518 s, Rust at 0.527 s and C at 0.531 s. D takes 0.542 s, Go 0.544 s, Zig 0.567 s and OCaml 1.11 s. C++ takes 1.11 times as long as Zane and C 1.14 times as long. Zane's samples run from 0.454 to 0.500 s, so its slowest overlaps C++'s fastest.",
-    "Allocation, initialization and scanning all contribute to the whole-process measurement, which does not separate them."
+    "Each version except OCaml stores entities inline and scans 96 MB of entity data. OCaml's array holds pointers to records, and a record mixing ints and floats boxes each float, so it reads more memory through more indirection. Zane, Rust, C and D finish within 3% of each other, from 0.459 to 0.470 s, and Zane's samples overlap all three, so this run does not rank them. C++ takes 0.494 s, Zig 0.500 s, Go 0.521 s and OCaml 1.23 s; C++ takes 1.08 times as long as Zane.",
+    "Zane's scan compiles to the same loop as C's: four entities per iteration, each hp added into one running total. Allocation, initialization and scanning all contribute to the whole-process measurement, which does not separate them."
    ]
   },
   {
@@ -764,77 +764,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.397877,
-     "min": 0.374068,
-     "max": 0.415176,
-     "build": 0.5638
+     "median": 0.404612,
+     "min": 0.3963,
+     "max": 0.408538,
+     "build": 0.4162
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.37904,
-     "min": 0.373271,
-     "max": 0.383521,
-     "build": 0.1985
+     "median": 0.445555,
+     "min": 0.439191,
+     "max": 0.454301,
+     "build": 0.1543
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.8519,
-     "min": 0.829944,
-     "max": 0.887972,
-     "build": 0.5845
+     "median": 0.892661,
+     "min": 0.86856,
+     "max": 0.950063,
+     "build": 0.2794
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.427519,
-     "min": 0.41964,
-     "max": 0.430532,
-     "build": 0.2806
+     "median": 0.435323,
+     "min": 0.42352,
+     "max": 0.444816,
+     "build": 0.2354
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 1.808992,
-     "min": 1.757467,
-     "max": 1.860047,
-     "build": 0.2171
+     "median": 1.88802,
+     "min": 1.78454,
+     "max": 1.934829,
+     "build": 0.1166
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 1.379728,
-     "min": 1.365956,
-     "max": 1.390087,
-     "build": 0.8278
+     "median": 0.758152,
+     "min": 0.755076,
+     "max": 0.767124,
+     "build": 0.4295
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.596997,
-     "min": 0.590358,
-     "max": 0.611064,
-     "build": 11.5243
+     "median": 0.546874,
+     "min": 0.539922,
+     "max": 0.574792,
+     "build": 7.8139
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 3.769232,
-     "min": 3.751868,
-     "max": 3.879204,
-     "build": 0.8514
+     "median": 2.551166,
+     "min": 2.512553,
+     "max": 2.569333,
+     "build": 0.2285
     }
    ],
    "note": [
-    "C is fastest at 0.379 s and Zane takes 0.398 s, 1.05 times as long; their sample ranges overlap. Rust follows at 0.428 s and Zig at 0.597 s. C++ takes 0.852 s, D 1.38 s, Go 1.81 s and OCaml 3.77 s.",
+    "Zane is fastest at 0.405 s, followed by Rust at 0.435 s and C at 0.446 s; C takes 1.10 times as long as Zane, and Zane's slowest sample, 0.409 s, is below every other row's fastest. Zig takes 0.547 s, D 0.758 s, C++ 0.893 s, Go 1.89 s and OCaml 2.55 s.",
     "Each language grows its list by its own policy. Zane's backing store starts at a 128-byte block and doubles (memory.md \u00a73.6); C doubles from four elements through realloc. Each round reads only the final entity's hp and the list's size into a checksum; there is no full-list sum. The measurement includes appending, initialization, growth and teardown, and does not separate allocation costs from indexing or arithmetic."
    ]
   },
@@ -857,77 +857,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.218562,
-     "min": 0.210172,
-     "max": 0.225671,
-     "build": 0.9539
+     "median": 0.14644,
+     "min": 0.143974,
+     "max": 0.148169,
+     "build": 0.4278
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.449723,
-     "min": 0.444763,
-     "max": 0.453928,
-     "build": 0.2554
+     "median": 0.353795,
+     "min": 0.340968,
+     "max": 0.366118,
+     "build": 0.1675
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.73612,
-     "min": 0.734378,
-     "max": 0.752872,
-     "build": 0.6048
+     "median": 0.571917,
+     "min": 0.547936,
+     "max": 0.576369,
+     "build": 0.4321
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.306586,
-     "min": 0.29527,
-     "max": 0.319899,
-     "build": 0.2904
+     "median": 0.270454,
+     "min": 0.259872,
+     "max": 0.273715,
+     "build": 0.2327
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.49319,
-     "min": 0.490846,
-     "max": 0.534264,
-     "build": 0.2021
+     "median": 0.372226,
+     "min": 0.360541,
+     "max": 0.390491,
+     "build": 0.1084
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 1.299939,
-     "min": 1.280202,
-     "max": 1.308369,
-     "build": 0.6535
+     "median": 0.948811,
+     "min": 0.916855,
+     "max": 1.026209,
+     "build": 0.4201
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.842638,
-     "min": 0.75707,
-     "max": 0.906061,
-     "build": 11.4749
+     "median": 0.789768,
+     "min": 0.785324,
+     "max": 0.800809,
+     "build": 7.7321
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 1.570866,
-     "min": 1.481805,
-     "max": 1.606438,
-     "build": 1.6566
+     "median": 1.044774,
+     "min": 1.043072,
+     "max": 1.06263,
+     "build": 0.2341
     }
    ],
    "note": [
-    "Zane is fastest at 0.219 s, followed by Rust at 0.307 s, C at 0.450 s and Go at 0.493 s. C++ takes 0.736 s, Zig 0.843 s, D 1.30 s and OCaml 1.57 s. Rust takes 1.40 times as long as Zane and C++ takes 3.37 times as long. Zane's slowest sample, 0.226 s, is below every other row's fastest.",
+    "Zane is fastest at 0.146 s, followed by Rust at 0.270 s, C at 0.354 s and Go at 0.372 s. C++ takes 0.572 s, Zig 0.790 s, D 0.949 s and OCaml 1.05 s. Rust takes 1.85 times as long as Zane and C++ takes 3.91 times as long. Zane's slowest sample, 0.148 s, is below every other row's fastest.",
     "Rust's Vec\u003cNode> stores children inline, allocating once per internal node. The other versions allocate nodes separately and retain references or pointers to them, so the representations do different allocation work. Zane's nodes own lists of child references; constructing and dropping the tree includes both node and child-list storage. In Go, D and OCaml the collector handles reclamation at times of its own choosing."
    ]
   },
@@ -950,77 +950,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.103032,
-     "min": 0.10092,
-     "max": 0.106522,
-     "build": 0.9896
+     "median": 0.084881,
+     "min": 0.083228,
+     "max": 0.10671,
+     "build": 0.4406
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.259483,
-     "min": 0.252665,
-     "max": 0.268245,
-     "build": 1.4397
+     "median": 0.160292,
+     "min": 0.158381,
+     "max": 0.167705,
+     "build": 0.1536
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.323478,
-     "min": 0.315712,
-     "max": 0.336601,
-     "build": 1.0966
+     "median": 0.185583,
+     "min": 0.1771,
+     "max": 0.19025,
+     "build": 0.3867
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.441937,
-     "min": 0.420433,
-     "max": 0.463677,
-     "build": 0.3282
+     "median": 0.274407,
+     "min": 0.272076,
+     "max": 0.289471,
+     "build": 0.2226
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.243727,
-     "min": 0.237433,
-     "max": 0.251614,
-     "build": 0.2194
+     "median": 0.18557,
+     "min": 0.182877,
+     "max": 0.188481,
+     "build": 0.1047
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.395535,
-     "min": 0.385242,
-     "max": 0.424567,
-     "build": 0.5555
+     "median": 0.364852,
+     "min": 0.324552,
+     "max": 0.369781,
+     "build": 0.4189
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.307365,
-     "min": 0.300038,
-     "max": 0.314956,
-     "build": 11.5175
+     "median": 0.255512,
+     "min": 0.242716,
+     "max": 0.256915,
+     "build": 7.5968
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.352268,
-     "min": 0.33263,
-     "max": 0.360128,
-     "build": 0.2688
+     "median": 0.223699,
+     "min": 0.220927,
+     "max": 0.229301,
+     "build": 0.2217
     }
    ],
    "note": [
-    "Zane is fastest at 0.103 s, compared with 0.244 s for Go, 0.260 s for C, 0.307 s for Zig, 0.324 s for C++, 0.352 s for OCaml, 0.396 s for D and 0.442 s for Rust. Go takes 2.37 times as long as Zane and C++ takes 3.14 times as long. Zane's slowest sample, 0.107 s, is below every other row's fastest.",
+    "Zane is fastest at 0.0849 s, compared with 0.160 s for C, 0.186 s for Go and C++, 0.224 s for OCaml, 0.256 s for Zig, 0.274 s for Rust and 0.365 s for D. C takes 1.89 times as long as Zane and C++ takes 2.19 times as long. Zane's slowest sample, 0.107 s, is below every other row's fastest.",
     "Unlike binarytrees, this test deliberately retains value types and full-tree copying. A Zane value copy allocates every boxed payload afresh, so the two trees share nothing (memory.md \u00a72.3); the other languages clone the tree as well. The original is read after the last copy, so replacing that copy with a move would change the workload. Allocation and deep-copy work remain even when calls across core's package boundary can be optimized."
    ]
   },
@@ -1043,78 +1043,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.243042,
-     "min": 0.233447,
-     "max": 0.247181,
-     "build": 0.6121
+     "median": 0.139879,
+     "min": 0.139505,
+     "max": 0.151562,
+     "build": 0.4555
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.197537,
-     "min": 0.189571,
-     "max": 0.205088,
-     "build": 0.2255
+     "median": 0.155764,
+     "min": 0.147634,
+     "max": 0.157888,
+     "build": 0.1734
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.200393,
-     "min": 0.191689,
-     "max": 0.208233,
-     "build": 0.3625
+     "median": 0.160693,
+     "min": 0.160422,
+     "max": 0.163554,
+     "build": 0.2714
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.216138,
-     "min": 0.205512,
-     "max": 0.216695,
-     "build": 0.324
+     "median": 0.155704,
+     "min": 0.149333,
+     "max": 0.15867,
+     "build": 0.2615
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.30977,
-     "min": 0.305545,
-     "max": 0.314932,
-     "build": 0.2151
+     "median": 0.211087,
+     "min": 0.210428,
+     "max": 0.22365,
+     "build": 0.1387
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.187436,
-     "min": 0.186443,
-     "max": 0.189923,
-     "build": 0.5886
+     "median": 0.145336,
+     "min": 0.141704,
+     "max": 0.150822,
+     "build": 0.4417
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.139993,
-     "min": 0.137277,
-     "max": 0.142293,
-     "build": 11.4521
+     "median": 0.111648,
+     "min": 0.107861,
+     "max": 0.112637,
+     "build": 7.534
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.235122,
-     "min": 0.229949,
-     "max": 0.253472,
-     "build": 0.3017
+     "median": 0.154995,
+     "min": 0.154028,
+     "max": 0.166551,
+     "build": 0.2317
     }
    ],
    "note": [
     "The five bodies' starting state is fixed and only the step count is read, so the setup is eligible for compile-time evaluation; the whole-tree CGT loop counts do not show how much of it was. Every version does the same floating-point operations in the same order and prints the same energies.",
-    "Zig is fastest at 0.140 s, well ahead of D at 0.187 s, C at 0.198 s and C++ at 0.200 s. Rust takes 0.216 s, OCaml 0.235 s, Zane 0.243 s and Go 0.310 s. Zane takes 1.23 times as long as C and 1.74 times as long as Zig, and its samples overlap OCaml's. The timing does not identify what Zig's build does differently in the pair loop, or where Zane's time goes."
+    "Zig is fastest at 0.112 s, well ahead of the rest. Zane follows at 0.140 s and D at 0.145 s, and their samples overlap. OCaml takes 0.155 s, Rust and C 0.156 s, C++ 0.161 s and Go 0.211 s. Zane takes 1.25 times as long as Zig, and C takes 1.11 times as long as Zane. The timing does not identify what Zig's build does differently in the pair loop."
    ]
   },
   {
@@ -1136,77 +1136,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.15457,
-     "min": 0.153382,
-     "max": 0.157592,
-     "build": 0.5838
+     "median": 0.110921,
+     "min": 0.107249,
+     "max": 0.112455,
+     "build": 0.4352
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.157005,
-     "min": 0.153468,
-     "max": 0.167441,
-     "build": 0.2019
+     "median": 0.108792,
+     "min": 0.108173,
+     "max": 0.114215,
+     "build": 0.1643
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.154771,
-     "min": 0.146921,
-     "max": 0.156555,
-     "build": 0.4197
+     "median": 0.107786,
+     "min": 0.107425,
+     "max": 0.113333,
+     "build": 0.332
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.156196,
-     "min": 0.15008,
-     "max": 0.156785,
-     "build": 0.3835
+     "median": 0.104895,
+     "min": 0.104244,
+     "max": 0.109854,
+     "build": 0.27
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.163683,
-     "min": 0.159759,
-     "max": 0.167872,
-     "build": 0.2223
+     "median": 0.113601,
+     "min": 0.110034,
+     "max": 0.115018,
+     "build": 0.1139
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.163876,
-     "min": 0.154815,
-     "max": 0.165691,
-     "build": 0.5719
+     "median": 0.10598,
+     "min": 0.105543,
+     "max": 0.106568,
+     "build": 0.4352
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.203847,
-     "min": 0.196163,
-     "max": 0.209334,
-     "build": 11.4562
+     "median": 0.111679,
+     "min": 0.110638,
+     "max": 0.115543,
+     "build": 7.733
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.350924,
-     "min": 0.343951,
-     "max": 0.353711,
-     "build": 0.2787
+     "median": 0.304135,
+     "min": 0.296479,
+     "max": 0.3098,
+     "build": 0.2263
     }
    ],
    "note": [
-    "Zane, C++, Rust and C finish within 2% of each other, from 0.155 to 0.157 s, and Zane's samples overlap all three and D's, so this run does not rank them. Go and D take 0.164 s, Zig 0.204 s and OCaml 0.351 s. The work is a dense matrix-vector product whose entries are computed on the fly, so it is dominated by floating-point division and multiplication rather than by memory."
+    "Every row except OCaml finishes within 9% of the fastest, from Rust at 0.105 s to Go at 0.114 s, with Zane at 0.111 s. Zane's samples overlap every row's except D's and OCaml's, so this run does not rank them; D takes 0.106 s. OCaml takes 0.304 s. The work is a dense matrix-vector product whose entries are computed on the fly, so it is dominated by floating-point division and multiplication rather than by memory."
    ]
   },
   {
@@ -1228,77 +1228,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.429215,
-     "min": 0.408373,
-     "max": 0.431864,
-     "build": 0.5775
+     "median": 0.226592,
+     "min": 0.225751,
+     "max": 0.228928,
+     "build": 0.435
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 1.634797,
-     "min": 1.527527,
-     "max": 1.702741,
-     "build": 0.1834
+     "median": 0.853713,
+     "min": 0.83107,
+     "max": 0.868668,
+     "build": 0.1627
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 1.583554,
-     "min": 1.530824,
-     "max": 1.636799,
-     "build": 0.5715
+     "median": 0.919346,
+     "min": 0.885767,
+     "max": 0.924034,
+     "build": 0.4334
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 1.662285,
-     "min": 1.640409,
-     "max": 1.683146,
-     "build": 0.2668
+     "median": 0.873874,
+     "min": 0.85439,
+     "max": 0.884493,
+     "build": 0.2422
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.598397,
-     "min": 0.576384,
-     "max": 0.616874,
-     "build": 0.2289
+     "median": 0.443787,
+     "min": 0.414601,
+     "max": 0.482493,
+     "build": 0.1113
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.755542,
-     "min": 0.707016,
-     "max": 0.780644,
-     "build": 0.58
+     "median": 0.388283,
+     "min": 0.377394,
+     "max": 0.394152,
+     "build": 0.4257
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 1.446496,
-     "min": 1.4032,
-     "max": 1.494827,
-     "build": 11.4904
+     "median": 0.769618,
+     "min": 0.75253,
+     "max": 0.781034,
+     "build": 7.5358
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 1.976067,
-     "min": 1.95055,
-     "max": 2.023068,
-     "build": 0.3838
+     "median": 1.291012,
+     "min": 1.275399,
+     "max": 1.304324,
+     "build": 0.2301
     }
    ],
    "note": [
-    "Zane is fastest at 0.429 s, followed by Go at 0.598 s and D at 0.756 s. Zig takes 1.45 s, C++ 1.58 s, C 1.64 s, Rust 1.66 s and OCaml 1.98 s. Go takes 1.39 times as long as Zane and C 3.81 times as long. Zane's slowest sample, 0.432 s, is below every other row's fastest.",
+    "Zane is fastest at 0.227 s, followed by D at 0.388 s and Go at 0.444 s. Zig takes 0.770 s, C 0.854 s, Rust 0.874 s, C++ 0.919 s and OCaml 1.29 s. D takes 1.71 times as long as Zane and C 3.77 times as long. Zane's slowest sample, 0.229 s, is below every other row's fastest.",
     "The random removal order frees a million small objects out of allocation order every round. C, C++ and Rust release each item through the C allocator and Zig through its smp_allocator as it is removed; Zane drops each removed item when its loop iteration ends. Go and D leave the items to their collectors, which reclaim them at times of their own choosing. OCaml's item record mixes ints and floats, so each item is three heap blocks, not one; that is how OCaml represents such a record, and the cost is part of its result. These are whole-program results for different allocators, and they do not separate allocation from release."
    ]
   },
@@ -1321,78 +1321,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 1.377814,
-     "min": 1.303338,
-     "max": 1.44643,
-     "build": 0.5746
+     "median": 0.575416,
+     "min": 0.571533,
+     "max": 0.592505,
+     "build": 0.4284
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.283804,
-     "min": 0.274848,
-     "max": 0.299601,
-     "build": 0.2296
+     "median": 0.15825,
+     "min": 0.157705,
+     "max": 0.170909,
+     "build": 0.1719
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 1.231603,
-     "min": 1.217341,
-     "max": 1.264797,
-     "build": 0.609
+     "median": 0.737842,
+     "min": 0.716795,
+     "max": 0.740085,
+     "build": 0.4481
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.352287,
-     "min": 0.345708,
-     "max": 0.355433,
-     "build": 0.2815
+     "median": 0.234655,
+     "min": 0.22537,
+     "max": 0.235527,
+     "build": 0.239
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.41109,
-     "min": 0.406175,
-     "max": 0.416544,
-     "build": 0.2176
+     "median": 0.27839,
+     "min": 0.273866,
+     "max": 0.284971,
+     "build": 0.111
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 1.559382,
-     "min": 1.511823,
-     "max": 2.323181,
-     "build": 0.7445
+     "median": 1.06709,
+     "min": 0.935449,
+     "max": 1.108081,
+     "build": 0.4289
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.453408,
-     "min": 0.428086,
-     "max": 0.47017,
-     "build": 11.6004
+     "median": 0.349083,
+     "min": 0.34641,
+     "max": 0.355514,
+     "build": 7.815
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 6.460524,
-     "min": 6.387198,
-     "max": 6.852585,
-     "build": 0.2832
+     "median": 3.318764,
+     "min": 3.306387,
+     "max": 3.422311,
+     "build": 0.2272
     }
    ],
    "note": [
-    "C is fastest at 0.284 s, followed by Rust at 0.352 s, Go at 0.411 s and Zig at 0.453 s. C++ takes 1.23 s and Zane 1.38 s, 4.86 times as long as C and 1.12 times as long as C++; their sample ranges do not overlap. D takes 1.56 s, with one sample at 2.32 s, and OCaml 6.46 s.",
-    "Every version keeps the entities in spawn order and removes them from the front and the middle, so each removal shifts the entries behind it; about 1,860 entities are alive at the end. C moves those pointers with one memmove, while C++'s erase moves each unique_ptr in turn, clearing its source. The gap from C to C++, Zane and D follows the shift, but this run does not show which part of Zane's ordered remove accounts for its time."
+    "C is fastest at 0.158 s, followed by Rust at 0.235 s, Go at 0.278 s and Zig at 0.349 s. Zane takes 0.575 s, 3.64 times as long as C, and C++ takes 0.738 s, 1.28 times as long as Zane; their sample ranges do not overlap. D takes 1.07 s and OCaml 3.32 s.",
+    "Every version keeps the entities in spawn order and removes them from the front and the middle, so each removal shifts the entries behind it; about 1,860 entities are alive at the end. C moves those pointers with one memmove, and so does the ordered remove the Zane compiler emits inline, while C++'s erase moves each unique_ptr in turn, clearing its source. The gap from C to Zane, C++ and D follows the shift, but this run does not show which other part of Zane's loop accounts for the rest of its time."
    ]
   },
   {
@@ -1414,77 +1414,77 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.178524,
-     "min": 0.175725,
-     "max": 0.197893,
-     "build": 0.9628
+     "median": 0.069484,
+     "min": 0.067434,
+     "max": 0.069946,
+     "build": 0.4356
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.133301,
-     "min": 0.128359,
-     "max": 0.141709,
-     "build": 0.2028
+     "median": 0.086664,
+     "min": 0.084584,
+     "max": 0.089946,
+     "build": 0.1574
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.133769,
-     "min": 0.128605,
-     "max": 0.138423,
-     "build": 0.5787
+     "median": 0.088598,
+     "min": 0.085707,
+     "max": 0.090585,
+     "build": 0.4372
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.181228,
-     "min": 0.173302,
-     "max": 0.190335,
-     "build": 0.2738
+     "median": 0.116592,
+     "min": 0.114147,
+     "max": 0.122566,
+     "build": 0.2437
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.147362,
-     "min": 0.14388,
-     "max": 0.157573,
-     "build": 0.2136
+     "median": 0.109499,
+     "min": 0.106983,
+     "max": 0.111078,
+     "build": 0.1112
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.226252,
-     "min": 0.204794,
-     "max": 0.263011,
-     "build": 0.5592
+     "median": 0.129633,
+     "min": 0.115321,
+     "max": 0.132842,
+     "build": 0.4317
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.137723,
-     "min": 0.13452,
-     "max": 0.141713,
-     "build": 11.3416
+     "median": 0.09705,
+     "min": 0.094794,
+     "max": 0.117796,
+     "build": 7.7194
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.707157,
-     "min": 0.694291,
-     "max": 0.716749,
-     "build": 0.2979
+     "median": 0.468399,
+     "min": 0.448128,
+     "max": 0.476195,
+     "build": 0.2234
     }
    ],
    "note": [
-    "C, C++ and Zig are within 4% of each other at 0.133 to 0.138 s, and Go takes 0.147 s. Zane takes 0.179 s, 1.34 times as long as C, and its samples overlap Rust's, whose median is 0.181 s. D takes 0.226 s and OCaml 0.707 s.",
+    "Zane is fastest at 0.0695 s, followed by C at 0.0867 s and C++ at 0.0886 s. Zig takes 0.0971 s, Go 0.109 s, Rust 0.117 s, D 0.130 s and OCaml 0.468 s. C takes 1.25 times as long as Zane, and Zane's slowest sample, 0.0699 s, is below every other row's fastest.",
     "Order does not matter here, so an expired particle's slot takes the last particle and no entries shift. About 1,160 particles are alive at the end. Each particle is its own object in every version, a reference type in Zane and a separate allocation elsewhere, so the run measures allocating, updating and releasing short-lived small objects; it does not separate the three."
    ]
   },
@@ -1507,78 +1507,78 @@ const DATA = {
      "lang": "zane",
      "name": "Zane",
      "variant": "plain",
-     "median": 0.356188,
-     "min": 0.347194,
-     "max": 0.360538,
-     "build": 0.58
+     "median": 0.19575,
+     "min": 0.19227,
+     "max": 0.198222,
+     "build": 0.434
     },
     {
      "lang": "c",
      "name": "C",
      "variant": "plain",
-     "median": 0.365914,
-     "min": 0.352464,
-     "max": 0.375447,
-     "build": 0.181
+     "median": 0.199514,
+     "min": 0.197542,
+     "max": 0.200306,
+     "build": 0.1632
     },
     {
      "lang": "cpp",
      "name": "C++",
      "variant": "plain",
-     "median": 0.361054,
-     "min": 0.35553,
-     "max": 0.366941,
-     "build": 0.6562
+     "median": 0.197736,
+     "min": 0.196595,
+     "max": 0.197892,
+     "build": 0.4954
     },
     {
      "lang": "rust",
      "name": "Rust",
      "variant": "plain",
-     "median": 0.36545,
-     "min": 0.36178,
-     "max": 0.371263,
-     "build": 0.4278
+     "median": 0.197422,
+     "min": 0.195795,
+     "max": 0.201758,
+     "build": 0.3149
     },
     {
      "lang": "go",
      "name": "Go",
      "variant": "plain",
-     "median": 0.361539,
-     "min": 0.350549,
-     "max": 0.367475,
-     "build": 0.2111
+     "median": 0.214629,
+     "min": 0.213467,
+     "max": 0.217329,
+     "build": 0.1182
     },
     {
      "lang": "d",
      "name": "D",
      "variant": "plain",
-     "median": 0.394009,
-     "min": 0.389596,
-     "max": 0.404518,
-     "build": 1.0373
+     "median": 0.207998,
+     "min": 0.204729,
+     "max": 0.208972,
+     "build": 0.4588
     },
     {
      "lang": "zig",
      "name": "Zig",
      "variant": "plain",
-     "median": 0.384083,
-     "min": 0.382242,
-     "max": 0.392442,
-     "build": 11.5788
+     "median": 0.220713,
+     "min": 0.219733,
+     "max": 0.224562,
+     "build": 7.8941
     },
     {
      "lang": "ocaml",
      "name": "OCaml",
      "variant": "plain",
-     "median": 0.848827,
-     "min": 0.841295,
-     "max": 0.869727,
-     "build": 0.2897
+     "median": 0.5917,
+     "min": 0.587481,
+     "max": 0.603108,
+     "build": 0.2313
     }
    ],
    "note": [
-    "Excluding OCaml, every row is within 11% of Zane, the fastest at 0.356 s: C++ and Go take 0.361 s, Rust 0.365 s, C 0.366 s, Zig 0.384 s and D 0.394 s. Zane's samples overlap C++'s, Go's and C's, so this run does not rank those four. OCaml takes 0.849 s; its array holds pointers to records, as in entities.",
-    "Each pass splits the inline entities into four shards and sums each on its own thread, 100 passes in all, and the measurement also includes building the entities. Zane spawns a call per shard, Go a goroutine, OCaml a domain and the others a thread. The close spread suggests the scan is bound by memory bandwidth rather than by how each language starts its threads, but this run does not measure either separately."
+    "Zane, Rust, C++ and C finish within 2% of each other, from 0.196 to 0.200 s, and Zane's samples overlap all three, so this run does not rank them. D takes 0.208 s, Go 0.215 s and Zig 0.221 s, 1.13 times as long as Zane. OCaml takes 0.592 s; its array holds pointers to records, as in entities.",
+    "Each pass splits the inline entities into four shards and sums each on its own thread, 100 passes in all, and the measurement also includes building the entities. Zane spawns a call per shard, Go a goroutine, OCaml a domain and the others a thread. This run does not separate the scan from how each language starts its threads."
    ]
   }
  ]
