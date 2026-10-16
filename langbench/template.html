@@ -70,7 +70,7 @@
 <body>
 <header>
   <h1>Zane Language Benchmark</h1>
-  <p><span>the same programs in Zane, C, C++, Rust, Go, D and Zig</span> &mdash; each built by its own release compiler, timed as a whole process</p>
+  <p><span>the same programs in Zane, C, C++, Rust, Go, D, Zig and OCaml</span> &mdash; each built by its own release compiler, timed as a whole process</p>
 </header>
 <div id="banner"></div>
 <div class="tabs" id="tabs"></div>
@@ -90,7 +90,7 @@
 <script>
 const DATA = __DATA_JSON__;
 
-const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441"};
+const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441", ocaml:"#e5534b"};
 let current = 0, metric = "run";
 
 const el = (tag, cls, text) => {

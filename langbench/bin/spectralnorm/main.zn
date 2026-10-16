@@ -1,0 +1,75 @@
+/// The Benchmarks Game's spectral-norm: the largest singular value of an
+/// infinite matrix, by 10 rounds of the power method on its N by N corner.
+/// It prints the value in billionths, truncated. N is the program's first
+/// argument.
+package spectralnorm;
+
+import core$;
+import math$;
+import bench$;
+
+/// The matrix's entry at row `i` and column `j`, both from 0.
+Float entry(i Int, j Int) => Float(1.0) / Float((i + j) * (i + j + Int(1)) / 2 + i + Int(1))
+
+/// The matrix times `v`.
+^List<Float> times(v List<Float>) {
+	n Int = v:size();
+	out ^List<Float> = List(Float);
+	i Int = Int(1);
+	i!to(n) {
+		sum Float = Float(0.0);
+		j Int = Int(1);
+		j!to(n) {
+			sum = sum + entry(i - Int(1), j - Int(1)) * v[j];
+		}
+		out!push(sum);
+	}
+	return out;
+}
+
+/// The matrix's transpose times `v`.
+^List<Float> timesTransposed(v List<Float>) {
+	n Int = v:size();
+	out ^List<Float> = List(Float);
+	i Int = Int(1);
+	i!to(n) {
+		sum Float = Float(0.0);
+		j Int = Int(1);
+		j!to(n) {
+			sum = sum + entry(j - Int(1), i - Int(1)) * v[j];
+		}
+		out!push(sum);
+	}
+	return out;
+}
+
+/// The transpose times the matrix times `v`.
+^List<Float> timesBoth(v List<Float>) => timesTransposed(times(v))
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(100));
+	u List<Float> = List(Float);
+	i Int = Int(1);
+	i!to(n) {
+		u!push(Float(1.0));
+	}
+	v List<Float> = timesBoth(u);
+	round Int = Int(1);
+	round!to(Int(9)) {
+		u = timesBoth(v);
+		v = timesBoth(u);
+	}
+	u = timesBoth(v);
+	vBv Float = Float(0.0);
+	vv Float = Float(0.0);
+	k Int = Int(1);
+	k!to(n) {
+		vBv = vBv + u[k] * v[k];
+		vv = vv + v[k] * v[k];
+	}
+	norm Float = sqrt(vBv / vv);
+	console!print(String(n) + " " + String(Int.truncate(norm * Float(1000000000.0))));
+	return Unit();
+}

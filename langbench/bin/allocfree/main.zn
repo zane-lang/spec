@@ -1,0 +1,39 @@
+/// N small objects allocated one by one into a list, then released in
+/// random order, 10 times over. N is the program's first argument.
+package allocfree;
+
+import core$;
+import math$;
+import bench$;
+
+type Item = #struct {
+	id Int;
+	x Float;
+	y Float;
+	hp Int;
+}
+
+Item(id Int, x Float, y Float, hp Int) => init{ id; x; y; hp; }
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(10000));
+	rng Rng = Rng(Int(42));
+	hash Int = Int(0);
+	round Int = Int(1);
+	round!to(Int(10)) {
+		items List<Item> = List(Item);
+		i Int = Int(1);
+		i!to(n) {
+			items!push(Item(i, Float(0.5) * Float(i), Float(0.25) * Float(i), i / 3));
+		}
+		k Int = Int(1);
+		k!to(n) {
+			item Item = items!swapRemove(rng!below(items:size()) + 1);
+			hash = bitAnd(hash * 31 + item.id, Int(2147483647));
+		}
+	}
+	console!print(String(n) + " " + String(hash));
+	return Unit();
+}

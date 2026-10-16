@@ -1,6 +1,6 @@
 # langbench
 
-The same programs written in Zane, C, C++, Rust, Go, D and Zig, each built by
+The same programs written in Zane, C, C++, Rust, Go, D, Zig and OCaml, each built by
 its language's release compiler and timed as a whole process. Where
 [`memorybench/`](../memorybench/) models the memory design in C, this bench
 measures what a released Zane compiler actually produces.
@@ -12,8 +12,8 @@ measures what a released Zane compiler actually produces.
 | `zane.coda`, `zane-lock.coda` | the Zane project: the pinned compiler release and `core` |
 | `devbox.json`, `devbox.lock` | the other languages' compilers, pinned |
 | `bin/<test>/main.zn` | each test's Zane program |
-| `lib/bench/` | what the Zane programs share: reading the size from the arguments |
-| `c/`, `cpp/`, `rust/`, `go/`, `d/`, `zig/` | the other languages, one file per program |
+| `lib/bench/` | what the Zane programs share: reading the size from the arguments, and the random numbers |
+| `c/`, `cpp/`, `rust/`, `go/`, `d/`, `zig/`, `ocaml/` | the other languages, one file per program |
 | `tests.py` | each test's size, expected output and fold profile, and each language's build command |
 | `langbench.py` | builds, checks, times and renders |
 | `template.html` | the page skeleton |
@@ -25,8 +25,8 @@ measures what a released Zane compiler actually produces.
 
 [Devbox](https://www.jetify.com/devbox) supplies the other languages'
 compilers at the versions `devbox.json` pins: clang 19, the LLVM release the
-Zane compiler is built against, for C and C++, then Rust, Go, LDC for D, and
-Zig 0.16. Python 3 and the zane CLI come from the machine. The CLI must
+Zane compiler is built against, for C and C++, then Rust, Go, LDC for D,
+Zig 0.16 and OCaml 5.5. Python 3 and the zane CLI come from the machine. The CLI must
 be v0.4 or later, the first release with `zane inspect`, and the compiler
 release `zane.coda` names must be installed (`zane toolchain install`). Run from `langbench/`:
 
@@ -61,10 +61,18 @@ in `explanations.txt` can describe, and update those notes in the same change.
 
 Every language builds at its level-2 optimization, keeps the safety checks it
 has by default, and is written the way that language is usually written.
+OCaml's level-2 optimization needs flambda, and nixpkgs builds `ocamlopt`
+without it, so OCaml builds at its one level.
 `primes` also has a variant that asks the compiler to evaluate the sieve, in
 the languages that can ask. The Zig programs allocate through
 `std.heap.smp_allocator`, because in ReleaseSafe the allocator `main` is
 handed is the leak-checking debug allocator.
+
+`allocfree`, `gameloop` and `particles` draw their random numbers from the
+same linear congruential generator in every language, so all of them make
+the same choices and print the same result. `nbody` and `spectralnorm` print
+floating-point results in billionths, truncated to an integer, and do the
+same operations in the same order in every language, so the digits agree.
 
 `binarytrees` uses reference-type nodes with owning child fields. Building a
 parent transfers both children into it, matching the owning pointers in C++
@@ -73,24 +81,10 @@ types, because copying the complete tree is the work that test measures.
 
 The project builds with compiler v0.12
 ([`a490ae4`](https://github.com/zane-lang/compiler/commit/a490ae476163df4716eb0e94cd447b73b08fca8b))
-and `core` v0.1. The pinned 2026-10-10 run predates both: it used compiler
-v0.9
+and `core` v0.1. The pinned 2026-10-10 run predates both, OCaml, and the
+`nbody`, `spectralnorm`, `allocfree`, `gameloop`, `particles` and `concscan`
+tests: it used compiler v0.9
 ([`a6b95b3`](https://github.com/zane-lang/compiler/commit/a6b95b34bdbabbf1709bf1998fe9c6de434c447c))
 with cross-package optimization and the reference-based binary-tree program,
 `core` v0.0, and Go 1.27.1. It was measured on an Intel Core i7-1355U laptop
 under WSL2 with zane CLI v0.6; `explanations.txt` describes that run.
-
-## Planned tests
-
-These tests are planned. Compiler v0.12 and `core` v0.1 supply what each
-needs: `core`'s `math` package has `sqrt`, `List` has `remove` and
-`swapRemove`, and the compiler runs `spawn`.
-
-| test | what it measures |
-| --- | --- |
-| n-body | floating-point physics over a few bodies (Benchmarks Game) |
-| spectral-norm | repeated matrix-vector products (Benchmarks Game) |
-| alloc and release | allocating many small objects and releasing them in random order (memorybench Tests 1 and 2) |
-| game loop | entities spawned, updated and killed every frame (memorybench Test 7) |
-| particles | short-lived objects spawned in bursts and expired (memorybench Test 8) |
-| concurrent scan | four shards of one array summed on four threads (memorybench Test 12) |

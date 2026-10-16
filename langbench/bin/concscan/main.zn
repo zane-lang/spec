@@ -1,0 +1,48 @@
+/// N entities held inline in one list, split into four shards, each shard
+/// summed by its own spawned call, 100 times over. N is the program's first
+/// argument.
+package concscan;
+
+import core$;
+import bench$;
+
+type Entity = struct {
+	id Int;
+	x Float;
+	y Float;
+	hp Int;
+}
+
+Entity(id Int, x Float, y Float, hp Int) => init{ id; x; y; hp; }
+
+/// The hit points of the entities from `first` to `last`.
+Int shardSum(entities List<Entity>, first Int, last Int) {
+	sum Int = Int(0);
+	k Int = first;
+	k!to(last) {
+		sum = sum + entities[k].hp;
+	}
+	return sum;
+}
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	n Int = size(runtime, Int(100000));
+	entities List<Entity> = List(Entity);
+	i Int = Int(1);
+	i!to(n) {
+		entities!push(Entity(i, Float(1.1) * Float(i), Float(2.2) * Float(i), i - i / 100 * 100 + 1));
+	}
+	total Int = Int(0);
+	pass Int = Int(1);
+	pass!to(Int(100)) {
+		a Int = spawn shardSum(entities, Int(1), n / 4);
+		b Int = spawn shardSum(entities, n / 4 + 1, n / 2);
+		c Int = spawn shardSum(entities, n / 2 + 1, n * 3 / 4);
+		d Int = spawn shardSum(entities, n * 3 / 4 + 1, n);
+		total = total + a + b + c + d;
+	}
+	console!print(String(n) + " " + String(total));
+	return Unit();
+}

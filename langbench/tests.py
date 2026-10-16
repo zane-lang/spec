@@ -7,9 +7,12 @@ interpretation of pinned numbers lives in explanations.txt.
 
 # How each language builds one source file into an executable. "{src}" and
 # "{out}" are filled in; "{tmp}" is a scratch directory and "{cache}" the
-# language's cache for this run. Clang builds C and C++, so they share Zane's
+# language's cache for this run. A rule with "copy_src" builds a copy of the
+# source placed in "{tmp}", for a compiler that writes its intermediate files
+# beside the source. Clang builds C and C++, so they share Zane's
 # LLVM backend; every language builds at its level-2 optimization, with the
-# safety checks it keeps by default.
+# safety checks it keeps by default. OCaml's compiler without flambda, the
+# one nixpkgs builds, has a single optimization level.
 LANGUAGES = {
     "zane": {
         "name": "Zane",
@@ -20,8 +23,8 @@ LANGUAGES = {
         "name": "C",
         "ext": "c",
         "version": ["clang", "--version"],
-        "build": ["clang", "-O2", "-o", "{out}", "{src}"],
-        "flags": "clang -O2",
+        "build": ["clang", "-O2", "-o", "{out}", "{src}", "-lm"],
+        "flags": "clang -O2 -lm",
     },
     "cpp": {
         "name": "C++",
@@ -63,10 +66,18 @@ LANGUAGES = {
                  'pub fn main() void {\n    std.debug.print("hello\\n", .{});\n}\n',
         "flags": "zig build-exe -O ReleaseSafe",
     },
+    "ocaml": {
+        "name": "OCaml",
+        "ext": "ml",
+        "version": ["ocamlopt", "-version"],
+        "build": ["ocamlopt", "-o", "{out}", "{src}"],
+        "copy_src": True,
+        "flags": "ocamlopt",
+    },
 }
 
 # The order rows appear in on the page.
-LANGUAGE_ORDER = ["zane", "c", "cpp", "rust", "go", "d", "zig"]
+LANGUAGE_ORDER = ["zane", "c", "cpp", "rust", "go", "d", "zig", "ocaml"]
 
 # What a fold profile means, shown beside each test.
 PROFILES = {
@@ -92,8 +103,8 @@ TESTS = [
                    "much of a program each compiler finishes on its own. The "
                    "comptime rows ask the compiler to run the sieve while it "
                    "compiles: constexpr and consteval in C++, a const fn in "
-                   "Rust, an enum initializer in D and comptime in Zig. C and "
-                   "Go have no way to ask.",
+                   "Rust, an enum initializer in D and comptime in Zig. C, "
+                   "Go and OCaml have no way to ask.",
         "args": [],
         "expected": "2262 21171191\n",
         "check_args": [],
@@ -128,8 +139,8 @@ TESTS = [
                    "walks and tears down perfect binary trees, many short-lived "
                    "ones and one that lives through the run. It measures "
                    "allocating and freeing many small owned objects. C, C++, "
-                   "Rust and Zig free each tree as it goes; Go and D leave "
-                   "theirs to a garbage collector; Zane's reference nodes "
+                   "Rust and Zig free each tree as it goes; Go, D and OCaml "
+                   "leave theirs to a garbage collector; Zane's reference nodes "
                    "own their children and transfer ownership into each parent.",
         "args": ["16"],
         "expected": None,
@@ -147,7 +158,7 @@ TESTS = [
                    "with an early exit; every language does the same "
                    "operations in the same order, so all count the same "
                    "points. The Benchmarks Game version writes a bitmap; "
-                   "this one counts, since Zane has no bit operations.",
+                   "this one prints the count.",
         "args": ["3000"],
         "expected": "3000 3572354\n",
         "check_args": ["200"],
@@ -178,7 +189,9 @@ TESTS = [
         "summary": "Fills a list with N entities of four 8-byte fields each, "
                    "held inline, then sums one field over all of them 100 "
                    "times. A read-only scan over contiguous storage, the "
-                   "inline layout of memorybench's Test 4.",
+                   "inline layout of memorybench's Test 4. An OCaml record "
+                   "that mixes ints and floats is a block of its own, so "
+                   "OCaml's array holds pointers to them.",
         "args": ["3000000"],
         "expected": "3000000 149999950000000\n",
         "check_args": ["100000"],
@@ -208,8 +221,8 @@ TESTS = [
                    "every node owns a growable list of its children, counts "
                    "its nodes, and drops it, 10 times over. Teardown walks "
                    "every node and frees every child list, the cascade of "
-                   "memorybench's Test 10. Go and D leave the work to their "
-                   "garbage collectors.",
+                   "memorybench's Test 10. Go, D and OCaml leave the work to "
+                   "their garbage collectors.",
         "args": ["10"],
         "expected": "10 13981010\n",
         "check_args": ["6"],
@@ -231,6 +244,105 @@ TESTS = [
         "expected": "18 2748773826560 137438691328\n",
         "check_args": ["12"],
         "check_expected": "12 671006720 33550336\n",
+        "variants": {},
+    },
+    {
+        "id": "nbody",
+        "title": "N-body (Benchmarks Game)",
+        "profile": "setup",
+        "summary": "The Benchmarks Game's n-body: the Sun and the four gas "
+                   "giants, advanced N steps, with the system's energy "
+                   "printed before and after, in billionths, truncated. "
+                   "Floating-point arithmetic with a square root in the inner "
+                   "loop, over a few bodies held inline. The starting energy "
+                   "needs no input, so it may be computed while compiling.",
+        "args": ["5000000"],
+        "expected": "5000000 -169075163 -169083133\n",
+        "check_args": ["1000"],
+        "check_expected": "1000 -169075163 -169087605\n",
+        "variants": {},
+    },
+    {
+        "id": "spectralnorm",
+        "title": "Spectral norm (Benchmarks Game)",
+        "profile": "input",
+        "summary": "The Benchmarks Game's spectral-norm: 10 rounds of the "
+                   "power method on the N by N corner of an infinite matrix, "
+                   "each entry computed where it is used, then the square "
+                   "root of a ratio of dot products, in billionths, "
+                   "truncated. Repeated matrix-vector products over lists of "
+                   "floats, run on one thread.",
+        "args": ["2000"],
+        "expected": "2000 1274224152\n",
+        "check_args": ["100"],
+        "check_expected": "100 1274219991\n",
+        "variants": {},
+    },
+    {
+        "id": "allocfree",
+        "title": "Allocating and releasing in random order",
+        "profile": "input",
+        "summary": "Allocates N objects of four 8-byte fields one at a time "
+                   "into a list, then releases them in random order, each "
+                   "taken out by moving the last one into its slot, 10 times "
+                   "over. It measures the allocator's small-object path and "
+                   "freeing out of order, memorybench's Tests 1 and 2. Go, D "
+                   "and OCaml leave the releasing to their garbage "
+                   "collectors.",
+        "args": ["1000000"],
+        "expected": "1000000 92416104\n",
+        "check_args": ["10000"],
+        "check_expected": "10000 1360832322\n",
+        "variants": {},
+    },
+    {
+        "id": "gameloop",
+        "title": "Game loop",
+        "profile": "input",
+        "summary": "Runs F frames of a game loop: each frame spawns 30 "
+                   "entities, kills the 20 oldest, and updates the rest, "
+                   "removing those whose hit points run out. Entities are "
+                   "separate objects in a list that keeps them in spawn "
+                   "order, so every removal shifts the ones after it. "
+                   "memorybench's Test 7.",
+        "args": ["50000"],
+        "expected": "50000 1863 4019734260\n",
+        "check_args": ["500"],
+        "check_expected": "500 1871 34449268\n",
+        "variants": {},
+    },
+    {
+        "id": "particles",
+        "title": "Particle system",
+        "profile": "input",
+        "summary": "Runs F frames of a particle system: each frame spawns a "
+                   "burst of 60 particles with 10 to 30 frames to live, "
+                   "moves the living and expires the rest. Order does not "
+                   "matter, so an expired particle's slot takes the last "
+                   "one. Short-lived separate objects, memorybench's Test 8.",
+        "args": ["50000"],
+        "expected": "50000 1164 22784086869\n",
+        "check_args": ["500"],
+        "check_expected": "500 1152 223226995\n",
+        "variants": {},
+    },
+    {
+        "id": "concscan",
+        "title": "Concurrent scan",
+        "profile": "input",
+        "summary": "Fills a list with N entities held inline, then sums one "
+                   "field over four shards of it, each shard on its own "
+                   "thread, 100 times over. Every language starts four "
+                   "concurrent calls per pass and waits for all four: Zane "
+                   "with spawn, Go with goroutines, D with tasks in new "
+                   "threads, Zig with Io.concurrent, OCaml with domains, "
+                   "and C, C++ and Rust with threads. OCaml's records are "
+                   "blocks of their own rather than inline. memorybench's "
+                   "Test 12.",
+        "args": ["3000000"],
+        "expected": "3000000 15150000000\n",
+        "check_args": ["100000"],
+        "check_expected": "100000 505000000\n",
         "variants": {},
     },
 ]

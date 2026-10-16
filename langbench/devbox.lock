@@ -141,6 +141,44 @@
         }
       }
     },
+    "ocaml@5.5.0": {
+      "last_modified": "2026-10-14T08:20:44Z",
+      "resolved": "github:NixOS/nixpkgs/319e4cebef10cbb636c6ea392137b52ad105336a#ocaml",
+      "source": "devbox-search",
+      "version": "5.5.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/a9y37f3afx6ga8fjn7gvlkvyhmsiyaqg-ocaml-5.5.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/a9y37f3afx6ga8fjn7gvlkvyhmsiyaqg-ocaml-5.5.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xk94mm9848590nrcsl222rq9mqi2nfbg-ocaml-5.5.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/xk94mm9848590nrcsl222rq9mqi2nfbg-ocaml-5.5.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/64a10wg1zxrvbap3q33ls59y99mwq03f-ocaml-5.5.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/64a10wg1zxrvbap3q33ls59y99mwq03f-ocaml-5.5.0"
+        }
+      }
+    },
     "rustc@1.98.1": {
       "last_modified": "2026-10-07T01:26:01Z",
       "plugin_version": "0.0.1",

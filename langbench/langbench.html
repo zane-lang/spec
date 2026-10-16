@@ -70,7 +70,7 @@
 <body>
 <header>
   <h1>Zane Language Benchmark</h1>
-  <p><span>the same programs in Zane, C, C++, Rust, Go, D and Zig</span> &mdash; each built by its own release compiler, timed as a whole process</p>
+  <p><span>the same programs in Zane, C, C++, Rust, Go, D, Zig and OCaml</span> &mdash; each built by its own release compiler, timed as a whole process</p>
 </header>
 <div id="banner"></div>
 <div class="tabs" id="tabs"></div>
@@ -123,7 +123,7 @@ const DATA = {
   },
   "c": {
    "name": "C",
-   "flags": "clang -O2"
+   "flags": "clang -O2 -lm"
   },
   "cpp": {
    "name": "C++",
@@ -144,13 +144,17 @@ const DATA = {
   "zig": {
    "name": "Zig",
    "flags": "zig build-exe -O ReleaseSafe"
+  },
+  "ocaml": {
+   "name": "OCaml",
+   "flags": "ocamlopt"
   }
  },
  "tests": [
   {
    "id": "primes",
    "title": "Sieve of Eratosthenes, fixed bound",
-   "summary": "Counts and sums the primes below 20,000 with a sieve. Nothing it computes depends on input, so it measures how much of a program each compiler finishes on its own. The comptime rows ask the compiler to run the sieve while it compiles: constexpr and consteval in C++, a const fn in Rust, an enum initializer in D and comptime in Zig. C and Go have no way to ask.",
+   "summary": "Counts and sums the primes below 20,000 with a sieve. Nothing it computes depends on input, so it measures how much of a program each compiler finishes on its own. The comptime rows ask the compiler to run the sieve while it compiles: constexpr and consteval in C++, a const fn in Rust, an enum initializer in D and comptime in Zig. C, Go and OCaml have no way to ask.",
    "args": [],
    "profile": "static",
    "profileText": "Reads no input: an optimized build may compute the whole program while it compiles.",
@@ -352,7 +356,7 @@ const DATA = {
   {
    "id": "binarytrees",
    "title": "Binary trees (Benchmarks Game)",
-   "summary": "The Benchmarks Game's binary-trees at depth N: builds, walks and tears down perfect binary trees, many short-lived ones and one that lives through the run. It measures allocating and freeing many small owned objects. C, C++, Rust and Zig free each tree as it goes; Go and D leave theirs to a garbage collector; Zane's reference nodes own their children and transfer ownership into each parent.",
+   "summary": "The Benchmarks Game's binary-trees at depth N: builds, walks and tears down perfect binary trees, many short-lived ones and one that lives through the run. It measures allocating and freeing many small owned objects. C, C++, Rust and Zig free each tree as it goes; Go, D and OCaml leave theirs to a garbage collector; Zane's reference nodes own their children and transfer ownership into each parent.",
    "args": [
     "16"
    ],
@@ -437,7 +441,7 @@ const DATA = {
   {
    "id": "mandelbrot",
    "title": "Mandelbrot set, counted",
-   "summary": "Iterates z = z\u00b2 + c for every point of an N by N grid and counts the points that stay within radius 2 for 50 iterations. Floating-point arithmetic in a tight loop with an early exit; every language does the same operations in the same order, so all count the same points. The Benchmarks Game version writes a bitmap; this one counts, since Zane has no bit operations.",
+   "summary": "Iterates z = z\u00b2 + c for every point of an N by N grid and counts the points that stay within radius 2 for 50 iterations. Floating-point arithmetic in a tight loop with an early exit; every language does the same operations in the same order, so all count the same points. The Benchmarks Game version writes a bitmap; this one prints the count.",
    "args": [
     "3000"
    ],
@@ -605,7 +609,7 @@ const DATA = {
   {
    "id": "entities",
    "title": "Scanning entities held inline",
-   "summary": "Fills a list with N entities of four 8-byte fields each, held inline, then sums one field over all of them 100 times. A read-only scan over contiguous storage, the inline layout of memorybench's Test 4.",
+   "summary": "Fills a list with N entities of four 8-byte fields each, held inline, then sums one field over all of them 100 times. A read-only scan over contiguous storage, the inline layout of memorybench's Test 4. An OCaml record that mixes ints and floats is a block of its own, so OCaml's array holds pointers to them.",
    "args": [
     "3000000"
    ],
@@ -773,7 +777,7 @@ const DATA = {
   {
    "id": "ntree",
    "title": "Building and tearing down a tree of lists",
-   "summary": "Builds a complete four-way tree N levels deep in which every node owns a growable list of its children, counts its nodes, and drops it, 10 times over. Teardown walks every node and frees every child list, the cascade of memorybench's Test 10. Go and D leave the work to their garbage collectors.",
+   "summary": "Builds a complete four-way tree N levels deep in which every node owns a growable list of its children, counts its nodes, and drops it, 10 times over. Teardown walks every node and frees every child list, the cascade of memorybench's Test 10. Go, D and OCaml leave the work to their garbage collectors.",
    "args": [
     "10"
    ],
@@ -941,7 +945,7 @@ const DATA = {
  ]
 };
 
-const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441"};
+const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441", ocaml:"#e5534b"};
 let current = 0, metric = "run";
 
 const el = (tag, cls, text) => {

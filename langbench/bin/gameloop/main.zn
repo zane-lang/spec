@@ -1,0 +1,61 @@
+/// A game loop over F frames: each frame spawns 30 entities, kills the 20
+/// oldest, and updates the rest, removing those whose hit points run out.
+/// The list keeps the entities in the order they spawned. F is the
+/// program's first argument.
+package gameloop;
+
+import core$;
+import bench$;
+
+type Entity = #struct {
+	id Int;
+	x Float;
+	y Float;
+	hp Int;
+}
+
+Entity(id Int, x Float, y Float, hp Int) => init{ id; x; y; hp; }
+
+Unit main() {
+	console Console(@program$console);
+	runtime Runtime(@program$runtime);
+	frames Int = size(runtime, Int(500));
+	rng Rng = Rng(Int(42));
+	entities List<Entity> = List(Entity);
+	total Int = Int(0);
+	frame Int = Int(1);
+	frame!to(frames) {
+		s Int = Int(1);
+		s!to(Int(30)) {
+			x Float = Float(rng!below(Int(1000)));
+			y Float = Float(rng!below(Int(1000)));
+			id Int = rng!below(Int(100));
+			hp Int = Int(50) + rng!below(Int(50));
+			entities!push(Entity(id, x, y, hp));
+		}
+		kills Int = Int(20);
+		if(entities:size() < kills) {
+			kills = entities:size();
+		}
+		d Int = Int(1);
+		d!to(kills) {
+			entities!remove(Int(1));
+		}
+		k Int = Int(1);
+		u Int = Int(1);
+		u!to(entities:size()) {
+			entities[k].x = entities[k].x + Float(entities[k].id) * Float(0.1);
+			entities[k].y = entities[k].y + Float(entities[k].hp) * Float(0.05);
+			entities[k].hp = entities[k].hp - Int(1);
+			expired Bool = if(entities[k].hp < 1) {
+				entities!remove(k);
+			}
+			expired:else() {
+				total = total + entities[k].hp;
+				k = k + 1;
+			}
+		}
+	}
+	console!print(String(frames) + " " + String(entities:size()) + " " + String(total));
+	return Unit();
+}
