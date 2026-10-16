@@ -462,7 +462,7 @@ const DATA = {
    ],
    "note": [
     "This test measures a reference-based Zane program. Each reference node owns its children, parent construction takes both children rather than deep-copying completed subtrees, and checking a tree borrows it. This matches the ownership transfer of child pointers in C++ and Rust.",
-    "OCaml is fastest at 0.0377 s, and Zane follows at 0.0476 s. The rest are well behind: Go takes 0.161 s, C 0.169 s, C++ and Rust 0.211 s, D 0.260 s and Zig 0.286 s. Go, the next row after Zane, takes 3.38 times as long as Zane; C++ takes 4.43 times as long. Zane's slowest sample, 0.0498 s, is below the fastest of every row except OCaml.",
+    "OCaml is fastest at 0.0377 s, and Zane follows at 0.0476 s. The rest are well behind: Go takes 0.161 s, C 0.169 s, C++ and Rust 0.211 s, D 0.260 s and Zig 0.286 s. Go, the next row after Zane, takes 3.37 times as long as Zane; C++ takes 4.43 times as long. Zane's slowest sample, 0.0498 s, is below the fastest of every row except OCaml.",
     "OCaml allocates the short-lived trees in its minor heap and collects them generationally; Go and D leave trees to their garbage collectors, while C, C++, Rust and Zig free them explicitly. Zane uses scope-based storage and teardown. These are whole-program results for different allocation and reclamation strategies; they do not isolate the cost of allocating, traversing, relocating or dropping a node."
    ]
   },
@@ -927,7 +927,7 @@ const DATA = {
     }
    ],
    "note": [
-    "Zane is fastest at 0.146 s, followed by Rust at 0.271 s, C at 0.354 s and Go at 0.372 s. C++ takes 0.572 s, Zig 0.790 s, D 0.949 s and OCaml 1.05 s. Rust takes 1.85 times as long as Zane and C++ takes 3.91 times as long. Zane's slowest sample, 0.148 s, is below every other row's fastest.",
+    "Zane is fastest at 0.146 s, followed by Rust at 0.270 s, C at 0.354 s and Go at 0.372 s. C++ takes 0.572 s, Zig 0.790 s, D 0.949 s and OCaml 1.05 s. Rust takes 1.85 times as long as Zane and C++ takes 3.91 times as long. Zane's slowest sample, 0.148 s, is below every other row's fastest.",
     "Rust's Vec\u003cNode> stores children inline, allocating once per internal node. The other versions allocate nodes separately and retain references or pointers to them, so the representations do different allocation work. Zane's nodes own lists of child references; constructing and dropping the tree includes both node and child-list storage. In Go, D and OCaml the collector handles reclamation at times of its own choosing."
    ]
   },
@@ -1391,7 +1391,7 @@ const DATA = {
     }
    ],
    "note": [
-    "C is fastest at 0.158 s, followed by Rust at 0.235 s, Go at 0.278 s and Zig at 0.349 s. Zane takes 0.575 s, 3.63 times as long as C, and C++ takes 0.738 s, 1.28 times as long as Zane; their sample ranges do not overlap. D takes 1.07 s and OCaml 3.32 s.",
+    "C is fastest at 0.158 s, followed by Rust at 0.235 s, Go at 0.278 s and Zig at 0.349 s. Zane takes 0.575 s, 3.64 times as long as C, and C++ takes 0.738 s, 1.28 times as long as Zane; their sample ranges do not overlap. D takes 1.07 s and OCaml 3.32 s.",
     "Every version keeps the entities in spawn order and removes them from the front and the middle, so each removal shifts the entries behind it; about 1,860 entities are alive at the end. C moves those pointers with one memmove, and so does the ordered remove the Zane compiler emits inline, while C++'s erase moves each unique_ptr in turn, clearing its source. The gap from C to Zane, C++ and D follows the shift, but this run does not show which other part of Zane's loop accounts for the rest of its time."
    ]
   },
@@ -1484,7 +1484,7 @@ const DATA = {
     }
    ],
    "note": [
-    "Zane is fastest at 0.0695 s, followed by C at 0.0867 s and C++ at 0.0886 s. Zig takes 0.0971 s, Go 0.110 s, Rust 0.117 s, D 0.130 s and OCaml 0.468 s. C takes 1.25 times as long as Zane, and Zane's slowest sample, 0.0700 s, is below every other row's fastest.",
+    "Zane is fastest at 0.0695 s, followed by C at 0.0867 s and C++ at 0.0886 s. Zig takes 0.0971 s, Go 0.109 s, Rust 0.117 s, D 0.130 s and OCaml 0.468 s. C takes 1.25 times as long as Zane, and Zane's slowest sample, 0.0699 s, is below every other row's fastest.",
     "Order does not matter here, so an expired particle's slot takes the last particle and no entries shift. About 1,160 particles are alive at the end. Each particle is its own object in every version, a reference type in Zane and a separate allocation elsewhere, so the run measures allocating, updating and releasing short-lived small objects; it does not separate the three."
    ]
   },
