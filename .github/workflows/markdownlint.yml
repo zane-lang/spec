@@ -17,11 +17,14 @@ jobs:
   markdownlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-
-      # `globs` is not optional: the action's own default is `*.{md,markdown}`,
-      # which reaches only the repository root and would silently skip `spec/`
-      # and `stories/` — every file this check exists for.
-      - uses: DavidAnson/markdownlint-cli2-action@v24
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          globs: "**/*.md"
+          persist-credentials: false
+
+      - name: Install Devbox tools (latest Devbox CLI)
+        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
+        with:
+          enable-cache: true
+
+      # Keep recursive globs and the committed Markdownlint configuration.
+      - run: devbox run lint

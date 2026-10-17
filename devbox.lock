@@ -1,0 +1,47 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "github:NixOS/nixpkgs/nixpkgs-unstable": {
+      "last_modified": "2026-10-16T02:15:57Z",
+      "resolved": "github:NixOS/nixpkgs/f20cd90e28fe0403873f473b29e42662cd86e8c4?lastModified=1792116957&narHash=sha256-EjZqHKObBfIOeHZnMRVV87HB3pPq%2FWBkmRJWyFxmZu8%3D"
+    },
+    "markdownlint-cli2@latest": {
+      "last_modified": "2026-10-14T08:20:44Z",
+      "resolved": "github:NixOS/nixpkgs/319e4cebef10cbb636c6ea392137b52ad105336a#markdownlint-cli2",
+      "source": "devbox-search",
+      "version": "0.23.3",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/mrxkc3883d5hvpmhjb592q9nx8wfpl5x-markdownlint-cli2-0.23.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/mrxkc3883d5hvpmhjb592q9nx8wfpl5x-markdownlint-cli2-0.23.3"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/gsjas2ypaw7ih6dv93dhgxcxasbq8jvy-markdownlint-cli2-0.23.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/gsjas2ypaw7ih6dv93dhgxcxasbq8jvy-markdownlint-cli2-0.23.3"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/hvfyxgwb28ipnsq0im6dvqx98cy460ij-markdownlint-cli2-0.23.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/hvfyxgwb28ipnsq0im6dvqx98cy460ij-markdownlint-cli2-0.23.3"
+        }
+      }
+    }
+  }
+}
