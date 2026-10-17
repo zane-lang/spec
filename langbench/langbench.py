@@ -466,7 +466,7 @@ def page_data(doc, explanations, notes_pinned):
             "profileText": tests.PROFILES.get(result["profile"], ""),
             "fold": {**result["fold"], "observed": "not inferred"},
             "rows": rows,
-            "hasNet": any("startup" in row for row in rows),
+            "hasNet": bool(rows) and all("startup" in row for row in rows),
             "note": explanations.get(result["id"], []),
         })
     return {
