@@ -106,10 +106,8 @@ TESTS = [
                    "language: loading it, initializing the runtime, one "
                    "write and exit. Every other test's run time contains the "
                    "same cost, and its net run time is its median less this "
-                   "test's median in the same language. A row whose fastest "
-                   "sample is not above the slowest sample here is shown as "
-                   "within startup, since nothing it computed is measurable "
-                   "beside that cost.",
+                   "test's median in the same language. A net run time is "
+                   "negative when a row's median is below this test's.",
         "args": [],
         "expected": "0\n",
         "check_args": [],

@@ -50,10 +50,9 @@ in `explanations.txt` can describe, and update those notes in the same change.
 - **Net run time.** `startup` prints one fixed number and exits, so its run
   time is what starting a program costs in each language. It runs with every
   selection, `--only` included. A row's net run time is its median less its
-  language's `startup` median, and a row whose fastest sample is not above
-  the slowest `startup` sample is shown as within startup: nothing it
-  computed is measurable beside that cost. Comptime rows use their language's
-  plain `startup`. The page opens on net run time, and shows run time on a
+  language's `startup` median, negative when the row's median is the lower.
+  The page marks no row fastest and gives none a multiple while a test has a
+  net at or below zero. Comptime rows use their language's plain `startup`. The page opens on net run time, and shows run time on a
   test without a `startup` row for each of its rows: `startup` itself, or a
   run pinned without it.
 - **Build time.** Each program built once, with its language's standard
