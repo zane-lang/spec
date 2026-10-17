@@ -517,7 +517,7 @@ def print_summary(doc):
             line = (f"  {name:<16} run {median(row['samples_s']):9.4f} s   "
                     f"build {row['build_s']:7.3f} s")
             if test["id"] != tests.BASELINE and row["lang"] in startup:
-                line += f"   net {net(row['samples_s'], startup[row['lang']]):9.4f} s"
+                line += f"   net {net(row['samples_s'], startup[row['lang']]) * 1e3:10.3f} ms"
             print(line)
 
 
