@@ -46,7 +46,6 @@
   .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-size:11.5px;}
   .rmult{font-size:10.5px;color:var(--muted);}
   .row.fastest .rmult{color:var(--good);}
-  .row.within .rmeta{color:var(--muted);}
 
   .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
   .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
@@ -157,7 +156,7 @@ const DATA = {
   {
    "id": "startup",
    "title": "Startup baseline",
-   "summary": "Prints one fixed number and exits, so its run time is what starting and stopping a program costs in each language: loading it, initializing the runtime, one write and exit. Every other test's run time contains the same cost, and its net run time is its median less this test's median in the same language. A row whose fastest sample is not above the slowest sample here is shown as within startup, since nothing it computed is measurable beside that cost.",
+   "summary": "Prints one fixed number and exits, so its run time is what starting and stopping a program costs in each language: loading it, initializing the runtime, one write and exit. Every other test's run time contains the same cost, and its net run time is its median less this test's median in the same language. A net run time is negative when a row's median is below this test's.",
    "args": [],
    "profile": "static",
    "profileText": "Reads no input: an optimized build may compute the whole program while it compiles.",
@@ -268,7 +267,7 @@ const DATA = {
      "max": 0.000766,
      "build": 0.5556,
      "startup": 0.000523,
-     "net": null
+     "net": -2.0000000000000052e-05
     },
     {
      "lang": "c",
@@ -279,7 +278,7 @@ const DATA = {
      "max": 0.000872,
      "build": 0.1674,
      "startup": 0.000481,
-     "net": null
+     "net": 0.00011800000000000005
     },
     {
      "lang": "cpp",
@@ -290,7 +289,7 @@ const DATA = {
      "max": 0.001065,
      "build": 0.2916,
      "startup": 0.000788,
-     "net": null
+     "net": 0.00015000000000000007
     },
     {
      "lang": "cpp",
@@ -301,7 +300,7 @@ const DATA = {
      "max": 0.001174,
      "build": 0.4428,
      "startup": 0.000788,
-     "net": null
+     "net": 6.500000000000006e-05
     },
     {
      "lang": "rust",
@@ -312,7 +311,7 @@ const DATA = {
      "max": 0.00102,
      "build": 0.2471,
      "startup": 0.000481,
-     "net": null
+     "net": 8.5e-05
     },
     {
      "lang": "rust",
@@ -323,7 +322,7 @@ const DATA = {
      "max": 0.000657,
      "build": 0.2507,
      "startup": 0.000481,
-     "net": null
+     "net": 6.300000000000001e-05
     },
     {
      "lang": "go",
@@ -334,7 +333,7 @@ const DATA = {
      "max": 0.001597,
      "build": 0.1179,
      "startup": 0.000971,
-     "net": null
+     "net": 0.000308
     },
     {
      "lang": "d",
@@ -345,7 +344,7 @@ const DATA = {
      "max": 0.000965,
      "build": 0.3498,
      "startup": 0.000726,
-     "net": null
+     "net": 6.100000000000007e-05
     },
     {
      "lang": "d",
@@ -356,7 +355,7 @@ const DATA = {
      "max": 0.001243,
      "build": 0.3807,
      "startup": 0.000726,
-     "net": null
+     "net": 4.300000000000007e-05
     },
     {
      "lang": "zig",
@@ -367,7 +366,7 @@ const DATA = {
      "max": 0.001403,
      "build": 7.6971,
      "startup": 0.000657,
-     "net": null
+     "net": 0.00027499999999999996
     },
     {
      "lang": "zig",
@@ -378,7 +377,7 @@ const DATA = {
      "max": 0.00069,
      "build": 9.784,
      "startup": 0.000657,
-     "net": null
+     "net": -6.599999999999998e-05
     },
     {
      "lang": "ocaml",
@@ -395,7 +394,7 @@ const DATA = {
    "hasNet": true,
    "note": [
     "This fixed-bound sieve reads no input, so it is eligible for compile-time evaluation. The plain CGT contains three loops and the optimized CGT contains none. That shows loop elimination at the CGT stage, including the imported dependency bodies present in the optimized tree. It does not by itself establish that every operation was evaluated while compiling; the page therefore keeps the folding status as \"not inferred\".",
-    "Every row except OCaml's is within startup: its fastest sample is no slower than its own language's slowest startup sample, so nothing it computed is measurable beside starting the program. That covers C and Go, which have no way to ask for compile-time evaluation, as well as every comptime row. OCaml's fastest sample, 0.808 ms, is 3 \u00b5s above its slowest startup sample, so its net 0.242 ms is barely clear of that cost. Zane's median, 0.503 ms, is the lowest of any row and below its own startup median. The single build measurements are 0.556 s for Zane, 0.292 s and 0.443 s for plain and comptime C++, and 7.70 s and 9.78 s for plain and comptime Zig."
+    "Every row's median is within 0.31 ms of its own language's startup median. Zane's, 0.503 ms, is the lowest of any row and 20 \u00b5s below its startup median, and comptime Zig's is 66 \u00b5s below its own, so both net times are negative. The other comptime rows take 43 \u00b5s (D), 63 \u00b5s (Rust) and 65 \u00b5s (C++) more than their startup; the plain rows take 61 \u00b5s (D), 85 \u00b5s (Rust), 118 \u00b5s (C), 150 \u00b5s (C++), 242 \u00b5s (OCaml), 275 \u00b5s (Zig) and 308 \u00b5s (Go) more. Differences this small sit inside the run's noise: Rust's own startup samples run from 0.455 to 0.944 ms. The single build measurements are 0.556 s for Zane, 0.292 s and 0.443 s for plain and comptime C++, and 7.70 s and 9.78 s for plain and comptime Zig."
    ]
   },
   {
@@ -1954,6 +1953,7 @@ const el = (tag, cls, text) => {
 };
 
 function seconds(s) {
+  if (s < 0) return "−" + seconds(-s);
   if (s >= 10) return s.toFixed(1) + " s";
   if (s >= 1) return s.toFixed(2) + " s";
   if (s >= 0.001) return (s * 1000).toFixed(1) + " ms";
@@ -2006,11 +2006,10 @@ function renderInfo(t) {
   info.appendChild(el("p", "", t.profileText)).style.marginTop = "10px";
 }
 
-// Net run time is a row's median less its language's startup baseline. A row
-// whose net is null is within startup: its fastest sample is not above the
-// baseline's slowest, so it has no bar and no multiple. Such a row is faster
-// than any measured one, so while a test has one, no row is marked fastest
-// and none gets a multiple.
+// Net run time is a row's median less its language's startup median, and is
+// negative when the row's median is the lower; a negative net has no bar. A
+// multiple of a net at or below zero means nothing, so while a test has one,
+// no row is marked fastest and none gets a multiple.
 function renderChart(t) {
   const chart = document.getElementById("chart");
   chart.textContent = "";
@@ -2020,28 +2019,24 @@ function renderChart(t) {
     net: "bar = median run less the language's startup baseline · whisker = min–max, less the same · lower is faster",
     build: "bar = build time with the standard library and dependencies already built",
   }[metric];
-  const value = r => r[key] === null ? -1 : r[key];
-  const rows = [...t.rows].sort((a, b) => value(a) - value(b));
-  const measured = rows.filter(r => r[key] !== null);
-  const top = Math.max(...measured.map(r =>
+  const rows = [...t.rows].sort((a, b) => a[key] - b[key]);
+  const top = Math.max(...rows.map(r =>
     metric === "run" ? r.max : metric === "net" ? r.max - r.startup : r.build), 1e-9);
-  const best = measured.length ? measured[0][key] : null;
-  const ranked = measured.length === rows.length;
+  const best = rows[0][key];
+  const ranked = best > 0;
   rows.forEach(r => {
-    const within = r[key] === null;
     const fastest = ranked && r[key] === best;
-    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") +
-      (fastest ? " fastest" : "") + (within ? " within" : ""));
+    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") + (fastest ? " fastest" : ""));
     row.appendChild(el("div", "rname", r.name + (r.variant === "plain" ? "" : " " + r.variant)));
     const track = el("div", "rtrack");
-    if (!within) {
+    if (r[key] > 0) {
       const bar = el("div", "rbar");
       bar.style.width = (100 * r[key] / top) + "%";
       bar.style.background = COLORS[r.lang] || "#6b7280";
       track.appendChild(bar);
     }
-    if (metric !== "build" && !within) {
-      const shift = metric === "net" ? r.startup : 0;
+    const shift = metric === "net" ? r.startup : 0;
+    if (metric !== "build" && r.max - shift > 0) {
       const low = Math.max(0, r.min - shift);
       const w = el("div", "rwhisker");
       w.style.left = (100 * low / top) + "%";
@@ -2050,12 +2045,8 @@ function renderChart(t) {
     }
     row.appendChild(track);
     const meta = el("div", "rmeta");
-    if (within) {
-      meta.appendChild(el("span", "", "within startup"));
-    } else {
-      meta.appendChild(el("span", "", seconds(r[key])));
-      if (ranked) meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
-    }
+    meta.appendChild(el("span", "", seconds(r[key])));
+    if (ranked) meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
     row.appendChild(meta);
     chart.appendChild(row);
   });

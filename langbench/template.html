@@ -46,7 +46,6 @@
   .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-size:11.5px;}
   .rmult{font-size:10.5px;color:var(--muted);}
   .row.fastest .rmult{color:var(--good);}
-  .row.within .rmeta{color:var(--muted);}
 
   .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
   .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
@@ -105,6 +104,7 @@ const el = (tag, cls, text) => {
 };
 
 function seconds(s) {
+  if (s < 0) return "−" + seconds(-s);
   if (s >= 10) return s.toFixed(1) + " s";
   if (s >= 1) return s.toFixed(2) + " s";
   if (s >= 0.001) return (s * 1000).toFixed(1) + " ms";
@@ -157,11 +157,10 @@ function renderInfo(t) {
   info.appendChild(el("p", "", t.profileText)).style.marginTop = "10px";
 }
 
-// Net run time is a row's median less its language's startup baseline. A row
-// whose net is null is within startup: its fastest sample is not above the
-// baseline's slowest, so it has no bar and no multiple. Such a row is faster
-// than any measured one, so while a test has one, no row is marked fastest
-// and none gets a multiple.
+// Net run time is a row's median less its language's startup median, and is
+// negative when the row's median is the lower; a negative net has no bar. A
+// multiple of a net at or below zero means nothing, so while a test has one,
+// no row is marked fastest and none gets a multiple.
 function renderChart(t) {
   const chart = document.getElementById("chart");
   chart.textContent = "";
@@ -171,28 +170,24 @@ function renderChart(t) {
     net: "bar = median run less the language's startup baseline · whisker = min–max, less the same · lower is faster",
     build: "bar = build time with the standard library and dependencies already built",
   }[metric];
-  const value = r => r[key] === null ? -1 : r[key];
-  const rows = [...t.rows].sort((a, b) => value(a) - value(b));
-  const measured = rows.filter(r => r[key] !== null);
-  const top = Math.max(...measured.map(r =>
+  const rows = [...t.rows].sort((a, b) => a[key] - b[key]);
+  const top = Math.max(...rows.map(r =>
     metric === "run" ? r.max : metric === "net" ? r.max - r.startup : r.build), 1e-9);
-  const best = measured.length ? measured[0][key] : null;
-  const ranked = measured.length === rows.length;
+  const best = rows[0][key];
+  const ranked = best > 0;
   rows.forEach(r => {
-    const within = r[key] === null;
     const fastest = ranked && r[key] === best;
-    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") +
-      (fastest ? " fastest" : "") + (within ? " within" : ""));
+    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") + (fastest ? " fastest" : ""));
     row.appendChild(el("div", "rname", r.name + (r.variant === "plain" ? "" : " " + r.variant)));
     const track = el("div", "rtrack");
-    if (!within) {
+    if (r[key] > 0) {
       const bar = el("div", "rbar");
       bar.style.width = (100 * r[key] / top) + "%";
       bar.style.background = COLORS[r.lang] || "#6b7280";
       track.appendChild(bar);
     }
-    if (metric !== "build" && !within) {
-      const shift = metric === "net" ? r.startup : 0;
+    const shift = metric === "net" ? r.startup : 0;
+    if (metric !== "build" && r.max - shift > 0) {
       const low = Math.max(0, r.min - shift);
       const w = el("div", "rwhisker");
       w.style.left = (100 * low / top) + "%";
@@ -201,12 +196,8 @@ function renderChart(t) {
     }
     row.appendChild(track);
     const meta = el("div", "rmeta");
-    if (within) {
-      meta.appendChild(el("span", "", "within startup"));
-    } else {
-      meta.appendChild(el("span", "", seconds(r[key])));
-      if (ranked) meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
-    }
+    meta.appendChild(el("span", "", seconds(r[key])));
+    if (ranked) meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
     row.appendChild(meta);
     chart.appendChild(row);
   });

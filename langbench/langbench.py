@@ -425,11 +425,8 @@ def baselines(doc):
 
 
 def net(samples, baseline):
-    """A row's median less its language's baseline median, or None when the
-    row is within startup: its fastest sample is not above the baseline's
-    slowest, so nothing it computed is measurable beside starting up."""
-    if min(samples) <= max(baseline):
-        return None
+    """A row's median less its language's baseline median. It is negative
+    when the row's median is below the baseline's."""
     return median(samples) - median(baseline)
 
 
@@ -520,9 +517,7 @@ def print_summary(doc):
             line = (f"  {name:<16} run {median(row['samples_s']):9.4f} s   "
                     f"build {row['build_s']:7.3f} s")
             if test["id"] != tests.BASELINE and row["lang"] in startup:
-                rest = net(row["samples_s"], startup[row["lang"]])
-                line += ("   net within startup" if rest is None
-                         else f"   net {rest:9.4f} s")
+                line += f"   net {net(row['samples_s'], startup[row['lang']]):9.4f} s"
             print(line)
 
 
