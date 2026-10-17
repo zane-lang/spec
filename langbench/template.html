@@ -159,7 +159,9 @@ function renderInfo(t) {
 
 // Net run time is a row's median less its language's startup baseline. A row
 // whose net is null is within startup: its fastest sample is not above the
-// baseline's slowest, so it has no bar and no multiple.
+// baseline's slowest, so it has no bar and no multiple. Such a row is faster
+// than any measured one, so while a test has one, no row is marked fastest
+// and none gets a multiple.
 function renderChart(t) {
   const chart = document.getElementById("chart");
   chart.textContent = "";
@@ -175,9 +177,10 @@ function renderChart(t) {
   const top = Math.max(...measured.map(r =>
     metric === "run" ? r.max : metric === "net" ? r.max - r.startup : r.build), 1e-9);
   const best = measured.length ? measured[0][key] : null;
+  const ranked = measured.length === rows.length;
   rows.forEach(r => {
     const within = r[key] === null;
-    const fastest = !within && r[key] === best;
+    const fastest = ranked && r[key] === best;
     const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") +
       (fastest ? " fastest" : "") + (within ? " within" : ""));
     row.appendChild(el("div", "rname", r.name + (r.variant === "plain" ? "" : " " + r.variant)));
@@ -202,7 +205,7 @@ function renderChart(t) {
       meta.appendChild(el("span", "", "within startup"));
     } else {
       meta.appendChild(el("span", "", seconds(r[key])));
-      meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
+      if (ranked) meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
     }
     row.appendChild(meta);
     chart.appendChild(row);
