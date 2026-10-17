@@ -46,6 +46,7 @@
   .rmeta{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font-size:11.5px;}
   .rmult{font-size:10.5px;color:var(--muted);}
   .row.fastest .rmult{color:var(--good);}
+  .row.within .rmeta{color:var(--muted);}
 
   .notes{margin-top:30px;padding-top:20px;border-top:1px solid var(--divider);}
   .notes h2{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--label);margin-bottom:12px;}
@@ -79,6 +80,7 @@
   <span class="chart-cap" id="cap"></span>
   <div class="toggle" id="metric">
     <button data-m="run">run time</button>
+    <button data-m="net">net run time</button>
     <button data-m="build">build time</button>
   </div>
 </div>
@@ -153,34 +155,53 @@ function renderInfo(t) {
   info.appendChild(el("p", "", t.profileText)).style.marginTop = "10px";
 }
 
+// Net run time is a row's median less its language's startup baseline. A row
+// whose net is null is within startup: its fastest sample is not above the
+// baseline's slowest, so it has no bar and no multiple.
 function renderChart(t) {
   const chart = document.getElementById("chart");
   chart.textContent = "";
-  const key = metric === "run" ? "median" : "build";
-  document.getElementById("cap").textContent = metric === "run"
-    ? "bar = median run · whisker = min–max · lower is faster"
-    : "bar = build time with the standard library and dependencies already built";
-  const rows = [...t.rows].sort((a, b) => a[key] - b[key]);
-  const top = Math.max(...rows.map(r => metric === "run" ? r.max : r.build));
-  const best = rows[0][key];
-  rows.forEach((r, i) => {
-    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") + (i === 0 ? " fastest" : ""));
+  const key = {run: "median", net: "net", build: "build"}[metric];
+  document.getElementById("cap").textContent = {
+    run: "bar = median run · whisker = min–max · lower is faster",
+    net: "bar = median run less the language's startup baseline · whisker = min–max, less the same · lower is faster",
+    build: "bar = build time with the standard library and dependencies already built",
+  }[metric];
+  const value = r => r[key] === null ? -1 : r[key];
+  const rows = [...t.rows].sort((a, b) => value(a) - value(b));
+  const measured = rows.filter(r => r[key] !== null);
+  const top = Math.max(...measured.map(r =>
+    metric === "run" ? r.max : metric === "net" ? r.max - r.startup : r.build), 1e-9);
+  const best = measured.length ? measured[0][key] : null;
+  rows.forEach(r => {
+    const within = r[key] === null;
+    const fastest = !within && r[key] === best;
+    const row = el("div", "row" + (r.lang === "zane" ? " zane" : "") +
+      (fastest ? " fastest" : "") + (within ? " within" : ""));
     row.appendChild(el("div", "rname", r.name + (r.variant === "plain" ? "" : " " + r.variant)));
     const track = el("div", "rtrack");
-    const bar = el("div", "rbar");
-    bar.style.width = (100 * r[key] / top) + "%";
-    bar.style.background = COLORS[r.lang] || "#6b7280";
-    track.appendChild(bar);
-    if (metric === "run") {
+    if (!within) {
+      const bar = el("div", "rbar");
+      bar.style.width = (100 * r[key] / top) + "%";
+      bar.style.background = COLORS[r.lang] || "#6b7280";
+      track.appendChild(bar);
+    }
+    if (metric !== "build" && !within) {
+      const shift = metric === "net" ? r.startup : 0;
+      const low = Math.max(0, r.min - shift);
       const w = el("div", "rwhisker");
-      w.style.left = (100 * r.min / top) + "%";
-      w.style.width = Math.max(0.3, 100 * (r.max - r.min) / top) + "%";
+      w.style.left = (100 * low / top) + "%";
+      w.style.width = Math.max(0.3, 100 * (r.max - shift - low) / top) + "%";
       track.appendChild(w);
     }
     row.appendChild(track);
     const meta = el("div", "rmeta");
-    meta.appendChild(el("span", "", seconds(r[key])));
-    meta.appendChild(el("span", "rmult", i === 0 ? "fastest" : "×" + (r[key] / best).toFixed(1)));
+    if (within) {
+      meta.appendChild(el("span", "", "within startup"));
+    } else {
+      meta.appendChild(el("span", "", seconds(r[key])));
+      meta.appendChild(el("span", "rmult", fastest ? "fastest" : "×" + (r[key] / best).toFixed(1)));
+    }
     row.appendChild(meta);
     chart.appendChild(row);
   });
@@ -224,9 +245,14 @@ function renderAbout() {
 function render() {
   renderBanner();
   renderTabs();
-  document.querySelectorAll("#metric button").forEach(b => b.classList.toggle("on", b.dataset.m === metric));
   const t = DATA.tests[current];
   const shown = !!t;
+  const hasNet = shown && t.hasNet;
+  if (metric === "net" && !hasNet) metric = "run";
+  document.querySelectorAll("#metric button").forEach(b => {
+    b.classList.toggle("on", b.dataset.m === metric);
+    if (b.dataset.m === "net") b.style.display = hasNet ? "" : "none";
+  });
   ["info", "chart", "notes"].forEach(id => document.getElementById(id).style.display = shown ? "" : "none");
   document.querySelector(".chart-head").style.display = shown ? "" : "none";
   if (shown) {

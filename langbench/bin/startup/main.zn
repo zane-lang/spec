@@ -1,0 +1,11 @@
+/// Prints one fixed number and exits: the cost of starting a Zane program,
+/// which every other test's run time also contains.
+package startup;
+
+import core$;
+
+Unit main() {
+	console Console(@program$console);
+	console!print(String(Int(0)));
+	return Unit();
+}
