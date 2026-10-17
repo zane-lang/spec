@@ -53,7 +53,8 @@ in `explanations.txt` can describe, and update those notes in the same change.
   language's `startup` median, and a row whose fastest sample is not above
   the slowest `startup` sample is shown as within startup: nothing it
   computed is measurable beside that cost. Comptime rows use their language's
-  plain `startup`.
+  plain `startup`. The page opens on net run time, and shows run time on a
+  test with no net times: `startup` itself, or a run pinned without it.
 - **Build time.** Each program built once, with its language's standard
   library and its dependencies already built: `core` for Zane, and for Go and
   Zig a small program built first into a fresh cache. Zig compiles the parts

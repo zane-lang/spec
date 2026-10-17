@@ -6,8 +6,8 @@ Builds every test in each language, checks that all of them print the output
 the test expects, records plain and optimized CGT loop counts,
 times the programs, and renders langbench.html from
 the measurements. The startup baseline runs with every selection, and the
-page shows each row's run time net of its language's baseline beside the
-raw run time.
+page opens on each row's run time net of its language's baseline, with the
+raw run time one toggle away.
 
 Layout:
     zane.coda, zane-lock.coda   the Zane project: the pinned compiler and core

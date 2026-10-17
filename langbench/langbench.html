@@ -79,8 +79,8 @@
 <div class="chart-head">
   <span class="chart-cap" id="cap"></span>
   <div class="toggle" id="metric">
-    <button data-m="run">run time</button>
     <button data-m="net">net run time</button>
+    <button data-m="run">run time</button>
     <button data-m="build">build time</button>
   </div>
 </div>
@@ -1602,7 +1602,9 @@ const DATA = {
 };
 
 const COLORS = {zane:"#7c6ff7", c:"#5b8def", cpp:"#4fb3c8", rust:"#d9825b", go:"#55b88a", d:"#c96fae", zig:"#d9a441", ocaml:"#e5534b"};
-let current = 0, metric = "run";
+// `chosen` is the view picked with the toggle, net run time by default;
+// `metric` is the one shown, which is run time on a tab without net times.
+let current = 0, chosen = "net", metric = chosen;
 
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
@@ -1757,7 +1759,7 @@ function render() {
   const t = DATA.tests[current];
   const shown = !!t;
   const hasNet = shown && t.hasNet;
-  if (metric === "net" && !hasNet) metric = "run";
+  metric = chosen === "net" && !hasNet ? "run" : chosen;
   document.querySelectorAll("#metric button").forEach(b => {
     b.classList.toggle("on", b.dataset.m === metric);
     if (b.dataset.m === "net") b.style.display = hasNet ? "" : "none";
@@ -1775,7 +1777,7 @@ function render() {
 const langNames = Object.values(DATA.languages).map(l => l.name);
 document.getElementById("langs").textContent = "the same programs in " +
   langNames.slice(0, -1).join(", ") + " and " + langNames[langNames.length - 1];
-document.querySelectorAll("#metric button").forEach(b => b.onclick = () => { metric = b.dataset.m; render(); });
+document.querySelectorAll("#metric button").forEach(b => b.onclick = () => { chosen = b.dataset.m; render(); });
 render();
 </script>
 </body>
