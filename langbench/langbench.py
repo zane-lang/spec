@@ -5,7 +5,9 @@ Zane language benchmark runner
 Builds every test in each language, checks that all of them print the output
 the test expects, records plain and optimized CGT loop counts,
 times the programs, and renders langbench.html from
-the measurements.
+the measurements. The startup baseline runs with every selection, and the
+page opens on each row's run time net of its language's baseline, with the
+raw run time one toggle away.
 
 Layout:
     zane.coda, zane-lock.coda   the Zane project: the pinned compiler and core
@@ -30,7 +32,7 @@ Usage, from langbench/:
     devbox run -- python3 langbench.py                # build, check, time, render
     devbox run -- python3 langbench.py --save         # ... and pin the run
     devbox run -- python3 langbench.py --quick        # small sizes, one run: check the pipeline
-    devbox run -- python3 langbench.py --only primes  # one test
+    devbox run -- python3 langbench.py --only primes  # one test, with the startup baseline
     python3 langbench.py --from-file                  # render from the committed JSON
     python3 langbench.py --json PATH                  # render from another results file
 """
@@ -409,16 +411,40 @@ def median(samples):
     return statistics.median(samples)
 
 
+def baselines(doc):
+    """Each language's startup baseline samples, from a run that measured it.
+
+    A results file pinned before the baseline joined the bench has none, and
+    its page shows raw run times only.
+    """
+    for result in (doc or {}).get("tests", []):
+        if result["id"] == tests.BASELINE:
+            return {row["lang"]: row["samples_s"] for row in result["rows"]
+                    if row["variant"] == "plain"}
+    return {}
+
+
+def net(samples, baseline):
+    """A row's median less its language's baseline median, or None when the
+    row is within startup: its fastest sample is not above the baseline's
+    slowest, so nothing it computed is measurable beside starting up."""
+    if min(samples) <= max(baseline):
+        return None
+    return median(samples) - median(baseline)
+
+
 def page_data(doc, explanations, notes_pinned):
     """Everything the page shows, as one JSON document."""
     by_id = {t["id"]: t for t in tests.TESTS}
+    startup = baselines(doc)
     out_tests = []
     for result in (doc or {}).get("tests", []):
         meta = by_id.get(result["id"], {})
+        is_baseline = result["id"] == tests.BASELINE
         rows = []
         for row in result["rows"]:
             samples = row["samples_s"]
-            rows.append({
+            out = {
                 "lang": row["lang"],
                 "name": tests.LANGUAGES[row["lang"]]["name"],
                 "variant": row["variant"],
@@ -426,7 +452,11 @@ def page_data(doc, explanations, notes_pinned):
                 "min": min(samples),
                 "max": max(samples),
                 "build": row["build_s"],
-            })
+            }
+            if not is_baseline and row["lang"] in startup:
+                out["startup"] = median(startup[row["lang"]])
+                out["net"] = net(samples, startup[row["lang"]])
+            rows.append(out)
         out_tests.append({
             "id": result["id"],
             "title": meta.get("title", result["id"]),
@@ -436,6 +466,7 @@ def page_data(doc, explanations, notes_pinned):
             "profileText": tests.PROFILES.get(result["profile"], ""),
             "fold": {**result["fold"], "observed": "not inferred"},
             "rows": rows,
+            "hasNet": bool(rows) and all("startup" in row for row in rows),
             "note": explanations.get(result["id"], []),
         })
     return {
@@ -478,15 +509,21 @@ def render_html(data):
 
 
 def print_summary(doc):
-    """Print each test's medians, fastest first."""
+    """Print each test's medians, fastest first, each with its net run time."""
+    startup = baselines(doc)
     for test in doc["tests"]:
         print(f"\n{test['id']} {' '.join(test['args'])}  "
               f"(profile {test['profile']}, Zane {test['fold']['observed']})")
         rows = sorted(test["rows"], key=lambda r: median(r["samples_s"]))
         for row in rows:
             name = f"{tests.LANGUAGES[row['lang']]['name']} {row['variant']}"
-            print(f"  {name:<16} run {median(row['samples_s']):9.4f} s   "
-                  f"build {row['build_s']:7.3f} s")
+            line = (f"  {name:<16} run {median(row['samples_s']):9.4f} s   "
+                    f"build {row['build_s']:7.3f} s")
+            if test["id"] != tests.BASELINE and row["lang"] in startup:
+                rest = net(row["samples_s"], startup[row["lang"]])
+                line += ("   net within startup" if rest is None
+                         else f"   net {rest:9.4f} s")
+            print(line)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -526,7 +563,8 @@ def main():
         for name in args.only or []:
             if name not in known:
                 parser.error(f"unknown test {name!r}; tests: {', '.join(sorted(known))}")
-        selected = [t for t in tests.TESTS if not args.only or t["id"] in args.only]
+        selected = [t for t in tests.TESTS if not args.only or t["id"] in args.only
+                    or t["id"] == tests.BASELINE]
         runs, warmup = (1, 0) if args.quick else (args.runs, args.warmup)
         doc = run_bench(selected, args.quick, runs, warmup)
         print_summary(doc)

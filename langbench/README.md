@@ -47,6 +47,15 @@ in `explanations.txt` can describe, and update those notes in the same change.
   what `tests.py` expects at the test's size before it is timed.
 - **Run time.** One untimed run, then five timed runs of the whole process;
   the page shows the median and the spread.
+- **Net run time.** `startup` prints one fixed number and exits, so its run
+  time is what starting a program costs in each language. It runs with every
+  selection, `--only` included. A row's net run time is its median less its
+  language's `startup` median, and a row whose fastest sample is not above
+  the slowest `startup` sample is shown as within startup: nothing it
+  computed is measurable beside that cost. Comptime rows use their language's
+  plain `startup`. The page opens on net run time, and shows run time on a
+  test without a `startup` row for each of its rows: `startup` itself, or a
+  run pinned without it.
 - **Build time.** Each program built once, with its language's standard
   library and its dependencies already built: `core` for Zane, and for Go and
   Zig a small program built first into a fresh cache. Zig compiles the parts
@@ -85,8 +94,8 @@ parent transfers both children into it, matching the owning pointers in C++
 and Rust; checking a tree borrows it. `treecopy` intentionally uses value
 types, because copying the complete tree is the work that test measures.
 
-The project builds with compiler v0.13
-([`090bc70`](https://github.com/zane-lang/compiler/commit/090bc709ef1226501422b6b20aa7549bff40b20e))
-and `core` v0.3. The pinned 2026-10-16 run used both, with every language and
+The project builds with compiler v0.14
+([`41277c7`](https://github.com/zane-lang/compiler/commit/41277c73ef24dbf95715c190741ff13ae93077fb))
+and `core` v0.4. The pinned 2026-10-17 run used both, with every language and
 test above, and was measured on an Intel Core Ultra 9 285K machine under WSL2
-with zane CLI v0.6; `explanations.txt` describes that run.
+with zane CLI v0.7; `explanations.txt` describes that run.

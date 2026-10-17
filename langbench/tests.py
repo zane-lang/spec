@@ -92,8 +92,30 @@ PROFILES = {
 # Each test: the programs, the size the bench runs it at, and the output every
 # language must print at that size. "check" is a small size for --quick.
 # "variants" lists the extra programs of a language beyond its plain one, as
-# (variant, file stem).
+# (variant, file stem). The test marked "baseline" is the startup baseline:
+# each other row's net run time is its median minus its language's baseline
+# median.
 TESTS = [
+    {
+        "id": "startup",
+        "title": "Startup baseline",
+        "profile": "static",
+        "baseline": True,
+        "summary": "Prints one fixed number and exits, so its run time is "
+                   "what starting and stopping a program costs in each "
+                   "language: loading it, initializing the runtime, one "
+                   "write and exit. Every other test's run time contains the "
+                   "same cost, and its net run time is its median less this "
+                   "test's median in the same language. A row whose fastest "
+                   "sample is not above the slowest sample here is shown as "
+                   "within startup, since nothing it computed is measurable "
+                   "beside that cost.",
+        "args": [],
+        "expected": "0\n",
+        "check_args": [],
+        "check_expected": "0\n",
+        "variants": {},
+    },
     {
         "id": "primes",
         "title": "Sieve of Eratosthenes, fixed bound",
@@ -366,3 +388,5 @@ for _test in TESTS:
     if _test["id"] == "binarytrees":
         _test["expected"] = expected_binarytrees(int(_test["args"][0]))
         _test["check_expected"] = expected_binarytrees(int(_test["check_args"][0]))
+
+BASELINE = next(_test["id"] for _test in TESTS if _test.get("baseline"))
