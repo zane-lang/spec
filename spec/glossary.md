@@ -348,6 +348,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out the kind and the width, which is all that tells the four apart.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
 
+### 3.47 growing-argument rule
+
+- **Meaning:** A type that leads back to itself, through any member or another type, passes back each argument as one of its own parameters or as one naming none. A parameter passed back inside a larger argument would demand a new type at every step, so the declaration is an error.
+- **Why this name:** It names what the rule forbids: an argument that grows each time the type comes back to itself.
+- **Canonical home:** [`generics.md`](generics.md) §2.4; its relation to boxing in [`adt.md`](adt.md) §4
+
 ---
 
 ## 4. Packages, Operators, and Versioning
