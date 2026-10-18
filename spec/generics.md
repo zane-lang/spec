@@ -72,6 +72,35 @@ type Wrapper = struct {
 
 `Wrapper` is concrete: every field type is fully applied, so `Wrapper`'s layout is known. A named type is always declared with `type Name = struct { ... }` or `type Name = #struct { ... }` (see [`types.md`](types.md) §2); the `struct { ... }` and `#struct { ... }` bodies are type expressions and do not name a type on their own.
 
+### 2.4 A type may not hold itself at a growing argument
+
+A type definition may lead back to itself through its members, directly or through other types. Each time it does, every argument it passes back **MUST** either be one of its own parameters as written or name none of them. This is the **growing-argument rule**. A definition that passes a parameter back inside a larger argument is a compile-time error:
+
+```zane
+type Grow<T Type> = variant { leaf T; more Grow<Array<T, 2>>; }   // ILLEGAL
+```
+
+`Grow<Int>` holds a `Grow<Array<Int, 2>>`, which holds a `Grow<Array<Array<Int, 2>, 2>>`, and so on. Each value is finite, since it ends at a `leaf`. The types are not: every application is a distinct concrete type with a layout of its own (§2.1), and evaluating `Grow<Int>` never reaches a set of types it has already produced. Boxing cannot help, because boxing makes each type on a cycle finite ([`adt.md`](adt.md) §4) and here there is no end to the types.
+
+Leading back at the same arguments, at shuffled ones, or at fixed ones produces finitely many types, so each is legal:
+
+```zane
+type Chain<T Type>        = variant { last T; more Chain<T>; }
+type Swap<A Type, B Type> = variant { first A; second B; more Swap<B, A>; }
+type Mixed<T Type>        = variant { last T; more Mixed<Int>; }
+```
+
+The rule follows every member: inline and boxed members, `&` fields, a distinct type's definition, and the element types of `Array`, `ArrayRef`, and `List`. It also follows a cycle through other generic types, where the argument may grow on any step:
+
+```zane
+type A<T Type> = variant { last T; next B<Array<T, 2>>; }   // ILLEGAL
+type B<U Type> = variant { last U; next A<U>; }
+```
+
+The error is reported at the declaration, on the member that passes the larger argument, whether or not anything applies the type. Unlike a wrong-kind argument (§3.6), such a type is wrong for every argument, so its declaration is where the mistake is.
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-type-may-not-hold-itself-at-a-growing-argument) — "A type may not hold itself at a growing argument".
+
 ---
 
 ## 3. The Parameter Model
@@ -476,6 +505,7 @@ The following are intentionally not specified in this version:
 | Concept | Rule |
 |---|---|
 | Type as template | A type definition lists parameters in a `<>` header and produces a result; applying arguments evaluates a type into a concrete type |
+| Growing-argument rule | A type that leads back to itself, through any member or other type, passes back each argument as one of its own parameters or as one naming none; passing a parameter inside a larger argument is an error at the declaration |
 | Type parameter | Declared `name Type` with an uppercase name (`T`); ranges over types |
 | Number parameter | Declared `name @concepts$Int` with a lowercase name (`n`); ranges over compile-time integers and resolves to a number value in body positions |
 | `Type` / `@concepts$Int` | Compiler concept types; legal only in parameter positions, never as storage; the only two kinds a type's `<>` header holds |
