@@ -124,7 +124,7 @@ This pair records a project's **direct** dependencies only; it is not a flattene
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-lock.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
-`zane toolchain update [version]` does the same for the compiler (§14): it writes the toolchain tag named, or the latest, into the `zane-version` field of `zane.coda` and the commit that tag resolves to into the reserved `zane` row of `zane-lock.coda`, installing that toolchain if it is missing.
+`zane toolchain update [version]` does the same for the compiler (§14): it writes the toolchain tag named, or else the newest release of the project's current major, into the `zane-version` field of `zane.coda` and the commit that tag resolves to into the reserved `zane` row of `zane-lock.coda`, installing that toolchain if it is missing. Moving the project to another major takes a named tag.
 
 If a tag has moved and the user intentionally wants to trust the new commit, the update flow requires an explicit override flag rather than silently refreshing the hash, for example:
 
