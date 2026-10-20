@@ -26,7 +26,7 @@ Each project records dependencies across two committed files: an intent manifest
 `zane.coda` records what the project wants, by dependency key:
 
 ```zane
-zane-version v0.4.1
+zane-version v0.14
 version-pattern v*.+.++
 
 deps [
@@ -61,7 +61,7 @@ Neither region field has a language-defined maximum. The toolchain checks that i
 `fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
 
 ```zane
-zane-version v0.4.1
+zane-version v0.14
 version-pattern v*.+.++
 fixed-region 1GiB
 spawned-fixed-region 16MiB
@@ -70,7 +70,7 @@ spawned-fixed-region 16MiB
 The optional top-level **`test-deps`** block lists the dependencies whose packages only the project's test packages import ([`packages.md`](packages.md) §7.3). It has the same columns as `deps`, and its rows follow the same rules:
 
 ```zane
-zane-version v0.4.1
+zane-version v0.14
 version-pattern v*.+.++
 
 deps [
