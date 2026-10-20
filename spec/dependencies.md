@@ -43,7 +43,7 @@ remaps [
 
 Top-level fields:
 
-- **`zane-version`**: the toolchain tag used for the compiler; see [§14 Toolchain Version](#14-toolchain-version).
+- **`zane-version`** (required): the oldest compiler release that builds the project. The project being built is built by that compiler, together with every package it depends on; see [§14 Toolchain Version](#14-toolchain-version).
 - **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB`. It is `256MiB` when omitted.
 - **`spawned-fixed-region`** (optional): the same bound for each spawned call ([`concurrency.md`](concurrency.md) §3). It is `8MiB` when omitted.
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It is information, not permission, and is consumed only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
@@ -179,7 +179,7 @@ Each asset is a gzip-compressed tar archive containing a `build/` directory with
 
 ### 3.2 Publishing a release
 
-The author builds the objects for each supported target from the release's source and dependency pins, packages them, and computes each archive's SHA-256. The author then commits the URLs and hashes in `zane-artifacts.coda`, tags that commit, and uploads the exact archives at the recorded GitHub Release URLs. The release is usable only after its assets are available. Archives contain the objects, not the artifact manifest, so recording their hashes creates no circular hash dependency.
+The author builds the objects for each supported target from the release's source and dependency pins, with the compiler the package's `zane-version` names (§14), packages them, and computes each archive's SHA-256. The author then commits the URLs and hashes in `zane-artifacts.coda`, tags that commit, and uploads the exact archives at the recorded GitHub Release URLs. The release is usable only after its assets are available. Archives contain the objects, not the artifact manifest, so recording their hashes creates no circular hash dependency.
 
 A release **MUST NOT** be published while any `deps` row of the package's manifest has a path `from` (§12.2), because no other machine can fetch the code such a row names. A `test-deps` row may keep a path `from`, since no consumer reads it.
 
@@ -396,7 +396,7 @@ At a high level, dependency resolution proceeds in this order:
 2. validate the package URLs and version tags for path safety (§7)
 3. resolve each recorded tag and verify its commit against the corresponding lock file (§4), for every dependency whose `from` is not a path
 4. fetch and check out each verified commit into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, a dependency with no public library package, or two packages a project reaches under one name (§6.1, §8, §9, §10)
+5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, a dependency with no public library package, two packages a project reaches under one name, or a package whose `zane-version` is of another major than the project's or newer than it (§6.1, §8, §9, §10, §14)
 6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for a `source` dependency, use §12.1 instead, and for a path dependency, use §12.2 instead
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead
@@ -409,17 +409,21 @@ A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` pins the toolchain tag used to build the project. It selects the compiler; the reserved `zane` key in `zane-lock.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` names a compiler release by its tag, `vMAJOR.MINOR`. It states the oldest compiler that builds the project's code. The reserved `zane` key in `zane-lock.coda` records the commit that tag must resolve to.
 
+- **One compiler builds the whole graph.** The project being built is compiled by the compiler its own `zane-version` names, and so is every package of its graph. A consumer is compiled against its dependencies' source and emits the generic instances it needs from their bodies, so the compiler that builds the consumer reads every package the consumer reaches.
+- **A major keeps compatibility.** A compiler builds any code that an earlier compiler of the same major builds, with the same meaning, and links the objects such a compiler wrote. Compilers of different majors make no promise about each other. Major `0` is exempt: a release of major `0` promises nothing about the releases before it.
+- **A dependency's `zane-version` is a floor.** In the manifest of the project being built, `zane-version` names the compiler, for its programs, its library packages, and its tests alike. In a fetched manifest, it names the oldest compiler that builds that package. Dependency resolution **MUST** reject a graph that holds a package whose `zane-version` is of another major than the project's, or newer than it, and the error names each such package and the compiler it needs.
 - The tag covers the compiler alone. What the compiler supplies is the grammar and the intrinsics — none of which name a declaration in any package ([`syntax.md`](syntax.md) §2.7, [`control-flow.md`](control-flow.md) §4.1) — so pinning it fixes the language without fixing any library.
 - **No library is coupled to the toolchain tag, `core` included.** `core` and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
-- This is why nothing has to preserve backward compatibility across versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
+- Nothing has to preserve backward compatibility across package versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
 - The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
 - The `zane` command that reads the manifest is not part of the toolchain the tag pins. It installs the compiler the tag names and runs it, so one installed `zane` command builds projects pinned to any toolchain tag.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-part-of-the-language-again) — "`core` becomes part of the language again".
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-an-ordinary-package-over-a-primitive-floor) — "`core` becomes an ordinary package over a primitive floor".
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-zane-command-is-not-pinned-by-zane-version) — "The `zane` command is not pinned by `zane-version`".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#zane-version-becomes-the-oldest-compiler-a-package-builds-with) — "`zane-version` becomes the oldest compiler a package builds with".
 
 ---
 
