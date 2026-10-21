@@ -88,7 +88,7 @@ The operands of every operator are evaluated left to right, in written order, an
 |---|---|---|
 | `Bool` | conjunction | disjunction |
 | a set | the elements in both | the elements in either |
-| a set of flags | the flags both hold | the flags either holds |
+| a set of flags | the flags both hold | the flags held by either |
 
 A number has no parts of that kind, so `Int` and `Float` implement neither.
 
