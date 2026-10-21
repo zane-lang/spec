@@ -90,7 +90,7 @@ Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, 
 A leading `_` marks an identifier as private without changing the lexical class set by the first letter.
 
 - A field beginning with `_` is private to the package that declares its type. See [`types.md`](types.md) §2.3.
-- A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are symbol-named and remain public. See [`packages.md`](packages.md) §4.
+- A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are named by operator tokens and remain public. See [`packages.md`](packages.md) §4.
 - A top-level library package whose name begins with `_` is private to its project. See [`packages.md`](packages.md) §4.4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".

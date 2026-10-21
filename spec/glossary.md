@@ -224,7 +224,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.26 capability marker
 
-- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; a symbol name makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 
