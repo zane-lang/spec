@@ -1,7 +1,7 @@
-zane-version v0.14
+zane-version v0.16
 version-pattern v*.+
 
 deps [
     key version from
-    core v0.4 source
+    core v0.5 source
 ]
