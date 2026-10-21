@@ -182,7 +182,16 @@ Int +(left Int, right @concepts$Int) => left + Int(right)
 Int +(left @concepts$Int, right Int) => Int(left) + right
 ```
 
-So `count + 1` and `1 + count` both resolve directly. Operands of two different types reach an overload only when one declares that pair:
+So `count + 1` and `1 + count` both resolve directly.
+
+`~` on an integer or float literal calls no operator. The result is the literal of the opposite sign, of the same concept type, so `~1` is an integer literal and `~2.5` a float literal. A literal parameter stands for its literal, and `~` flips it the same way. A derived subtraction with a literal on the right therefore resolves like an addition: `count - 1` is `count + ~1` (§2.3), which `core`'s overload above takes.
+
+```zane
+less Int = count - 1;        // count + ~1
+below Int = Int(~1);         // a negative literal, constructed
+```
+
+Operands of two different types reach an overload only when one declares that pair:
 
 ```zane
 total Float = count + ratio;           // ILLEGAL: no `+` takes an Int and a Float
@@ -310,5 +319,5 @@ An operator token may appear only in operator position; it has no value form. Th
 | Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `conjoin`, `disjoin`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Intersection and union | `and` and `or` take what two values share and what either covers, binding below every comparison with `and` tighter; `Bool` reads them as conjunction and disjunction, and the numeric types implement neither. Both operands are evaluated. |
-| Operands | An operand is never converted; an overload accepts a literal by declaring its concept type, and `core` declares one for each side of each operator over a fundamental type. |
+| Operands | An operand is never converted; an overload accepts a literal by declaring its concept type, and `core` declares one for each side of each operator over a fundamental type. `~` on a numeric literal is the literal of the opposite sign. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |

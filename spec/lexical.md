@@ -260,6 +260,8 @@ A numeric literal consists of digits and at most one `.`, which has at least one
 .5     // ILLEGAL: a digit must precede the `.`
 ```
 
+A numeric literal is written without a sign. `~` before one gives the literal of the opposite sign ([`operators.md`](operators.md) §2.7), so `~3` is a negative integer literal.
+
 Because the spelling decides the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
