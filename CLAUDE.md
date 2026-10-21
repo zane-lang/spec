@@ -145,7 +145,7 @@ canonical home before deciding what a hit means.
 None of these should hit:
 
 ```sh
-grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]|@concepts[$](Number|Integer|Decimal|Text)\b|[a-z] Number\b" spec/
+grep -RIn -E "Array\[|\[size\]|Array[0-9]+|Matrix10|\[rows\]|\[cols\]|inferred type generic|type-parameter symbol|root form|'[A-Z]|@concepts[$](Number|Integer|Decimal|Text)\b|[a-z] Number\b|'[*/+<>=~-]|@operators[$](and|or)\b" spec/
 ```
 
 `@concepts[$]Number` and `[a-z] Number\b` catch the single numeric-literal
@@ -160,9 +160,11 @@ and `grep -E` then reads a bare `$` as an end-of-line anchor.
 
 `'[A-Z]` catches the retired **borrow** type marker (`'Node`), which lived for
 one release; a reference-type parameter now has exactly the two modes of
-`spec/memory.md` §2.9. Do **not** widen it to a bare `'`: `'` now prefixes the
-loose form of a binary operator (`spec/operators.md` §3.1), which is always `'`
-followed by punctuation, so the uppercase class still separates the two.
+`spec/memory.md` §2.9. `'[*/+<>=~-]` catches the retired loose operator forms
+(`'*`), whose job `and` and `or` took over (`spec/operators.md` §2.4), and
+`@operators[$](and|or)` the machine operations renamed when those two words
+became reserved (`spec/lexical.md` §4.4). Neither `'` class is widened to a
+bare `'`, which English prose uses as an apostrophe.
 
 The only legitimate stray `<...>` is `Result<T, E>` in `spec/error-handling.md`
 — Rust's type named as a comparison, not Zane's.

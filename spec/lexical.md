@@ -106,7 +106,15 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 | `^` | Roaming owner type (`^Node`) | [`memory.md`](memory.md) §2.1 |
 | `@` | Intrinsic namespace (`@primitives$`, `@concepts$`, `@operators$`, `@math$`, `@controlflow$`, `@runtime$`, `@program$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
-| `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
+
+### 4.4 Operator words
+
+`and` and `or` are operator tokens ([`operators.md`](operators.md) §2.4). They are reserved, and **MUST NOT** be used as an identifier, a member name after `$` included:
+
+```zane
+ready Bool = left and right;   // legal: `and` in operator position
+and Bool = Bool(true);          // ILLEGAL: `and` is reserved
+```
 
 ---
 

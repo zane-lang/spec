@@ -596,10 +596,9 @@ An implicit constructor is **never** inserted at any other position. In particul
 - Field or subscript assignments: `obj.field = expr`, `arr[i] = expr`
 - `return` expressions, even when the return type is declared
 - Named field entries of an `init{ field = expr; }` initializer inside a constructor body
+- Operands of an operator
 
-At each of these positions the destination type is one you fix yourself — a local declaration, existing storage, the return type in the enclosing signature, or the fields the constructor builds through `init{ }` — rather than a contract supplied by a callee or language construct, so the conversion must be written explicitly.
-
-Operator operands **are** coercion sites, because operators desugar to ordinary function calls (see [operators.md](operators.md) §2.2); each operand is a positional argument of that call.
+At each of these positions but the last, the destination type is one you fix yourself — a local declaration, existing storage, the return type in the enclosing signature, or the fields the constructor builds through `init{ }` — rather than a contract supplied by a callee or language construct, so the conversion must be written explicitly. An operator's operands are passed as written, and an operator accepts a literal through an overload that declares its concept type ([`operators.md`](operators.md) §2.7).
 
 At one coercion site requiring destination type `T`, given an argument with static type `U`, the compiler resolves the site locally:
 
@@ -759,7 +758,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |
 | Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
 | Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
-| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, or the `init{field = value;}` inside a constructor body; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
+| Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, the `init{field = value;}` inside a constructor body, or operator operands; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | `^T` constructor parameter | Takes a roaming owner or a temporary; callee moves it into an owning field |
 | Plain `T` constructor parameter | A borrow: read only, never stored; a value-type parameter is always one |

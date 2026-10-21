@@ -213,7 +213,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.24 roaming owner
 
 - **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, return, or abort written `^T` with `T` a reference type, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
-- **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name. *Loose* was set aside because the spec already calls `'*` the loose form of an operator.
+- **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.25 arena placement
@@ -236,7 +236,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.28 coercion site
 
-- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of an intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly.
+- **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of an intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly, nor at an operator's operand, which is passed as written.
 - **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
@@ -382,11 +382,11 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import chooses how it is written.
 - **Canonical home:** [`packages.md`](packages.md) §3.3 and §3.4
 
-### 4.5 loose form
+### 4.5 intersection and union
 
-- **Meaning:** A binary operator written with a leading `'`, calling the same implementation at a mirrored precedence level below every unprefixed operator. One tier only, binary only.
-- **Why this name:** The prefix loosens how tightly the operator binds and changes nothing else about it.
-- **Canonical home:** [`operators.md`](operators.md) §3.1
+- **Meaning:** The meaning of the operators `and` and `or`: what two values share and what either covers. On `Bool` they are conjunction and disjunction; on a set, its intersection and union. Both bind below every comparison.
+- **Why this name:** The set-theoretic names hold for every type that implements the pair, where *conjunction* and *disjunction* fit `Bool` alone; the words `and` and `or` read as the same thing in prose.
+- **Canonical home:** [`operators.md`](operators.md) §2.4
 
 ### 4.6 block argument
 

@@ -324,6 +324,8 @@ If no phase yields a viable candidate, the call is a normal no-match type error.
 
 Implicit constructors are therefore a last resort. They never participate in discovering an otherwise unknown destination type for generic inference.
 
+An operator call resolves through the same phases. Its operands are not coercion sites ([`operators.md`](operators.md) §2.7), so the implicit phase adds no candidate to it.
+
 These phases describe **static** overload resolution. Matching a `variant` on its cases is not part of overload resolution at all; it is a separate construct — the `match` block — that dispatches on the live tag at runtime. See [`adt.md`](adt.md) §5.
 
 > **See also:** [`types.md`](types.md) §4 for the definition and constraints of implicit constructors. [`adt.md`](adt.md) §5 for variant matching.

@@ -1,6 +1,6 @@
 # Zane Operator System
 
-This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, precedence, Boolean algebra, and the loose forms.
+This document specifies Zane's operator system: the fixed operator set, where operators may be defined, derived operators, intersection and union, how operands are matched, and precedence.
 
 > **See also:** [`syntax.md`](syntax.md) §3.9 and §7 for operator declarations and surface forms. [`effects.md`](effects.md) §2 for `mut` and side effects.
 
@@ -13,8 +13,8 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
-- **`Boolean algebra`.** `Bool` draws from the same operator set as every other type: `*` is conjunction, `+` is disjunction, `~` is complement, `==` is equality, and it declares neither `/` nor `<`.
-- **`Loose forms`.** A `'` prefix moves a binary operator into a mirror of the precedence table below the unprefixed one, so a chain of comparisons can be combined without brackets.
+- **`Intersection and union`.** `and` and `or` take what two values share and what either covers. `Bool` reads them as conjunction and disjunction, and they bind below every comparison.
+- **`Operands as written`.** An operand is never converted. An overload states each type it accepts, a literal's concept type included.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
 
@@ -34,6 +34,10 @@ Primitive operators are implementable and define the operator surface area:
 | `+` | binary | `T +(left T, right T)` |
 | `==` | binary | `Bool ==(left T, right T)` |
 | `<` | binary | `Bool <(left T, right T)` |
+| `and` | binary | `T and(left T, right T)` |
+| `or` | binary | `T or(left T, right T)` |
+
+`and` and `or` are words, reserved as operator tokens ([`lexical.md`](lexical.md) §4.4).
 
 ### 2.2 Where operators may be defined
 
@@ -76,37 +80,43 @@ The operands of every operator are evaluated left to right, in written order, an
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#written-order-survives-the-swap) — "Written order survives the swap".
 
-### 2.4 Boolean operators
+### 2.4 Intersection and union
 
-`Bool` implements four of the primitive operators of §2.1 — the three of a Boolean algebra, plus equality — and declares nothing beyond them:
+`and` and `or` are the operators of **intersection** and **union**. `a and b` is what `a` and `b` share, and `a or b` is what either of them covers. A type implements them when its values have parts in common in that sense:
 
-| Expression | Meaning |
-|---|---|
-| `a * b` | conjunction |
-| `a + b` | disjunction |
-| `~a` | complement |
-| `a == b` | equality |
+| Type | `a and b` | `a or b` |
+|---|---|---|
+| `Bool` | conjunction | disjunction |
+| a set | the elements in both | the elements in either |
+| a set of flags | the flags both hold | the flags either holds |
 
-The derived operators of §2.3 that rest on those four follow without separate implementations: `a ~= b` is `~(a == b)`, which on `Bool` is exclusive or, and `a - b` is `a + ~b`, which is `b` implies `a`.
+A number has no parts of that kind, so `Int` and `Float` implement neither.
 
-The two primitives `Bool` leaves undeclared are the two a Boolean algebra has no use for. It has no division, so `a / b` on two `Bool` operands is an ordinary no-match error; and it is not ordered, so `a < b` is a no-match error too, along with the `>`, `<=`, and `>=` that §2.3 derives from `<`.
-
-Conjunction and disjunction are interderivable through `~`; see §4.4.
-
-Both operands are evaluated. Conjunction and disjunction are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when it decides the result is written inside a branch on the other: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The evaluation then shows at the call site rather than being implied by the token.
+An implementation's operand and result types follow §2.2 like those of any other operator. A package may declare `or` over two members of its own enum and return a set of them:
 
 ```zane
-if(ready * check()) { ... }
-if(ok + fallback()) { ... }
+type Permission = enum [ read, write, execute ]
+
+Permissions or(left Permission, right Permission) { ... }
+
+access Permissions = Permission.read or Permission.write;
 ```
 
-Comparisons are the loosest unprefixed level (§3), so a conjunction of comparisons is written with the loose forms of §3.1 or with brackets:
+`Bool` implements `and`, `or`, `~` as complement, and `==`, and declares nothing beyond them. `a ~= b` follows from §2.3 and is exclusive or on `Bool`. `Bool` declares no `*`, `/`, `+`, or `<`, so those operators and the ones §2.3 derives from them are no-match errors on two `Bool` operands.
+
+Both operands are evaluated. `and` and `or` are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when it decides the result is written inside a branch on the other: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The evaluation then shows at the call site.
+
+`and` and `or` bind below every comparison (§3), so a combination of comparisons needs no brackets:
 
 ```zane
-if(age > Int(18) '* hasId) { ... }
-if((age > Int(18)) * hasId) { ... }
+if(ready and check()) { ... }
+if(ok or fallback()) { ... }
+if(age > 18 and hasId) { ... }
 ```
 
+For a type whose `~` is a complement, each of the two derives the other; see §4.4.
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-return-as-intersection-and-union-and-the-loose-forms-go) — "`and` and `or` return as intersection and union, and the loose forms go".
 > **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-become--and-) — "`and` and `or` become `*` and `+`".
 
 ### 2.5 Reserved meanings for `!` and `~`
@@ -142,13 +152,13 @@ On `@primitives$F32` and `@primitives$F64`, each operation is IEEE 754's: `add`,
 
 | Operation | Signature |
 |---|---|
-| `and` | `@primitives$Bool @operators$and(left @primitives$Bool, right @primitives$Bool)` |
-| `or` | `@primitives$Bool @operators$or(left @primitives$Bool, right @primitives$Bool)` |
+| `conjoin` | `@primitives$Bool @operators$conjoin(left @primitives$Bool, right @primitives$Bool)` |
+| `disjoin` | `@primitives$Bool @operators$disjoin(left @primitives$Bool, right @primitives$Bool)` |
 | `not` | `@primitives$Bool @operators$not(value @primitives$Bool)` |
 | `concat` | `@primitives$String @operators$concat(left @primitives$String, right @primitives$String)` |
 | `equal` | `@primitives$Bool @operators$equal(left B, right B)`, for `B` either of the two |
 
-`concat` gives a new string holding the left operand's bytes followed by the right's. `equal` on `@primitives$String` compares contents: two strings are equal when they hold the same bytes in the same order, whatever storage holds them.
+`conjoin` and `disjoin` are conjunction and disjunction. `concat` gives a new string holding the left operand's bytes followed by the right's. `equal` on `@primitives$String` compares contents: two strings are equal when they hold the same bytes in the same order, whatever storage holds them.
 
 No machine operation takes operands of two types; an operand is converted first ([`types.md`](types.md) §2.9). There is no subtraction, since `a - b` is `a + ~b` (§4.2).
 
@@ -160,6 +170,33 @@ Bool ~(value Bool) => Bool(@operators$not(value.value))
 ```
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#primitives-lose-their-operators-to-operators-functions) — "Primitives lose their operators to `@operators$` functions".
+
+### 2.7 Operands are passed as written
+
+An operator converts no operand. Implicit constructors ([`types.md`](types.md) §4) are never inserted at an operand, so an overload is viable only when the type of each operand is the type of its parameter, directly or through generic inference ([`functions.md`](functions.md) §5).
+
+A literal operand has a compiler concept type ([`syntax.md`](syntax.md) §2.8). An overload accepts it by declaring that concept type as its parameter, and builds the value it needs inside its body. `core` declares one for each side of each operator over a fundamental type:
+
+```zane
+Int +(left Int, right @concepts$Int) => left + Int(right)
+Int +(left @concepts$Int, right Int) => Int(left) + right
+```
+
+So `count + 1` and `1 + count` both resolve directly. Operands of two different types reach an overload only when one declares that pair:
+
+```zane
+total Float = count + ratio;           // ILLEGAL: no `+` takes an Int and a Float
+total Float = Float(count) + ratio;    // legal: the conversion is written
+```
+
+A concept type belongs to no package, so two literal operands find no candidate under §2.2. One of them is written as a value of the type it stands for:
+
+```zane
+area Float = 3.0 * 3.0;           // ILLEGAL: no operand names a home package
+area Float = Float(3.0) * 3.0;    // legal
+```
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#operators-never-coerce-and-a-literal-operand-has-an-overload-of-its-own) — "Operators never coerce, and a literal operand has an overload of its own".
 
 ---
 
@@ -177,42 +214,22 @@ number Int = (3 + 2) * 2;
 | 2 | `*` `/` | left |
 | 3 | `+` `-` | left |
 | 4 | `<` `>` `<=` `>=` `==` `~=` | left |
-| 5 | `'*` `'/` | left |
-| 6 | `'+` `'-` | left |
-| 7 | `'<` `'>` `'<=` `'>=` `'==` `'~=` | left |
+| 5 | `and` | left |
+| 6 | `or` | left |
 
 Comparison operators group left. For example, `a < b < c` groups as `(a < b) < c`. The expression is valid only when overload resolution finds an implementation for each grouped operation.
 
-### 3.1 A `'` prefix selects the loose form of a binary operator
-
-Levels 5 through 7 are a **mirror** of levels 2 through 4: the same binary operators, in the same relative order, written with a leading `'`. A loose operator calls the same implementation as its unprefixed form and differs only in where it groups.
+`and` and `or` sit below every comparison, and `and` binds tighter than `or`:
 
 ```zane
-ready Bool = age > Int(18) '* hasId;      // (age > 18) * hasId
-band Bool = a == b '* c == d '+ e == f;   // ((a == b) * (c == d)) + (e == f)
+band Bool = a == b and c == d or e == f;   // ((a == b) and (c == d)) or (e == f)
 ```
 
-The mirror is one tier deep. A second prefix is not a further shift:
+> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-return-as-intersection-and-union-and-the-loose-forms-go) — "`and` and `or` return as intersection and union, and the loose forms go".
 
-```zane
-a ''* b    // ILLEGAL: there is no second loose tier
-```
+### 3.1 Precedence is fixed syntax
 
-Only binary operators have a loose form. Unary `~` binds tightest and has nothing to separate itself from, so it has none:
-
-```zane
-'~a        // ILLEGAL: unary operators have no loose form
-```
-
-The loose forms are surface grammar like every other level. They add no token to the operator vocabulary (§5.1) and no way for a program to place an operator at a level of its choosing: which level a loose operator occupies is fixed by the mirror, exactly as the unprefixed level is fixed by the table.
-
-> **See also:** [`lexical.md`](lexical.md) §4.3 for `'` as a reserved sigil.
-
-> **Story:** [`stories/operators.md`](../stories/operators.md#the-loose-operator-forms-and-the--prefix) — "The loose operator forms and the `'` prefix".
-
-### 3.2 Precedence is fixed syntax
-
-Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups. The loose forms of §3.1 occupy fixed levels of their own beneath every unprefixed one.
+Operator precedence is part of the surface grammar. Programs **MUST NOT** declare precedence levels, precedence groups, or type-dependent precedence behavior. Changing operand types may change which implementation is called, but never how the expression groups.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#grouping-is-grammar-all-the-way-down) — "Grouping is grammar all the way down".
 
@@ -234,18 +251,26 @@ Subtraction is defined as `a - b = a + ~b`. Implementations **MUST NOT** provide
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#deriving-the-laws-instead-of-trusting-them) — "Deriving the laws instead of trusting them".
 
-### 4.4 Conjunction and disjunction are interderivable
+### 4.4 Laws of intersection and union
 
-For a type whose `~` is a complement, either binary operator derives the other:
+Where `and` and `or` take two operands of one type and return that type, the implementations **SHOULD** satisfy the laws of intersection and union:
 
 ```zane
-a + b == ~(~a * ~b)
-~(a * b) == ~a + ~b
+(a and b) == (b and a)                  // commutative, and likewise for `or`
+((a and b) and c) == (a and (b and c))  // associative, and likewise for `or`
+(a and a) == a                          // idempotent, and likewise for `or`
+(a and (a or b)) == a                   // absorptive
+(a or (a and b)) == a
 ```
 
-`~Int` and `~Float` are additive inverses rather than complements (§2.5), so these identities do not hold there and the logical reading of `*` and `+` is available only to `Bool` and to user-defined types complemented under their own `~`.
+For a type whose `~` is a complement, as on `Bool`, either operator derives the other:
 
-> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-become--and-) — "`and` and `or` become `*` and `+`".
+```zane
+(a or b) == ~(~a and ~b)
+~(a and b) == (~a or ~b)
+```
+
+> **Story:** [`stories/operators.md`](../stories/operators.md#and-and-or-return-as-intersection-and-union-and-the-loose-forms-go) — "`and` and `or` return as intersection and union, and the loose forms go".
 
 ---
 
@@ -253,7 +278,7 @@ a + b == ~(~a * ~b)
 
 ### 5.1 No user-defined operator tokens
 
-Programs **MUST NOT** define new operator symbols or precedence levels. Overloading is limited to the built-in operator set. The loose forms of §3.1 are part of that fixed set rather than an exception to it: `'` selects an existing operator at a fixed level, and no program can introduce a token or place one at a level of its own choosing.
+Programs **MUST NOT** define new operator symbols or precedence levels. Overloading is limited to the built-in operator set, whose two words `and` and `or` are as fixed as its symbols.
 
 ### 5.2 Reserved symbols
 
@@ -278,12 +303,12 @@ An operator token may appear only in operator position; it has no value form. Th
 | Concept | Rule |
 |---|---|
 | Operator vocabulary | Only the fixed built-in operator set may be overloaded; programs cannot declare new tokens or precedence. |
-| Primitive operators | `~`, `*`, `/`, `+`, `==`, and `<` are independently implementable. |
+| Primitive operators | `~`, `*`, `/`, `+`, `==`, `<`, `and`, and `or` are independently implementable. |
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
 | Operand order | The operands of every operator are evaluated left to right, in written order, whatever position the desugaring passes them in. |
 | Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`, and a storage primitive has none. |
-| Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `and`, `or`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
+| Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `conjoin`, `disjoin`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
-| Boolean logic | `Bool` implements `*` as conjunction, `+` as disjunction, `~` as complement, and `==` as equality; `~=` is exclusive or and `-` is implication by derivation. It declares no `/` and no `<`, so those and the operators derived from `<` are no-match errors. Both operands are evaluated. |
-| Loose forms | A `'` prefix selects a binary operator at a mirrored level below every unprefixed one; one tier only, binary only, same implementation. |
+| Intersection and union | `and` and `or` take what two values share and what either covers, binding below every comparison with `and` tighter; `Bool` reads them as conjunction and disjunction, and the numeric types implement neither. Both operands are evaluated. |
+| Operands | An operand is never converted; an overload accepts a literal by declaring its concept type, and `core` declares one for each side of each operator over a fundamental type. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |
