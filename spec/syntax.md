@@ -667,6 +667,8 @@ ReturnType /(leftParam LeftType, rightParam RightType) { body }
 ReturnType +(leftParam LeftType, rightParam RightType) { body }
 Bool ==(leftParam LeftType, rightParam RightType) { body }
 Bool <(leftParam LeftType, rightParam RightType) { body }
+ReturnType and(leftParam LeftType, rightParam RightType) { body }
+ReturnType or(leftParam LeftType, rightParam RightType) { body }
 ```
 
 Operator definitions are package-scope verb declarations whose names are operator tokens. They never declare `this`, so they are not methods and cannot use `mut`.
@@ -919,19 +921,16 @@ expr ?? fallbackExpr
 
 ### 7.1 Operators
 
-`~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`
+`~`, `*`, `/`, `+`, `-`, `<`, `>`, `<=`, `>=`, `==`, `~=`, `and`, `or`
 
-Every binary operator above also has a **loose form**, written with a leading `'`:
-
-`'*`, `'/`, `'+`, `'-`, `'<`, `'>`, `'<=`, `'>=`, `'==`, `'~=`
+`and` and `or` are written between their operands like every other binary operator:
 
 ```zane
-a == b '* c == d      // legal
-a ''* b               // ILLEGAL: there is no second loose tier
-'~a                   // ILLEGAL: unary operators have no loose form
+a == b and c == d     // legal
+and(a, b)             // ILLEGAL: an operator is written in operator position
 ```
 
-> **See also:** [`operators.md`](operators.md) §3.1 for where the loose forms group.
+> **See also:** [`operators.md`](operators.md) §3 for precedence. [`lexical.md`](lexical.md) §4.4 for the reserved words.
 
 ### 7.2 Control-flow keywords
 

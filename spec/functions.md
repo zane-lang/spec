@@ -212,7 +212,7 @@ lead &Player = squad[1];     // legal: the projection ends at an ArrayRef elemen
 
 ### 3.1 Functions are package-scope verbs without `this`
 
-A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`. (Operators are symbol-named and constructors are named after their type, so neither is a function even though they also take no `this`.)
+A function is an ordinary identifier-named package-scope verb whose first parameter is not named `this`. (Operators are named by an operator token and constructors are named after their type, so neither is a function even though they also take no `this`.)
 
 ```zane
 Float distance(from Vec2, to Vec2) {
@@ -323,6 +323,8 @@ For function calls, constructor calls, and desugared method calls, overload reso
 If no phase yields a viable candidate, the call is a normal no-match type error.
 
 Implicit constructors are therefore a last resort. They never participate in discovering an otherwise unknown destination type for generic inference.
+
+An operator call resolves through the same phases. Its operands are not coercion sites ([`operators.md`](operators.md) §2.7), so the implicit phase adds no candidate to it.
 
 These phases describe **static** overload resolution. Matching a `variant` on its cases is not part of overload resolution at all; it is a separate construct — the `match` block — that dispatches on the live tag at runtime. See [`adt.md`](adt.md) §5.
 
@@ -453,7 +455,7 @@ Every callable in Zane is a verb (§1). What *kind* of verb a declaration is —
 |---|---|---|
 | First parameter named `this` | Method | `:` / `!` call syntax on a borrowed subject |
 | Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** |
-| Symbol name (operator token) | Operator | Operator-position calls |
+| Name is an operator token | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
 | Plain identifier, none of the above | Function | No special capability |
 
@@ -488,7 +490,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Concept | Rule |
 |---|---|
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
-| Capability markers | `this` first → method (subject call); name is a type → constructor (`init{ }`, implicit return); symbol name → operator; no name → lambda |
+| Capability markers | `this` first → method (subject call); name is a type → constructor (`init{ }`, implicit return); operator token as name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |
 | Read-only method | Called with `:`; may read but not write `this` |

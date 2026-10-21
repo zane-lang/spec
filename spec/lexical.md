@@ -90,7 +90,7 @@ Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, 
 A leading `_` marks an identifier as private without changing the lexical class set by the first letter.
 
 - A field beginning with `_` is private to the package that declares its type. See [`types.md`](types.md) §2.3.
-- A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are symbol-named and remain public. See [`packages.md`](packages.md) §4.
+- A named package-scope declaration beginning with `_` is private to its package. This applies to every named declaration, including types; operators are named by operator tokens and remain public. See [`packages.md`](packages.md) §4.
 - A top-level library package whose name begins with `_` is private to its project. See [`packages.md`](packages.md) §4.4.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
@@ -106,7 +106,15 @@ Certain leading characters are reserved and are not ordinary identifier starts:
 | `^` | Roaming owner type (`^Node`) | [`memory.md`](memory.md) §2.1 |
 | `@` | Intrinsic namespace (`@primitives$`, `@concepts$`, `@operators$`, `@math$`, `@controlflow$`, `@runtime$`, `@program$`) | [`syntax.md`](syntax.md) §2.7 |
 | `$` | Package-member separator (`packageName$member`) | [`packages.md`](packages.md) §1 |
-| `'` | Loose form of a binary operator (`'*`, `'+`) | [`operators.md`](operators.md) §3.1 |
+
+### 4.4 Operator words
+
+`and` and `or` are operator tokens ([`operators.md`](operators.md) §2.4). They are reserved, and **MUST NOT** be used as an identifier, a member name after `$` included:
+
+```zane
+ready Bool = left and right;   // legal: `and` in operator position
+and Bool = Bool(true);          // ILLEGAL: `and` is reserved
+```
 
 ---
 
@@ -251,6 +259,8 @@ A numeric literal consists of digits and at most one `.`, which has at least one
 3.     // ILLEGAL: a digit must follow the `.`
 .5     // ILLEGAL: a digit must precede the `.`
 ```
+
+A numeric literal is written without a sign. `~` before one gives the literal of the opposite sign ([`operators.md`](operators.md) §2.7), so `~3` is a negative integer literal.
 
 Because the spelling decides the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 

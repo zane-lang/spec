@@ -208,7 +208,7 @@ A `_` field draws the same boundary: it is private to the package that declares 
 
 ### 4.2 Operators are public
 
-Operators are symbol-named rather than identifier-named and cannot carry a leading `_`. Every operator declaration is therefore public.
+Operators are named by operator tokens rather than identifiers and cannot carry a leading `_`. Every operator declaration is therefore public.
 
 ### 4.3 Which packages a package may import
 
