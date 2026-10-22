@@ -181,7 +181,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | a foreign handle `H` (§4) | `C *` or `const C *`, `C` the handle's C type | the C object it owns (§4.3) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
 
-A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. On any other target it corresponds to no Zane type and is reached through a shim (below). An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
+A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. On any other target it corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
 
 A **C-compatible value type** is a value type declared with `struct` whose every field is a scalar primitive, an `@primitives$Array<T, n>` of one, or a C-compatible value type. Its C `struct` has the same number of fields, in the same order, each of a full-width C type of the Zane field's primitive, an array of one, or a `struct` corresponding in turn; their names need not match. The Zane type and the C `struct` then have the same layout, field for field.
 
@@ -225,7 +225,7 @@ A foreign verb returning a handle without an abort type stops the program when t
 
 ### 3.6 Function values cross as C functions
 
-A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter and result types are scalar primitives, `@primitives$Bool`, or C-compatible value types, with no subject and no abort type, corresponds to a C function pointer of the corresponding types. C receives a function that calls the Zane function value it was passed.
+A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are scalar primitives, `@primitives$Bool`, or C-compatible value types, whose result type is one of those or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types. C receives a function that calls the Zane function value it was passed.
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
@@ -270,6 +270,8 @@ A handle is made only by a foreign verb that returns it (§3.5). It owns a non-n
 
 When a handle is destroyed ([`lifetimes.md`](lifetimes.md) §2), its release function is called with that pointer, exactly once, before the handle's storage is reused. A handle whose owner moves on keeps its object, and only the handle that is finally destroyed releases it.
 
+Release functions are C code that runs while a scope drains, so their order is observable where the scope's other destruction is not. When one drain destroys several handles, their release functions run in the reverse of the order the handles were made. A handle made from another, such as a statement prepared on a connection, is made after it, so it is released before it (§4.4).
+
 ### 4.3 Passing a handle reads it, and a `mut` subject writes it
 
 A handle crosses into C as the pointer it owns. Where it stands in the foreign verb decides how C may use the object:
@@ -302,7 +304,7 @@ type Statement = #struct {
 }
 ```
 
-The compiler knows nothing of how C objects refer to one another, so a binding that hands C a dependency without such a reference has to keep the dependency alive itself (§6).
+The store rule allows the two to share a scope, and then both die in one drain; the reverse order of §4.2 releases the statement first, since it was made from the connection. The compiler knows nothing of how C objects refer to one another, so a binding that hands C a dependency without such a reference, or makes the dependent first, has to keep the dependency alive itself (§6).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#c-never-writes-zane-memory) — "C never writes Zane memory".
 
