@@ -445,6 +445,11 @@ A foreign verb that returns a data handle is any foreign verb that is not a meth
 
 A call to a foreign verb that reads no capability-backed state computes its result from its arguments and from the data handles it is passed. It is therefore a computation like any other under [`effects.md`](effects.md) §5.3: when its arguments are known, the compiler may evaluate it at compile time. A computation in Zane that calls C folds through the call, and so does a data handle made, written, and destroyed within it.
 
+Two computations that call C are never evaluated at compile time, because what they give is a fact of the running process rather than of their arguments:
+
+- one whose result depends on where an object is stored: the numeric value of an address, such as a pointer converted to an integer, or the order of two different objects' addresses;
+- one that ends with a data handle it made still alive, since that handle's C object exists only in the process that made it.
+
 Evaluating a foreign call at compile time changes nothing the program computes. Its result is the one the C function gives on the build's target, as the C code is compiled for that target (§2.2), and for a `release` dependency as the dependency's object was compiled (§2.6).
 
 A call to a foreign verb that reads capability-backed state is never evaluated at compile time, and neither is anything that depends on its result. A call that writes capability-backed state happens at run time, at the point and in the order the program makes it.
@@ -603,6 +608,6 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Outside and data handles | A handle made by a method on a foreign capability is an outside handle, part of capability-backed state; any other is a data handle, program state |
 | Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |
-| Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result |
+| Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result, unless the computation observes an address or leaves a data handle it made alive |
 | Undeclared outside state | A foreign verb that touches outside state without its capability may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
 | Concurrency | Capability-free foreign calls may run in parallel; capability calls are ordered as one external state |
