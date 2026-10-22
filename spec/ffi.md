@@ -388,26 +388,36 @@ A foreign verb that breaks this rule gives the program no meaning the spec defin
 - **leave the call out** when its result is unused, so that what it writes is never written;
 - **make one call where the program makes two** with the same arguments, or **reorder** the call, or **run it in parallel** with other work ([`concurrency.md`](concurrency.md) §2.1).
 
-```zane
-package env
+A package that counts with a C variable shows how:
 
-@primitives$String home() foreign "zane_env_home"   // WRONG: reads the environment, and takes no capability
+```c
+static int64_t count;
+
+int64_t zane_counter_next(void) { return ++count; }
 ```
 
 ```zane
-console!print(String(env$home()));
-```
+package counter
 
-The call `env$home()` depends on nothing the program reads at run time, so an optimized build may evaluate it while it compiles. The program then prints the home directory of whoever built it, on every machine it runs on, and no diagnostic reports this. Declared with its capability, the call is a read, and it happens where the program runs:
-
-```zane
-package env
-
-@primitives$String home(this @runtime$System) foreign "zane_env_home"
+@primitives$I64 next() foreign "zane_counter_next"   // WRONG: changes a C variable the next call reads, and takes no capability
 ```
 
 ```zane
-console!print(String(@program$system:env$home()));
+console!print(Int(counter$next()));
+console!print(Int(counter$next()));
+console!print(Int(counter$next()));
+```
+
+Each call `counter$next()` depends on nothing the program reads at run time, so an optimized build may evaluate each one while it compiles, from the variable's first value. The program then prints `1` three times where an unoptimized build prints `1`, `2`, and `3`, and no diagnostic reports this. The same holds for a C function that reads the environment or the clock, whose fold builds the value the build machine saw into the program. Declared with its capability, the call is a write, and it happens where the program runs, in the order the program makes it:
+
+```zane
+package counter
+
+@primitives$I64 next(this @runtime$System) mut foreign "zane_counter_next"
+```
+
+```zane
+console!print(Int(@program$system!counter$next()));
 ```
 
 The rule protects the binding's users, and only the binding's author can follow it.
