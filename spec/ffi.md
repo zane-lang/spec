@@ -231,6 +231,8 @@ A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter t
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
+C may call a function value that touches no capability from several threads at once. A function value that reads or writes capability-backed state is called one call at a time: C does not start a call to it while another is running. That keeps its accesses ordered against each other as [`concurrency.md`](concurrency.md) §4.5 orders every access to capability-backed state, since the compiler orders the foreign call as a whole and sees none of the calls C makes inside it.
+
 ### 3.7 The declaration is checked against the interface header
 
 The compiler checks each foreign verb against the declaration of its symbol in the package's interface headers, as the package's C code sees them when compiled for the build's target. It is a compile-time error, reported at the foreign verb, when:
@@ -432,7 +434,7 @@ The compiler takes a foreign verb's signature as a description of its C function
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
 - **It keeps its C objects consistent with their handles.** A release function is called once per object, as §4.2 states, and a C object stays alive while a C object that refers to it does (§4.4).
-- **It treats a function value as a call.** A function value's C function is called with the types §3.6 gives, on any thread, while the foreign verb runs.
+- **It treats a function value as a call.** A function value's C function is called with the types §3.6 gives, on any thread, while the foreign verb runs, and one call at a time when the function value touches a capability.
 
 ---
 
