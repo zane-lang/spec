@@ -14,7 +14,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
 - **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature says which.
-- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
+- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package, from `@program$` and the foreign variables it declares.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -154,7 +154,7 @@ When the compiler cannot see a callee's body, as with a call through a function 
 
 ### 6.1 Capabilities must be passed or stored explicitly
 
-There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. The one source of capabilities is `@program$`, which only the root package reaches (§6.6); everything else receives them from there.
+There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package: `@program$` (§6.6) and the foreign variables it declares ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
@@ -254,5 +254,5 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Root package | Any verb may write the program's console and runtime |
 | Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
-| Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
+| Capabilities | Reachable only as objects passed or stored; they originate in the root package, from `@program$` and its foreign variables |
 | Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time |
