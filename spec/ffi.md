@@ -238,7 +238,7 @@ C may call a function value that touches no capability from several threads at o
 The compiler checks each foreign verb against the declaration of its symbol in the package's interface headers, as the package's C code sees them when compiled for the build's target. It is a compile-time error, reported at the foreign verb, when:
 
 - no interface header of the package declares the symbol as a function;
-- the C function takes another number of parameters than the foreign verb passes (§3.2), or is variadic;
+- the C function takes a different number of parameters than the foreign verb passes (§3.2), or is variadic;
 - a parameter's or the result's C type is not one §3.3 gives for the Zane type;
 - a handle's pointer is `const` where §4.2 or §4.4 requires it writable, or writable where §4.4 requires it `const`;
 - a handle stands where §4.4 does not allow it;
@@ -531,7 +531,7 @@ The compiler takes a foreign verb's signature as a description of its C function
 - **It keeps nothing Zane lent it.** A view, and a function pointer for a function value (§3.6), are used only until the call returns.
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
-- **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3).
+- **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and stays alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3).
 - **It treats a function value as a call.** A function value's C function is called with the types §3.6 gives, on any thread, while the foreign verb runs, and one call at a time when the function value touches a capability.
 
 ---
@@ -594,7 +594,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
-| Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in reverse making order |
+| Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
 | Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address; a type without one is never overwritten in a settled place |
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
