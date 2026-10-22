@@ -418,7 +418,7 @@ type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` r
 
 `node` is written as an ordinary owning member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, or a type parameter filled with one ([`generics.md`](generics.md) §3.6) — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle declared with `#handle`/`#capability` ([`ffi.md`](ffi.md) §4.1), a reference-type intrinsic such as `@runtime$System`, or a type parameter filled with one ([`generics.md`](generics.md) §3.6) — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ### 2.15 String literal forms
 
