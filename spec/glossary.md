@@ -465,3 +465,27 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A function of `@math$`, on scalar primitives. An **exact** one's result is fully specified and the same on every platform; an **approximate** one's is close to the true value and may differ between platforms.
 - **Why this name:** The everyday words: the namespace holds what a math library holds, and exact and approximate say how far its result can be trusted to the last bit.
 - **Canonical home:** [`math.md`](math.md) §2.2
+
+### 4.19 foreign verb
+
+- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and what it touches outside the program is what that signature states.
+- **Why this name:** "Foreign" is the established word for code in another language reached through an interface, as in a foreign-function interface; "verb" is the spec's word for a function or method.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.1
+
+### 4.20 foreign handle / data handle / foreign capability
+
+- **Meaning:** A **foreign handle** is a reference type owning one C object, released by a named C function when the handle is destroyed. A **data handle** (`#handle`) holds state of the program's own; a **foreign capability** (`#capability`) stands for state outside it, so using it is a capability access.
+- **Why this name:** C APIs already call an opaque pointer to their object a handle; a capability is what the effect model calls an object that reaches outside state.
+- **Canonical home:** [`ffi.md`](ffi.md) §4.1
+
+### 4.21 interface header
+
+- **Meaning:** A `.h` file directly in a package's directory. Every C function a foreign verb names, and every C type a foreign handle names, is declared in one; headers elsewhere are seen only by the C compiler.
+- **Why this name:** It is the header that states the interface between the package's C and its Zane, as opposed to the C library's own headers.
+- **Canonical home:** [`ffi.md`](ffi.md) §2.1
+
+### 4.22 system capability
+
+- **Meaning:** `@runtime$System`, whose one instance is `@program$system`: the capability for the state outside the program that foreign code reaches. A foreign method on it reads that state, or writes it when `mut`; C never receives it.
+- **Why this name:** To C code everything beyond the program is "the system" it calls into, and the effect model names what reaches such state a capability.
+- **Canonical home:** [`ffi.md`](ffi.md) §5.1

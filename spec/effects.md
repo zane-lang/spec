@@ -57,7 +57,7 @@ A verb's signature says what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
+The root package is the one exception. Any verb there may write the program's console, runtime, and system (§6.6).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -121,7 +121,7 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2).
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead ([`ffi.md`](ffi.md) §5.2).
 
 ### 5.3 Compile-time evaluation
 
@@ -144,7 +144,7 @@ Reading through an `&` is a read like any other. What a verb may write follows f
 
 ### 5.5 Unknown callees are assumed to touch capabilities
 
-When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state.
+When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state. A foreign verb is the exception: what it reads and writes is what its signature states ([`ffi.md`](ffi.md) §5.2), whatever of its C body the compiler sees.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -201,6 +201,8 @@ The runtime's `arguments` method gives the arguments the program was started wit
 
 It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
 
+A third capability, `@runtime$System`, stands for the state outside the program that foreign code reaches. Its one instance is `@program$system`, and it is passed and stored like the console and the runtime. It has no intrinsic methods; packages declare foreign methods on it ([`ffi.md`](ffi.md) §5.1).
+
 Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time (§5.3).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
@@ -251,7 +253,7 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Method without `mut`, function | Write nothing their caller can see |
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
-| Root package | Any verb may write the program's console and runtime |
+| Root package | Any verb may write the program's console, runtime, and system |
 | Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |

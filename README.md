@@ -57,6 +57,7 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
 | [`spec/packages.md`](spec/packages.md) | The `lib/`, `bin/` and `test/` project layout, library packages and their subpackages, file-scoped imports, explicit member access, package visibility, package-scope state, and the program and test packages that hold `main` |
 | [`spec/dependencies.md`](spec/dependencies.md) | Package identity, manifests, test dependencies, version pinning, fetching, and caching |
+| [`spec/ffi.md`](spec/ffi.md) | Calling C: a package's C code and the toolchain that builds it, foreign verbs and the types that cross into C, foreign handles, the system capability, and what foreign code is taken to read and write |
 
 ## Design stories
 

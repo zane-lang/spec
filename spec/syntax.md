@@ -115,6 +115,8 @@ type Name = #struct { field FieldType; ... }
 type Name = variant { member FieldType; ... }
 type Name = #variant { member FieldType; ... }
 type Name = enum [ memberA, memberB, ... ]
+type Name = #handle("cType", "releaseFunction")
+type Name = #capability("cType", "releaseFunction")
 ```
 
 `type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `#struct`, `variant`, `#variant`, or `enum` body; a leading `#` marks a reference type (§2.14). A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
@@ -268,8 +270,8 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
-- `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
-- `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
+- `@runtime$` holds the **runtime types** `@runtime$Console`, `@runtime$Runtime`, and `@runtime$System` and their methods ([`effects.md`](effects.md) §6.6, [`ffi.md`](ffi.md) §5.1).
+- `@program$` holds the running program's own instances of those types, `@program$console`, `@program$runtime`, and `@program$system`.
 
 An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
@@ -407,7 +409,7 @@ Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.14 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types.
+A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — or to a foreign handle — `#handle(...)` or `#capability(...)` (§2.16) — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types; a foreign handle has no unmarked form.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named
@@ -436,6 +438,22 @@ A string is delimited by double quotes. `\"`, `\\`, and `\%name` are the languag
 ```
 
 > **See also:** [`lexical.md`](lexical.md) §7.1 for tokenization and structural escapes. [`types.md`](types.md) §2.8 for concept typing and interpolation coercion.
+
+### 2.16 Foreign handles
+
+```zane
+type Name = #handle("cType", "releaseFunction")
+type Name = #capability("cType", "releaseFunction")
+```
+
+A foreign handle is declared only as the right-hand side of a `type` declaration (§1.6). Its `( )` holds exactly two string literals without interpolation, separated by `,`: the name of a C type and the name of the C function that releases an object of it. The leading `#` is required.
+
+```zane
+type Stream = handle("z_stream", "zane_stream_free")     // ILLEGAL: a foreign handle carries `#`
+alias Stream = #handle("z_stream", "zane_stream_free")   // ILLEGAL: declared only by `type`
+```
+
+> **See also:** [`ffi.md`](ffi.md) §4 for foreign handle semantics.
 
 ---
 
@@ -680,6 +698,25 @@ return expr
 ```
 
 See [`functions.md`](functions.md) §3.5 for return-path requirements.
+
+### 3.11 Foreign verbs
+
+```zane
+ReturnType name(param ParamType, ...) foreign "cSymbol"
+ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol"
+ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
+ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
+```
+
+A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it. The literal is the C function's symbol.
+
+```zane
+@primitives$I64 now(this @runtime$System) foreign "zane_now" { ... }   // ILLEGAL: a foreign verb has no body
+@primitives$I64 now(this @runtime$System) => foreign "zane_now"         // ILLEGAL: `foreign` is not an expression
+```
+
+> **See also:** [`ffi.md`](ffi.md) §3 for foreign verb semantics.
 
 ---
 
