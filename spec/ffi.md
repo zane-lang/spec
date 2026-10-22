@@ -169,7 +169,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 |---|---|---|
 | `@primitives$I32` | `int32_t`, `uint32_t`, `int`, `unsigned int` | its 32 bits |
 | `@primitives$I32` | `int8_t`, `uint8_t`, `int16_t`, `uint16_t`, `char`, `signed char`, `unsigned char`, `short`, `unsigned short` | its low bits when passed; widened by the C type's sign when returned |
-| `@primitives$I64` | `int64_t`, `uint64_t`, `long long`, `unsigned long long`, `size_t`, `ptrdiff_t`, `intptr_t`, `uintptr_t` | its 64 bits |
+| `@primitives$I64` | `int64_t`, `uint64_t`, `long long`, `unsigned long long`, and, on a target whose pointers are 64 bits, `size_t`, `ptrdiff_t`, `intptr_t`, `uintptr_t` | its 64 bits |
 | `@primitives$F32` | `float` | its value |
 | `@primitives$F64` | `double` | its value |
 | `@primitives$Bool` | `bool` | its value |
@@ -197,7 +197,7 @@ type Vec3 = struct {
 typedef struct { double x, y, z; } vec3;
 ```
 
-A C type whose size differs between the targets the toolchain builds for, such as `long`, `unsigned long`, `wchar_t`, or `long double`, corresponds to no Zane type, so a C function that takes or returns one is reached through a C function of the package that converts it. A variadic C function is reached the same way.
+A C type whose size differs between the targets the toolchain builds for, such as `long`, `unsigned long`, `wchar_t`, or `long double`, corresponds to no Zane type, and neither do `size_t`, `ptrdiff_t`, `intptr_t`, and `uintptr_t` on a target whose pointers are not 64 bits, so a C function that takes or returns one is reached through a C function of the package that converts it. A variadic C function is reached the same way.
 
 ### 3.4 Strings, arrays, and lists are lent for the call
 
@@ -212,9 +212,9 @@ A string's view holds its bytes, with no terminator. A list's view holds its ele
 
 ### 3.5 Results
 
-A foreign verb returns one of the types of §3.3.
+A foreign verb's result is a scalar primitive, `@primitives$Bool`, `@primitives$Unit`, `@primitives$String`, a C-compatible value type, or a handle. An array, a list, and a function type cross into C only as parameters.
 
-- A returned `zane_bytes` is a view of bytes C owns. The call copies them into a new string primitive before it returns, so the bytes need stay valid only until the C function has returned. A view whose `size` is zero gives an empty string, whatever its `data`.
+- A returned `zane_bytes` is a view of bytes C owns. The call copies them into a new string primitive before it returns, so the bytes stay valid after the C function has returned, until the copy is made: they are C memory that outlives the call, such as memory a handle owns, and never storage that ends when the C function returns. A view whose `size` is zero gives an empty string, whatever its `data`.
 - A returned handle is a new roaming owner (§4.2). A foreign verb that returns one may declare `@primitives$Unit` as its abort type, and the call aborts when the C function returns a null pointer:
 
 ```zane
@@ -253,14 +253,14 @@ A **foreign handle** is a reference type that owns one C object. Its declaration
 
 ```zane
 type Deflater = #handle("zane_deflater", "zane_deflater_free")
-type Database = #capability("sqlite3", "sqlite3_close")
+type Database = #capability("sqlite3", "zane_sqlite_close")
 ```
 
 A type declared with `#handle` is a **data handle**: its C object holds state of the program's own, such as a compression stream or a parsed document. A type declared with `#capability` is a **foreign capability**: its C object stands for state outside the program, such as an open file, a database connection, or a socket, and reading or writing it is reading or writing capability-backed state ([`effects.md`](effects.md) §2.2, §5).
 
 Both are reference types ([`types.md`](types.md) §2.1). A handle is moved rather than copied, is settled or roaming, and may be referenced through `&` like any reference type ([`memory.md`](memory.md) §2). It has no fields: C reaches the object it owns, and Zane reaches it only through foreign verbs.
 
-The C type is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not. The release function is a C function of the package's interface headers that takes one non-`const` pointer to that type and returns `void`.
+The C type is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not. The release function is a C function of the package's interface headers that takes one non-`const` pointer to that type and returns `void`. A library's own cleanup function that returns a status, as SQLite's `sqlite3_close` returns an `int`, is reached through a C function of the package that calls it and returns `void`, such as the `zane_sqlite_close` above.
 
 > **See also:** [`syntax.md`](syntax.md) §2.16 for the declaration form.
 
@@ -294,7 +294,7 @@ int64_t zane_deflater_total_in(const zane_deflater *deflater);
 A C object that refers to another, such as a prepared statement and the connection it belongs to, needs that other object to outlive it. A handle expresses this through an `&` to the other held beside it, so that the store rule keeps the referenced handle alive at least as long ([`lifetimes.md`](lifetimes.md) §1.1):
 
 ```zane
-type _RawStatement = #capability("sqlite3_stmt", "sqlite3_finalize")
+type _RawStatement = #capability("sqlite3_stmt", "zane_sqlite_finalize")
 
 type Statement = #struct {
     _raw _RawStatement;
@@ -342,6 +342,8 @@ Int nanoseconds(this Clock) => Int(this._system:_nowNanoseconds())
 ```
 
 A foreign verb on a data handle that is `mut` writes the handle, which is state of the program, and nothing outside it.
+
+Destroying a foreign capability calls its release function (§4.2), which may change outside state, such as by closing a file. So it counts as a write to capability-backed state: it happens at run time, where the destruction falls, ordered as §5.6 orders every capability write. Destruction is not a write in the sense of [`effects.md`](effects.md) §4.1 ([`effects.md`](effects.md) §7.2), so the owner of a capability may let it be destroyed whether or not the verb may write it.
 
 ### 5.3 Making a foreign capability is a write
 

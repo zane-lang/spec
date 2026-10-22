@@ -705,6 +705,7 @@ See [`functions.md`](functions.md) §3.5 for return-path requirements.
 ReturnType name(param ParamType, ...) foreign "cSymbol"
 ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol"
 ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
 ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
 ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
 ```
