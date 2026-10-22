@@ -462,7 +462,9 @@ The compiler cannot see what a C function reads or writes. It takes each foreign
 
 A foreign verb whose C function reads or writes state outside the program **MUST** be declared as a method on the foreign capability that reaches that state, `mut` if it writes. Outside state includes anything one run of the program can see differently from another: a file, the clock, the environment, a random source, a device, another process, and a C variable that another call changes.
 
-A foreign verb that breaks this rule gives the program no meaning the spec defines. In particular, the compiler may:
+A data handle's free function and setter **MUST** read and write no outside state. They are named by the handle's type rather than declared as verbs, so no capability can mark them, and they run where the program destroys or overwrites the handle, which a computation evaluated at compile time may do (§5.4). An outside handle's free function and setter may touch outside state, since running them counts as a capability write (§5.3).
+
+A foreign verb, free function, or setter that breaks these rules gives the program no meaning the spec defines. In particular, the compiler may:
 
 - **evaluate the call at compile time**, so that the value the outside state held on the build machine, while the compiler ran, is built into the program, and every run of the program gives that value;
 - **leave the call out** when its result is unused, so that what it writes is never written;
@@ -609,5 +611,5 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |
 | Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result, unless the computation observes an address or leaves a data handle it made alive |
-| Undeclared outside state | A foreign verb that touches outside state without its capability may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
+| Undeclared outside state | A foreign verb that touches outside state without its capability, or a data handle's free function or setter that touches it at all, may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
 | Concurrency | Capability-free foreign calls may run in parallel; capability calls are ordered as one external state |
