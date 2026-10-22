@@ -394,7 +394,7 @@ Unit main() {
 }
 ```
 
-The symbol is a settled owner of a foreign capability. The global is looked up in the package that declares the capability's type: its C code defines it with external linkage, and one of its interface headers declares it with the type's C type. It is a compile-time error, reported at the declaration, when no such global exists or its C type is another.
+The symbol is a settled owner of a foreign capability. The global is looked up in the package that declares the capability's type: its C code defines it with external linkage, and one of its interface headers declares it with the type's C type. It is a compile-time error, reported at the declaration, when no such global exists, its C type is another, or it is thread-local (`_Thread_local`), since a thread-local global is a separate object on each thread and a call that reaches it may run on any thread.
 
 Only the root package declares foreign variables ([`packages.md`](packages.md) §6.1). A foreign variable in any other package is a compile-time error. Every other package reaches a foreign capability only through one passed to it, as it reaches the program's console ([`effects.md`](effects.md) §6.6), so a package that touches outside state shows it in what it receives. Two foreign variables that name one global are two handles to one C object, and since a foreign capability has no free function or setter, neither releases or replaces it.
 
@@ -608,7 +608,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
 | Foreign capability | A handle type without a free function, referring to a C global; made only by a foreign variable |
-| Foreign variable | `name T foreign "cGlobal"`, declared only in the root package, giving a handle to a global of `T`'s package |
+| Foreign variable | `name T foreign "cGlobal"`, declared only in the root package, giving a handle to a global of `T`'s package that is not thread-local |
 | Outside and data handles | A handle made by a method on a foreign capability is an outside handle, part of capability-backed state; any other is a data handle, program state |
 | Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |
