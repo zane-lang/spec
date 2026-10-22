@@ -12,7 +12,7 @@ This document specifies how a Zane package calls C: the C code a package holds a
 
 A package may hold C code beside its Zane source. The toolchain compiles that C for the build's target, links it into the package, and lets the package's own declarations call it. A call into C is an ordinary call in Zane: it has a Zane signature, Zane passing modes, and the effects that signature states.
 
-- **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from the manifest. No build script runs.
+- **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from a `c.coda` file in the package's directory. No build script runs.
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
 - **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call. State that C keeps lives in C memory, owned from Zane through a **foreign handle** that releases it when it is destroyed.
 - **`Outside state is a capability`.** A foreign verb that reaches no capability is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation. A foreign verb that reads or writes outside state says so by being a method on the system capability, `@runtime$System`, or on a foreign capability.
@@ -28,7 +28,7 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 
 Every package may hold C code: a library, program, or test package, and a subpackage. Its C code is:
 
-- its **C sources**: the `.c` files directly in the package's directory, together with any listed for it in the manifest (§2.3);
+- its **C sources**: the `.c` files directly in the package's directory, together with any its `c.coda` lists (§2.3);
 - its **interface headers**: the `.h` files directly in the package's directory.
 
 A foreign verb of the package names a C function that one of its interface headers declares (§3.7). Headers elsewhere, including those an interface header includes, are seen by the C compiler and by nothing else.
@@ -40,6 +40,7 @@ zlib/
       zlib.zn          package zlib: the foreign verbs
       binding.h        interface header
       binding.c        C source
+      c.coda           C build settings
       vendor/          the upstream library's own tree
         deflate.c
         zlib.h
@@ -55,40 +56,40 @@ A package's C code is reached only through that package's foreign verbs. Another
 
 The toolchain compiles each C source of a package as C17, with the C compiler it carries, for the target the build is for. One machine therefore builds a package's C for every target, as it builds its Zane.
 
-Two settings are fixed for every C source, and no manifest setting changes them:
+Two settings are fixed for every C source, and no setting of a package's `c.coda` changes them:
 
 - floating-point expressions are evaluated as written, each operation rounded on its own, with no contraction of a multiply and an add into one operation;
 - the C compiler makes no assumption that a floating-point value is finite or that its operations are associative.
 
 So a C floating-point computation gives the same result each time it is evaluated, at compile time or at run time (§5.4).
 
-The toolchain runs no program the package supplies to build its C: no build script, configure step, or other build system. What a package's C build needs is stated as data in its manifest (§2.3).
+The toolchain runs no program the package supplies to build its C: no build script, configure step, or other build system. What a package's C build needs is stated as data in its `c.coda` (§2.3).
 
 The C code of a package is compiled once per build, with the settings of that package alone. Two packages' C code never share a compilation, so a definition in one package's settings has no effect on another's.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
-### 2.3 The `c` block of the manifest
+### 2.3 A package's `c.coda`
 
-A project's `zane.coda` may carry a `c` block, which states the C build settings of its packages ([`dependencies.md`](dependencies.md) §2.1). Each row gives one setting for one package:
+A package whose C build needs settings holds a file named `c.coda` directly in its directory. It is written by hand, as the package's source is, and no command records anything in it. Its one table, `c`, gives one setting per row:
 
 ```zane
 c [
-    package  setting  value                    target
-    zlib     source   vendor/*.c               *
-    zlib     include  vendor                   *
-    zlib     define   HAVE_UNISTD_H=1          *-linux-*
-    zlib     define   HAVE_UNISTD_H=1          *-apple-*
-    sqlite   system   sqlite3                  *-linux-*
+    setting  value            target
+    source   vendor/*.c       *
+    include  vendor           *
+    define   HAVE_UNISTD_H=1  *-linux-*
+    define   HAVE_UNISTD_H=1  *-apple-*
 ]
 ```
 
 Each row records:
 
-- **package**: the package's path within its directory of `lib/`, `bin/`, or `test/`, with directory names joined by `.`, as a symbol writes it ([`dependencies.md`](dependencies.md) §6.1).
 - **setting**: one of the settings below.
 - **value**: the setting's value.
 - **target**: a pattern over the target triple, in which `*` matches any run of characters. The row applies to a build whose target the pattern matches; `*` alone applies to every build.
+
+The settings belong to the package whose directory holds the file, so they move with it: a package moved to another directory or another project keeps its C build, and the project's manifest and lock file ([`dependencies.md`](dependencies.md) §2) record nothing about C. A package without a `c.coda` compiles the C sources in its directory with no settings of its own.
 
 The settings are:
 
@@ -100,7 +101,7 @@ The settings are:
 | `archive` | a path, relative to the package's directory | a prebuilt static library linked with the package (§2.4) |
 | `system` | a library name | a library of the target system linked with the program (§2.4) |
 
-A path **MUST** stay inside the project; one that is absolute or leaves the project through `..` is an error. A `source` pattern that matches no file in a build it applies to is an error, as is a `package` that names no package of the project. The rows of one package apply in the order they are written.
+A path **MUST** stay inside the project; one that is absolute or leaves the project through `..` is an error. A `source` pattern that matches no file in a build it applies to is an error. The rows apply in the order they are written.
 
 ### 2.4 Prebuilt archives and system libraries
 
@@ -457,7 +458,7 @@ c @primitives$I64 = _crc32(@primitives$I64(0), @primitives$String("hello")); // 
 | Difference | Rust | Zane |
 |---|---|---|
 | What the compiler knows of the C function | its declaration | its declaration and its body, compiled from source |
-| Building the C | a `build.rs` program run on the build machine | the toolchain, from settings in the manifest |
+| Building the C | a `build.rs` program run on the build machine | the toolchain, from settings in the package's `c.coda` |
 | Effects | none are stated; any call may do anything | stated by the signature, and taken as true |
 
 ### 7.2 Zane vs. Zig (`@cImport`)
@@ -476,9 +477,9 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 
 | Concept | Rule |
 |---|---|
-| A package's C code | Its C sources (the `.c` files in its directory and those the manifest lists) and its interface headers (the `.h` files in its directory) |
+| A package's C code | Its C sources (the `.c` files in its directory and those its `c.coda` lists) and its interface headers (the `.h` files in its directory) |
 | Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written |
-| `c` block | Manifest rows giving a package's `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
+| `c.coda` | A hand-written file in the package's directory whose rows give its `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
 | C symbols | Renamed into the package's placeholder namespace and rewritten with its version, so versions coexist |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
