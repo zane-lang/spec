@@ -28,7 +28,7 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 
 Every package may hold C code: a library, program, or test package, and a subpackage. Its C code is:
 
-- its **C sources**: the `.c` files directly in the package's directory, together with any its `c.coda` lists (§2.3);
+- its **C sources**: the `.c` files directly in the package's directory, together with any listed in its `c.coda` (§2.3);
 - its **interface headers**: the `.h` files directly in the package's directory.
 
 A foreign verb of the package names a C function that one of its interface headers declares (§3.7). Headers elsewhere, including those an interface header includes, are seen by the C compiler and by nothing else.
@@ -489,7 +489,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 
 | Concept | Rule |
 |---|---|
-| A package's C code | Its C sources (the `.c` files in its directory and those its `c.coda` lists) and its interface headers (the `.h` files in its directory) |
+| A package's C code | Its C sources (the `.c` files in its directory and those listed in its `c.coda`) and its interface headers (the `.h` files in its directory) |
 | Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written |
 | `c.coda` | A hand-written file in the package's directory whose rows give its `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
 | C symbols | Renamed into the package's placeholder namespace and rewritten with its version, so versions coexist |
