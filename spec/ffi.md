@@ -125,6 +125,8 @@ So two versions of one package, or two packages that hold the same C library, co
 
 A project's release archive holds the objects compiled from its library packages' C sources beside their Zane objects ([`dependencies.md`](dependencies.md) §3.1), for the archive's target. Its prebuilt archives are part of its source tree. A consumer compiles against a dependency's source ([`dependencies.md`](dependencies.md) §14), C sources and interface headers included, so the compiler reads a dependency's C code as it reads its Zane code: to check foreign verbs against their declarations (§3.7) and to evaluate calls at compile time (§5.4).
 
+A `release` dependency's objects were compiled by that package's own compiler ([`dependencies.md`](dependencies.md) §14), which may compile its C differently from the consumer's. So the archive records, for each C source and for the code the toolchain generates around the package's foreign verbs, what the object was compiled from: the preprocessed source, the compile command, and the compiler's version. The consumer evaluates a call into the dependency's C at compile time only where what it compiles from the dependency's source matches that record. Where it does not, the call runs only in the running program, as a call into an archive does (§2.4).
+
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
 ---
@@ -366,7 +368,7 @@ A foreign verb that returns a data handle may be any foreign verb.
 
 A call to a foreign verb that reads no capability-backed state computes its result from its arguments and from the data handles it is passed. It is therefore a computation like any other under [`effects.md`](effects.md) §5.3: when its arguments are known, the compiler may evaluate it at compile time. A computation in Zane that calls C folds through the call, and so does a data handle made, written, and destroyed within it.
 
-Evaluating a foreign call at compile time changes nothing the program computes. Its result is the one the C function gives on the build's target, as the C code is compiled for that target (§2.2).
+Evaluating a foreign call at compile time changes nothing the program computes. Its result is the one the C function gives on the build's target, as the C code is compiled for that target (§2.2), and for a `release` dependency as the dependency's object was compiled (§2.6).
 
 A call to a foreign verb that reads capability-backed state is never evaluated at compile time, and neither is anything that depends on its result. A call that writes capability-backed state happens at run time, at the point and in the order the program makes it.
 
