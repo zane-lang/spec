@@ -178,10 +178,10 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | `@primitives$Array<T, n>`, `T` a scalar primitive | `const E *`, `E` a full-width C type of `T` | a view of its `n` elements (§3.4) |
 | `@primitives$List<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
 | a C-compatible value type (below) | a `struct` of the same layout | its value |
-| a foreign handle `H` (§4) | `C *` or `const C *`, `C` the handle's C type | the C object it owns (§4.3) |
+| a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.3 says so | the C object it owns (§4.2, §4.3) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
 
-A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. On any other target it corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
+A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. A C type of the second row corresponds to `@primitives$I32` only on a target where it is at most 32 bits. On any other target such a type corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
 
 A **C-compatible value type** is a value type declared with `struct` whose every field is a scalar primitive, an `@primitives$Array<T, n>` of one, or a C-compatible value type. Its C `struct` has the same number of fields, in the same order, each of a full-width C type of the Zane field's primitive, an array of one, or a `struct` corresponding in turn; their names need not match. The Zane type and the C `struct` then have the same layout, field for field.
 
@@ -236,7 +236,7 @@ The compiler checks each foreign verb against the declaration of its symbol in t
 - no interface header of the package declares the symbol as a function;
 - the C function takes another number of parameters than the foreign verb passes (§3.2), or is variadic;
 - a parameter's or the result's C type is not one §3.3 gives for the Zane type;
-- a handle's pointer is `const` where §4.3 requires it writable, or writable where §4.3 requires it `const`;
+- a handle's pointer is `const` where §4.2 or §4.3 requires it writable, or writable where §4.3 requires it `const`;
 - a C-compatible value type's layout differs from its C `struct`'s.
 
 The check sees each target's C types, so a declaration that is correct for one target and wrong for another fails in the build for that other target.
@@ -266,7 +266,7 @@ The C type is a `struct` type, or a `typedef` name of one, that an interface hea
 
 ### 4.2 A handle is made by a foreign verb and released when it is destroyed
 
-A handle is made only by a foreign verb that returns it (§3.5). It owns a non-null pointer to its C object from then on.
+A handle is made only by a foreign verb that returns it (§3.5), as a writable `C *`, since the handle may later be a `mut` subject and is passed to its release function. It owns a non-null pointer to its C object from then on.
 
 When a handle is destroyed ([`lifetimes.md`](lifetimes.md) §2), its release function is called with that pointer, exactly once, before the handle's storage is reused. A handle whose owner moves on keeps its object, and only the handle that is finally destroyed releases it.
 
