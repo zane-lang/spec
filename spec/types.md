@@ -725,6 +725,8 @@ type Wrapper = struct {
 
 A named type is therefore always declared this way: `type Name = struct { ... }` or `type Name = #struct { ... }` (and likewise `variant`/`#variant`/`enum`). There is no standalone `struct Name { ... }` declaration form — a mould is a type expression that only names a type through a `type` (or `alias`) declaration.
 
+A foreign handle, `#handle(...)` or `#capability(...)`, is the one other right-hand side that declares a new type. It is no mould: it has no body and no value form, and it appears only after `type` ([`ffi.md`](ffi.md) §4.1).
+
 These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".

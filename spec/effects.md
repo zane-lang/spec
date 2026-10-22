@@ -57,7 +57,7 @@ A verb's signature says what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console, runtime, and system (§6.6).
+The root package is the one exception. Any verb there may write the program's console, runtime, and system (§6.6). A foreign verb is the same in the root package as elsewhere: what it touches outside the program is what its signature states ([`ffi.md`](ffi.md) §5.2).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -121,7 +121,7 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead ([`ffi.md`](ffi.md) §5.2).
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead, and from the function values the call passes it ([`ffi.md`](ffi.md) §5.2).
 
 ### 5.3 Compile-time evaluation
 

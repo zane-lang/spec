@@ -327,9 +327,11 @@ What a foreign verb reads and writes outside the program is stated by its signat
 
 | Foreign verb | Outside the program, it |
 |---|---|
-| A function, or a method on a data handle, taking no foreign capability | reads and writes nothing |
+| A function, or a method on a data handle, taking no foreign capability | reads and writes nothing itself |
 | A method without `mut` on `@runtime$System` or a foreign capability, or any foreign verb taking a foreign capability as a parameter | reads capability-backed state |
 | A `mut` method on `@runtime$System` or a foreign capability | reads and writes capability-backed state |
+
+A call also reads and writes whatever the function values it passes read and write (§3.6), as the compiler derives it for any call through a function value ([`effects.md`](effects.md) §5.2, §5.5). So a call that passes no capability, but passes a function value that writes the console, writes the console.
 
 Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package, the program's own `@program$system`; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
 

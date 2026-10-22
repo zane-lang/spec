@@ -409,7 +409,7 @@ Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.14 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — or to a foreign handle — `#handle(...)` or `#capability(...)` (§2.16) — and only as the right-hand side of a `type`/`alias` declaration (§1.6). The unmarked moulds declare value types; a foreign handle has no unmarked form.
+A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6), or to a foreign handle — `#handle(...)` or `#capability(...)` (§2.16) — and only as the right-hand side of a `type` declaration. The unmarked moulds declare value types; a foreign handle has no unmarked form.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named
