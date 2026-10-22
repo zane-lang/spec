@@ -297,6 +297,8 @@ void zane_deflater_set(zane_deflater_t *dst, zane_deflater_t *src);
 
 The setter releases the object `dst` held, moves `src`'s object into `dst`, and frees what remains of `src`. The replacement handle is consumed by the call, and its free function is not called. The object keeps its address, so a C object that holds that address reaches the replacement.
 
+The handle keeps its place in the release order of §4.2 too. Handles made from its object hold that address and now reach the replacement, so they are still released before it. A replacement made from a handle that is younger than the one it replaces is therefore released after that handle, and a binding whose replacement depends on such an object has to keep the dependency alive itself, as it must for any dependency the order does not cover (§4.5).
+
 An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a list element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
 
 ```zane
