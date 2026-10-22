@@ -18,7 +18,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`One spelling per entity`.** Whatever an import states is the only way that entity may be written in the file.
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
-- **`Programs and tests start a build`.** A program or test package is the root of its build: it declares `main` and alone reaches the program's console, runtime, and system.
+- **`Programs and tests start a build`.** A program or test package is the root of its build: it declares `main` and alone reaches the program's console and runtime.
 
 ---
 
@@ -255,13 +255,13 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 Every build that produces a program has one **root package**, from which every other package of the build is reached: the program package it builds, or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
 
-Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console, runtime, and system ([`effects.md`](effects.md) §6.6). A library package is never a root, so it reaches them only through an instance passed to it.
+Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
 ### 6.2 `main` is the entry point
 
-A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console, runtime, and system through `@program$` directly. Its return type may be any type, and the value it returns is discarded. It declares no abort type, because no caller exists to handle an abort.
+A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly. Its return type may be any type, and the value it returns is discarded. It declares no abort type, because no caller exists to handle an abort.
 
 Every program package and every test package **MUST** declare `main`. A package without it is a compile-time error.
 
@@ -298,7 +298,7 @@ Every source file of a test package **MUST** begin with the declaration `package
 
 ### 7.2 Each test package is the root of its own test build
 
-A **test build** compiles one test package with the library packages it reaches and runs the result. The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console, runtime, and system only through an instance the test package passes to them.
+A **test build** compiles one test package with the library packages it reaches and runs the result. The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
 
 A library package under test is a package of its own, distinct from every release of the same project that the build's dependency graph also reaches. When a dependency of the test package itself depends on the project, the two copies coexist in one program as two versions do ([`dependencies.md`](dependencies.md) §11), and a type of one is not a type of the other.
 

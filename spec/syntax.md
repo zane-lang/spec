@@ -24,6 +24,7 @@ name ^VarType = expr
 name &VarType = expr
 name ReturnType(param ParamType, ...) { body }
 name ReturnType(param ParamType, ...) => expr
+name VarType foreign "cGlobal"
 ```
 
 `VarType{fieldA; fieldB;}` is shorthand for `VarType{fieldA = fieldA; fieldB = fieldB;}`.
@@ -40,7 +41,9 @@ car ^Car{id = Int(1); seats = Int(4);}   // car ^Car = Car{id = Int(1); seats = 
 car ^Car{id; seats;}                     // car ^Car = Car{id = id; seats = seats;}
 ```
 
-The last two forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
+The two lambda forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
+
+The last form declares a **foreign variable**, whose value is a handle to a C global: it writes `foreign` and one string literal without interpolation, the global's symbol, in place of an initializer. Only the root package declares one ([`ffi.md`](ffi.md) §5.1).
 
 Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
 
@@ -115,8 +118,7 @@ type Name = #struct { field FieldType; ... }
 type Name = variant { member FieldType; ... }
 type Name = #variant { member FieldType; ... }
 type Name = enum [ memberA, memberB, ... ]
-type Name = #handle("cType", "releaseFunction")
-type Name = #capability("cType", "releaseFunction")
+type Name = #handle{ cType = "cType"; set = "setter"; free = "freeFunction"; }
 ```
 
 `type` declares a new distinct named type; `alias` declares an interchangeable name. The right-hand side is any type expression (§2.4), including an inline `struct`, `#struct`, `variant`, `#variant`, or `enum` body; a leading `#` marks a reference type (§2.14). A `<>` header on the left declares the type's parameters. See [`types.md`](types.md) §5.
@@ -270,8 +272,8 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
 - `@controlflow$` holds the **control-flow intrinsics**, the operations that branch, repeat, and exit (§5.1).
-- `@runtime$` holds the **runtime types** `@runtime$Console`, `@runtime$Runtime`, and `@runtime$System` and their methods ([`effects.md`](effects.md) §6.6, [`ffi.md`](ffi.md) §5.1).
-- `@program$` holds the running program's own instances of those types, `@program$console`, `@program$runtime`, and `@program$system`.
+- `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
+- `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
 An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
@@ -409,7 +411,7 @@ Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 
 ### 2.14 The `#` reference modifier
 
-A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6), or to a foreign handle — `#handle(...)` or `#capability(...)` (§2.16) — and only as the right-hand side of a `type` declaration. The unmarked moulds declare value types; a foreign handle has no unmarked form.
+A leading `#` marks a **reference type**. It attaches only to a **mould** — `#struct { ... }`, `#variant { ... }`, or `#enum [ ... ]` — and only as the right-hand side of a `type`/`alias` declaration (§1.6), or to a foreign handle — `#handle{ ... }` (§2.16) — and only as the right-hand side of a `type` declaration. The unmarked moulds declare value types; a foreign handle has no unmarked form.
 
 ```zane
 type Cell = #struct { value Int; }               // reference product type, declared and named
@@ -418,7 +420,7 @@ type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` r
 
 `node` is written as an ordinary owning member. The compiler boxes such a member because no finite inline layout exists for it — nothing is written for that, and it is not an `&` (see [`adt.md`](adt.md) §4). A value type may recurse the same way; its boxed member is owned by the value and deep-copied with it (see [`memory.md`](memory.md) §2.3).
 
-`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle declared with `#handle`/`#capability` ([`ffi.md`](ffi.md) §4.1), a reference-type intrinsic such as `@runtime$System`, or a type parameter filled with one ([`generics.md`](generics.md) §3.6) — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
+`&` combines with a reference type and never with a bare value type: an `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle declared with `#handle` ([`ffi.md`](ffi.md) §4.1), or a type parameter filled with one ([`generics.md`](generics.md) §3.6) — so a stored **reference** is written `&Cell` or `&Tree` (see [`memory.md`](memory.md) §2.4). See [`types.md`](types.md) §2.1 for the semantics.
 
 ### 2.15 String literal forms
 
@@ -442,15 +444,17 @@ A string is delimited by double quotes. `\"`, `\\`, and `\%name` are the languag
 ### 2.16 Foreign handles
 
 ```zane
-type Name = #handle("cType", "releaseFunction")
-type Name = #capability("cType", "releaseFunction")
+type Name = #handle{ cType = "cType"; }
+type Name = #handle{ cType = "cType"; free = "freeFunction"; }
+type Name = #handle{ cType = "cType"; set = "setter"; free = "freeFunction"; }
 ```
 
-A foreign handle is declared only as the right-hand side of a `type` declaration (§1.6). Its `( )` holds exactly two string literals without interpolation, separated by `,`: the name of a C type and the name of the C function that releases an object of it. The leading `#` is required.
+A foreign handle is declared only as the right-hand side of a `type` declaration (§1.6). Its `{ }` is written like a field-constructor call (§1.1): named entries, each `name = literal;`, whose literals are strings without interpolation. `cType` names a C type and is required; `set` names the setter and `free` the free function, and either may be left out, except that a handle with `set` has `free`. Each entry appears at most once, and no other entry is allowed. The leading `#` is required.
 
 ```zane
-type Stream = handle("z_stream", "zane_stream_free")     // ILLEGAL: a foreign handle carries `#`
-alias Stream = #handle("z_stream", "zane_stream_free")   // ILLEGAL: declared only by `type`
+type Stream = handle{ cType = "z_stream"; free = "zane_stream_free"; }     // ILLEGAL: a foreign handle carries `#`
+alias Stream = #handle{ cType = "z_stream"; free = "zane_stream_free"; }   // ILLEGAL: declared only by `type`
+type Stream = #handle{ cType = "z_stream"; set = "zane_stream_set"; }      // ILLEGAL: `set` without `free`
 ```
 
 > **See also:** [`ffi.md`](ffi.md) §4 for foreign handle semantics.
@@ -713,8 +717,8 @@ ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "c
 A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it. The literal is the C function's symbol.
 
 ```zane
-@primitives$I64 now(this @runtime$System) foreign "zane_now" { ... }   // ILLEGAL: a foreign verb has no body
-@primitives$I64 now(this @runtime$System) => foreign "zane_now"         // ILLEGAL: `foreign` is not an expression
+@primitives$I64 now(this Clock) foreign "zane_now" { ... }   // ILLEGAL: a foreign verb has no body
+@primitives$I64 now(this Clock) => foreign "zane_now"         // ILLEGAL: `foreign` is not an expression
 ```
 
 > **See also:** [`ffi.md`](ffi.md) §3 for foreign verb semantics.

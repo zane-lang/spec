@@ -472,9 +472,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** "Foreign" is the established word for code in another language reached through an interface, as in a foreign-function interface; "verb" is the spec's word for a function or method.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.1
 
-### 4.20 foreign handle / data handle / foreign capability
+### 4.20 foreign handle / data handle / outside handle / foreign capability
 
-- **Meaning:** A **foreign handle** is a reference type owning one C object, released by a named C function when the handle is destroyed. A **data handle** (`#handle`) holds state of the program's own; a **foreign capability** (`#capability`) stands for state outside it, so using it is a capability access.
+- **Meaning:** A **foreign handle** (`#handle`) is a reference type referring to one C object. One without a free function is a **foreign capability**, referring to a C global; one with a free function owns its object, and is an **outside handle**, part of capability-backed state, when a method on a foreign capability makes it, and a **data handle**, state of the program's own, otherwise.
 - **Why this name:** C APIs already call an opaque pointer to their object a handle; a capability is what the effect model calls an object that reaches outside state.
 - **Canonical home:** [`ffi.md`](ffi.md) §4.1
 
@@ -484,8 +484,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It is the header that states the interface between the package's C and its Zane, as opposed to the C library's own headers.
 - **Canonical home:** [`ffi.md`](ffi.md) §2.1
 
-### 4.22 system capability
+### 4.22 foreign variable
 
-- **Meaning:** `@runtime$System`, whose one instance is `@program$system`: the capability for the state outside the program that foreign code reaches. A foreign method on it reads that state, or writes it when `mut`; C never receives it.
-- **Why this name:** To C code everything beyond the program is "the system" it calls into, and the effect model names what reaches such state a capability.
+- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package declares one, and passes it on.
+- **Why this name:** It is the variable counterpart of a foreign verb: declared like any symbol, with its value supplied by C.
 - **Canonical home:** [`ffi.md`](ffi.md) §5.1

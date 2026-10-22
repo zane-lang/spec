@@ -14,8 +14,8 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 
 - **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from a `c.coda` file in the package's directory. No build script runs.
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
-- **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call. State that C keeps lives in C memory, owned from Zane through a **foreign handle** that releases it when it is destroyed.
-- **`Outside state is a capability`.** A foreign verb that reaches no capability is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation. A foreign verb that reads or writes outside state says so by being a method on the system capability, `@runtime$System`, or on a foreign capability.
+- **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
+- **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation.
 - **`The declaration is trusted`.** The compiler cannot see what C code touches. A foreign verb declared without a capability that in fact reads outside state is evaluated at compile time, and the value the build machine produced is built into the program (§5.5).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#a-c-interface-that-keeps-compile-time-evaluation) — "A C interface that keeps compile-time evaluation".
@@ -161,7 +161,7 @@ Int crc32(data String) => Int(_crc32(@primitives$I64(0), data))
 
 ### 3.2 Parameters become the C function's arguments in order
 
-A foreign verb's parameters are the C function's parameters, in order. A method's subject is the first of them, except a subject of type `@runtime$System`, which C does not receive (§5.1).
+A foreign verb's parameters are the C function's parameters, in order. A method's subject is the first of them.
 
 ### 3.3 Types at the boundary
 
@@ -180,7 +180,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | `@primitives$Array<T, n>`, `T` a scalar primitive | `const E *`, `E` a full-width C type of `T` | a view of its `n` elements (§3.4) |
 | `@primitives$List<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
 | a C-compatible value type (below) | a `struct` of the same layout | its value |
-| a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.3 says so | the C object it owns (§4.2, §4.3) |
+| a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.4 says so | the C object it refers to (§4.2, §4.4) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
 
 A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. A C type of the second row corresponds to `@primitives$I32` only on a target where it is at most 32 bits. On any other target such a type corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. A signed C type corresponds only on a target where it is two's complement, as Zane's integers are. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
@@ -217,7 +217,7 @@ A string's view holds its bytes, with no terminator. A list's view holds its ele
 A foreign verb's result is a scalar primitive, `@primitives$Bool`, `@primitives$Unit`, `@primitives$String`, a C-compatible value type, or a handle. An array, a list, and a function type cross into C only as parameters.
 
 - A returned `zane_bytes` is a view of bytes C owns. The call copies them into a new string primitive before it returns, so the bytes stay valid after the C function has returned, until the copy is made: they are C memory that outlives the call, such as memory a handle owns, and never storage that ends when the C function returns. A view whose `size` is zero gives an empty string, whatever its `data`.
-- A returned handle is a new roaming owner (§4.2). A foreign verb that returns one may declare `@primitives$Unit` as its abort type, and the call aborts when the C function returns a null pointer:
+- A returned handle is a new roaming owner (§4.2), of a type with a free function. A foreign verb that returns one may declare `@primitives$Unit` as its abort type, and the call aborts when the C function returns a null pointer:
 
 ```zane
 ^Deflater?@primitives$Unit _deflater(level @primitives$I32) foreign "zane_deflater_new"
@@ -240,7 +240,8 @@ The compiler checks each foreign verb against the declaration of its symbol in t
 - no interface header of the package declares the symbol as a function;
 - the C function takes another number of parameters than the foreign verb passes (§3.2), or is variadic;
 - a parameter's or the result's C type is not one §3.3 gives for the Zane type;
-- a handle's pointer is `const` where §4.2 or §4.3 requires it writable, or writable where §4.3 requires it `const`;
+- a handle's pointer is `const` where §4.2 or §4.4 requires it writable, or writable where §4.4 requires it `const`;
+- a handle stands where §4.4 does not allow it;
 - a C-compatible value type's layout differs from its C `struct`'s.
 
 The check sees each target's C types, so a declaration that is correct for one target and wrong for another fails in the build for that other target.
@@ -251,58 +252,95 @@ The check sees each target's C types, so a declaration that is correct for one t
 
 ## 4. Foreign Handles
 
-### 4.1 `#handle` and `#capability`
+### 4.1 `#handle`
 
-A **foreign handle** is a reference type that owns one C object. Its declaration names the C type of the objects it owns and the C function that releases one:
+A **foreign handle** is a reference type whose value refers to one C object. Its declaration names the C type of those objects and, where Zane owns them, the C functions that replace and release one:
 
 ```zane
-type Deflater = #handle("zane_deflater", "zane_deflater_free")
-type Database = #capability("sqlite3", "zane_sqlite_close")
+type Fs       = #handle{ cType = "zane_fs_t"; }
+type File     = #handle{ cType = "zane_file_t"; free = "zane_fclose"; }
+type Deflater = #handle{ cType = "zane_deflater_t"; set = "zane_deflater_set"; free = "zane_deflater_free"; }
 ```
 
-A type declared with `#handle` is a **data handle**: its C object holds state of the program's own, such as a compression stream or a parsed document. A type declared with `#capability` is a **foreign capability**: its C object stands for state outside the program, such as an open file, a database connection, or a socket, and reading or writing it is reading or writing capability-backed state ([`effects.md`](effects.md) §2.2, §5).
+- **`cType`** is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not.
+- **`free`** is the **free function**: a C function of the package's interface headers that takes one non-`const` pointer to the C type and returns `void`. It releases an object when its handle is destroyed (§4.2). A library's own cleanup function that returns a status, as SQLite's `sqlite3_close` returns an `int`, is reached through a C function of the package that calls it and returns `void`.
+- **`set`** is the **setter**: a C function of the package's interface headers that takes two non-`const` pointers to the C type and returns `void`. It replaces an object in place when a settled handle is overwritten (§4.3). A handle type with a setter has a free function.
 
-Both are reference types ([`types.md`](types.md) §2.1). A handle is moved rather than copied, is settled or roaming, and may be referenced through `&` like any reference type ([`memory.md`](memory.md) §2). It has no fields: C reaches the object it owns, and Zane reaches it only through foreign verbs.
+A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to the foreign verbs that make it (§4.2):
 
-The C type is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not. The release function is a C function of the package's interface headers that takes one non-`const` pointer to that type and returns `void`. A library's own cleanup function that returns a status, as SQLite's `sqlite3_close` returns an `int`, is reached through a C function of the package that calls it and returns `void`, such as the `zane_sqlite_close` above.
+- an **outside handle**, made by a method on a foreign capability, whose C object is part of the state outside the program that the capability reaches, such as an open file or a database connection;
+- a **data handle**, made by any other foreign verb, whose C object holds state of the program's own, such as a compression stream or a parsed document.
+
+Every handle type is a reference type ([`types.md`](types.md) §2.1). A handle is moved rather than copied, is settled or roaming, and may be referenced through `&` like any reference type ([`memory.md`](memory.md) §2). It has no fields: C reaches the object it refers to, and Zane reaches it only through foreign verbs.
 
 > **See also:** [`syntax.md`](syntax.md) §2.16 for the declaration form.
 
 ### 4.2 A handle is made by a foreign verb and released when it is destroyed
 
-A handle is made only by a foreign verb that returns it (§3.5), as a writable `C *`, since the handle may later be a `mut` subject and is passed to its release function. It owns a non-null pointer to its C object from then on.
+A handle with a free function is made only by a foreign verb that returns it (§3.5), as a writable `C *`, since it is later passed to its free function. It owns a non-null pointer to its C object from then on. A foreign verb never returns a foreign capability.
 
-When a handle is destroyed ([`lifetimes.md`](lifetimes.md) §2), its release function is called with that pointer, exactly once, before the handle's storage is reused. A handle whose owner moves on keeps its object, and only the handle that is finally destroyed releases it.
+The foreign verbs that return one handle type are all methods on a foreign capability or none of them are. A type that one makes and another does not is a compile-time error, reported at the type's declaration, because it would be outside state and program state at once.
 
-Release functions are C code that runs while a scope drains, so their order is observable where the scope's other destruction is not. When one drain destroys several handles, their release functions run in the reverse of the order the handles were made. A handle made from another, such as a statement prepared on a connection, is made after it, so it is released before it (§4.4).
+When a handle is destroyed ([`lifetimes.md`](lifetimes.md) §2), its free function is called with that pointer, exactly once, before the handle's storage is reused. A handle whose owner moves on keeps its object, and only the handle that is finally destroyed releases it. A foreign capability has no free function, and destroying one releases nothing.
 
-A settled place that holds a foreign handle, directly or through the owning fields of the objects it holds, is never overwritten: an assignment that would replace the handle there is a compile-time error. Overwriting a settled owner keeps references to it and gives them the replacement ([`memory.md`](memory.md) §2.2), which suits a Zane object but not a C object that another C object still points at, since the old one would be released under it. A handle in a settled place is therefore released only when its scope drains. A roaming owner, a list element, and a variant payload hold handles nothing references, so they are overwritten as any reference-type owner is.
+Free functions are C code that runs while a scope drains, so their order is observable where the scope's other destruction is not. When one drain destroys several handles, their free functions run in the reverse of the order the handles were made. A handle made from another, such as a statement prepared on a connection, is made after it, so it is released before it (§4.5).
 
-### 4.3 Passing a handle reads it, and a `mut` subject writes it
+C keeps each object at the address its handle holds until the free function releases it, and other C objects may hold that address. Zane therefore never moves a C object, and replaces one only through its setter.
 
-A handle crosses into C as the pointer it owns. Where it stands in the foreign verb decides how C may use the object:
+### 4.3 A settled handle is overwritten through its setter
 
-- As the subject of a `mut` foreign method, C receives a writable pointer, `C *`, and may change the object.
-- In every other position, as the subject of a foreign method without `mut` or as another parameter, C receives a `const C *` and only reads the object.
+Overwriting a settled owner writes the replacement at the same address, so references to it see the replacement ([`memory.md`](memory.md) §2.2). A foreign handle in a settled place, directly or through the owning fields of the objects that place holds, is overwritten the same way through its setter: the setter receives the pointer the place holds and the replacement's pointer, and leaves the object at the first address holding the replacement.
 
-A foreign verb writes at most one handle, its subject, because a `mut` method writes `this` and nothing else ([`effects.md`](effects.md) §4.2). A C function that changes two objects is reached through C functions of the package that each change one of them.
+```c
+void zane_deflater_set(zane_deflater_t *dst, zane_deflater_t *src);
+```
+
+The setter releases the object `dst` held, moves `src`'s object into `dst`, and frees what remains of `src`. The replacement handle is consumed by the call, and its free function is not called. The object keeps its address, so a C object that holds that address reaches the replacement.
+
+An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a list element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
+
+```zane
+d Deflater = _deflater(@primitives$I32(6));
+d = _deflater(@primitives$I32(9));          // calls zane_deflater_set
+
+log fs$File = files!fs$open("a.log");
+log = files!fs$open("b.log");             // ERROR: File has no setter
+```
+
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#replacing-a-handle-in-place) — "Replacing a handle in place".
+
+### 4.4 Passing a handle
+
+A handle crosses into C as the pointer it holds. Where it stands in the foreign verb decides how C may use the object:
+
+- **A foreign capability** stands, in a foreign verb, only as the subject of a foreign method (§5.1). C receives `C *` when the method is `mut`, and `const C *` otherwise.
+- **An outside handle** stands, in a foreign verb, only as a parameter other than the subject of a method on a foreign capability, or as its result. C receives `C *` when the method is `mut`, and `const C *` otherwise: the object is part of the outside state the capability reaches, so a write through the capability may change it.
+- **A data handle** stands anywhere. C receives `C *` when it is the subject of a `mut` foreign method, and `const C *` in every other position, where it only reads the object.
+
+A data handle is written only as the subject of a `mut` method, because a `mut` method writes `this` and no other state of the program ([`effects.md`](effects.md) §4.2). A C function that changes two data handles is reached through C functions of the package that each change one of them.
 
 ```zane
 @primitives$String _deflate(this Deflater, input @primitives$String) mut foreign "zane_deflate"
 @primitives$I64 _totalIn(this Deflater) foreign "zane_deflater_total_in"
+
+@primitives$Unit _write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite"
 ```
 
 ```c
-zane_bytes zane_deflate(zane_deflater *deflater, zane_bytes input);
-int64_t zane_deflater_total_in(const zane_deflater *deflater);
+zane_bytes zane_deflate(zane_deflater_t *deflater, zane_bytes input);
+int64_t zane_deflater_total_in(const zane_deflater_t *deflater);
+
+void zane_fwrite(zane_fs_t *fs, zane_file_t *file, zane_bytes data);
 ```
 
-### 4.4 A C object that depends on another
+### 4.5 A C object that depends on another
 
 A C object that refers to another, such as a prepared statement and the connection it belongs to, needs that other object to outlive it. A handle expresses this through an `&` to the other held beside it, so that the store rule keeps the referenced handle alive at least as long ([`lifetimes.md`](lifetimes.md) §1.1):
 
 ```zane
-type _RawStatement = #capability("sqlite3_stmt", "zane_sqlite_finalize")
+type Sqlite        = #handle{ cType = "zane_sqlite_t"; }
+type Database      = #handle{ cType = "sqlite3"; free = "zane_sqlite_close"; }
+type _RawStatement = #handle{ cType = "sqlite3_stmt"; free = "zane_sqlite_finalize"; }
 
 type Statement = #struct {
     _raw _RawStatement;
@@ -310,7 +348,7 @@ type Statement = #struct {
 }
 ```
 
-The store rule allows the two to share a scope, and then both die in one drain; the reverse order of §4.2 releases the statement first, since it was made from the connection. The compiler knows nothing of how C objects refer to one another, so a binding that hands C a dependency without such a reference, or makes the dependent first, has to keep the dependency alive itself (§6).
+The store rule allows the two to share a scope, and then both die in one drain; the reverse order of §4.2 releases the statement first, since it was made from the connection. A settled `Database` is never overwritten, since it has no setter, so the connection a statement holds stays the one it was prepared on. The compiler knows nothing of how C objects refer to one another, so a binding that hands C a dependency without such a reference, or makes the dependent first, has to keep the dependency alive itself (§6).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#c-never-writes-zane-memory) — "C never writes Zane memory".
 
@@ -318,16 +356,47 @@ The store rule allows the two to share a scope, and then both die in one drain; 
 
 ## 5. Effects of Foreign Code
 
-### 5.1 The system capability
+### 5.1 Foreign capabilities come from C globals
 
-`@runtime$System` is the capability for state outside the program that foreign code reaches: the file system, the clock, the environment, the network, and every other source of input or target of output a C library may use. It is a reference type with one instance, `@program$system`, created when the program starts. It cannot be constructed, and it is passed and stored like the program's console and runtime ([`effects.md`](effects.md) §6.6).
+A package whose C code reaches state outside the program offers that reach as a C global, of a C type its interface header declares and a foreign capability names:
 
-A foreign method whose subject is `@runtime$System` touches outside state that no foreign capability stands for. C does not receive the subject: it is the capability through which the call is made, not an argument.
+```c
+// fs.h
+typedef struct zane_fs_t   zane_fs_t;
+typedef struct zane_file_t zane_file_t;
+
+extern zane_fs_t zane_fs;
+
+zane_file_t *zane_fopen(zane_fs_t *fs, zane_bytes path);
+void zane_fwrite(zane_fs_t *fs, zane_file_t *file, zane_bytes data);
+void zane_fclose(zane_file_t *file);
+```
 
 ```zane
-@primitives$I64 _nowNanoseconds(this @runtime$System) foreign "zane_clock_now_ns"
-@primitives$Unit _remove(this @runtime$System, path @primitives$String) mut foreign "zane_fs_remove"
+package fs
+
+type Fs   = #handle{ cType = "zane_fs_t"; }
+type File = #handle{ cType = "zane_file_t"; free = "zane_fclose"; }
+
+^File open(this Fs, path @primitives$String) mut foreign "zane_fopen"
+@primitives$Unit write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite"
 ```
+
+A **foreign variable** declares a symbol whose value is a handle to such a global. It is written like a symbol declaration, with `foreign` and the global's symbol in place of an initializer:
+
+```zane
+Unit main() {
+    files fs$Fs foreign "zane_fs";
+    log fs$File = files!fs$open("app.log");
+    files!fs$write(log, "started\n");
+}
+```
+
+The symbol is a settled owner of a foreign capability. The global is looked up in the package that declares the capability's type: its C code defines it with external linkage, and one of its interface headers declares it with the type's C type. It is a compile-time error, reported at the declaration, when no such global exists or its C type is another.
+
+Only the root package declares foreign variables ([`packages.md`](packages.md) §6.1). A foreign variable in any other package is a compile-time error. Every other package reaches a foreign capability only through one passed to it, as it reaches the program's console ([`effects.md`](effects.md) §6.6), so a package that touches outside state shows it in what it receives. Two foreign variables that name one global are two handles to one C object, and since a foreign capability has no free function or setter, neither releases or replaces it.
+
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#capabilities-come-from-c) — "Capabilities come from C".
 
 ### 5.2 What a foreign verb touches follows from its signature
 
@@ -335,36 +404,42 @@ What a foreign verb reads and writes outside the program is stated by its signat
 
 | Foreign verb | Outside the program, it |
 |---|---|
-| A function, or a method on a data handle, taking no foreign capability | reads and writes nothing itself |
-| A method without `mut` on `@runtime$System` or a foreign capability, or any foreign verb taking a foreign capability as a parameter | reads capability-backed state |
-| A `mut` method on `@runtime$System` or a foreign capability | reads and writes capability-backed state |
+| A function, or a method on a data handle | reads and writes nothing itself |
+| A method without `mut` on a foreign capability | reads capability-backed state |
+| A `mut` method on a foreign capability | reads and writes capability-backed state |
+
+The state an outside handle refers to is capability-backed state, and a foreign verb reaches it only as a method on a foreign capability (§4.4). A foreign verb on a data handle that is `mut` writes the handle, which is state of the program, and nothing outside it.
 
 A call also reads and writes whatever the function values it passes read and write (§3.6), as the compiler derives it for any call through a function value ([`effects.md`](effects.md) §5.2, §5.5). So a call that passes no capability, but passes a function value that writes the console, writes the console.
 
-Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package, the program's own `@program$system`; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
+Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package, a foreign variable it declares; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
 
 ```zane
-type Clock = #struct { _system &@runtime$System; }
+package time
 
-Clock(system &@runtime$System) => init{_system = system;}
+type Clock = #handle{ cType = "zane_clock_t"; }
 
-Int nanoseconds(this Clock) => Int(this._system:_nowNanoseconds())
+@primitives$I64 _nowNanoseconds(this Clock) foreign "zane_clock_now_ns"
+
+type Timer = #struct { _clock &Clock; }
+
+Timer(clock &Clock) => init{_clock = clock;}
+
+Int nanoseconds(this Timer) => Int(this._clock:_nowNanoseconds())
 ```
 
-A foreign verb on a data handle that is `mut` writes the handle, which is state of the program, and nothing outside it.
+Destroying an outside handle calls its free function (§4.2), which may change outside state, such as by closing a file, and overwriting one calls its setter (§4.3). Both count as writes to capability-backed state: they happen at run time, where the destruction or the assignment falls, ordered as §5.6 orders every capability write. Destruction is not a write in the sense of [`effects.md`](effects.md) §4.1 ([`effects.md`](effects.md) §7.2), so the owner of an outside handle may let it be destroyed whether or not the verb may write the capability that made it.
 
-Destroying a foreign capability calls its release function (§4.2), which may change outside state, such as by closing a file. So it counts as a write to capability-backed state: it happens at run time, where the destruction falls, ordered as §5.6 orders every capability write. Destruction is not a write in the sense of [`effects.md`](effects.md) §4.1 ([`effects.md`](effects.md) §7.2), so the owner of a capability may let it be destroyed whether or not the verb may write it.
+### 5.3 Making an outside handle is a write
 
-### 5.3 Making a foreign capability is a write
-
-A foreign verb that returns a foreign capability **MUST** be a `mut` method whose subject is `@runtime$System` or a foreign capability. Opening a file or a connection is a write to outside state, and it makes a new capability writable by its owner, so only a verb that may write a capability may make one.
+A foreign verb that returns an outside handle **MUST** be a `mut` method on a foreign capability. Opening a file or a connection is a write to outside state, and it gives its owner a handle to that state, so only a verb that may write the capability may make one.
 
 ```zane
-^Database?@primitives$Unit _open(this @runtime$System, path @primitives$String) mut foreign "zane_sqlite_open"
-^_RawStatement?@primitives$Unit _prepare(this Database, sql @primitives$String) mut foreign "zane_sqlite_prepare"
+^Database?@primitives$Unit _open(this Sqlite, path @primitives$String) mut foreign "zane_sqlite_open"
+^_RawStatement?@primitives$Unit _prepare(this Sqlite, database Database, sql @primitives$String) mut foreign "zane_sqlite_prepare"
 ```
 
-A foreign verb that returns a data handle may be any foreign verb.
+A foreign verb that returns a data handle is any foreign verb that is not a method on a foreign capability.
 
 ### 5.4 Compile-time evaluation of foreign calls
 
@@ -378,9 +453,9 @@ A call to a foreign verb that reads capability-backed state is never evaluated a
 
 ### 5.5 A foreign verb that touches outside state MUST say so
 
-The compiler cannot see what a C function reads or writes. It takes each foreign verb's signature at its word (§5.2), and a foreign verb that takes no capability is taken to read and write nothing outside the program.
+The compiler cannot see what a C function reads or writes. It takes each foreign verb's signature at its word (§5.2), and a foreign verb that is not a method on a foreign capability is taken to read and write nothing outside the program.
 
-A foreign verb whose C function reads or writes state outside the program **MUST** be declared with the capability it touches: as a method on `@runtime$System` or on a foreign capability, `mut` if it writes. Outside state includes anything one run of the program can see differently from another: a file, the clock, the environment, a random source, a device, another process, and a C variable that another call changes.
+A foreign verb whose C function reads or writes state outside the program **MUST** be declared as a method on the foreign capability that reaches that state, `mut` if it writes. Outside state includes anything one run of the program can see differently from another: a file, the clock, the environment, a random source, a device, another process, and a C variable that another call changes.
 
 A foreign verb that breaks this rule gives the program no meaning the spec defines. In particular, the compiler may:
 
@@ -399,7 +474,7 @@ int64_t zane_counter_next(void) { return ++count; }
 ```zane
 package counter
 
-@primitives$I64 next() foreign "zane_counter_next"   // WRONG: changes a C variable the next call reads, and takes no capability
+@primitives$I64 next() foreign "zane_counter_next"   // WRONG: changes a C variable the next call reads, and is no method on a capability
 ```
 
 ```zane
@@ -408,16 +483,29 @@ console!print(Int(counter$next()));
 console!print(Int(counter$next()));
 ```
 
-Each call `counter$next()` depends on nothing the program reads at run time, so an optimized build may evaluate each one while it compiles, from the variable's first value. The program then prints `1` three times where an unoptimized build prints `1`, `2`, and `3`, and no diagnostic reports this. The same holds for a C function that reads the environment or the clock, whose fold builds the value the build machine saw into the program. Declared with its capability, the call is a write, and it happens where the program runs, in the order the program makes it:
+Each call `counter$next()` depends on nothing the program reads at run time, so an optimized build may evaluate each one while it compiles, from the variable's first value. The program then prints `1` three times where an unoptimized build prints `1`, `2`, and `3`, and no diagnostic reports this. The same holds for a C function that reads the environment or the clock, whose fold builds the value the build machine saw into the program. Declared as a method on a capability, the call is a write, and it happens where the program runs, in the order the program makes it:
+
+```c
+typedef struct zane_counter_t { int64_t count; } zane_counter_t;
+
+zane_counter_t zane_counter;
+
+int64_t zane_counter_next(zane_counter_t *counter) { return ++counter->count; }
+```
 
 ```zane
 package counter
 
-@primitives$I64 next(this @runtime$System) mut foreign "zane_counter_next"
+type Counter = #handle{ cType = "zane_counter_t"; }
+
+@primitives$I64 next(this Counter) mut foreign "zane_counter_next"
 ```
 
 ```zane
-console!print(Int(@program$system!counter$next()));
+Unit main() {
+    counter counter$Counter foreign "zane_counter";
+    console!print(Int(counter!counter$next()));
+}
 ```
 
 The rule protects the binding's users, and only the binding's author can follow it.
@@ -428,7 +516,7 @@ The rule protects the binding's users, and only the binding's author can follow 
 
 A call to a foreign verb that touches no capability may run in parallel with other work, including other calls to the same C function, as any call that writes nothing its caller can see ([`concurrency.md`](concurrency.md) §2.1). Its C code is therefore called from more than one thread at a time.
 
-Every call that reads or writes capability-backed state through `@runtime$System` or a foreign capability is taken to touch one external state, whatever capability it is made through, because C code behind two capabilities may share what it touches. Such calls are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write.
+Every call that reads or writes capability-backed state through a foreign capability is taken to touch one external state, whatever capability it is made through, because C code behind two capabilities may share what it touches. Such calls, and the destruction and overwriting of outside handles (§5.2), are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write.
 
 A foreign handle is a reference type, so a spawned call never mutates one ([`concurrency.md`](concurrency.md) §4.2). Calls that only read a handle may run at the same time.
 
@@ -439,11 +527,11 @@ A foreign handle is a reference type, so a spawned call never mutates one ([`con
 The compiler takes a foreign verb's signature as a description of its C function, and builds the rest of its guarantees on it. A C function reached through a foreign verb upholds each of the following. One that breaks any of them gives the program no meaning the spec defines.
 
 - **It touches outside state only as declared** (§5.5).
-- **It writes only what it is given writable**: the C object of its `mut` subject, and C memory that C owns. It writes no view (§3.4), and no handle passed as `const`.
+- **It writes only what it is given writable**: the C object of its `mut` subject, the outside handles a `mut` method on a foreign capability is passed, and C memory that C owns. It writes no view (§3.4), and no handle passed as `const`.
 - **It keeps nothing Zane lent it.** A view, and a function pointer for a function value (§3.6), are used only until the call returns.
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
-- **It keeps its C objects consistent with their handles.** A release function is called once per object, as §4.2 states, and a C object stays alive while a C object that refers to it does (§4.4).
+- **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3).
 - **It treats a function value as a call.** A function value's C function is called with the types §3.6 gives, on any thread, while the foreign verb runs, and one call at a time when the function value touches a capability.
 
 ---
@@ -491,7 +579,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 |---|---|---|
 | What crosses the boundary | C's own types, pointers included | the types of §3.3; a C object only behind a handle |
 | C at compile time | never | when the call touches no capability |
-| Releasing a C object | `defer` written at each use | the handle's release function, when the handle is destroyed |
+| Releasing a C object | `defer` written at each use | the handle's free function, when the handle is destroyed |
 
 ---
 
@@ -506,12 +594,15 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
-| Foreign handle | A `#handle` or `#capability` reference type owning one C object, released by its release function when it is destroyed; a settled place holding one is never overwritten, and one drain releases its handles in reverse making order |
-| Writing a handle | Only as the subject of a `mut` foreign method; everywhere else C receives a `const` pointer |
+| Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in reverse making order |
+| Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address; a type without one is never overwritten in a settled place |
+| Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
-| `@runtime$System` | The capability for outside state; one instance, `@program$system`; never passed to C |
-| Effects | No capability: nothing outside the program; a capability without `mut`: a read; with `mut`: a write |
-| Making a capability | Only a `mut` method on `@runtime$System` or a foreign capability returns one |
+| Foreign capability | A handle type without a free function, referring to a C global; made only by a foreign variable |
+| Foreign variable | `name T foreign "cGlobal"`, declared only in the root package, giving a handle to a global of `T`'s package |
+| Outside and data handles | A handle made by a method on a foreign capability is an outside handle, part of capability-backed state; any other is a data handle, program state |
+| Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
+| Making an outside handle | Only a `mut` method on a foreign capability returns one |
 | Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result |
 | Undeclared outside state | A foreign verb that touches outside state without its capability may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
 | Concurrency | Capability-free foreign calls may run in parallel; capability calls are ordered as one external state |
