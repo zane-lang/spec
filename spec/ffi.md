@@ -272,6 +272,8 @@ When a handle is destroyed ([`lifetimes.md`](lifetimes.md) §2), its release fun
 
 Release functions are C code that runs while a scope drains, so their order is observable where the scope's other destruction is not. When one drain destroys several handles, their release functions run in the reverse of the order the handles were made. A handle made from another, such as a statement prepared on a connection, is made after it, so it is released before it (§4.4).
 
+A settled place that holds a foreign handle, directly or through the owning fields of the objects it holds, is never overwritten: an assignment that would replace the handle there is a compile-time error. Overwriting a settled owner keeps references to it and gives them the replacement ([`memory.md`](memory.md) §2.2), which suits a Zane object but not a C object that another C object still points at, since the old one would be released under it. A handle in a settled place is therefore released only when its scope drains. A roaming owner, a list element, and a variant payload hold handles nothing references, so they are overwritten as any reference-type owner is.
+
 ### 4.3 Passing a handle reads it, and a `mut` subject writes it
 
 A handle crosses into C as the pointer it owns. Where it stands in the foreign verb decides how C may use the object:
@@ -490,7 +492,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
-| Foreign handle | A `#handle` or `#capability` reference type owning one C object, released by its release function when it is destroyed |
+| Foreign handle | A `#handle` or `#capability` reference type owning one C object, released by its release function when it is destroyed; a settled place holding one is never overwritten, and one drain releases its handles in reverse making order |
 | Writing a handle | Only as the subject of a `mut` foreign method; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
 | `@runtime$System` | The capability for outside state; one instance, `@program$system`; never passed to C |

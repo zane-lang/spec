@@ -55,7 +55,7 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a settled owner destroys the old occupant and writes the replacement at the same address. This holds at every depth a reference can reach: each boxed member reached from the owner through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing references into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A reference to the owner, or to any field of it, inline or boxed, therefore observes the replacement.
+Overwriting a settled owner destroys the old occupant and writes the replacement at the same address. A settled place holding a foreign handle is the exception, and is never overwritten ([`ffi.md`](ffi.md) §4.2). This holds at every depth a reference can reach: each boxed member reached from the owner through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing references into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A reference to the owner, or to any field of it, inline or boxed, therefore observes the replacement.
 
 ```zane
 car Car(...);
