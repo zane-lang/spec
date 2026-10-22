@@ -252,7 +252,7 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime |
-| Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
 | Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time |

@@ -101,7 +101,7 @@ The settings are:
 | `archive` | a path, relative to the package's directory | a prebuilt static library linked with the package (§2.4) |
 | `system` | a library name | a library of the target system linked with the program (§2.4) |
 
-A path **MUST** stay inside the project; one that is absolute or leaves the project through `..` is an error. A `source` pattern that matches no file in a build it applies to is an error. The rows apply in the order they are written.
+A path **MUST** stay inside the package's directory, so that everything a package's C build reads moves with the package; one that is absolute or leaves the package's directory through `..` is an error. C that two packages share is vendored into each, or kept in one package whose foreign verbs the other calls. A `source` pattern that matches no file in a build it applies to is an error. The rows apply in the order they are written.
 
 ### 2.4 Prebuilt archives and system libraries
 
