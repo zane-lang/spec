@@ -424,6 +424,7 @@ The `zane-version` field in `zane.coda` names a compiler release by its tag, `vM
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-an-ordinary-package-over-a-primitive-floor) — "`core` becomes an ordinary package over a primitive floor".
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-zane-command-is-not-pinned-by-zane-version) — "The `zane` command is not pinned by `zane-version`".
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#zane-version-becomes-the-oldest-compiler-a-package-builds-with) — "`zane-version` becomes the oldest compiler a package builds with".
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-zane-command-drives-only-current-compilers-while-zane-is-at-major-0) — "The `zane` command drives only current compilers while Zane is at major `0`".
 
 ---
 
