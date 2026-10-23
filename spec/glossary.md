@@ -426,7 +426,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$`, and it holds `main`; a library package is never one.
+- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$` and declares foreign variables, and it holds `main`; a library package is never one.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 

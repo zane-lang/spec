@@ -57,7 +57,7 @@ A verb's signature says what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
+The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -251,7 +251,7 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Method without `mut`, function | Write nothing their caller can see |
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
-| Root package | Any verb may write the program's console and runtime |
+| Root package | Any verb may write the program's console and runtime and the foreign capabilities its foreign variables give |
 | Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | Capabilities | Reachable only as objects passed or stored; they originate in the root package, from `@program$` and its foreign variables |

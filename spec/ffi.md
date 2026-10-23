@@ -299,6 +299,8 @@ The setter releases the object `dst` held, moves `src`'s object into `dst`, and 
 
 The handle keeps its place in the release order of §4.2 too. Handles made from its object hold that address and now reach the replacement, so they are still released before it. A replacement made from a handle that is younger than the one it replaces is therefore released after that handle, and a binding whose replacement depends on such an object has to keep the dependency alive itself, as it must for any dependency the order does not cover (§4.5).
 
+One overwrite can reach several handles, such as a struct that holds a connection and a statement prepared on it. Their setters run in the reverse of the order the handles were made, the order a drain releases them in (§4.2), so a handle's old object is released before the old object it was made from.
+
 An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a list element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
 
 ```zane
@@ -604,7 +606,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
 | Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
-| Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address; a type without one is never overwritten in a settled place |
+| Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address and the handle's place in the release order; one overwrite runs its setters in the reverse of the order the handles were made; a type without one is never overwritten in a settled place |
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
 | Foreign capability | A handle type without a free function, referring to a C global; made only by a foreign variable |
