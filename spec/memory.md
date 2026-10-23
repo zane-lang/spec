@@ -55,7 +55,7 @@ tank Tank(...);
 tank = Tank(...); // legal
 ```
 
-Overwriting a settled owner destroys the old occupant and writes the replacement at the same address. This holds at every depth a reference can reach: each boxed member reached from the owner through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing references into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A reference to the owner, or to any field of it, inline or boxed, therefore observes the replacement.
+Overwriting a settled owner destroys the old occupant and writes the replacement at the same address. A foreign handle in such a place is overwritten through its setter, which keeps its C object at the same address, and one whose type has no setter is never overwritten there ([`ffi.md`](ffi.md) §4.3). This holds at every depth a reference can reach: each boxed member reached from the owner through struct fields and `ArrayRef` elements (§3.3) is written into the block the occupant's member already holds, recursively, so no such member moves to a new block (§3.6). A variant payload is not followed, since nothing references into one (§2.8.1). A fresh replacement is constructed directly in that storage; a moved-in replacement is copied into it, and the blocks that held its boxed members are returned. A reference to the owner, or to any field of it, inline or boxed, therefore observes the replacement.
 
 ```zane
 car Car(...);
@@ -103,7 +103,7 @@ Destruction is the mirror. When a value dies — its owner dies, its container d
 
 ### 2.4 `&` is a reference: non-owning storage
 
-`&` creates a **reference**: non-owning storage that points at a settled owner of a **reference type**. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, or a reference-type intrinsic such as `@primitives$List<T>` — because only a reference type has an owner to point at. A value type is shared by copying it or by a borrow (see [`functions.md`](functions.md) §2.4), never by a stored reference. Writing `&Node` names a reference to a reference type; a bare `&Int` over a value type is ill-formed.
+`&` creates a **reference**: non-owning storage that points at a settled owner of a **reference type**. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle ([`ffi.md`](ffi.md) §4.1), or a reference-type intrinsic such as `@primitives$List<T>` — because only a reference type has an owner to point at. A value type is shared by copying it or by a borrow (see [`functions.md`](functions.md) §2.4), never by a stored reference. Writing `&Node` names a reference to a reference type; a bare `&Int` over a value type is ill-formed.
 
 An explicitly declared `&T` slot is **reference-only**: it stores only the reference and can never own a `T`. A slot declared as `T` or `^T` is an **owning slot**. After a roaming owner's value moves out, that same full-size slot is **spent** ([`lifetimes.md`](lifetimes.md) §1.6): it denotes no object until a store refills it.
 

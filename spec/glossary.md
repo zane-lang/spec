@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.7 capability wiring
 
-- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in `@program$`, which only the root package reaches.
+- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in the root package, from `@program$` and the foreign variables it declares.
 - **Why this name:** The design treats capabilities like explicit wiring between components rather than ambient globals.
 - **Canonical home:** [`effects.md`](effects.md) §6
 
@@ -426,7 +426,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$`, and it holds `main`; a library package is never one.
+- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$` and declares foreign variables, and it holds `main`; a library package is never one.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 
@@ -465,3 +465,27 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A function of `@math$`, on scalar primitives. An **exact** one's result is fully specified and the same on every platform; an **approximate** one's is close to the true value and may differ between platforms.
 - **Why this name:** The everyday words: the namespace holds what a math library holds, and exact and approximate say how far its result can be trusted to the last bit.
 - **Canonical home:** [`math.md`](math.md) §2.2
+
+### 4.19 foreign verb
+
+- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and what it touches outside the program is what that signature states.
+- **Why this name:** "Foreign" is the established word for code in another language reached through an interface, as in a foreign-function interface; "verb" is the spec's word for a function or method.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.1
+
+### 4.20 foreign handle / data handle / outside handle / foreign capability
+
+- **Meaning:** A **foreign handle** (`#handle`) is a reference type referring to one C object. One without a free function is a **foreign capability**, referring to a C global; one with a free function owns its object, and is an **outside handle**, part of capability-backed state, when a method on a foreign capability makes it, and a **data handle**, state of the program's own, otherwise.
+- **Why this name:** C APIs already call an opaque pointer to their object a handle; a capability is what the effect model calls an object that reaches outside state.
+- **Canonical home:** [`ffi.md`](ffi.md) §4.1
+
+### 4.21 interface header
+
+- **Meaning:** A `.h` file directly in a package's directory. Every C function a foreign verb names, and every C type a foreign handle names, is declared in one; headers elsewhere are seen only by the C compiler.
+- **Why this name:** It is the header that states the interface between the package's C and its Zane, as opposed to the C library's own headers.
+- **Canonical home:** [`ffi.md`](ffi.md) §2.1
+
+### 4.22 foreign variable
+
+- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package declares one, and passes it on.
+- **Why this name:** It is the variable counterpart of a foreign verb: declared like any symbol, with its value supplied by C.
+- **Canonical home:** [`ffi.md`](ffi.md) §5.1

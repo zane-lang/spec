@@ -28,7 +28,7 @@ A **store** is legal only when every owner the stored value names — directly, 
 
 Two clauses complete it. A **block** outlives every block nested within it, and a symbol's scope is fixed at that symbol's declaration, so nothing later can falsify it. And the owners **inside** a stored value travel with it, taking the destination's scope.
 
-A block is one lifetime, not a sequence of them. Everything scoped to it dies when it drains (§2.1), with no user code interleaved and no order among them to observe, so two things in one scope can never see each other's death. That is why the comparison is between scopes rather than between declaration positions.
+A block is one lifetime, not a sequence of them. Everything scoped to it dies when it drains (§2.1), with no Zane code interleaved and no order among them to observe, so two things in one scope can never see each other's death. The free functions of foreign handles are C, and they run in an order of their own ([`ffi.md`](ffi.md) §4.2). That is why the comparison is between scopes rather than between declaration positions.
 
 ```zane
 node Node();

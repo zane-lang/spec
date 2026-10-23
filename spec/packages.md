@@ -46,7 +46,7 @@ geometry/
   zane.coda
 ```
 
-A package's source files are the `.zn` files directly in its directory. A `.zn` file directly in `lib/`, `bin/`, or `test/` is a compile-time error, as is a `.zn` file in a subdirectory of a program package. A project holds at least one library or program package.
+A package's source files are the `.zn` files directly in its directory. A package may also hold C code, which [`ffi.md`](ffi.md) §2.1 specifies. A `.zn` file directly in `lib/`, `bin/`, or `test/` is a compile-time error, as is a `.zn` file in a subdirectory of a program package. A project holds at least one library or program package.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-projects-packages-move-into-lib-bin-and-test) — "A project's packages move into `lib/`, `bin/` and `test/`".
 
@@ -255,7 +255,7 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 Every build that produces a program has one **root package**, from which every other package of the build is reached: the program package it builds, or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
 
-Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6). A library package is never a root, so it reaches them only through an instance passed to it.
+Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
@@ -335,7 +335,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 |---|---|
 | Project layout | Library packages in `lib/`, program packages in `bin/`, test packages in `test/`; no `.zn` file directly in any of the three |
 | Package identity | A library or program package is named by its directory; every test package is named `test` |
-| Package source | The `.zn` files directly in the package's directory |
+| Package source | The `.zn` files directly in the package's directory, beside any C code ([`ffi.md`](ffi.md) §2.1) |
 | Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project |
 | Package declaration | Required in every source file; it matches the package's name |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |

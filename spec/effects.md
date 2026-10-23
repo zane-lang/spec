@@ -14,7 +14,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
 - **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature says which.
-- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in `@program$`, which only the root package reaches.
+- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package, from `@program$` and the foreign variables it declares.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -57,7 +57,7 @@ A verb's signature says what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6).
+The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -121,7 +121,7 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2).
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead, and from the function values the call passes it ([`ffi.md`](ffi.md) §5.2).
 
 ### 5.3 Compile-time evaluation
 
@@ -144,7 +144,7 @@ Reading through an `&` is a read like any other. What a verb may write follows f
 
 ### 5.5 Unknown callees are assumed to touch capabilities
 
-When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state.
+When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state. A foreign verb is the exception: what it reads and writes is what its signature states ([`ffi.md`](ffi.md) §5.2), whatever of its C body the compiler sees.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -154,7 +154,7 @@ When the compiler cannot see a callee's body, as with a call through a function 
 
 ### 6.1 Capabilities must be passed or stored explicitly
 
-There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. The one source of capabilities is `@program$`, which only the root package reaches (§6.6); everything else receives them from there.
+There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package: `@program$` (§6.6) and the foreign variables it declares ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
@@ -251,8 +251,8 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Method without `mut`, function | Write nothing their caller can see |
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
-| Root package | Any verb may write the program's console and runtime |
-| Derived facts | Capability reads and capability writes come from the body and its callees, and govern only compile-time evaluation and parallelism |
+| Root package | Any verb may write the program's console and runtime and the foreign capabilities its foreign variables give |
+| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
-| Capabilities | Reachable only as objects passed or stored; they originate in `@program$` |
+| Capabilities | Reachable only as objects passed or stored; they originate in the root package, from `@program$` and its foreign variables |
 | Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time |

@@ -175,7 +175,7 @@ The hashes above illustrate the field format, not actual published archives. Eac
 
 The toolchain **MUST** reject malformed rows, non-HTTPS URLs, invalid hashes, and duplicate target triples. It reads this file only from the verified source commit (§4), including for transitive packages. Consumers do not duplicate the artifact hashes in their own lock files: their pinned commits already pin each dependency's artifact manifest.
 
-Each asset is a gzip-compressed tar archive containing a `build/` directory with the original object files of every library package of the project, subpackages and `_`-prefixed packages included, and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
+Each asset is a gzip-compressed tar archive containing a `build/` directory with the original object files of every library package of the project, subpackages and `_`-prefixed packages included, the objects compiled from their C sources among them ([`ffi.md`](ffi.md) §2.6), and their placeholder-prefixed exports (§6.1). It contains no vendored transitive dependency objects; those dependencies are fetched through their own manifests (§9). The archive contains only directories and regular files under the `build/` directory. Extraction **MUST** reject absolute paths, `..` path components, links, and any entry that would escape the artifact's extraction directory.
 
 ### 3.2 Publishing a release
 
