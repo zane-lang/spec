@@ -121,6 +121,8 @@ Every C function and variable that a package's C sources or archives define with
 
 So two versions of one package, or two packages that hold the same C library, coexist in one program as their Zane code does ([`dependencies.md`](dependencies.md) §11). A symbol the package's C code references and does not define, such as a function of the C library or of a `system` row's library, keeps its name, and every package that references it reaches the same definition.
 
+A section is gathered by its name rather than renamed. A section whose name is a C identifier is a **linker set**: the linker gathers every object's contribution to it into one range, which C reaches through the `__start_` and `__stop_` symbols named after it. A package's linker set would be shared with every other package, and every other version of the package, that places data in a section of that name. It is a build error, naming the package and the section, when the package's C sources or archives place anything in one.
+
 ### 2.6 Release archives hold the C objects
 
 A project's release archive holds the objects compiled from its library packages' C sources beside their Zane objects ([`dependencies.md`](dependencies.md) §3.1), for the archive's target. Its prebuilt archives are part of its source tree. A consumer compiles against a dependency's source ([`dependencies.md`](dependencies.md) §14), C sources and interface headers included, so the compiler reads a dependency's C code as it reads its Zane code: to check foreign verbs against their declarations (§3.7) and to evaluate calls at compile time (§5.4).
@@ -603,7 +605,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | A package's C code | Its C sources (the `.c` files in its directory and those listed in its `c.coda`) and its interface headers (the `.h` files in its directory) |
 | Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written |
 | `c.coda` | A hand-written file in the package's directory whose rows give its `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
-| C symbols | Renamed into the package's placeholder namespace and rewritten with its version, so versions coexist |
+| C symbols | Renamed into the package's placeholder namespace and rewritten with its version, so versions coexist; a linker set (a section named as a C identifier) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
