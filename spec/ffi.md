@@ -2,6 +2,8 @@
 
 This document specifies how a Zane package calls C: the C code a package holds and how the toolchain builds it, foreign verbs and the types that cross into C, foreign handles, and what foreign code is taken to read and write.
 
+It states what a Zane program and a package's C code can rely on: what is accepted, what a call does, and when a call is evaluated at compile time. How the compiler meets it, from compiling the C and generating the code around each foreign verb to renaming symbols, caching, and running C at compile time, is the compiler's design ([`docs/design/ffi.md`](https://github.com/zane-lang/compiler/blob/main/docs/design/ffi.md) in the compiler repository), which this document does not specify.
+
 > **See also:** [`effects.md`](effects.md) §5 and §6 for capability access and compile-time evaluation. [`memory.md`](memory.md) §2.9 for passing modes. [`dependencies.md`](dependencies.md) §3 and §6 for release archives and symbol rewriting. [`syntax.md`](syntax.md) §2.16 and §3.11 for the declaration forms.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md) tells the story behind this design.
