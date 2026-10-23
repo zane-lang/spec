@@ -301,6 +301,8 @@ The handle keeps its place in the release order of §4.2 too. Handles made from 
 
 One overwrite can reach several handles, such as a struct that holds a connection and a statement prepared on it. Their setters run in the reverse of the order the handles were made, the order a drain releases them in (§4.2), so a handle's old object is released before the old object it was made from.
 
+A replacement is a roaming value, and a roaming owner is never referenced ([`memory.md`](memory.md) §2.1), so no handle that holds an `&` to its dependency (§4.5) depends on a replacement, in the same overwrite or anywhere else. Only a binding that hands C a dependency without such a reference can make an object depend on one, and it never passes that dependency to a setter as the replacement, since the setter frees the replacement's storage (§6).
+
 An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a list element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
 
 ```zane
@@ -542,7 +544,7 @@ The compiler takes a foreign verb's signature as a description of its C function
 - **It keeps nothing Zane lent it.** A view, and a function pointer for a function value (§3.6), are used only until the call returns.
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
-- **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and stays alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3).
+- **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and stays alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3), and no C object holds the address of a replacement passed to a setter.
 - **It treats a function value as a call.** A function value's C function is called with the types §3.6 gives, on any thread, while the foreign verb runs, and one call at a time among the function values the call is passed that touch a capability.
 
 ---
