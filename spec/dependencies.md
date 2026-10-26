@@ -304,7 +304,7 @@ A fully expanded cache path for the `math` example therefore looks like:
 Source code imports a dependency's library package by the package's own name:
 
 ```zane
-import math
+import math;
 ```
 
 And uses its members through that name:

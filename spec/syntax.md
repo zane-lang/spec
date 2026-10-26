@@ -1,6 +1,6 @@
 # Zane Syntax Reference
 
-This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only.
+This document is the canonical reference for Zane's surface syntax. Topic documents define semantics; this document defines form only. The forms are written without their terminator: a declaration or statement ends with a `;`, unless it ends in a `}` ([`lexical.md`](lexical.md) §6.3).
 
 > **See also:** [`types.md`](types.md) for constructors. [`functions.md`](functions.md) for methods. [`adt.md`](adt.md) for `enum`, `variant`, `match`, and enum maps. [`control-flow.md`](control-flow.md) for branching and loop semantics. [`error-handling.md`](error-handling.md) for abort semantics. [`operators.md`](operators.md) for precedence.
 
@@ -101,8 +101,8 @@ import packageName$
 The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
 
 ```zane
-import math$[sqrt, pow] as m   // ILLEGAL: a list has no single name to rename
-import math$ as m              // ILLEGAL: nothing is qualified to rename
+import math$[sqrt, pow] as m;  // ILLEGAL: a list has no single name to rename
+import math$ as m;             // ILLEGAL: nothing is qualified to rename
 ```
 
 > **See also:** [`packages.md`](packages.md) §3 for what each form makes available.
@@ -708,20 +708,19 @@ See [`functions.md`](functions.md) §3.5 for return-path requirements.
 ### 3.11 Foreign verbs
 
 ```zane
-ReturnType name(param ParamType, ...) foreign "cSymbol";
-ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol";
-ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol";
-ReturnType?AbortType name(this SubjectType, param ParamType, ...) foreign "cSymbol";
-ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol";
-ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol";
+ReturnType name(param ParamType, ...) foreign "cSymbol"
+ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol"
+ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
+ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
 ```
 
-A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it, and ends with a `;`. The literal is the C function's symbol.
+A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it. The literal is the C function's symbol.
 
 ```zane
-@primitives$I64 now(this Clock) foreign "zane_now"            // ILLEGAL: a foreign verb ends with `;`
-@primitives$I64 now(this Clock) foreign "zane_now" { ... }    // ILLEGAL: a foreign verb has no body
-@primitives$I64 now(this Clock) => foreign "zane_now";        // ILLEGAL: `foreign` is not an expression
+@primitives$I64 now(this Clock) foreign "zane_now" { ... }   // ILLEGAL: a foreign verb has no body
+@primitives$I64 now(this Clock) => foreign "zane_now";       // ILLEGAL: `foreign` is not an expression
 ```
 
 > **See also:** [`ffi.md`](ffi.md) §3 for foreign verb semantics.

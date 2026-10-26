@@ -14,8 +14,8 @@ Zane is case-sensitive. The first letter of a name selects its lexical class, so
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
-- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none.
-- **`Newlines are never structural`.** Every entry and every statement has its own end mark — a `;`, or for a statement ending in `}`, that brace — so line breaks are free everywhere.
+- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
+- **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement or declaration ending in `}`, that brace — so line breaks are free everywhere.
 - **`String structure is language-defined`.** Double quotes delimit a string; quote and backslash escapes and interpolation are recognized by the compiler. Other backslash sequences remain text for the consumer (§7.1).
 - **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a float literal. The two carry different concept types.
 
@@ -165,13 +165,13 @@ A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)]);
-type Colors = enum [ red, green, blue ]
+type Colors = enum [ red, green, blue ];
 Node(id Int, scale Float, label String)
 ```
 
-### 6.3 `;` terminates a statement
+### 6.3 `;` terminates a statement and a declaration
 
-A `;` **terminates** every statement in a code block — a function body, a lambda body, or a block argument. Newlines are insignificant here as they are inside a `{ }` body (§6.1), so two statements may share a line and one statement may span several.
+A `;` **terminates** every statement in a code block — a function body, a lambda body, or a block argument — and every package-scope declaration. Newlines are insignificant here as they are inside a `{ }` body (§6.1), so two statements may share a line and one statement may span several.
 
 ```zane
 Unit main() {
@@ -200,7 +200,23 @@ init{
 }
 ```
 
-A **package-scope declaration** is not a statement; it ends where its own body or bracket ends. A foreign verb, which has neither, ends with a `;` ([`syntax.md`](syntax.md) §3.11).
+A **package-scope declaration** follows the statement rule: it ends with a `;`, unless it ends in a `}`, which ends it instead. A declaration is therefore written the same at package scope and inside a body.
+
+```zane
+package geometry;
+
+import core$;
+
+type Meters = Int;
+type Point = struct { x Int; y Int; }
+
+Int double(value Int) => value * 2;
+Int triple(value Int) {
+    return value * 3;
+}
+
+@primitives$I64 crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32";
+```
 
 ### 6.3.1 A `{ }` may not open a statement
 
@@ -311,7 +327,7 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
-| Statement terminator | `;` terminates every statement in a code block, except a statement ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
+| Statement and declaration terminator | `;` terminates every statement in a code block and every package-scope declaration, except one ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
 | Integer literal | One or more digits; carries `@concepts$Int` |
 | Float literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Float`, whatever its value |

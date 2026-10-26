@@ -73,7 +73,7 @@ A directory inside a library package that holds `.zn` files is a **subpackage**,
 Every source file **MUST** begin with a `package packageName` declaration whose name exactly matches its package's name (§2.2). A missing or mismatched declaration is a compile-time error.
 
 ```zane
-package opengl
+package opengl;
 ```
 
 The directory determines package membership; the declaration asserts that the file is in the package its author intended.
@@ -114,12 +114,12 @@ What an import writes after `import` is what the file writes at the use site.
 | `import pkg$` | every accessible member, unqualified |
 
 ```zane
-import math
-import math as m
-import math$sqrt
-import math$sqrt as root
-import math$[sqrt, pow]
-import math$
+import math;
+import math as m;
+import math$sqrt;
+import math$sqrt as root;
+import math$[sqrt, pow];
+import math$;
 ```
 
 The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2: `,` separates entries and never trails. The `pkg$` form ends the qualifier at the separator and takes everything past it; it brings only members the importing package may access, so a `_`-prefixed declaration (§4.1) is never included.
@@ -133,7 +133,7 @@ An import is a **spelling**, not a linkage. Every imported name resolves to its 
 An import states one spelling and that spelling is the only one available in the file. `import math as m` makes `m$sqrt` legal and `math$sqrt` illegal; `import math$sqrt as root` makes `root` legal and `sqrt` illegal.
 
 ```zane
-import math as m
+import math as m;
 
 result Float = m$sqrt(value);     // legal
 result Float = math$sqrt(value);  // ILLEGAL: the file spells this package `m`
@@ -156,7 +156,7 @@ An import changes how plain names resolve and nothing else. It does not contribu
 Methods and operators are therefore not importable members, because neither is reached by a plain name:
 
 ```zane
-import shapes$area   // ILLEGAL: a method is reached by subject:pkg$method()
+import shapes$area;  // ILLEGAL: a method is reached by subject:pkg$method()
 import math$+        // ILLEGAL: operators resolve by operand home package
 ```
 
@@ -169,9 +169,9 @@ A cross-package method call is written with the qualifier at the call site inste
 An `as` alias **MUST** have the same initial case as the name it renames, because an initial capital is semantic ([`lexical.md`](lexical.md) §3). A value name cannot be aliased to a type-shaped name, or the reverse.
 
 ```zane
-import math$sqrt as root      // legal: both lowercase
-import math$Vector as Vec     // legal: both uppercase
-import math$sqrt as Root      // ILLEGAL: a value renamed to a type-shaped name
+import math$sqrt as root;     // legal: both lowercase
+import math$Vector as Vec;    // legal: both uppercase
+import math$sqrt as Root;     // ILLEGAL: a value renamed to a type-shaped name
 ```
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
@@ -266,9 +266,9 @@ A program starts at `main()`, which the root package declares in any of its sour
 Every program package and every test package **MUST** declare `main`. A package without it is a compile-time error.
 
 ```zane
-package viewer
+package viewer;
 
-import core$
+import core$;
 
 Unit main() {
     console Console(@program$console);
@@ -309,10 +309,10 @@ A build that is not a test build leaves `test/` uncompiled. A project's release 
 A top-level test package may import every top-level library package of its project, including one whose name begins with `_`. A nested test package may import the subpackage it tests and every top-level library package of its project. Both may import the public library packages of the project's `deps` and `test-deps` ([`dependencies.md`](dependencies.md) §2.1), and only a test package may import a package of `test-deps`.
 
 ```zane
-package test
+package test;
 
-import core$
-import math
+import core$;
+import math;
 
 Unit main() {
     console Console(@program$console);

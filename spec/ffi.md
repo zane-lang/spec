@@ -152,13 +152,13 @@ The symbol is the C function's name as the interface header declares it. A forei
 A package's own Zane code wraps its foreign verbs in the verbs it offers. The foreign verbs are usually private to the package:
 
 ```zane
-package zlib
+package zlib;
 
-import core$
+import core$;
 
 @primitives$I64 _crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32";
 
-Int crc32(data String) => Int(_crc32(@primitives$I64(0), data))
+Int crc32(data String) => Int(_crc32(@primitives$I64(0), data));
 ```
 
 > **See also:** [`syntax.md`](syntax.md) §3.11 for the declaration forms.
@@ -383,7 +383,7 @@ void zane_fclose(zane_file_t *file);
 ```
 
 ```zane
-package fs
+package fs;
 
 type Fs   = #handle{ cType = "zane_fs_t"; }
 type File = #handle{ cType = "zane_file_t"; free = "zane_fclose"; }
@@ -425,7 +425,7 @@ A call also reads and writes whatever the function values it passes read and wri
 Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package, a foreign variable it declares; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
 
 ```zane
-package time
+package time;
 
 type Clock = #handle{ cType = "zane_clock_t"; }
 
@@ -435,7 +435,7 @@ type Timer = #struct { _clock &Clock; }
 
 Timer(clock &Clock) => init{_clock = clock;}
 
-Int nanoseconds(this Timer) => Int(this._clock:_nowNanoseconds())
+Int nanoseconds(this Timer) => Int(this._clock:_nowNanoseconds());
 ```
 
 Destroying an outside handle calls its free function (§4.2), which may change outside state, such as by closing a file, and overwriting one calls its setter (§4.3). Both count as writes to capability-backed state: they happen at run time, where the destruction or the assignment falls, ordered as §5.6 orders every capability write. Destruction is not a write in the sense of [`effects.md`](effects.md) §4.1 ([`effects.md`](effects.md) §7.2), so the owner of an outside handle may let it be destroyed whether or not the verb may write the capability that made it.
@@ -489,7 +489,7 @@ int64_t zane_counter_next(void) { return ++count; }
 ```
 
 ```zane
-package counter
+package counter;
 
 @primitives$I64 next() foreign "zane_counter_next";   // WRONG: changes a C variable the next call reads, and is no method on a capability
 ```
@@ -511,7 +511,7 @@ int64_t zane_counter_next(zane_counter_t *counter) { return ++counter->count; }
 ```
 
 ```zane
-package counter
+package counter;
 
 type Counter = #handle{ cType = "zane_counter_t"; }
 
