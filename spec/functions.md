@@ -189,7 +189,7 @@ Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit
 
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
 
-A subscript expression denotes the place its body projects, so it is a reference source exactly when that place is ([`memory.md`](memory.md) §2.8). Following the body through every subscript and field it uses ends at one intrinsic projection, which decides: an `@primitives$ArrayRef` element takes its root's state and may be referenced when that root is settled, an `@primitives$List` element is always roaming, and an `@primitives$Array` element is a value.
+A subscript expression denotes the place its body projects, so it is a reference source exactly when that place is ([`memory.md`](memory.md) §2.8). Following the body through every subscript and field it uses ends at one intrinsic projection, which decides: an `@primitives$ArrayRef` element takes its root's state and may be referenced when that root is settled, an `@primitives$ListRef` element is always roaming, and an `@primitives$Array` or `@primitives$List` element is a value.
 
 ```zane
 type Squad = #struct {

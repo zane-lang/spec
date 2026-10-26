@@ -196,7 +196,7 @@ The console's own method borrows a string primitive ([`types.md`](types.md) §2.
 The runtime's `arguments` method gives the arguments the program was started with:
 
 ```zane
-^@primitives$List<@primitives$String> arguments(this @runtime$Runtime)
+@primitives$List<@primitives$String> arguments(this @runtime$Runtime)
 ```
 
 It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
