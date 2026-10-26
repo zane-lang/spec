@@ -194,9 +194,9 @@ The compiler-provided string constructor concatenates the string concept's liter
 Any other backslash sequence stays as written. `escaped` reads the fragments after the literal's own structure has been read, so a backslash followed by an `n` reaches its result from the source `\\\\n`: the literal turns that into `\\n`, and `escaped` into a backslash and an `n`. An interpolated value is copied as it is; `escaped` reads only the fragments.
 
 ```zane
-@primitives$String("a\nb")          // four bytes: a, backslash, n, b
+raw @primitives$String("a\nb");     // four bytes: a, backslash, n, b
 @primitives$String.escaped("a\nb")  // three bytes: a, line feed, b
-@primitives$String.escaped("\%raw") // raw's bytes, unread
+@primitives$String.escaped("\%raw") // raw's four bytes, unread
 ```
 
 A package constructor accepting the concept chooses between the two, or interprets the literal fragments by its own rules, for example as regex syntax. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
