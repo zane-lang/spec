@@ -110,7 +110,7 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 The language names none of them. The control-flow intrinsics take storage primitives or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$I64`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String` and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. A storage primitive has no operators, so `core` writes the fundamental types' operators over the machine operations of `@operators$` ([`operators.md`](operators.md) §2.6). None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$I64`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String`, which builds through `@primitives$String.escaped` (§2.7), and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. Explicit `Bool(true)` and `Int(20)` construction remains legal. A storage primitive has no operators, so `core` writes the fundamental types' operators over the machine operations of `@operators$` ([`operators.md`](operators.md) §2.6). None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
 `Int` converts only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` passed where an `Int` is expected. `Float` converts only from `@concepts$Float`, so `Float(2.0)` is legal and `Float(2)` is a type error. Which literal a numeric type accepts is decided by the conversions its package declares, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
 
@@ -142,7 +142,7 @@ An implementation may erase only the runtime storage of `Unit` values, including
 
 A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Five storage primitives take a literal directly: the integer scalars `@primitives$I32` and `@primitives$I64`, which take `@concepts$Int`; the float scalars `@primitives$F32` and `@primitives$F64`, which take `@concepts$Float`; and `@primitives$String`, the string storage primitive described below. `@primitives$Bool` is a machine-word scalar as well.
 
-Each of the five has one compiler-provided constructor from its literal's concept type. A scalar also converts from each other scalar (§2.9), and packages may declare conversions to primitives under §4:
+Each of the five has a compiler-provided constructor from its literal's concept type, and `@primitives$String` has a second, the named constructor `escaped`, described below. A scalar also converts from each other scalar (§2.9), and packages may declare conversions to primitives under §4:
 
 ```zane
 @primitives$I32(value @concepts$Int)
@@ -150,6 +150,7 @@ Each of the five has one compiler-provided constructor from its literal's concep
 @primitives$F32(value @concepts$Float)
 @primitives$F64(value @concepts$Float)
 @primitives$String(value @concepts$String)
+@primitives$String.escaped(text @concepts$String)
 ```
 
 A concept is not storage, so the constructor it is passed to decides which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
@@ -178,7 +179,27 @@ big @primitives$I32(9999999999);   // ILLEGAL: out of range for @primitives$I32
 
 `@primitives$String` is a **string primitive**: a value type whose fixed-size handle records the native address of its owned bytes in the dynamic region ([`memory.md`](memory.md) §3.6), their length in bytes, and the backing block's allocation metadata. The bytes carry no terminator. A consumer that needs a terminator adds one itself. A copy owns independent bytes; a method borrows the value under the ordinary rules. The primitive has no identity and cannot be targeted by an `&` reference.
 
-The compiler-provided string constructor concatenates the string concept's literal fragments and interpolated string values in their written order (§2.8). It does not interpret any remaining backslash sequences. A package constructor accepting the concept may instead interpret its literal fragments, for example as regex syntax or text escapes. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
+The compiler-provided string constructor concatenates the string concept's literal fragments and interpolated string values in their written order (§2.8). Every backslash sequence left in the fragments ([`lexical.md`](lexical.md) §7.1) stays in the string as written.
+
+`@primitives$String.escaped` builds the same string with the **text escapes** in its literal fragments read:
+
+| Text escape | Byte |
+|---|---|
+| `\n` | Line feed |
+| `\t` | Horizontal tab |
+| `\r` | Carriage return |
+| `\0` | Zero byte |
+| `\\` | One backslash |
+
+Any other backslash sequence stays as written. `escaped` reads the fragments after the literal's own structure has been read, so a backslash followed by an `n` reaches its result from the source `\\\\n`: the literal turns that into `\\n`, and `escaped` into a backslash and an `n`. An interpolated value is copied as it is; `escaped` reads only the fragments.
+
+```zane
+raw @primitives$String("a\nb");     // four bytes: a, backslash, n, b
+@primitives$String.escaped("a\nb")  // three bytes: a, line feed, b
+@primitives$String.escaped("\%raw") // raw's four bytes, unread
+```
+
+A package constructor accepting the concept chooses between the two, or interprets the literal fragments by its own rules, for example as regex syntax. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
 
 ```zane
 a String("hello");
@@ -189,6 +210,8 @@ type Label = struct { text String; }  // legal: value-type field
 ```
 
 > **Story:** [`stories/types.md`](../stories/types.md#text-without-identity) — "Text without identity".
+
+> **Story:** [`stories/types.md`](../stories/types.md#primitivesstringescaped-reads-text-escapes-when-a-consumer-asks) — "`@primitives$String.escaped` reads text escapes when a consumer asks".
 
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage".
 
@@ -751,10 +774,11 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Value type | Copied on assignment; transitively value (no reference-type or `&` field, anywhere downstream); mutable in place through a borrowed `mut` subject; storage may also be overwritten wholesale |
 | Reference type (`#`) | Single ownership and stable identity; may hold reference-type and `&` fields; moved rather than copied; placement is unobservable |
 | Fundamental type | `Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, or `List<T>`; declared by `core`, which is an ordinary package with no standing in the language |
-| Literal storage primitive | `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, `@primitives$F64`, or `@primitives$String`; each has one compiler-provided constructor, not `implicit`, taking its literal's concept type; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
+| Literal storage primitive | `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, `@primitives$F64`, or `@primitives$String`; each has a compiler-provided constructor, not `implicit`, taking its literal's concept type, and `@primitives$String` also has `escaped`; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
 | Scalar conversion | Each scalar primitive converts to each other through a constructor of the target, never `implicit`; an exact one is the anonymous constructor, and a lossy one is named for its loss: `wrap`, `truncate`, or `round` |
 | String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored reference; copies are deep |
 | Reading a number | `parseI64` and `parseF64` on `@primitives$String` read a literal's text with an optional `-`, and abort with `@primitives$Unit` on any other text or a value that does not fit; they are methods, since a constructor cannot abort |
+| Text escapes | `@primitives$String` keeps a literal's backslash sequences as written; `@primitives$String.escaped` reads `\n`, `\t`, `\r`, `\0`, and `\\` in the literal's fragments, never in an interpolated value |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |
