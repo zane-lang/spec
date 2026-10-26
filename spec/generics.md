@@ -204,7 +204,7 @@ Here `n` in the return position is the number the use site supplied for that par
 
 ### 3.6 A wrong-kind type argument is reported where the concrete type enters
 
-A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind. An `&T` takes only a reference type ([`memory.md`](memory.md) §2.4), so a value type that fills `T` there, on a field or on a verb's parameter, is ill-formed the same way. A `^T` takes an owner or a borrow, never a reference ([`memory.md`](memory.md) §2.9), so an `&` type that fills `T` there is ill-formed too, and so is a `ListRef` of one (§8.5). A `List` is a value type, so it takes only a value type (§8.3).
+A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind. An `&T` takes only a reference type ([`memory.md`](memory.md) §2.4), so a value type that fills `T` there, on a field or on a verb's parameter, is ill-formed the same way. A `^T` takes an owner or a borrow, never a reference ([`memory.md`](memory.md) §2.9), so an `&` type that fills `T` there is ill-formed too, and so is `ListRef<&U>` (§8.5). A `List` is a value type, so it takes only a value type (§8.3).
 
 ```zane
 type Box<T Type> = #struct {

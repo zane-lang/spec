@@ -182,7 +182,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | `@primitives$Unit` | `void`, as a result only | nothing |
 | `@primitives$String` | `zane_bytes` | a view of its bytes (§3.4); a returned view is copied (§3.5) |
 | `@primitives$Array<T, n>`, `T` a scalar primitive | `const E *`, `E` a full-width C type of `T` | a view of its `n` elements (§3.4) |
-| `@primitives$List<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
+| `@primitives$List<T>` or `@primitives$ListRef<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
 | a C-compatible value type (below) | a `struct` of the same layout | its value |
 | a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.4 says so | the C object it refers to (§4.2, §4.4) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
@@ -307,7 +307,7 @@ One overwrite can reach several handles, such as a struct that holds a connectio
 
 A replacement is a roaming value, and a roaming owner is never referenced ([`memory.md`](memory.md) §2.1), so no handle that holds an `&` to its dependency (§4.5) depends on a replacement, in the same overwrite or anywhere else. Only a binding that hands C a dependency without such a reference can make an object depend on one, and it never passes that dependency to a setter as the replacement, since the setter frees the replacement's storage (§6).
 
-An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a list element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
+An assignment that would overwrite a handle in a settled place is a compile-time error when the handle's type has no setter. A foreign capability has none, so a settled place holding one is never overwritten. A roaming owner, a `ListRef` element, and a variant payload are overwritten as any reference-type owner is: the old handle is destroyed (§4.2) and the new one takes its place.
 
 ```zane
 d Deflater = _deflater(@primitives$I32(6));
