@@ -181,7 +181,7 @@ Unit main() {
 }
 ```
 
-A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing. Whatever comes after the brace is the next statement, so a `(` or a `[` written there opens a statement of its own rather than calling or subscripting what the brace closed ([`syntax.md`](syntax.md) §4.8). A value closed by its own brace may still go on through a token that opens no statement — a `.`, `:`, `!`, `?`, `??`, or an operator — and the statement then ends where that longer expression does ([`syntax.md`](syntax.md) §4.9).
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing. Whatever comes after the brace is the next statement, so a `(` or a `[` written there opens a statement of its own rather than calling or subscripting what the brace closed ([`syntax.md`](syntax.md) §4.8). A value closed by its own brace may still go on through a token that opens no statement — a `.`, `:`, `!`, `?`, `??`, or an operator, though a map literal takes the first three only once parenthesized — and the statement then ends where that longer expression does ([`syntax.md`](syntax.md) §4.9).
 
 ```zane
 Unit main() {
@@ -328,7 +328,7 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
-| Statement and declaration terminator | `;` terminates every statement in a code block and every package-scope declaration, except one ending in `}` — that brace ends it, and nothing may continue it past that point; newlines are insignificant |
+| Statement and declaration terminator | `;` terminates every statement in a code block and every package-scope declaration, except one ending in `}` — that brace ends it, so a `(` or `[` after it opens the next statement; newlines are insignificant |
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
 | Integer literal | One or more digits; carries `@concepts$Int` |
 | Float literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Float`, whatever its value |
