@@ -142,7 +142,7 @@ A `release` dependency's objects were compiled by that package's own compiler ([
 A **foreign verb** is a function or method whose body is a C function. In place of a body, it names the C function's symbol:
 
 ```zane
-@primitives$I64 crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32"
+@primitives$I64 crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32";
 ```
 
 A call to a foreign verb calls the C function with the arguments the call passes, converted as §3.3 states, and gives its result converted back. Everything else about the verb is Zane: it is declared at package scope, it overloads, it is imported, it may be private through a leading `_`, and its calls follow its passing modes and its kind ([`effects.md`](effects.md) §3).
@@ -156,7 +156,7 @@ package zlib
 
 import core$
 
-@primitives$I64 _crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32"
+@primitives$I64 _crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32";
 
 Int crc32(data String) => Int(_crc32(@primitives$I64(0), data))
 ```
@@ -224,7 +224,7 @@ A foreign verb's result is a scalar primitive, `@primitives$Bool`, `@primitives$
 - A returned handle is a new roaming owner (§4.2), of a type with a free function. A foreign verb that returns one may declare `@primitives$Unit` as its abort type, and the call aborts when the C function returns a null pointer:
 
 ```zane
-^Deflater?@primitives$Unit _deflater(level @primitives$I32) foreign "zane_deflater_new"
+^Deflater?@primitives$Unit _deflater(level @primitives$I32) foreign "zane_deflater_new";
 ```
 
 A foreign verb returning a handle without an abort type stops the program when the C function returns a null pointer. No other foreign verb declares an abort type: a C function signals failure through its result, and the package's Zane code turns that into an abort.
@@ -330,10 +330,10 @@ A handle crosses into C as the pointer it holds. Where it stands in the foreign 
 A data handle is written only as the subject of a `mut` method, because a `mut` method writes `this` and no other state of the program ([`effects.md`](effects.md) §4.2). A C function that changes two data handles is reached through C functions of the package that each change one of them.
 
 ```zane
-@primitives$String _deflate(this Deflater, input @primitives$String) mut foreign "zane_deflate"
-@primitives$I64 _totalIn(this Deflater) foreign "zane_deflater_total_in"
+@primitives$String _deflate(this Deflater, input @primitives$String) mut foreign "zane_deflate";
+@primitives$I64 _totalIn(this Deflater) foreign "zane_deflater_total_in";
 
-@primitives$Unit _write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite"
+@primitives$Unit _write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite";
 ```
 
 ```c
@@ -388,8 +388,8 @@ package fs
 type Fs   = #handle{ cType = "zane_fs_t"; }
 type File = #handle{ cType = "zane_file_t"; free = "zane_fclose"; }
 
-^File open(this Fs, path @primitives$String) mut foreign "zane_fopen"
-@primitives$Unit write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite"
+^File open(this Fs, path @primitives$String) mut foreign "zane_fopen";
+@primitives$Unit write(this Fs, file File, data @primitives$String) mut foreign "zane_fwrite";
 ```
 
 A **foreign variable** declares a symbol whose value is a handle to such a global. It is written like a symbol declaration, with `foreign` and the global's symbol in place of an initializer:
@@ -429,7 +429,7 @@ package time
 
 type Clock = #handle{ cType = "zane_clock_t"; }
 
-@primitives$I64 _nowNanoseconds(this Clock) foreign "zane_clock_now_ns"
+@primitives$I64 _nowNanoseconds(this Clock) foreign "zane_clock_now_ns";
 
 type Timer = #struct { _clock &Clock; }
 
@@ -445,8 +445,8 @@ Destroying an outside handle calls its free function (§4.2), which may change o
 A foreign verb that returns an outside handle **MUST** be a `mut` method on a foreign capability. Opening a file or a connection is a write to outside state, and it gives its owner a handle to that state, so only a verb that may write the capability may make one.
 
 ```zane
-^Database?@primitives$Unit _open(this Sqlite, path @primitives$String) mut foreign "zane_sqlite_open"
-^_RawStatement?@primitives$Unit _prepare(this Sqlite, database Database, sql @primitives$String) mut foreign "zane_sqlite_prepare"
+^Database?@primitives$Unit _open(this Sqlite, path @primitives$String) mut foreign "zane_sqlite_open";
+^_RawStatement?@primitives$Unit _prepare(this Sqlite, database Database, sql @primitives$String) mut foreign "zane_sqlite_prepare";
 ```
 
 A foreign verb that returns a data handle is any foreign verb that is not a method on a foreign capability.
@@ -491,7 +491,7 @@ int64_t zane_counter_next(void) { return ++count; }
 ```zane
 package counter
 
-@primitives$I64 next() foreign "zane_counter_next"   // WRONG: changes a C variable the next call reads, and is no method on a capability
+@primitives$I64 next() foreign "zane_counter_next";   // WRONG: changes a C variable the next call reads, and is no method on a capability
 ```
 
 ```zane
@@ -515,7 +515,7 @@ package counter
 
 type Counter = #handle{ cType = "zane_counter_t"; }
 
-@primitives$I64 next(this Counter) mut foreign "zane_counter_next"
+@primitives$I64 next(this Counter) mut foreign "zane_counter_next";
 ```
 
 ```zane
@@ -578,7 +578,7 @@ let c = unsafe { crc32(0, b"hello".as_ptr(), 5) }; // never computed at compile 
 **Zane:**
 
 ```zane
-@primitives$I64 _crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32"
+@primitives$I64 _crc32(crc @primitives$I64, data @primitives$String) foreign "zane_crc32";
 c @primitives$I64 = _crc32(@primitives$I64(0), @primitives$String("hello")); // may fold
 ```
 

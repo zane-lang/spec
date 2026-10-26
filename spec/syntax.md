@@ -708,19 +708,20 @@ See [`functions.md`](functions.md) §3.5 for return-path requirements.
 ### 3.11 Foreign verbs
 
 ```zane
-ReturnType name(param ParamType, ...) foreign "cSymbol"
-ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol"
-ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
-ReturnType?AbortType name(this SubjectType, param ParamType, ...) foreign "cSymbol"
-ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
-ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol"
+ReturnType name(param ParamType, ...) foreign "cSymbol";
+ReturnType?AbortType name(param ParamType, ...) foreign "cSymbol";
+ReturnType name(this SubjectType, param ParamType, ...) foreign "cSymbol";
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) foreign "cSymbol";
+ReturnType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol";
+ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut foreign "cSymbol";
 ```
 
-A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it. The literal is the C function's symbol.
+A foreign verb writes `foreign` and one string literal without interpolation where another verb writes its body, after `mut` when the verb has it, and ends with a `;`. The literal is the C function's symbol.
 
 ```zane
-@primitives$I64 now(this Clock) foreign "zane_now" { ... }   // ILLEGAL: a foreign verb has no body
-@primitives$I64 now(this Clock) => foreign "zane_now"         // ILLEGAL: `foreign` is not an expression
+@primitives$I64 now(this Clock) foreign "zane_now"            // ILLEGAL: a foreign verb ends with `;`
+@primitives$I64 now(this Clock) foreign "zane_now" { ... }    // ILLEGAL: a foreign verb has no body
+@primitives$I64 now(this Clock) => foreign "zane_now";        // ILLEGAL: `foreign` is not an expression
 ```
 
 > **See also:** [`ffi.md`](ffi.md) §3 for foreign verb semantics.

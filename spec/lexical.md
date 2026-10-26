@@ -200,7 +200,7 @@ init{
 }
 ```
 
-A **package-scope declaration** is not a statement and takes no terminator of its own; it ends where its own body or bracket ends.
+A **package-scope declaration** is not a statement; it ends where its own body or bracket ends. A foreign verb, which has neither, ends with a `;` ([`syntax.md`](syntax.md) §3.11).
 
 ### 6.3.1 A `{ }` may not open a statement
 
