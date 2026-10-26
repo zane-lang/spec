@@ -257,7 +257,7 @@ A **reference type** parameter has three passing modes, one per surface form:
 - A **reference** parameter is an ordinary reference. Inside the callee body the parameter acts as a place expression that may be read or returned as `&T` under [`lifetimes.md`](lifetimes.md) §1.7. Binding it into an `&` **field** is decided at each call: the callee records that the parameter comes to rest in that field ([`lifetimes.md`](lifetimes.md) §1.11), and each call compares the scopes of the two argument paths it actually wrote.
 
 ```zane
-Float topSpeed(engine Engine) => engine.speed      // borrow
+Float topSpeed(engine Engine) => engine.speed;     // borrow
 
 engine Engine();
 s Float = topSpeed(engine);  // legal: engine stays a full owner
@@ -309,8 +309,8 @@ do() {
 **The subject is always a borrow.** `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is a borrow of the object the method was called on, settled or roaming, and mutable under `mut`. A method never moves `this`, never stores it, and never returns it as `&T`. Nothing is written on `this` to say so, because a subject has no other mode. A verb that hands out a reference into an object takes that object as an `&T` parameter instead:
 
 ```zane
-&Weapon weaponOf(player &Player) => player.weapon  // legal: rooted in an `&T` parameter
-&Weapon weapon(this Player) => this.weapon         // ILLEGAL: this is a borrow
+&Weapon weaponOf(player &Player) => player.weapon; // legal: rooted in an `&T` parameter
+&Weapon weapon(this Player) => this.weapon;        // ILLEGAL: this is a borrow
 ```
 
 This rule preserves uniform call syntax. The call site writes `inspect(e)`, `setSpare(e)`, or `setEngine(e)` identically; only the callee's signature says which mode applies and therefore what the caller must supply and what state the caller is left in.

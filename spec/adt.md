@@ -24,9 +24,9 @@ Zane separates two ideas that other languages often merge. An `enum` is a closed
 An `enum` is a closed set of **interchangeable peer** members that mean one uniform thing — colors, brands, weekdays. It is not a sum mould but the **peer mould** — the third mould shape beside the product `struct` and the sum `variant`, declaring a **peer type**. Because its members carry no payload, a peer type has exactly as many representations as it has members, where a sum has as many as its cases' payloads summed; that payloadless uniformity, not a shared body, is what sets it apart (§2.1). Its members are lowercase, payloadless peer values, written as a flat `[ ]` list.
 
 ```zane
-type Operator = enum [ add, sub, mul, div, eq, lessEq, moreEq, less, more ]
+type Operator = enum [ add, sub, mul, div, eq, lessEq, moreEq, less, more ];
 
-type Colors = enum [ red, green, blue ]
+type Colors = enum [ red, green, blue ];
 ```
 
 A member is accessed as a value through the type name: `Colors.red`. The type is uppercase and the member is lowercase, so member selection (`Colors.red`) reads exactly like field selection (`vec.x`) and the casing rule (see [`lexical.md`](lexical.md) §3) is never broken.
@@ -287,8 +287,8 @@ The type is closed; the operations are open.
 A `match` may take **several scrutinees**, written as a bare comma-separated list — never parenthesised. Each arm then gives one selector per scrutinee position, in order and comma-separated, and the block dispatches on all the tags jointly.
 
 ```zane
-type State = enum [ idle, running, paused ]
-type Event = enum [ keyPress, timeout, reset ]
+type State = enum [ idle, running, paused ];
+type Event = enum [ keyPress, timeout, reset ];
 
 newState State = match state, event {
     [idle, running, paused], keyPress => State.running;
@@ -359,7 +359,7 @@ enum Expr { IntLit(String), Flip(Box<Expr>) }  // payload-carrying
 
 **Zane:**
 ```zane
-type Colors = enum [ red, green, blue ]    // uniform peers
+type Colors = enum [ red, green, blue ];   // uniform peers
 type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference type
 ```
 

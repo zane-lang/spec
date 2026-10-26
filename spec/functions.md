@@ -45,10 +45,10 @@ Naming the first parameter `this` is the only thing that makes a declaration a m
 Access to `_` fields is decided by package, for a method as for every other verb ([`types.md`](types.md) §2.3).
 
 ```zane
-package Graph
+package Graph;
 
-Int scaledId(this Node, factor Int) => this._id * factor     // a method: node:scaledId(factor)
-Int scaledIdOf(node Node, factor Int) => node._id * factor   // a function: scaledIdOf(node, factor)
+Int scaledId(this Node, factor Int) => this._id * factor;    // a method: node:scaledId(factor)
+Int scaledIdOf(node Node, factor Int) => node._id * factor;  // a function: scaledIdOf(node, factor)
 ```
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
@@ -74,8 +74,8 @@ Unit setScale(this Node, scale Float) mut {   // reference subject: a borrow of 
 ```
 
 ```zane
-&Weapon mainWeapon(player &Player) => player.weapon  // a reference is handed out by a function
-&Weapon weapon(this Player) => this.weapon           // ILLEGAL: this is a borrow
+&Weapon mainWeapon(player &Player) => player.weapon; // a reference is handed out by a function
+&Weapon weapon(this Player) => this.weapon;          // ILLEGAL: this is a borrow
 ```
 
 ```zane
@@ -172,8 +172,8 @@ The last two fail for unrelated reasons. A temporary is refused at the source en
 Subscripts are package-scope declarations with the subject first:
 
 ```zane
-(this CustomList)[index Int] => this._data[index]
-(this Tensor3)[x Int, y Int, z Int] => this._data[x][y][z]
+(this CustomList)[index Int] => this._data[index];
+(this Tensor3)[x Int, y Int, z Int] => this._data[x][y][z];
 ```
 
 The body of a subscript definition **MUST** be a place expression. `[]` is not a general function call and cannot return a computed value. Its result is always inferred from the projected place, so subscripts have no explicit return type annotation. A subscript may declare any number of comma-separated parameters inside `[]`; it is not limited to one or two.
@@ -183,8 +183,8 @@ When a subject interprets an `Int` subscript as an ordinal position in an ordere
 > **See also:** [`memory.md`](memory.md) §2.8 for when a place expression may create a new `&`.
 
 ```zane
-(this CustomList)[index Int] => this._data.compute(index)   // ILLEGAL: body is not a place expression
-Int (this CustomList)[index Int] => this._data[index]       // ILLEGAL: explicit return type not allowed
+(this CustomList)[index Int] => this._data.compute(index);  // ILLEGAL: body is not a place expression
+Int (this CustomList)[index Int] => this._data[index];      // ILLEGAL: explicit return type not allowed
 ```
 
 `list[i]` is a place expression only if `list` is a place expression. `CustomList()[1]` is therefore not a place expression because the base is a temporary.
@@ -195,7 +195,7 @@ A subscript expression denotes the place its body projects, so it is a reference
 type Squad = #struct {
     _members ArrayRef<Player, 4>;
 }
-(this Squad)[index Int] => this._members[index]
+(this Squad)[index Int] => this._members[index];
 
 squad Squad(...);
 lead &Player = squad[1];     // legal: the projection ends at an ArrayRef element of a settled root
@@ -235,9 +235,9 @@ Functions are called as `name(args...)` or `packageName$name(args...)`.
 A verb may use `=>` for its body. Functions, methods, operators, constructors, and lambdas all support this shorthand (operators are covered in [`operators.md`](operators.md), constructors in [`types.md`](types.md) §3.2):
 
 ```zane
-Int double(value Int) => value * 2
-Int scaledId(this Node, factor Int) => this._id * factor
-Unit noOperation() => Unit()
+Int double(value Int) => value * 2;
+Int scaledId(this Node, factor Int) => this._id * factor;
+Unit noOperation() => Unit();
 ```
 
 `=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x; y;}` is shorthand for `{ return init{x; y;} }`.
@@ -261,8 +261,8 @@ The return checker does not synthesize a constructor call for `Unit` or any othe
 A verb that computes its result from its inputs is declared as a function, even when its first parameter has the type the result is computed from. A verb that reads its subject's own state or acts on its subject is declared as a method. `core` and `math` follow this rule, and a package **SHOULD** follow it too.
 
 ```zane
-Float sqrt(value Float) => Float(@math$sqrt(value))         // a computation: sqrt(x)
-Float scale(this Node) => this.scale                        // a read of the subject: node:scale()
+Float sqrt(value Float) => Float(@math$sqrt(value));        // a computation: sqrt(x)
+Float scale(this Node) => this.scale;                       // a read of the subject: node:scale()
 Unit setScale(this Node, scale Float) mut {                 // an act on the subject: node!setScale(s)
     this.scale = scale;
     return Unit();

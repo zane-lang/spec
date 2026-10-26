@@ -223,9 +223,9 @@ type Pair<T Type> = struct {
     first T;
 }
 Pair<T>(first T Type) => init{first;}
-Pair<T> wrap(x T Type) => Pair(x)
+Pair<T> wrap(x T Type) => Pair(x);
 
-alias Crew = Pair<MainCharacter>   // error at MainCharacter: the explicit argument is the origin
+alias Crew = Pair<MainCharacter>;  // error at MainCharacter: the explicit argument is the origin
 q Pair(MainCharacter());           // error at MainCharacter(): the inferred T originates there
 r wrap(MainCharacter());           // error at MainCharacter(), not inside wrap
 ```
@@ -277,7 +277,7 @@ The token before `<` in a type expression is always a type, which is always uppe
 A type expression normally *applies* arguments. Inside a verb signature — where there is no header — the same `<>` brackets are also where a nested type or number parameter is introduced: an entry that carries its concept (`T Type`, `n @concepts$Int`) introduces a parameter; a bare or concrete entry references or applies as usual.
 
 ```zane
-Int size(this Buffer<T Type, n @concepts$Int>) => n   // legal: T and n introduced here
+Int size(this Buffer<T Type, n @concepts$Int>) => n;  // legal: T and n introduced here
 T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing introduces T or n,
                                                // so the bare names are undefined
 ```

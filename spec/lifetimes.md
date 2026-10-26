@@ -193,7 +193,7 @@ A verb result (§1.2) has no symbol to spend. The temporary is consumed by the m
 A return is a store into the call-site scope, so §1.1 governs it, and this is what the comparison comes to for a returned reference: a function may return an `&T` only when the returned reference is rooted in one of the function's **`&T` parameters** or in a **package constant** — the root used bare, or a field access whose base chain reaches it.
 
 ```zane
-&Weapon weaponOf(player &Player) => player.weapon
+&Weapon weaponOf(player &Player) => player.weapon;
 ```
 
 An `&T` parameter stands for a path in the caller's frame (§1.5), so it has no scope the body could compare against. The obligation travels out with the signature and the call site discharges it against the argument path (§1.11), which is where the two scopes are finally both in view. A package constant lives for the whole program, so it outlives every caller's scope and needs no comparison at the call site:
@@ -201,7 +201,7 @@ An `&T` parameter stands for a path in the caller's frame (§1.5), so it has no 
 ```zane
 garage Garage(...);                    // a package constant
 
-&Engine spareEngine() => garage.spare  // legal: rooted in a package constant
+&Engine spareEngine() => garage.spare; // legal: rooted in a package constant
 ```
 
 Nothing else is a root. A **local** is excluded by lifetime: a body block does not outlive the call-site scope, so §1.1 rejects the store outright. A **`^T` parameter** is an owner of the body (§1.5), excluded the same way. A **borrow**, `this` included, is never returned at all ([`memory.md`](memory.md) §2.9).

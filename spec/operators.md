@@ -95,7 +95,7 @@ A number has no parts of that kind, so `Int` and `Float` implement neither.
 An implementation's operand and result types follow §2.2 like those of any other operator. A package may declare `or` over two members of its own enum and return a set of them:
 
 ```zane
-type Permission = enum [ read, write, execute ]
+type Permission = enum [ read, write, execute ];
 
 Permissions or(left Permission, right Permission) { ... }
 
@@ -165,8 +165,8 @@ No machine operation takes operands of two types; an operand is converted first 
 `core` writes the fundamental types' operators over these machine operations. Where its `Int` holds an `@primitives$I64` in a field `value`, and its `Bool` an `@primitives$Bool`:
 
 ```zane
-Int +(left Int, right Int) => Int(@operators$add(left.value, right.value))
-Bool ~(value Bool) => Bool(@operators$not(value.value))
+Int +(left Int, right Int) => Int(@operators$add(left.value, right.value));
+Bool ~(value Bool) => Bool(@operators$not(value.value));
 ```
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#primitives-lose-their-operators-to-operators-functions) — "Primitives lose their operators to `@operators$` functions".
@@ -178,8 +178,8 @@ An operator converts no operand. Implicit constructors ([`types.md`](types.md) �
 A literal operand has a compiler concept type ([`syntax.md`](syntax.md) §2.8). An overload accepts it by declaring that concept type as its parameter, and builds the value it needs inside its body. `core` declares one for each side of each operator over a fundamental type:
 
 ```zane
-Int +(left Int, right @concepts$Int) => left + Int(right)
-Int +(left @concepts$Int, right Int) => Int(left) + right
+Int +(left Int, right @concepts$Int) => left + Int(right);
+Int +(left @concepts$Int, right Int) => Int(left) + right;
 ```
 
 So `count + 1` and `1 + count` both resolve directly.

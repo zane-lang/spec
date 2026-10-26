@@ -28,7 +28,7 @@ Every mould is a **value mould** unless it is marked with `#`, which makes it a 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
 ```zane
-package Graph
+package Graph;
 
 type Node = #struct {      // reference type: identity, may hold `&`, moved not copied
     _id Int;
@@ -47,7 +47,7 @@ A value-type body contains only field declarations, stored inline apart from any
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
 ```zane
-package Math
+package Math;
 
 type Vec2 = struct {       // value type: copied, transitively value, mutable in place
     x Float;
@@ -68,18 +68,18 @@ All fields whose names do not begin with `_` are public.
 A leading `_` thus draws the same boundary on a field as on a package-scope declaration ([`packages.md`](packages.md) §4.1): the package is the unit of privacy. A type and the declarations written alongside it in its package work on the same internals, so all of them reach its `_` fields.
 
 ```zane
-package Graph
+package Graph;
 
-Int scaledId(this Node, factor Int) => this._id * factor   // a method in Graph
-Bool ==(left Node, right Node) => left._id == right._id     // an operator in Graph
+Int scaledId(this Node, factor Int) => this._id * factor;  // a method in Graph
+Bool ==(left Node, right Node) => left._id == right._id;    // an operator in Graph
 ```
 
 ```zane
-package render
+package render;
 
-import Graph
+import Graph;
 
-Int peek(this Graph$Node) => this._id   // ILLEGAL: _id is private to Graph
+Int peek(this Graph$Node) => this._id;  // ILLEGAL: _id is private to Graph
 ```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#privacy-lives-in-the-name) — "Privacy lives in the name".
@@ -304,7 +304,7 @@ Constructors use the same block-bodied or expression-bodied surface forms as oth
 Positional constructors declare ordinary parameters and return `init{ ... }`.
 
 ```zane
-package Graph
+package Graph;
 
 Node(id Int, scale Float, label String) {
     return init{
@@ -318,7 +318,7 @@ Node(id Int, scale Float, label String) {
 Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below means exactly `{ return init{x; y;} }`:
 
 ```zane
-package Math
+package Math;
 
 Vec2(x Float, y Float) => init{x; y;}
 ```
@@ -330,7 +330,7 @@ Constructor parameters do not need to repeat private-field underscores. It is no
 A constructor body is an ordinary verb body: a sequence of statements that ends by returning an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns `init{ }` — it is indistinguishable from a builder helper that ends in a constructor call, apart from that sugar.
 
 ```zane
-package Graph
+package Graph;
 
 Node(id Int, scale Float, label String) {
     scaled Float = scale * scale;      // ordinary statements run first
@@ -348,7 +348,7 @@ Node(id Int, scale Float, label String) {
 A constructor may also declare fields directly in its parameter header:
 
 ```zane
-package Math
+package Math;
 
 type Vector = struct {
     x Int;
@@ -387,7 +387,7 @@ starter Weapon{fireRate = Float(2.0);}
 The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
 
 ```zane
-package Math
+package Math;
 
 type Vector2 = struct { x Float; y Float; }
 
@@ -472,7 +472,7 @@ Constructors are not methods. They create new values rather than mutating an exi
 An `&` field is legal only in a reference type (`#struct`/`#variant`), since a value type is transitively value (§2.2). A constructor that assigns a value to an `&` field must declare the corresponding parameter as `&T`. A borrow `T` is never stored, and a taken `^T` is roaming, which nothing references ([`memory.md`](memory.md) §2.9). The caller must then supply a reference under [`memory.md`](memory.md) §2.8: either an existing `&T` value or a settled place that may mint one. A bare settled symbol, or a path from a settled root through struct fields and `ArrayRef` elements, may mint a reference; a roaming owner, a `ListRef` element, a variant payload, and any temporary may not. A read whose value is already `&T`, such as `weapons[1]` for `ArrayRef<&Weapon, 2>` or `racks[1].weapon` for a list of objects with an `&Weapon` field, remains legal because it copies the stored reference rather than minting one from the element slot.
 
 ```zane
-package Vehicle
+package Vehicle;
 
 type Car = #struct {
     engine &Engine;
@@ -553,7 +553,7 @@ A `Type` value parameter is usable as a type inside the body (for example, `T(0)
 A constructor marked with the `implicit` modifier declares a single-parameter conversion. Implicit constructors **MUST** declare exactly one parameter and **MUST NOT** use field-constructor form.
 
 ```zane
-package Units
+package Units;
 
 type Meters = struct {
     value Float;
@@ -677,7 +677,7 @@ An implicit constructor from type `U` to type `T` **MUST** be declared in the ho
 This rule prevents conflicts when multiple packages independently define the same implicit conversion and ensures that the owner of at least one type controls the conversion behavior.
 
 ```zane
-package Units
+package Units;
 
 type Meters = struct { value Float; }
 
@@ -686,8 +686,8 @@ implicit Meters(feet Feet) => init{value = feet.value * Float(0.3048);}
 ```
 
 ```zane
-package Conversions
-import Units
+package Conversions;
+import Units;
 
 // ILLEGAL: neither Meters nor Feet is defined in Conversions
 implicit Units$Meters(feet Units$Feet) => init{value = feet.value * Float(0.3048);}
@@ -722,7 +722,7 @@ Zane names types with two declaration keywords. `type` introduces a new distinct
 A `type` declaration introduces a new, distinct named type. The new type is structurally equal to its right-hand side but is **not** interchangeable with it.
 
 ```zane
-type VectorInt = Vector<Int>   // distinct type; NOT interchangeable with Vector<Int>
+type VectorInt = Vector<Int>;  // distinct type; NOT interchangeable with Vector<Int>
 ```
 
 A value of `VectorInt` and a value of `Vector<Int>` do not substitute for each other implicitly, even though their layouts match.
@@ -732,7 +732,7 @@ A value of `VectorInt` and a value of `Vector<Int>` do not substitute for each o
 An `alias` declaration introduces a true alias: the new name and its right-hand side are fully interchangeable everywhere.
 
 ```zane
-alias VectorInt = Vector<Int>   // fully interchangeable with Vector<Int>
+alias VectorInt = Vector<Int>;  // fully interchangeable with Vector<Int>
 ```
 
 ### 5.3 The right-hand side is a type expression

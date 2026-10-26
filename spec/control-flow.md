@@ -229,7 +229,7 @@ It reaches one level, not all of them. The verb holding the intrinsic ends too, 
 This is what makes an exit declarable. A verb whose body is the intrinsic exits whoever calls it, so `core` declares the exit every program uses (§3.6) rather than the language spelling one as grammar:
 
 ```zane
-package core
+package core;
 
 Unit guard(condition Bool) {
     if(condition) {
