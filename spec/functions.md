@@ -74,7 +74,7 @@ Unit setScale(this Node, scale Float) mut {   // reference subject: a borrow of 
 ```
 
 ```zane
-&Weapon mainWeapon(player &Player) => player.weapon  // a reference is handed out by a function
+&Weapon mainWeapon(player &Player) => player.weapon; // a reference is handed out by a function
 &Weapon weapon(this Player) => this.weapon;          // ILLEGAL: this is a borrow
 ```
 

@@ -157,7 +157,7 @@ Methods and operators are therefore not importable members, because neither is r
 
 ```zane
 import shapes$area;  // ILLEGAL: a method is reached by subject:pkg$method()
-import math$+        // ILLEGAL: operators resolve by operand home package
+import math$+;       // ILLEGAL: operators resolve by operand home package
 ```
 
 A cross-package method call is written with the qualifier at the call site instead ([`functions.md`](functions.md) §6.2).

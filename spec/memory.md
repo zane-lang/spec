@@ -309,7 +309,7 @@ do() {
 **The subject is always a borrow.** `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is a borrow of the object the method was called on, settled or roaming, and mutable under `mut`. A method never moves `this`, never stores it, and never returns it as `&T`. Nothing is written on `this` to say so, because a subject has no other mode. A verb that hands out a reference into an object takes that object as an `&T` parameter instead:
 
 ```zane
-&Weapon weaponOf(player &Player) => player.weapon  // legal: rooted in an `&T` parameter
+&Weapon weaponOf(player &Player) => player.weapon; // legal: rooted in an `&T` parameter
 &Weapon weapon(this Player) => this.weapon;        // ILLEGAL: this is a borrow
 ```
 
