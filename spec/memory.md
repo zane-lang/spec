@@ -11,7 +11,7 @@ This document specifies Zane's memory model: ownership, references, and arena la
 Zane eliminates dangling references by combining single ownership, an owner that never moves once anything may point at it, and lexical lifetime rules.
 
 - **`Settled and roaming owners`.** An owner is either **settled** — it may be referenced, and it never moves again — or **roaming** — it may move anywhere, and nothing references it. A roaming owner settles by moving into a settled place (§2.1, §2.8.1).
-- **`References name settled owners`.** An `&` — a **reference** — is a non-owning handle to a settled owner of a **reference type** (a `#`-marked type, or a reference-type intrinsic such as `@primitives$List<T>`). A value type has no identity to point at, so it is shared by copy or borrow, never by a stored reference (§2.4).
+- **`References name settled owners`.** An `&` — a **reference** — is a non-owning handle to a settled owner of a **reference type** (a `#`-marked type, or a reference-type intrinsic such as `@primitives$ListRef<T>`). A value type has no identity to point at, so it is shared by copy or borrow, never by a stored reference (§2.4).
 - **`A value copy is deep`.** A value owns whatever it holds out of line, so copying one copies its backing stores and boxed payloads into fresh storage instead of sharing them (§2.3, §2.10).
 - **`Three passing modes`.** A bare reference-type parameter, and every subject, is a **borrow**; `^T` takes the owner; `&T` takes a reference. A value-type parameter is always a borrow, and nothing else in a call writes what the call borrows (§2.9, §2.9.1).
 - **`Lexical lifetime enforcement`.** Every store is checked against declaration scopes alone (see [`lifetimes.md`](lifetimes.md) §1), and objects are destroyed when their owner's scope drains; there is no tracing garbage collector (see [`lifetimes.md`](lifetimes.md) §2).
@@ -34,7 +34,7 @@ Every instance of a reference type (a `#`-marked type, see [`types.md`](types.md
 - A **settled** owner may be referenced (§2.8). It never moves: no expression takes its object out of it.
 - A **roaming** owner may be moved (see [`lifetimes.md`](lifetimes.md) §1.2). Nothing references it, or anything inside it.
 
-A symbol, parameter, return type, or abort type written with `^` is roaming, except a type parameter filled with a value type, which is an ordinary value (§2.9); a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a list element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
+A symbol, parameter, return type, or abort type written with `^` is roaming, except a type parameter filled with a value type, which is an ordinary value (§2.9); a bare symbol of a reference type is settled. A field or an `ArrayRef` element takes the state of the root it is reached from, and a `ListRef` element or variant payload is always roaming (§2.8.1). A roaming owner **settles** when it moves into a settled place, and a settled owner never becomes roaming.
 
 ```zane
 spare ^Engine = Engine(Int(1));  // roaming
@@ -63,7 +63,7 @@ r &Engine = car.engine;
 car.engine = Engine(); // the old engine is destroyed; r observes the replacement
 ```
 
-Overwriting a roaming owner, a list element, or a variant payload destroys the old occupant unless the operation first moves it elsewhere. Nothing references it, so nothing observes the change of occupant.
+Overwriting a roaming owner, a `ListRef` element, or a variant payload destroys the old occupant unless the operation first moves it elsewhere. Nothing references it, so nothing observes the change of occupant.
 
 An `&T` stored *as an element value* is different: rewriting that element merely replaces one reference value with another.
 
@@ -86,7 +86,7 @@ v Vector2 = Vector2(Int(3), Int(4)); // constructs v, v.x, and v.y directly
 w Vector2 = v;                       // copies the existing value in v
 ```
 
-A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns neither a backing store nor a boxed member (§2.10, §3.3). A value that owns out-of-line storage is copied **deeply**: the copy allocates a block for each backing store or boxed payload and copies its live contents into it, recursively, so the original and the copy share no storage at all. This includes `String` and `@primitives$String` ([`types.md`](types.md) §2.7).
+A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns neither a backing store nor a boxed member (§2.10, §3.3). A value that owns out-of-line storage is copied **deeply**: the copy allocates a block for each backing store or boxed payload and copies its live contents into it, recursively, so the original and the copy share no storage at all. This includes `String`, `List`, and their primitives ([`types.md`](types.md) §2.7, [`generics.md`](generics.md) §8.3).
 
 Depth is not an extra feature bolted onto the copy; it is what the ordinary meaning of "copied" requires once a value may own out-of-line storage. A value's central promise is that nothing reachable from it is reachable from anywhere else, and a shallow copy would break exactly that by leaving two values naming one payload.
 
@@ -103,7 +103,7 @@ Destruction is the mirror. When a value dies — its owner dies, its container d
 
 ### 2.4 `&` is a reference: non-owning storage
 
-`&` creates a **reference**: non-owning storage that points at a settled owner of a **reference type**. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle ([`ffi.md`](ffi.md) §4.1), or a reference-type intrinsic such as `@primitives$List<T>` — because only a reference type has an owner to point at. A value type is shared by copying it or by a borrow (see [`functions.md`](functions.md) §2.4), never by a stored reference. Writing `&Node` names a reference to a reference type; a bare `&Int` over a value type is ill-formed.
+`&` creates a **reference**: non-owning storage that points at a settled owner of a **reference type**. An `&T` requires `T` to be a reference type — a declared `#struct`/`#variant`/`#enum`, a foreign handle ([`ffi.md`](ffi.md) §4.1), or a reference-type intrinsic such as `@primitives$ListRef<T>` — because only a reference type has an owner to point at. A value type is shared by copying it or by a borrow (see [`functions.md`](functions.md) §2.4), never by a stored reference. Writing `&Node` names a reference to a reference type; a bare `&Int` over a value type is ill-formed.
 
 An explicitly declared `&T` slot is **reference-only**: it stores only the reference and can never own a `T`. A slot declared as `T` or `^T` is an **owning slot**. After a roaming owner's value moves out, that same full-size slot is **spent** ([`lifetimes.md`](lifetimes.md) §1.6): it denotes no object until a store refills it.
 
@@ -154,7 +154,7 @@ Only a **settled** place may mint a new reference. A new `&` value may be minted
 Four things are rejected:
 
 - A roaming owner, and any place reached from one, is never a reference source. Nothing references an owner that may still move.
-- A subscript is a reference source only when the place it projects is an `ArrayRef` element ([`functions.md`](functions.md) §2.9). A list element is roaming, so `players[100]` and `players[100].weapon` on a `List` are both excluded.
+- A subscript is a reference source only when the place it projects is an `ArrayRef` element ([`functions.md`](functions.md) §2.9). A `ListRef` element is roaming, so `players[100]` and `players[100].weapon` on a `ListRef` are both excluded.
 - A variant case payload is never a reference source, and neither is a path that continues through one.
 - Temporaries and other value-only expressions are not place expressions at all. Constructor calls and ordinary function results such as `Engine()` and `makeEngine()` are not places.
 
@@ -174,7 +174,7 @@ t &Car = spare;          // ILLEGAL: spare is roaming
 ```
 
 ```zane
-weapon &Weapon = players[100].weapon;  // ILLEGAL: players is a List; its elements are roaming
+weapon &Weapon = players[100].weapon;  // ILLEGAL: players is a ListRef; its elements are roaming
 ```
 
 ```zane
@@ -182,7 +182,7 @@ squad ArrayRef.roaming([Player(), Player()]);
 lead &Weapon = squad[1].weapon;        // legal: squad is settled, and its elements are too
 ```
 
-For a list element or a case payload, keep the reference at the settled container and perform the access through it when needed. A reference to a container may subscript that container, and a reference to a variant may read whichever case is live; neither access may mint a new reference to the element or case payload.
+For a `ListRef` element or a case payload, keep the reference at the settled container and perform the access through it when needed. A reference to a container may subscript that container, and a reference to a variant may read whichever case is live; neither access may mint a new reference to the element or case payload.
 
 Reading an `&T` value that is already stored behind such an access remains legal:
 
@@ -192,7 +192,7 @@ type Rack = #struct {
 }
 
 armory Armory();
-racks List<Rack> = [Rack(armory.primary), Rack(armory.backup)];
+racks ListRef<Rack> = [Rack(armory.primary), Rack(armory.backup)];
 current &Weapon = racks[1].weapon;  // legal: reads an `&Weapon` already stored in an element
 ```
 
@@ -224,8 +224,8 @@ garage.car = make(Int(2));     // settles in garage.car when garage is settled
 
 What an owner contains takes a state from where it sits:
 
-- **Fixed storage inherits its root's state.** A struct's fields and an `ArrayRef`'s elements are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction ([`generics.md`](generics.md) §8.4). An `Array` is a value type ([`generics.md`](generics.md) §8.1), so it holds no owner at all (§2.10).
-- **Dynamic storage is always roaming.** A list's elements and a variant's payload come and go while the list or variant holding them lives, so they are roaming even under a settled root. A settled list may be referenced as a whole; its elements may not.
+- **Fixed storage inherits its root's state.** A struct's fields and an `ArrayRef`'s elements are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction ([`generics.md`](generics.md) §8.4). An `Array` and a `List` are value types ([`generics.md`](generics.md) §8.1, §8.3), so they hold no owner at all (§2.10).
+- **Dynamic storage is always roaming.** A `ListRef`'s elements and a variant's payload come and go while the `ListRef` or variant holding them lives, so they are roaming even under a settled root. A settled `ListRef` may be referenced as a whole; its elements may not.
 
 A field is never declared roaming. An `ArrayRef` element is never moved out, under either kind of root: its index is a runtime value, so which element is spent could not be tracked. A field of a **roaming** root may be moved out, because nothing can observe the root; the root is then partly spent, tracked in its declaration block as a spent symbol is ([`lifetimes.md`](lifetimes.md) §1.6). A field of a settled root is overwritten, never moved out (§2.2).
 
@@ -358,9 +358,9 @@ readLater(engines[Int(1)], engines!grow());     // ILLEGAL: the later argument w
 first String = names[Int(1)];
 names!push(first);                              // legal: first is a place of its own
 
-same &List<String> = names;
+same &ListRef<String> = names;
 same!push(names[Int(1)]);                       // ILLEGAL: same stands for names
-other &List<String> = spares;
+other &ListRef<String> = spares;
 names!push(other[Int(1)]);                      // legal: other stands for spares
 this.left!push(this.right[Int(1)]);             // ILLEGAL: two & fields may name one list
 ```
@@ -368,11 +368,11 @@ this.left!push(this.right[Int(1)]);             // ILLEGAL: two & fields may nam
 An `&T` parameter moves the check to the call that knows what it names:
 
 ```zane
-Unit append(this List<String>, from &List<String>) mut {
+Unit append(this ListRef<String>, from &ListRef<String>) mut {
     this!push(from[Int(1)]);                    // legal: from is apart from this; the signature records it
     return Unit();
 }
-Unit relay(this List<String>, via &List<String>) mut {
+Unit relay(this ListRef<String>, via &ListRef<String>) mut {
     this!append(via);                           // legal: relay records that via is apart from this
     return Unit();
 }
@@ -402,7 +402,7 @@ An `&T` argument is not a borrow. It names a settled owner, which an overwrite r
 
 ### 2.10 Value-downstream enforcement (transitive value-only field restriction)
 
-Value types form a closed world of plain value storage. A value-type field may contain only value types, value-type storage primitives among them (see [`syntax.md`](syntax.md) §2.6), and it **MUST NOT** contain a reference type (a `#`-marked type or a reference-type intrinsic such as `@primitives$List<T>`) or an `&`. This rule applies transitively: a value type containing another value type that eventually contains a reference-type or `&` field is also illegal.
+Value types form a closed world of plain value storage. A value-type field may contain only value types, value-type storage primitives among them (see [`syntax.md`](syntax.md) §2.6), and it **MUST NOT** contain a reference type (a `#`-marked type or a reference-type intrinsic such as `@primitives$ListRef<T>`) or an `&`. This rule applies transitively: a value type containing another value type that eventually contains a reference-type or `&` field is also illegal.
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
@@ -411,7 +411,7 @@ The rule is about **copying**, and both banned field kinds fail it the same way.
 - **Duplicate the object**, minting a second instance with its own identity. References to the original would not follow the copy, and "exactly one owner" would describe nothing.
 - **Share the object**, so two values reach one owner. Ownership would no longer be single, and a value would have become a way to alias.
 
-An `&` field fails on the second directly: copying it would duplicate a reference inside a copied value, putting aliasing inside the one world that is defined by having none. `List` is a reference type and is covered by this restriction. `String` and `@primitives$String` are value types with owned backing stores; variable payload size does not itself imply reference semantics ([`types.md`](types.md) §2.7).
+An `&` field fails on the second directly: copying it would duplicate a reference inside a copied value, putting aliasing inside the one world that is defined by having none. `ListRef` is a reference type and is covered by this restriction. `String` and `List`, with their primitives, are value types with owned backing stores; variable payload size does not itself imply reference semantics ([`types.md`](types.md) §2.7, [`generics.md`](generics.md) §8.3).
 
 What this closure does **not** bar is **recursion**, and the reason is that a **boxed member** (§3.3) is not a reference-type field: it is out-of-line placement of the member's own declared type, and placement is not language-visible (§3.5). Nothing this rule forbids has entered the value. The recursion rule itself lives in [`adt.md`](adt.md) §4, and the copy that keeps such a value alias-free in §2.3.
 
@@ -519,7 +519,7 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 Fields are laid out in declaration order. A value-type instance is stored inline, except for owned backing stores (§3.6) and any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size owner slot, so value-type slots and owner slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and ownership semantics, not by requiring a separate indirect allocation.
 
-A reference-type instance carries no metadata of its own: a reference names it by its address (§4.1). A dynamically-sized reference type such as `List` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
+A reference-type instance carries no metadata of its own: a reference names it by its address (§4.1). A dynamically-sized reference type such as `ListRef` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
 
 A **boxed member** is laid out the same way: a fixed-size handle inline, with the instance it names placed in the dynamic region (§3.6). Which members are boxed is [`adt.md`](adt.md) §4's rule — required on a cycle of owning edges, where no finite inline layout exists, and permitted elsewhere per type. §3.5 makes the choice unobservable.
 
@@ -540,7 +540,7 @@ Placement is an implementation decision, not a language-visible property. The ar
 
 A move transfers a roaming owner into a destination owner of the **same type** ([`lifetimes.md`](lifetimes.md) §1). Both have the same statically known size, so a move copies the owner's inline bytes, its handles among them, into the destination's fixed-size slot. A destination that already holds an object follows §2.2: a settled destination is overwritten in place, and any other destination's occupant is destroyed first. The source slot is spent ([`lifetimes.md`](lifetimes.md) §1.6). Nothing inside a roaming owner is referenced, so a move updates nothing else.
 
-The **dynamic blocks** the owner owns — the backing store behind a `List` or `String` handle, and the payload of a boxed member — stay where they are. A move copies their handles and never their contents, while the scope that holds the blocks outlives the destination owner. A move whose destination outlives that scope is an **escape**: a `return` out of the scope that allocated the blocks, or a store into an owner declared above it. Before that scope drains, every block the escaping owner owns **MUST** reside in a scope that lives as long as the destination, so that no handle ever names released memory. The implementation either relocates each block — allocating an equal-size block or oversized span in such a scope's dynamic region, moving the live contents into it under their ordinary move rules, updating the handle, and returning the old block to its exact-size stack — or allocates the block there in the first place.
+The **dynamic blocks** the owner owns — the backing store behind a `ListRef`, `List`, or `String` handle, and the payload of a boxed member — stay where they are. A move copies their handles and never their contents, while the scope that holds the blocks outlives the destination owner. A move whose destination outlives that scope is an **escape**: a `return` out of the scope that allocated the blocks, or a store into an owner declared above it. Before that scope drains, every block the escaping owner owns **MUST** reside in a scope that lives as long as the destination, so that no handle ever names released memory. The implementation either relocates each block — allocating an equal-size block or oversized span in such a scope's dynamic region, moving the live contents into it under their ordinary move rules, updating the handle, and returning the old block to its exact-size stack — or allocates the block there in the first place.
 
 Relocation is **recursive**, because a relocated block may itself own dynamic blocks: a boxed payload holds its own boxed members, and a backing store holds its elements' owned storage. Relocating the root of a roaming recursive structure therefore relocates the whole structure, at a cost proportional to the number of boxed nodes it contains rather than to the root alone.
 
@@ -554,7 +554,7 @@ Placement never changes observable semantics: destruction stays deterministic (s
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
 
-Dynamically-sized types such as the reference type `List` and the value type `String` are represented as fixed-size **handles**. A handle records the payload's native address and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
+Dynamically-sized types such as the reference type `ListRef` and the value types `List` and `String` are represented as fixed-size **handles**. A handle records the payload's native address and the metadata needed by the type, such as length and block size. The handle occupies a statically known footprint inline in the fixed-size region; its resizable backing store is a separate allocation in the dynamic region.
 
 A type that contains a handle-typed field therefore stays statically sized:
 
@@ -576,7 +576,7 @@ A list grows according to the following rules:
 5. Otherwise, the doubled block is bump-allocated wholly inside one dynamic chunk, and the live elements are relocated into it.
 6. After relocation, the handle's backing-store address and block size are updated and the old block's base address is pushed onto the stack for its exact old byte size.
 
-A block of at most 1 MiB grows in place only within its chunk. An oversized span grows in place to the end of its reservation, however many other blocks the scope allocates meanwhile, because nothing else is ever placed there; growth that would pass that end relocates into a fresh span with a reservation of its own. An oversized span made by a copy or an escape relocation (§2.3, §3.5) has no reservation beyond itself, so its next doubling relocates once. Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. References to the list remain valid because they reach the list's owner, whose fixed-size handle now names the current backing store.
+A block of at most 1 MiB grows in place only within its chunk. An oversized span grows in place to the end of its reservation, however many other blocks the scope allocates meanwhile, because nothing else is ever placed there; growth that would pass that end relocates into a fresh span with a reservation of its own. An oversized span made by a copy or an escape relocation (§2.3, §3.5) has no reservation beyond itself, so its next doubling relocates once. Relocation moves or copies elements according to their type's ordinary move rules; the old block becomes reusable only after its previous occupants are no longer live. References to a `ListRef` remain valid because they reach its owner, whose fixed-size handle now names the current backing store.
 
 A **boxed member** (§3.3) uses the same two-part representation with a payload that never grows. Its handle records the payload's native address; the payload is one instance of the member's declared type, sized and aligned as §3.2 specifies, and is returned to its size stack when the member's enclosing instance is destroyed. Overwriting the member writes the replacement into the same block, which always fits because both are instances of the member's type, and the replacement's own boxed members are written into the blocks the occupant already holds, recursively (§2.2). A reference into a settled boxed member, or into any member below it, keeps its address. A payload larger than 1 MiB is a dedicated oversized span like any other. None of the growth rules above apply to it: a boxed payload is allocated once and is thereafter only relocated when its roaming owner escapes, or allocated afresh by a deep value copy (§2.3, §3.5).
 
@@ -656,7 +656,7 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | Concept | Rule |
 |---|---|
 | Settled owner | May be referenced; never moves; a bare reference-type symbol, or a field of a settled root |
-| Roaming owner | May move; nothing references it or anything inside it; written `^T`, and every list element and variant payload |
+| Roaming owner | May move; nothing references it or anything inside it; written `^T`, and every `ListRef` element and variant payload |
 | Settling | A roaming owner settles by moving into a settled place; a settled owner never roams again |
 | Owning storage | Reference-typed symbols, fields, and container elements are directly initialized and may later be overwritten |
 | Settled overwrite | Destroys the old occupant and writes the replacement at the same address, reusing the block of every boxed member reached through struct fields and `ArrayRef` elements; references to the slot or any of its fields observe the replacement |
@@ -667,7 +667,7 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | `&` (reference) | Reference-only non-owning storage naming a settled owner; may be repointed, copied by value, and returned, but can never own a `T` |
 | Spent owner slot | After a roaming owner's value moves out, the slot is spent and keeps enough storage for a store to refill it |
 | Place expression | Existing storage: a named symbol, a field access of a place, a place-projection subscript of a place, or an `&` parameter |
-| New `&` value | May be minted only from a settled place: a bare settled symbol, or a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only; roaming owners, list elements, variant payloads, and temporaries are rejected |
+| New `&` value | May be minted only from a settled place: a bare settled symbol, or a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only; roaming owners, `ListRef` elements, variant payloads, and temporaries are rejected |
 | `ArrayRef` element | Fixed storage: takes its root's state, may be referenced under a settled root, is overwritten in place, and is never moved out |
 | Field of a roaming root | May be moved out; the root is partly spent until refilled; a field is never declared roaming |
 | Borrow | Non-owning, non-escaping access to a caller's storage for the duration of a call; not storable, not returnable, not a reference source, not a move-source |

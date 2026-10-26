@@ -19,7 +19,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
-- **`Three container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type; `@primitives$List<T>` is the dynamically sized counterpart and a reference type. `core` declares `Array`, `ArrayRef`, and `List` over them.
+- **`Four container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type. `@primitives$List<T>` and `@primitives$ListRef<T>` are their dynamically sized counterparts, a value type and a reference type. `core` declares `Array`, `ArrayRef`, `List`, and `ListRef` over them.
 
 ---
 
@@ -90,7 +90,7 @@ type Swap<A Type, B Type> = variant { first A; second B; more Swap<B, A>; }
 type Mixed<T Type>        = variant { last T; more Mixed<Int>; }
 ```
 
-The rule follows every member: inline and boxed members, `&` fields, a distinct type's definition, and the element types of `Array`, `ArrayRef`, and `List`. It also follows a cycle through other generic types, where the argument may grow on any step:
+The rule follows every member: inline and boxed members, `&` fields, a distinct type's definition, and the element types of `Array`, `ArrayRef`, `List`, and `ListRef`. It also follows a cycle through other generic types, where the argument may grow on any step:
 
 ```zane
 type A<T Type> = variant { last T; next B<Array<T, 2>>; }   // ILLEGAL
@@ -204,7 +204,7 @@ Here `n` in the return position is the number the use site supplied for that par
 
 ### 3.6 A wrong-kind type argument is reported where the concrete type enters
 
-A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind. An `&T` takes only a reference type ([`memory.md`](memory.md) §2.4), so a value type that fills `T` there, on a field or on a verb's parameter, is ill-formed the same way. A `^T` takes an owner or a borrow, never a reference ([`memory.md`](memory.md) §2.9), so an `&` type that fills `T` there is ill-formed too, and so is a `List` of one (§8.3).
+A type parameter ranges over value and reference types alike. Whether a given type fits is decided by where the parameter ends up: a value mould may hold only value types, so a reference type that reaches a value-type field makes the instantiation ill-formed ([`memory.md`](memory.md) §2.10). A reference mould holds either kind. An `&T` takes only a reference type ([`memory.md`](memory.md) §2.4), so a value type that fills `T` there, on a field or on a verb's parameter, is ill-formed the same way. A `^T` takes an owner or a borrow, never a reference ([`memory.md`](memory.md) §2.9), so an `&` type that fills `T` there is ill-formed too, and so is `ListRef<&U>` (§8.5). A `List` is a value type, so it takes only a value type (§8.3).
 
 ```zane
 type Box<T Type> = #struct {
@@ -445,12 +445,19 @@ Baking the size into the type (`Array<T, n>`) is the mechanism that guarantees e
 
 Other fixed-size containers (vectors, matrices) are defined in terms of `Array` and need no extra compiler support.
 
-### 8.3 List is the dynamically sized primitive
+### 8.3 List is the dynamically sized value primitive
 
-`@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. It is a reference type, so no value type may contain one ([`memory.md`](memory.md) §2.10). Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. A list grows by taking each new element through a `^T` parameter, so its `T` is never an `&` type; a fixed set of references is held in an `ArrayRef` (§8.4). `core` declares `List<T>` over it as a `#` reference type, since that declaration is written in Zane.
+`@primitives$List<T>` is the dynamically sized counterpart of `@primitives$Array<T, n>`: a sequence of `T` whose length changes at runtime, so its type carries no `n`. It is a value type, so its `T` is a value type ([`memory.md`](memory.md) §2.10), and a value type may contain one. Its elements live in the dynamic region behind a fixed-size handle ([`memory.md`](memory.md) §3.6), so a type that holds one stays statically sized. A copy of a list copies every element into a block of its own, as a copy of a `String` copies its bytes ([`memory.md`](memory.md) §2.3). `core` declares `List<T>` over it as a value type.
+
+```zane
+names List(String);
+names!push(String("Ada"));
+copy List<String> = names;
+copy[Int(1)] = String("Alan");    // names[Int(1)] is still "Ada"
+```
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-container-whose-size-the-type-cannot-carry) — "A container whose size the type cannot carry".
-> **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
+> **Story:** [`stories/generics.md`](../stories/generics.md#list-becomes-a-value-and-listref-takes-the-reference-form) — "`List` becomes a value, and `ListRef` takes the reference form".
 
 ### 8.4 ArrayRef is the fixed-size reference primitive
 
@@ -483,6 +490,21 @@ Its elements are fixed storage: they are all present from construction and never
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
 
+### 8.5 ListRef is the dynamically sized reference primitive
+
+`@primitives$ListRef<T>` is a reference-type storage primitive with `List`'s layout (§8.3). `T` may be a value type or a reference type. `core` declares `ListRef<T>` over it as a `#` reference type.
+
+A `ListRef` grows by taking each new element through a `^T` parameter, so an element of a reference type is an owner that moves in, and its `T` is never an `&` type ([`memory.md`](memory.md) §2.9); a fixed set of references is held in an `ArrayRef` (§8.4). Its elements are dynamic storage: they come and go while the list lives, so each is roaming whatever the list's state, and none may be referenced ([`memory.md`](memory.md) §2.8.1).
+
+```zane
+squad ListRef(Enemy);
+squad!push(Enemy(Int(1)));
+squad[Int(1)].hp = Int(5);
+```
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
+> **Story:** [`stories/generics.md`](../stories/generics.md#list-becomes-a-value-and-listref-takes-the-reference-form) — "`List` becomes a value, and `ListRef` takes the reference form".
+
 ---
 
 ## 9. Deferred Features
@@ -490,7 +512,7 @@ Its elements are fixed storage: they are all present from construction and never
 The following are intentionally not specified in this version:
 
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
-- dynamic container operations and map types — `List<T>` and its storage primitive are specified (§8.3), and so are the array and map **literal forms** ([`syntax.md`](syntax.md) §2.9 and §2.10), but `List`'s operations, a map type, whether a map preserves any order, and what a map requires of a key type are all open
+- dynamic container operations and map types — `List<T>`, `ListRef<T>`, and their storage primitives are specified (§8.3, §8.5), and so are the array and map **literal forms** ([`syntax.md`](syntax.md) §2.9 and §2.10), but the lists' operations, a map type, whether a map preserves any order, and what a map requires of a key type are all open
 - bounds-checking rules for element access APIs
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
@@ -518,5 +540,6 @@ The following are intentionally not specified in this version:
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
 | `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal by `ArrayRef`, which borrows each element and so copies values and `&` values, by `ArrayRef.roaming`, which takes owners, or by `ArrayRef.refs`, which mints or copies references and may mix the two in one literal, or by `fill`; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
-| `@primitives$List<T>` | Dynamically sized reference-type storage primitive: elements in the dynamic region behind a fixed-size handle; its element type is never an `&` type; `core` declares `List` over it |
+| `@primitives$List<T>` | Dynamically sized value-type storage primitive over a value `T`: elements in the dynamic region behind a fixed-size handle; a copy copies every element; `core` declares `List` over it |
+| `@primitives$ListRef<T>` | Dynamically sized reference-type storage primitive with `List`'s layout; its elements are owners or values, never `&`, and roaming; `core` declares `ListRef` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |

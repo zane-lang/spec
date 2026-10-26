@@ -212,7 +212,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.24 roaming owner
 
-- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, return, or abort written `^T` with `T` a reference type, a field or `ArrayRef` element of a roaming root, or any list element or variant payload.
+- **Meaning:** An owner that may move anywhere. Neither it nor anything inside it can be referenced. It is a symbol, parameter, return, or abort written `^T` with `T` a reference type, a field or `ArrayRef` element of a roaming root, or any `ListRef` element or variant payload.
 - **Why this name:** The opposite of *settled* in the same register: an owner still travelling, which no reference can name.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
@@ -284,7 +284,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.36 reference source
 
-- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only, or an `&T` parameter itself. List elements and variant payloads are excluded. A roaming owner, and anything reached from one, never originates a reference.
+- **Meaning:** A settled place a new `&` may be minted from: a bare settled symbol, a path from a settled root or an `&T` parameter through struct fields and `ArrayRef` elements only, or an `&T` parameter itself. `ListRef` elements and variant payloads are excluded. A roaming owner, and anything reached from one, never originates a reference.
 - **Why this name:** The term names the *source* end — where a reference may come from — separately from where a stored reference may go, which is the store rule's business.
 - **Canonical home:** [`memory.md`](memory.md) §2.8
 

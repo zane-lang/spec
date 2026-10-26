@@ -283,9 +283,12 @@ The residuals we do accept, and they are stated where they land rather than buri
 The interesting part is the line that did **not** move. Deep copy dissolves the *stated* reason for banning a reference-type field in a value type — "copying would silently duplicate hosting" — and for a while it looked as though `List` inside a `struct` should follow value recursion through the same door. It should not, and the reason is sharper than the one it replaces: **a reference type exists in order not to be copied.** That is not a side effect of hosting; it is the whole point of the mark. A reference type has one host at a time, a stable identity that guests resolve through, and it reaches a new place by being *moved*. A copy of a value holding one could only duplicate the object — minting a second identity, so guests tethered to the original quietly fail to follow — or share it, so two values reach one host and "exactly one host" stops describing anything. Both outcomes destroy the thing the `#` was for. `List` and `String` are reference types, so they are covered by the same sentence, and they stay out ([`memory.md` §2.10](https://github.com/zane-lang/spec/blob/804631ffa94d4f7df08b38f057e2e4bb95add545/spec/memory.md#210-value-downstream-enforcement-transitive-value-only-field-restriction)).
 
 > [!NOTE]
-> Superseded: the classification of String as a reference type. The ban on reference-type fields remains. See "[Dynamic bytes without reference identity](#dynamic-bytes-without-reference-identity)".
+> Superseded: the classification of String and List as reference types. The ban on reference-type fields remains; the reference list is now `ListRef`. See "[Dynamic bytes without reference identity](#dynamic-bytes-without-reference-identity)" and "[`List` becomes a value, and `ListRef` takes the reference form](generics.md#list-becomes-a-value-and-listref-takes-the-reference-form)".
 
 A boxed member never had that problem, which is why it walks through while a `List` field does not. A box holds an instance of the member's **own** type — it is placement, not a change of type, and placement was already unobservable. Nothing about it says "copy me by sharing." So the `#` axis comes out of this meaning something tighter than it did: identity, aliasing, and copy-versus-move. Not "may contain itself." That question turned out to belong to layout, and layout answered it the same way for both kinds.
+
+> [!NOTE]
+> Superseded: that a `List` field cannot enter a value. A `List` is now a value type, and the reference list kept out of values is `ListRef`. See "[`List` becomes a value, and `ListRef` takes the reference form](generics.md#list-becomes-a-value-and-listref-takes-the-reference-form)".
 
 ## Bare symbols become guest sources again
 
@@ -430,6 +433,9 @@ The cost we accepted is that anchor work on a move scales with the number of gue
 ## Dynamic bytes without reference identity
 
 The [string decision](types.md#text-without-identity) retired one example in [the deep-copy chapter](#what-a-copy-is-for-and-the-ban-that-survived-it): `String` no longer belongs beside `List` as a reference type forbidden inside a value. We kept the prohibition on reference fields, and changed which side strings occupy. Their dynamic size did not require identity; the existing ownership and deep-copy model already had the machinery their bytes need.
+
+> [!NOTE]
+> Superseded: `List` as the reference type forbidden inside a value. A `List` is now a value type too, and the reference list is `ListRef`. See "[`List` becomes a value, and `ListRef` takes the reference form](generics.md#list-becomes-a-value-and-listref-takes-the-reference-form)".
 
 That extends the accounting from boxes to backing stores. A string's handle stays inline, its bytes occupy the dynamic region, and a value copy allocates independent bytes in the destination's region ([`memory.md` §2.3](https://github.com/zane-lang/spec/blob/ea495c969e648b333fae0376446699e3297b8bd8/spec/memory.md#23-value-types-are-copied-whole-mutable-in-place-and-freely-overwritable)). No anchor follows those bytes, and a stored guest cannot name the string. Passing it to an ordinary parameter still borrows. We accepted copying where a value is stored, while keeping allocation, replacement ordering, and destruction under the rules already used for other owned value payloads.
 

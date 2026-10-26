@@ -383,7 +383,7 @@ do() {
 A `^T` parameter is recorded the same way for the references it carries, and that is what settles an argument carrying a reference. Neither frame sees the problem alone — the argument's reference names an owner in the call-site scope, and inside the callee the parameter lands in another parameter's object:
 
 ```zane
-cars List<Car>;
+cars ListRef<Car>;
 do() {
     innerHolder Holder(Engine(Int(2)));
     arriving ^Car = Car(innerHolder.engine);
@@ -445,7 +445,7 @@ A reference-type object is destroyed at one of three points, each known from the
 
 - its owner's **scope drains** without the object having moved elsewhere, which ends every owner scoped to it;
 - its owner is **overwritten** ([`memory.md`](memory.md) §2.2);
-- its place **disappears**: a list element is removed or a variant changes case, and the operation does not move the occupant out first.
+- its place **disappears**: a `ListRef` element is removed or a variant changes case, and the operation does not move the occupant out first.
 
 A settled owner never moves, so it dies at its own scope's drain or at an overwrite. A roaming owner may move first, and dies wherever it last landed. An object in a disappearing place is roaming ([`memory.md`](memory.md) §2.8.1), so nothing references it and destroying it with the place leaves nothing to dangle.
 
@@ -498,6 +498,6 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Parameter modes | A borrow (`T`, and `this`) lasts for the call; a take (`^T`) moves the caller's roaming owner into the body, as an owner of the body; a reference (`&T`) stands for the caller's path |
 | Owning argument | A verb **borrows** an owner (`T`, caller keeps it), **relays** it (`^T` and returns `^T`, caller may bind it to own the object again), or **consumes** it (`^T`, no owner returned); passing to `^T` spends the caller's symbol whatever the body does |
 | Return value | A return need not be bound; an unbound `^T` result is destroyed at the end of its statement, and an ignored value-type result is discarded |
-| Destruction | Deterministic: at the owner's scope drain, at an overwrite, or when a list element or variant payload disappears without being moved out; a settled owner dies only at its drain or an overwrite |
+| Destruction | Deterministic: at the owner's scope drain, at an overwrite, or when a `ListRef` element or variant payload disappears without being moved out; a settled owner dies only at its drain or an overwrite |
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#no-rule-to-spare-the-specific-hole-each-restriction-plugs) — "No rule to spare: the specific hole each restriction plugs".
