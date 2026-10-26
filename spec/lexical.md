@@ -288,7 +288,7 @@ After `\%`, the scanner consumes the longest value identifier allowed by §4, in
 "\%name!"       // interpolation of name, followed by !
 ```
 
-Structural escapes are recognized once. Neither a backslash produced by `\\` nor bytes inserted by interpolation are rescanned for another language escape. The consumer may interpret the remaining text according to its own rules; the compiler does not apply a general text-escape language.
+Structural escapes are recognized once. Neither a backslash produced by `\\` nor bytes inserted by interpolation are rescanned for another language escape. The consumer interprets the remaining text by its own rules, or has its text escapes read by `@primitives$String.escaped` ([`types.md`](types.md) §2.7).
 
 > **See also:** [`syntax.md`](syntax.md) §2.15 for surface forms. [`types.md`](types.md) §2.8 for interpolation resolution, copying, and concept typing.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#literal-structure-and-consumer-interpretation) — "Literal structure and consumer interpretation".

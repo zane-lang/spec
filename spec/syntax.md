@@ -303,7 +303,7 @@ These compiler-provided concept types represent source literals before they are 
 
 The **leaf** concept types — `Type`, `@concepts$Int`, and `@concepts$Float` — each represent a single compile-time value wherever they appear, including as an argument to a verb. `@concepts$String` instead carries literal text and optional interpolation ([`types.md`](types.md) §2.8); an interpolation may be a runtime value. The entries of an array or map literal are ordinary expressions and may likewise be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no compile-time guarantee; a block argument (§2.12) is not a value at all.
 
-A number or string literal becomes storage through a storage primitive's constructor from its concept (see [`types.md`](types.md) §2.7). Each primitive has one, and an integer literal may become either integer primitive, a float literal either float primitive:
+A number or string literal becomes storage through a storage primitive's constructor from its concept (see [`types.md`](types.md) §2.7). Each primitive has one, and the string primitive a second, `escaped`. An integer literal may become either integer primitive, a float literal either float primitive:
 
 ```zane
 @primitives$I32(value @concepts$Int)
@@ -311,6 +311,7 @@ A number or string literal becomes storage through a storage primitive's constru
 @primitives$F32(value @concepts$Float)
 @primitives$F64(value @concepts$Float)
 @primitives$String(value @concepts$String)
+@primitives$String.escaped(text @concepts$String)
 ```
 
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage".
