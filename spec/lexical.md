@@ -181,7 +181,7 @@ Unit main() {
 }
 ```
 
-A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing, and nothing may continue the statement past it either — a call or a subscript written there has nothing left to attach to ([`syntax.md`](syntax.md) §4.8). Whatever comes after the brace is the next statement.
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing. Whatever comes after the brace is the next statement, so a `(` or a `[` written there opens a statement of its own rather than calling or subscripting what the brace closed ([`syntax.md`](syntax.md) §4.8). A value closed by its own brace may still go on through a token that opens no statement — a `.`, `:`, `!`, `?`, `??`, or an operator — and the statement then ends where that longer expression does ([`syntax.md`](syntax.md) §4.9).
 
 ```zane
 Unit main() {

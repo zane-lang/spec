@@ -903,6 +903,22 @@ do() {
 }
 ```
 
+### 4.9 Continuing a value that closes on a `}`
+
+A field-constructor call (§3.4), an `init{ }` (§3.7), a map literal (§2.10), and a `match` expression (§4.7) each close on a `}`. Such a value takes a field access `.`, a method call `:` or `!`, a `?` or `??` handler, and an operator written directly after its brace. A call `( )` or a subscript `[ ]` is written on the parenthesized value (§4.6), because both of those brackets can open a statement ([`lexical.md`](lexical.md) §6.3).
+
+```zane
+x Int = Vector2{x = 0; y = 0;}.x;
+area Int = Rect{w = 2; h = 3;}:area();
+wide Bool = Rect{w = 2; h = 3;}.w > 1;
+run Int = (match mode { fast => quick; slow => careful; })(input);
+run Int = match mode { fast => quick; slow => careful; }(input);   // ILLEGAL: a call needs the match parenthesized
+```
+
+A trailing argument closes its call on a `}` as well, and that brace ends the statement, so nothing continues the call (§4.8).
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#a-value-closed-by-a-brace-takes-----and-) — "A value closed by a brace takes `.`, `:`, `!`, `?` and `??`".
+
 ---
 
 ## 5. Control Flow
