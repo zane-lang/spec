@@ -707,7 +707,8 @@ static void zlist_push(ZList *l, Entity e) {
         }
         if (nb) {
             memcpy(nb, l->base, l->len * sizeof(Entity));
-            zd_free(l->base, l->block, ZM_LINE);
+            if (l->block > ZM_CHUNK) zd_release(l->base, l->block);
+            else zd_free(l->base, l->block, ZM_LINE);
             l->base = nb;
         }
         l->block = want;
