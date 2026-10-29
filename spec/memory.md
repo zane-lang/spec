@@ -585,6 +585,7 @@ Dynamic chunks and oversized spans begin at cache-line-aligned addresses, and a 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-free-zero-sentinel-and-cache-line-aligned-buffers) — "A free zero sentinel, and cache-line-aligned buffers".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-lists-oversized-span-grows-in-place-within-a-reservation) — "A list's oversized span grows in place within a reservation".
+> **Story:** [`stories/memory.md`](../stories/memory.md#an-outgrown-span-gives-its-memory-back-as-the-list-leaves-it) — "An outgrown span gives its memory back as the list leaves it".
 
 ### 3.7 Nested scopes share a bounded fixed-size region
 
