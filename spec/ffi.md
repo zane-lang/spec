@@ -231,7 +231,7 @@ A foreign verb returning a handle without an abort type stops the program when t
 
 ### 3.6 Function values cross as C functions
 
-A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are scalar primitives, `@primitives$Bool`, or C-compatible value types, whose result type is one of those or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types: for each scalar primitive a full-width C type of it (§3.3), `bool` for `@primitives$Bool`, the corresponding `struct` for a C-compatible value type, and `void` for a `@primitives$Unit` result. A narrower C integer type, such as `char` or `int16_t`, corresponds to no function value's parameter or result. C receives a function that calls the Zane function value it was passed.
+A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are scalar primitives, `@primitives$Bool`, or C-compatible value types, whose result type is one of those or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types: for each scalar primitive, a full-width C type of it (§3.3), `bool` for `@primitives$Bool`, the corresponding `struct` for a C-compatible value type, and `void` for a `@primitives$Unit` result. A narrower C integer type, such as `char` or `int16_t`, corresponds to no function value's parameter or result. C receives a function that calls the Zane function value it was passed.
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
