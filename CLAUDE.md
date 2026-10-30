@@ -68,8 +68,9 @@ test the compiler does not fold is reported as not folded.
 ## Validate before committing (spec edits)
 
 Each grep hunts a *form* the spec has retired; the rule it guards lives in the
-spec, not here — read the home before deciding what a hit means. Stories are
-**exempt from every grep** (append-only; "fixing" a merged chapter violates it).
+spec, not here — read the home before deciding what a hit means. Merged stories
+are **exempt from every grep below** (append-only; "fixing" a merged chapter
+violates it); chapters your own branch adds are not (Before you edit §3).
 
 **Retired generics forms** (`spec/generics.md`, casing `spec/lexical.md`); no hits:
 
