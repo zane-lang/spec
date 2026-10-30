@@ -55,7 +55,7 @@ docstring. Agent-only rules:
   which differ (unchanged rows 1.9–5x apart), so compare rows within one run,
   never absolute figures across pins. `explanations.txt` quotes the pinned
   numbers, so re-pinning invalidates its notes. T8 and T12 (threaded) are noisiest.
-- A known-bad row is corrected in place: drop its measurement field and set
+- A known-bad row is corrected in place: remove the row from `rows` and set
   `provenance_note` on the **test**; `runbench.py` prints it on every render.
 
 ## The `langbench/` harness
