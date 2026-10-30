@@ -124,7 +124,7 @@ grep -RIn -E "\b[A-Z][A-Za-z0-9_]*(<[^>]*>)?\{[^}]*," spec/
 A hit is **not automatically a defect** — a `,` inside a single entry is legal
 (`lexical.md` §6.1) and the greps cannot see bracket depth. They are
 single-line on purpose: a multi-line pattern would hit multi-line `enum` bodies
-(§6.2) permanently. Check multi-line `{ }` bodies by reading; nothing sweeps `[ ]`.
+(§6.2) permanently. Check multi-line `{ }` bodies by reading; nothing sweeps `[ ]` brackets.
 
 If a grep hits an old form, rewrite it in the unified system. If a `§` target
 moved, fix every referrer and re-grep for the old numbers. If the change
