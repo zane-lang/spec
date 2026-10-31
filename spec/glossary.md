@@ -266,7 +266,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.33 reference
 
-- **Meaning:** The source-facing `&T`: access to a settled owner (§3.23) without storing that object or controlling its lifetime. A reference may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its owner. It is represented by a native pointer to the owner.
+- **Meaning:** The source-facing `&T`: access to a settled owner (§3.23) without storing that object or controlling its lifetime. A reference may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its owner. It is represented as its owner's 32-bit offset from the program's image.
 - **Why this name:** Readers already know a reference as something that reaches an object it does not own and must not outlive it, which is the rule. A **reference type** is exactly the kind of type a reference may name.
 - **Canonical home:** [`memory.md`](memory.md) §2.4
 
@@ -302,7 +302,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.39 boxed member
 
-- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. Required where a member's declared type can lead back to the enclosing type along **owning** edges, and permitted elsewhere. Nothing marks it in the source, and placement is unobservable (§3.25).
+- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. Required for a variant payload on a cycle of **owning** edges, and for a field on such a cycle that passes through no payload; permitted elsewhere for a payload. Nothing marks it in the source, and placement is unobservable (§3.25).
 - **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **member** rather than *field* because a `variant` case payload is boxed on the same terms as a `struct` field.
 - **Canonical home:** [`adt.md`](adt.md) §4; representation in [`memory.md`](memory.md) §3.3 and §3.6
 
