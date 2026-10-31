@@ -268,7 +268,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 - **Meaning:** The source-facing `&T`: access to a settled owner (§3.23) without storing that object or controlling its lifetime. A reference may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its owner. It is represented as its owner's 32-bit offset from the program's image.
 - **Why this name:** Readers already know a reference as something that reaches an object it does not own and must not outlive it, which is the rule. A **reference type** is exactly the kind of type a reference may name.
-- **Canonical home:** [`memory.md`](memory.md) §2.4
+- **Canonical home:** [`memory.md`](memory.md) §2.4; representation in [`memory.md`](memory.md) §4.1
 
 ### 3.34 taken parameter
 
