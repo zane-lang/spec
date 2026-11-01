@@ -717,7 +717,8 @@ static void zlist_push(ZList *l, Entity e) {
                 memcpy((char*)nb + at, (char*)l->base + at, n);
                 zd_give_back((char*)l->base + at, n);
             }
-            zd_give_back(l->base, l->block);
+            size_t done = bytes & ~(size_t)4095;
+            zd_give_back((char*)l->base + done, l->block - done);
             l->base = nb;
         } else if (nb) {
             memcpy(nb, l->base, l->len * sizeof(Entity));
