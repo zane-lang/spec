@@ -274,7 +274,8 @@ static void zm_fixed_release(void *p, size_t s) { (void)p; (void)s; }
 static void zd_release(void *p, size_t s) { (void)p; (void)s; }
 static void zd_give_back(void *p, size_t s) {
     uintptr_t page = 4096, lo = ((uintptr_t)p + page - 1) & ~(page - 1), hi = ((uintptr_t)p + s) & ~(page - 1);
-    if (hi > lo) mmap((void *)lo, hi - lo, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    if (hi > lo && mmap((void *)lo, hi - lo, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED)
+        abort();
 }
 
 static ZSizeStack *zd_stack(size_t size, size_t align) {
