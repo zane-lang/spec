@@ -302,7 +302,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.39 boxed member
 
-- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. Required for a variant payload on a cycle of **owning** edges, and for a field on such a cycle that passes through no payload; permitted elsewhere for a payload. Nothing marks it in the source, and placement is unobservable (§3.25).
+- **Meaning:** A **member** — a `struct`/`#struct` field or a `variant`/`#variant` case payload alike — stored as a fixed-size handle inline, with the instance it names placed in the scope's dynamic region. Required for a variant payload on a cycle of **owning** edges that runs through no list's elements, and for a field on such a cycle that passes through no payload; permitted elsewhere for a payload. Nothing marks it in the source, and placement is unobservable (§3.25).
 - **Why this name:** "Boxed" is the ordinary word for a value stored out of line behind a handle, and **member** rather than *field* because a `variant` case payload is boxed on the same terms as a `struct` field.
 - **Canonical home:** [`adt.md`](adt.md) §4; representation in [`memory.md`](memory.md) §3.3 and §3.6
 
@@ -320,7 +320,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.42 carried reference
 
-- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — the same graph the boxed-member rule reads (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is owned elsewhere and travels separately. A value's carried references are what the store rule compares alongside the value's owner.
+- **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — members, payloads, and the elements of arrays and lists (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is owned elsewhere and travels separately. A value's carried references are what the store rule compares alongside the value's owner.
 - **Why this name:** The value *carries* the reference the way luggage carries its contents — the reference travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
 

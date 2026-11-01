@@ -524,7 +524,7 @@ Fields are laid out in declaration order. A value-type instance is stored inline
 
 A reference-type instance carries no metadata of its own: a reference names it by its address (§4.1). A dynamically-sized reference type such as `ListRef` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
 
-A **boxed member** is laid out the same way: a fixed-size handle inline, with the instance it names placed in the dynamic region (§3.6). Which members are boxed is [`adt.md`](adt.md) §4's rule — required for a variant's payload on a cycle of owning edges, where no finite inline layout exists, and for a field on a cycle that passes through no payload; permitted elsewhere for a variant's payload. §3.5 makes the choice unobservable.
+A **boxed member** is laid out the same way: a fixed-size handle inline, with the instance it names placed in the dynamic region (§3.6). Which members are boxed is [`adt.md`](adt.md) §4's rule — required for a variant's payload on a cycle of owning edges that runs through no list's elements, where no finite inline layout exists, and for a field on a cycle that passes through no payload; permitted elsewhere for a variant's payload. §3.5 makes the choice unobservable.
 
 Boxing is available on **both** sides of the `#` axis. Two separate questions decide what a boxed member means, and they are answered by **different** types:
 

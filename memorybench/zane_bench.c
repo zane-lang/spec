@@ -710,10 +710,18 @@ static void zlist_push(ZList *l, Entity e) {
             if (!nb && !zd_grow_in_place(l->base, l->block, want))
                 nb = (Entity*)zm_bump(&zm.dyn, want, ZM_LINE);
         }
-        if (nb) {
+        if (nb && l->block > ZM_CHUNK) {
+            size_t bytes = l->len * sizeof(Entity);
+            for (size_t at = 0; at < bytes; at += ZM_CHUNK) {
+                size_t n = bytes - at < ZM_CHUNK ? bytes - at : ZM_CHUNK;
+                memcpy((char*)nb + at, (char*)l->base + at, n);
+                zd_give_back((char*)l->base + at, n);
+            }
+            zd_give_back(l->base, l->block);
+            l->base = nb;
+        } else if (nb) {
             memcpy(nb, l->base, l->len * sizeof(Entity));
-            if (l->block > ZM_CHUNK) zd_give_back(l->base, l->block);
-            else zd_free(l->base, l->block, ZM_LINE);
+            zd_free(l->base, l->block, ZM_LINE);
             l->base = nb;
         }
         l->block = want;
