@@ -272,6 +272,11 @@ static inline void *zm_fixed_alloc(size_t s) {
 }
 static void zm_fixed_release(void *p, size_t s) { (void)p; (void)s; }
 static void zd_release(void *p, size_t s) { (void)p; (void)s; }
+static void zd_give_back(void *p, size_t s) {
+    uintptr_t page = 4096, lo = ((uintptr_t)p + page - 1) & ~(page - 1), hi = ((uintptr_t)p + s) & ~(page - 1);
+    if (hi > lo && mmap((void *)lo, hi - lo, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) == MAP_FAILED)
+        abort();
+}
 
 static ZSizeStack *zd_stack(size_t size, size_t align) {
     uint32_t h = ((uint32_t)size * 0x9E3779B1u) ^ ((uint32_t)align * 0x85EBCA6Bu);
@@ -705,7 +710,17 @@ static void zlist_push(ZList *l, Entity e) {
             if (!nb && !zd_grow_in_place(l->base, l->block, want))
                 nb = (Entity*)zm_bump(&zm.dyn, want, ZM_LINE);
         }
-        if (nb) {
+        if (nb && l->block > ZM_CHUNK) {
+            size_t bytes = l->len * sizeof(Entity);
+            for (size_t at = 0; at < bytes; at += ZM_CHUNK) {
+                size_t n = bytes - at < ZM_CHUNK ? bytes - at : ZM_CHUNK;
+                memcpy((char*)nb + at, (char*)l->base + at, n);
+                zd_give_back((char*)l->base + at, n);
+            }
+            size_t done = bytes & ~(size_t)4095;
+            zd_give_back((char*)l->base + done, l->block - done);
+            l->base = nb;
+        } else if (nb) {
             memcpy(nb, l->base, l->len * sizeof(Entity));
             zd_free(l->base, l->block, ZM_LINE);
             l->base = nb;
