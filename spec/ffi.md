@@ -73,6 +73,8 @@ A warning the C compiler gives refuses nothing. The toolchain shows the warnings
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#c-strings-allocated-results-and-callback-arguments-cross-without-shims) — "C strings, allocated results and callback arguments cross without shims".
+
 ### 2.3 A package's `c.coda`
 
 A package whose C build needs settings holds a file named `c.coda` directly in its directory. It is written by hand, as the package's source is, and no command records anything in it. Its one table, `c`, gives one setting per row:
@@ -274,6 +276,8 @@ The check sees each target's C types, so a declaration that is correct for one t
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#c-never-writes-zane-memory) — "C never writes Zane memory".
 
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#c-strings-allocated-results-and-callback-arguments-cross-without-shims) — "C strings, allocated results and callback arguments cross without shims".
+
 ---
 
 ## 4. Foreign Handles
@@ -300,6 +304,8 @@ A handle type without a free function is a **foreign capability**. Its values re
 Every handle type is a reference type ([`types.md`](types.md) §2.1). A handle is moved rather than copied, is settled or roaming, and may be referenced through `&` like any reference type ([`memory.md`](memory.md) §2). It has no fields: C reaches the object it refers to, and Zane reaches it only through foreign verbs.
 
 > **See also:** [`syntax.md`](syntax.md) §2.16 for the declaration form.
+
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#c-strings-allocated-results-and-callback-arguments-cross-without-shims) — "C strings, allocated results and callback arguments cross without shims".
 
 ### 4.2 A handle is made by a foreign verb and released when it is destroyed
 
