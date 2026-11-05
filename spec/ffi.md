@@ -16,7 +16,7 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 
 - **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from a `c.coda` file in the package's directory. No build script runs.
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
-- **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
+- **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call; the only Zane memory C writes is the bytes it allocates for a string it returns. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
 - **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation.
 - **`The declaration is trusted`.** The compiler cannot see what C code touches. A foreign verb declared without a capability that in fact reads outside state is evaluated at compile time, and the value the build machine produced is built into the program (§5.5).
 
@@ -225,7 +225,8 @@ A string parameter whose C type is `const char *` reaches C as a pointer to its 
 
 A foreign verb's result is a scalar primitive, `@primitives$Bool`, `@primitives$Unit`, `@primitives$String`, a C-compatible value type, or a handle. An array, a list, and a function type cross into C only as parameters.
 
-- A returned `zane_bytes` is a view of bytes C owns. The call copies them into a new string primitive before it returns, so the bytes stay valid after the C function has returned, until the copy is made: they are C memory that outlives the call, such as memory a handle owns, and never storage that ends when the C function returns. A view whose `size` is zero gives an empty string, whatever its `data`.
+- A returned `zane_bytes` is a view of bytes C owns, or of bytes `zane_bytes_alloc` gave it (below). The call copies bytes C owns into a new string primitive before it returns, so they stay valid after the C function has returned, until the copy is made: they are C memory that outlives the call, such as memory a handle owns, and never storage that ends when the C function returns. A view whose `size` is zero gives an empty string, whatever its `data`.
+- `<zane_ffi.h>` declares `uint8_t *zane_bytes_alloc(size_t size)`, which gives C `size` writable bytes for the string the call returns. A returned view that starts at the bytes the call's last `zane_bytes_alloc` gave, and whose `size` is at most what it asked for, becomes the string without a copy; any other view is copied as above. C calls `zane_bytes_alloc` only on the thread of the foreign call, during it, and never frees what it gives: bytes C does not return are released with the program's own memory, as the string's would be.
 - A returned handle is a new roaming owner (§4.2), of a type with a free function. A foreign verb that returns one may declare `@primitives$Unit` as its abort type, and the call aborts when the C function returns a null pointer:
 
 ```zane
@@ -549,8 +550,8 @@ A foreign handle is a reference type, so a spawned call never mutates one ([`con
 The compiler takes a foreign verb's signature as a description of its C function, and builds the rest of its guarantees on it. A C function reached through a foreign verb upholds each of the following. One that breaks any of them gives the program no meaning the spec defines.
 
 - **It touches outside state only as declared** (§5.5).
-- **It writes only what it is given writable**: the C object of its `mut` subject, the outside handles a `mut` method on a foreign capability is passed, and C memory that C owns. It writes no view (§3.4), and no handle passed as `const`.
-- **It keeps nothing Zane lent it.** A view, and a function pointer for a function value (§3.6), are used only until the call returns.
+- **It writes only what it is given writable**: the C object of its `mut` subject, the outside handles a `mut` method on a foreign capability is passed, C memory that C owns, and the bytes `zane_bytes_alloc` gives it during the call (§3.5). It writes no view (§3.4), and no handle passed as `const`.
+- **It keeps nothing Zane lent it.** A view, a function pointer for a function value (§3.6), and the bytes `zane_bytes_alloc` gives it are used only until the call returns.
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
 - **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and stays alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3), and no C object holds the address of a replacement passed to a setter.
@@ -615,7 +616,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | C symbols | Belong to the package and version that defines them, so versions coexist; a linker set (a section named as a C identifier) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
-| Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied; a string parameter C declares `const char *` arrives NUL-terminated |
+| Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied, unless its bytes are ones `zane_bytes_alloc` gave the call; a string parameter C declares `const char *` arrives NUL-terminated |
 | Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
 | Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address and the handle's place in the release order; one overwrite runs its setters in the reverse of the order the handles were made; a type without one is never overwritten in a settled place |
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
