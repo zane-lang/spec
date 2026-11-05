@@ -522,7 +522,7 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 A value-type instance is stored inline, except for owned backing stores (§3.6) and any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size owner slot, so value-type slots and owner slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and ownership semantics, not by requiring a separate indirect allocation.
 
-The compiler chooses the order in which a type's fields are laid out, once for each type, so every instance of the type has one layout and uniform stride holds (see [`generics.md`](generics.md) §7). The order is placement (§3.5), as boxing is: no operator exposes a field's offset, and a C-compatible value crosses into C as a copy laid out as its C `struct`, its fields in declaration order ([`ffi.md`](ffi.md) §3.3).
+The compiler chooses the order in which a type's fields are laid out, once for each type, so every instance of the type has one layout and uniform stride holds (see [`generics.md`](generics.md) §7). Every object that lays the type out uses the same order, as objects a compiler links must agree on every layout ([`dependencies.md`](dependencies.md) §14). The order is placement (§3.5), as boxing is: no operator exposes a field's offset, and a C-compatible value crosses into C as a copy laid out as its C `struct`, its fields in declaration order ([`ffi.md`](ffi.md) §3.3).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-compiler-orders-a-structs-fields-and-c-receives-a-copy-in-its-own-order) — "The compiler orders a struct's fields, and C receives a copy in its own order".
 

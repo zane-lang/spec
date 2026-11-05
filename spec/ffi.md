@@ -248,7 +248,7 @@ The compiler checks each foreign verb against the declaration of its symbol in t
 - a parameter's or the result's C type is not one §3.3 gives for the Zane type;
 - a handle's pointer is `const` where §4.2 or §4.4 requires it writable, or writable where §4.4 requires it `const`;
 - a handle stands where §4.4 does not allow it;
-- a C-compatible value type, its fields laid out in declaration order, differs from its C `struct` in a field's offset or type, or in size or alignment.
+- the C layout of a C-compatible value type's fields in declaration order differs from its C `struct` in a corresponding field's offset or type, or in size or alignment.
 
 The check sees each target's C types, so a declaration that is correct for one target and wrong for another fails in the build for that other target.
 
