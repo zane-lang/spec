@@ -480,7 +480,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.21 interface header
 
-- **Meaning:** A `.h` file directly in a package's directory. Every C function a foreign verb names is declared in one, and every C type a foreign handle names is declared in one or in a header one includes; the rest of any other header is read by the C compiler alone.
+- **Meaning:** A `.h` file directly in a package's directory. Every C function a foreign verb names is declared in one, and every C type a foreign handle names is declared in one or in a header it includes; the rest of any other header is read by the C compiler alone.
 - **Why this name:** It is the header that states the interface between the package's C and its Zane, as opposed to the C library's own headers.
 - **Canonical home:** [`ffi.md`](ffi.md) §2.1
 
