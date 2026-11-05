@@ -33,7 +33,7 @@ Every package may hold C code: a library, program, or test package, and a subpac
 - its **C sources**: the `.c` files directly in the package's directory, together with any listed in its `c.coda` (§2.3);
 - its **interface headers**: the `.h` files directly in the package's directory.
 
-A foreign verb of the package names a C function that one of its interface headers declares (§3.7). Headers elsewhere, including those an interface header includes, are seen by the C compiler and by nothing else.
+A foreign verb of the package names a C function that one of its interface headers declares (§3.7). Headers elsewhere, including those an interface header includes, are seen by the C compiler; of their declarations, a foreign declaration names only a struct, as a foreign handle's C type (§4.1).
 
 ```zane
 zlib/
@@ -266,9 +266,9 @@ type File     = #handle{ cType = "zane_file_t"; free = "zane_fclose"; }
 type Deflater = #handle{ cType = "zane_deflater_t"; set = "zane_deflater_set"; free = "zane_deflater_free"; }
 ```
 
-- **`cType`** is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not.
-- **`free`** is the **free function**: a C function of the package's interface headers that takes one non-`const` pointer to the C type and returns `void`. It releases an object when its handle is destroyed (§4.2). A library's own cleanup function that returns a status, as SQLite's `sqlite3_close` returns an `int`, is reached through a C function of the package that calls it and returns `void`.
-- **`set`** is the **setter**: a C function of the package's interface headers that takes two non-`const` pointers to the C type and returns `void`. It replaces an object in place when a settled handle is overwritten (§4.3). A handle type with a setter has a free function.
+- **`cType`** is a `struct` type, or a `typedef` name of one, that an interface header declares, completely or not, itself or through a header it includes, such as a C library's own header.
+- **`free`** is the **free function**: a C function of the package's interface headers that takes one non-`const` pointer to the C type and returns `void` or an integer type, such as the status SQLite's `sqlite3_close` returns, which Zane ignores. It releases an object when its handle is destroyed (§4.2).
+- **`set`** is the **setter**: a C function of the package's interface headers that takes two non-`const` pointers to the C type and returns `void` or an integer type, which Zane ignores. It replaces an object in place when a settled handle is overwritten (§4.3). A handle type with a setter has a free function.
 
 A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to the foreign verbs that make it (§4.2):
 
