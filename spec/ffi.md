@@ -237,7 +237,23 @@ A foreign verb returning a handle without an abort type stops the program when t
 
 ### 3.6 Function values cross as C functions
 
-A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are scalar primitives, `@primitives$Bool`, or C-compatible value types, whose result type is one of those or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types: for each scalar primitive, a full-width C type of it (§3.3), `bool` for `@primitives$Bool`, the corresponding `struct` for a C-compatible value type, and `void` for a `@primitives$Unit` result. A narrower C integer type, such as `char` or `int16_t`, corresponds to no function value's parameter or result. C receives a function that calls the Zane function value it was passed.
+A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are among those below, whose result type is a scalar primitive, `@primitives$Bool`, a C-compatible value type, or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types. C receives a function that calls the Zane function value it was passed.
+
+| Parameter or result | C type |
+|---|---|
+| a scalar primitive | a full-width C type of it (§3.3) |
+| `@primitives$Bool` | `bool` |
+| a C-compatible value type | the corresponding `struct` |
+| `@primitives$Unit`, as the result only | `void` |
+| `@primitives$String`, as a parameter | `zane_bytes` |
+| `@primitives$List<T>`, `T` a scalar primitive, as a parameter | `zane_span`, its elements full-width C types of `T` |
+| `@primitives$Array<T, n>`, `T` a scalar primitive, as a parameter | `const E *`, `E` a full-width C type of `T` |
+| a data handle `H` (§4), as a parameter | `C *` or `const C *`, `C` the handle's C type |
+| a roaming owner `^H` of a data handle, as a parameter | `C *` or `const C *` |
+
+A narrower C integer type, such as `char` or `int16_t`, corresponds to no function value's parameter or result, and a string reaches a function value only as a `zane_bytes`.
+
+C lends what it passes for the call, as Zane lends C a view (§3.4): the function value receives a string, a list, or an array of its own, copied from the bytes or elements C passed before it runs, so it keeps nothing of C's. A data handle `H` is a borrow of the C object C passes, which the function value never releases. A roaming owner `^H` takes the C object: C gives up the object, and the handle releases it through its free function when it is destroyed, as a handle a foreign verb returns does (§4.2). C passes no null pointer for either; a null one stops the program, as a foreign verb's null handle result does (§3.5).
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
@@ -616,6 +632,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | C symbols | Belong to the package and version that defines them, so versions coexist; a linker set (a section named as a C identifier) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
+| Function values | Take what a foreign verb takes, a handle among them a data handle, borrowed or as a roaming owner, each copied or made before the function runs; give a scalar, `Bool`, a C-compatible value type, or `Unit` |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied, unless its bytes are ones `zane_bytes_alloc` gave the call; a string parameter C declares `const char *` arrives NUL-terminated |
 | Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
 | Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address and the handle's place in the release order; one overwrite runs its setters in the reverse of the order the handles were made; a type without one is never overwritten in a settled place |
