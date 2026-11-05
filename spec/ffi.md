@@ -183,6 +183,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | `@primitives$Bool` | `bool` | its value |
 | `@primitives$Unit` | `void`, as a result only | nothing |
 | `@primitives$String` | `zane_bytes` | a view of its bytes (§3.4); a returned view is copied (§3.5) |
+| `@primitives$String`, as a parameter only | `const char *` | its bytes followed by a NUL byte (§3.4) |
 | `@primitives$Array<T, n>`, `T` a scalar primitive | `const E *`, `E` a full-width C type of `T` | a view of its `n` elements (§3.4) |
 | `@primitives$List<T>` or `@primitives$ListRef<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
 | a C-compatible value type (below) | a `struct` of the same layout | its value |
@@ -217,6 +218,8 @@ typedef struct zane_span  { const void    *data; size_t count; } zane_span;
 ```
 
 A string's view holds its bytes, with no terminator. A list's view holds its elements, which are laid out as an array of `T`. C reads a view and never writes through it or keeps it after the call returns.
+
+A string parameter whose C type is `const char *` reaches C as a pointer to its bytes followed by a NUL byte, valid until the call returns, as a view is. C reads it as a C string, up to its first NUL, so a string holding a NUL byte reaches C as the bytes before it. The toolchain makes the terminated bytes for the call, so a foreign verb whose C function takes a `zane_bytes` pays nothing for them. C never writes through the pointer or keeps it after the call returns.
 
 ### 3.5 Results
 
@@ -607,12 +610,12 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Concept | Rule |
 |---|---|
 | A package's C code | Its C sources (the `.c` files in its directory and those listed in its `c.coda`) and its interface headers (the `.h` files in its directory) |
-| Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written |
+| Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written; the C compiler's warnings refuse nothing and are shown for the project's own package sources |
 | `c.coda` | A hand-written file in the package's directory whose rows give its `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
 | C symbols | Belong to the package and version that defines them, so versions coexist; a linker set (a section named as a C identifier) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
-| Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
+| Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied; a string parameter C declares `const char *` arrives NUL-terminated |
 | Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
 | Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address and the handle's place in the release order; one overwrite runs its setters in the reverse of the order the handles were made; a type without one is never overwritten in a settled place |
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
