@@ -69,6 +69,8 @@ The toolchain runs no program the package supplies to build its C: no build scri
 
 The C code of a package is compiled once per build, with the settings of that package alone. Two packages' C code never share a compilation, so a definition in one package's settings has no effect on another's.
 
+A warning the C compiler gives refuses nothing. The toolchain shows the warnings of the C sources directly in the directory of a package of the project being built, each once per command. A source in a subdirectory, such as a vendored library's, and a dependency's C are shown only when they fail to compile.
+
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
 ### 2.3 A package's `c.coda`
