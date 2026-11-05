@@ -298,10 +298,10 @@ type Deflater = #handle{ cType = "zane_deflater_t"; set = "zane_deflater_set"; f
 - **`free`** is the **free function**: a C function of the package's interface headers that takes one non-`const` pointer to the C type and returns `void` or an integer type, such as the status SQLite's `sqlite3_close` returns, which Zane ignores. It releases an object when its handle is destroyed (§4.2).
 - **`set`** is the **setter**: a C function of the package's interface headers that takes two non-`const` pointers to the C type and returns `void` or an integer type, which Zane ignores. It replaces an object in place when a settled handle is overwritten (§4.3). A handle type with a setter has a free function.
 
-A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to the foreign verbs that make it (§4.2):
+A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to what makes it (§4.2):
 
 - an **outside handle**, made by a method on a foreign capability, whose C object is part of the state outside the program that the capability reaches, such as an open file or a database connection;
-- a **data handle**, made by any other foreign verb, whose C object holds state of the program's own, such as a compression stream or a parsed document.
+- a **data handle**, made by any other foreign verb or by C passing its object to a function value (§3.6), whose C object holds state of the program's own, such as a compression stream or a parsed document. A handle type no foreign verb returns is a data handle.
 
 Every handle type is a reference type ([`types.md`](types.md) §2.1). A handle is moved rather than copied, is settled or roaming, and may be referenced through `&` like any reference type ([`memory.md`](memory.md) §2). It has no fields: C reaches the object it refers to, and Zane reaches it only through foreign verbs.
 
@@ -311,7 +311,7 @@ Every handle type is a reference type ([`types.md`](types.md) §2.1). A handle i
 
 ### 4.2 A handle is made by a foreign verb and released when it is destroyed
 
-A handle with a free function is made only by a foreign verb that returns it (§3.5), as a writable `C *`, since it is later passed to its free function. It owns a non-null pointer to its C object from then on. A foreign verb never returns a foreign capability.
+A handle with a free function is made only from a pointer C gives up: one a foreign verb returns (§3.5), as a writable `C *`, since it is later passed to its free function, or one C passes to a function value's roaming owner parameter `^H` (§3.6), which takes only a data handle. It owns a non-null pointer to its C object from then on, and is released as below however it was made. A foreign verb never returns a foreign capability.
 
 The foreign verbs that return one handle type are all methods on a foreign capability or none of them are. A type that one makes and another does not is a compile-time error, reported at the type's declaration, because it would be outside state and program state at once.
 
