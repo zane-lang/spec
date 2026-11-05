@@ -183,13 +183,13 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | `@primitives$String` | `zane_bytes` | a view of its bytes (§3.4); a returned view is copied (§3.5) |
 | `@primitives$Array<T, n>`, `T` a scalar primitive | `const E *`, `E` a full-width C type of `T` | a view of its `n` elements (§3.4) |
 | `@primitives$List<T>` or `@primitives$ListRef<T>`, `T` a scalar primitive | `zane_span`, its elements full-width C types of `T` | a view of its elements (§3.4) |
-| a C-compatible value type (below) | a `struct` of the same layout | its value |
+| a C-compatible value type (below) | a `struct` of corresponding fields (below) | a copy of its value, laid out as the `struct` |
 | a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.4 says so | the C object it refers to (§4.2, §4.4) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
 
 A C type of the first and third rows corresponds to its primitive only on a target where it has the primitive's size, 32 or 64 bits, and no padding bits, so that every bit of the primitive is a value bit of the C type: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. A C type of the second row corresponds to `@primitives$I32` only on a target where it is at most 32 bits and has no padding bits. On any other target such a type corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. A signed C type corresponds only on a target where it is two's complement, as Zane's integers are. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A scalar primitive's **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, and `double`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
 
-A **C-compatible value type** is a value type declared with `struct` whose every field is a scalar primitive, an `@primitives$Array<T, n>` of one, or a C-compatible value type. Its C `struct` has the same number of fields, in the same order, each of a full-width C type of the Zane field's primitive, an array of one, or a `struct` corresponding in turn; their names need not match. The Zane type and the C `struct` then have the same layout, field for field. The `struct`'s padding bytes hold no Zane value, so Zane fills them with zero whenever such a value crosses into C, as an argument or as a function value's result (§3.6). C that reads the object's bytes then sees the same ones at compile time (§5.4) and at run time.
+A **C-compatible value type** is a value type declared with `struct` whose every field is a scalar primitive, an `@primitives$Array<T, n>` of one, or a C-compatible value type. Its C `struct` has the same number of fields, in the same order, each of a full-width C type of the Zane field's primitive, an array of one, or a `struct` corresponding in turn; their names need not match. A value of the type crosses as a copy laid out as that C `struct`, each field at the offset of the C field it corresponds to; the order in which Zane lays out the type's fields itself is placement ([`memory.md`](memory.md) §3.3). No C-compatible value is shared in place: C receives a copy and returns one. The `struct`'s padding bytes hold no Zane value, so Zane fills them with zero whenever such a value crosses into C, as an argument or as a function value's result (§3.6). C that reads the object's bytes then sees the same ones at compile time (§5.4) and at run time.
 
 ```zane
 type Vec3 = struct {
@@ -204,6 +204,8 @@ typedef struct { double x, y, z; } vec3;
 ```
 
 A C type whose size differs between the targets the toolchain builds for, such as `long`, `unsigned long`, `wchar_t`, or `long double`, corresponds to no Zane type, and neither do `size_t`, `ptrdiff_t`, `intptr_t`, and `uintptr_t` on a target whose pointers are not 64 bits, so a C function that takes or returns one is reached through a C function of the package that converts it. A variadic C function is reached the same way.
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-compiler-orders-a-structs-fields-and-c-receives-a-copy-in-its-own-order) — "The compiler orders a struct's fields, and C receives a copy in its own order".
 
 ### 3.4 Strings, arrays, and lists are lent for the call
 
@@ -246,7 +248,7 @@ The compiler checks each foreign verb against the declaration of its symbol in t
 - a parameter's or the result's C type is not one §3.3 gives for the Zane type;
 - a handle's pointer is `const` where §4.2 or §4.4 requires it writable, or writable where §4.4 requires it `const`;
 - a handle stands where §4.4 does not allow it;
-- a C-compatible value type's layout differs from its C `struct`'s.
+- the C layout of a C-compatible value type's fields in declaration order differs from its C `struct` in a corresponding field's offset or type, or in size or alignment.
 
 The check sees each target's C types, so a declaration that is correct for one target and wrong for another fails in the build for that other target.
 
@@ -610,6 +612,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | C symbols | Belong to the package and version that defines them, so versions coexist; a linker set (a section named as a C identifier) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
+| C-compatible value type | A value `struct` of scalars, arrays of scalars, and such structs; it crosses as a copy laid out as its C `struct`, its fields in declaration order |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied |
 | Foreign handle | A `#handle{ cType; set; free; }` reference type referring to one C object; its free function releases the object when the handle is destroyed, and one drain releases its handles in the reverse of the order they were made |
 | Overwriting a handle | A settled handle is overwritten only through its setter, which keeps the C object's address and the handle's place in the release order; one overwrite runs its setters in the reverse of the order the handles were made; a type without one is never overwritten in a settled place |

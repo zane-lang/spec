@@ -518,9 +518,13 @@ When a scope drains — after all its spawned work completes ([`concurrency.md`]
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
 
-### 3.3 Value and reference layout follow declaration order
+### 3.3 Instances are stored inline, their fields in an order the compiler chooses
 
-Fields are laid out in declaration order. A value-type instance is stored inline, except for owned backing stores (§3.6) and any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size owner slot, so value-type slots and owner slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and ownership semantics, not by requiring a separate indirect allocation.
+A value-type instance is stored inline, except for owned backing stores (§3.6) and any members the compiler boxes (below). A statically sized reference-type instance is also stored inline in a fixed-size owner slot, so value-type slots and owner slots may sit directly beside each other in the fixed-size region. Reference types differ by identity and ownership semantics, not by requiring a separate indirect allocation.
+
+The compiler chooses the order in which a type's fields are laid out, once for each type, so every instance of the type has one layout and uniform stride holds (see [`generics.md`](generics.md) §7). Every object that lays the type out uses the same order, as objects a compiler links must agree on every layout ([`dependencies.md`](dependencies.md) §14). The order is placement (§3.5), as boxing is: no operator exposes a field's offset, and a C-compatible value crosses into C as a copy laid out as its C `struct`, its fields in declaration order ([`ffi.md`](ffi.md) §3.3).
+
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-compiler-orders-a-structs-fields-and-c-receives-a-copy-in-its-own-order) — "The compiler orders a struct's fields, and C receives a copy in its own order".
 
 A reference-type instance carries no metadata of its own: a reference names it by its address (§4.1). A dynamically-sized reference type such as `ListRef` occupies a fixed-size handle inline in the same region; only the backing store named by that handle occupies the dynamic region (§3.6).
 
@@ -692,6 +696,7 @@ An overwrite destroys the old occupant while references to the slot remain. They
 | Symbol declaration | Must be directly initialized |
 | Locating a destination | A store's destination and a `!` call's subject are located after the right-hand side and the arguments are evaluated |
 | Reference-type placement | Inline storage is bump-allocated in the creating scope's fixed-size region; moving a roaming owner copies its inline bytes and handles, and its dynamic blocks stay put unless it escapes the scope holding them, which must first leave every block in a scope that lives as long as the destination |
+| Field order | The compiler lays out a type's fields in an order it chooses, the same for every instance; it is placement, unobservable, and a C-compatible value crosses into C as a copy in its C `struct`'s order |
 | Boxed member | A member stored as a fixed-size handle inline with its enclosing instance, a 32-bit offset from the program image, while the instance the handle names lives in the dynamic region; required for a variant payload on a containment cycle and for a field on a cycle with no payload, permitted elsewhere for a payload, and nothing marks it in the source. In a reference type it moves with its enclosing instance; in a value type it is deep-copied with it. An overwrite reuses its block |
 | `&` representation | A reference is the settled owner's signed 32-bit byte offset from the program's image |
 | Addressing | References and boxed-member handles are 32-bit offsets from the program image, so fixed-size regions lie within 2 GiB of it and dynamic chunks within 16 GiB; list and string handles and size-stack entries use native pointers, so oversized spans lie anywhere |
