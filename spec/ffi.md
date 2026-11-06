@@ -127,6 +127,15 @@ Every C function and variable that a package's C sources or archives define with
 
 So two versions of one package, or two packages that hold the same C library, coexist in one program as their Zane code does ([`dependencies.md`](dependencies.md) §11). A symbol the package's C code references and does not define, such as a function of the C library or of a `system` row's library, keeps its name, and every package that references it reaches the same definition.
 
+A C name may be another name for a function or variable the same source defines, an **alias**. `<zane_ffi.h>` (§3.4) gives the form of one that holds on every target, Mach-O's among them, whose C has no `alias` attribute: `ZANE_ALIAS("target")` after a declaration makes the declared name an alias of `target`.
+
+```c
+int64_t helper(void) { return 2; }
+int64_t named(void) ZANE_ALIAS("helper");
+```
+
+The source defines `target` with external linkage, a function for a declared function and a variable for a declared variable, and does not define the declared name itself. It is a build error, at the mark, when any of these does not hold. An alias belongs to the package as the definition it names does.
+
 A section is gathered by its name rather than renamed. A **linker set** is a section the linker gathers from every object into one range that C reaches, in the form the target's object format gives it:
 
 - On ELF, a section whose name is a C identifier, whose range C reaches through the `__start_` and `__stop_` symbols named after it.
@@ -643,7 +652,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | A package's C code | Its C sources (the `.c` files in its directory and those listed in its `c.coda`) and its interface headers (the `.h` files in its directory) |
 | Building | The toolchain compiles a package's C as C17 for the build's target; no build script runs; floating-point expressions are evaluated as written; the C compiler's warnings refuse nothing and are shown for the project's own package sources |
 | `c.coda` | A hand-written file in the package's directory whose rows give its `source`, `include`, `define`, `archive`, and `system` settings, each for the targets a pattern matches |
-| C symbols | Belong to the package and version that defines them, so versions coexist; a linker set (a section the linker gathers by its name into a range C reaches, in each object format's form) is a build error |
+| C symbols | Belong to the package and version that defines them, so versions coexist; `ZANE_ALIAS("target")` makes a declaration an alias of a definition on every target; a linker set (a section the linker gathers by its name into a range C reaches, in each object format's form) is a build error |
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `Bool`, `Unit`, strings, arrays, and lists of scalars as read-only views, C-compatible value types, handles, and function values |
 | Function values | Take scalar primitives, `Bool`, C-compatible value types, strings, and lists and arrays of scalars, copied before the function runs, and data handles, borrowed or as a roaming owner `^H`, which takes the C object; give a scalar, `Bool`, a C-compatible value type, or `Unit` |
