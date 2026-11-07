@@ -141,7 +141,7 @@ committing any Markdown change; CI runs the same:
 devbox run lint
 ```
 
-Intel macOS fallback and the rule itself: `README.md` § Markdown formatting.
+Intel macOS fallback and the rule itself: `contributing/markdown-formatting.md`.
 
 ## Writing a design story
 
