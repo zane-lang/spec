@@ -37,7 +37,7 @@ when it discusses them (§4), and to sibling chapters by anchor (§4.3).>
 ...
 ```
 
-Leave a blank line above and below every `## ` chapter heading — a repository-wide rule that is machine-checked; see [Markdown formatting](../README.md#markdown-formatting).
+Leave a blank line above and below every `## ` chapter heading — a repository-wide rule that is machine-checked; see [`markdown-formatting.md`](markdown-formatting.md).
 
 Do **not** open the file with a paragraph explaining what stories documents are or how they work — that is this guide's job, not the file's. A reader who opens `stories/generics.md` wants the generics story, not a preamble. Start with the title, the `> **See also:**` line pointing at the matching spec doc, and then the first chapter.
 
@@ -224,4 +224,4 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule, in the first-person-plural "we" voice throughout (§6).
 4. Add a `> **Story:**` pointer from each non-trivially-justified section of the matching spec doc (§4.4), and pin in-prose spec references by permalink (§4.2).
 5. For every term of art the topic coins that carries a [`glossary.md`](../spec/glossary.md) entry, make sure some chapter defends its name — the developed rationale the glossary only summarizes (§3.1).
-6. Add a row to the stories table in [`README.md`](../README.md).
+6. Add a row to the stories table in [`README.md`](../README.md): one short phrase naming what the story is about. The row does not list chapters, so appending a chapter later leaves it as it is.

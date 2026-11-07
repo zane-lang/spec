@@ -1,24 +1,44 @@
+<!-- markdownlint-disable-next-line MD041 -- the logo floats before the title -->
+<img height="96" align="right" src="https://raw.githubusercontent.com/zane-lang/logos/main/zane/zane.svg" alt="Zane logo" />
+
 # The Zane Language Specification
 
-This repository is a **prior art publication** for the Zane programming language. The techniques described in these documents were conceived and developed by the author and are dedicated to the public domain under [CC0 1.0 Universal](LICENSE). Anyone may use these ideas freely, for any purpose, without restriction or attribution. No patent claims are made by the author.
+This repository defines the [Zane](https://github.com/zane-lang/zane) programming language: what every construct means, what programs are legal, and how memory, effects and packages work. Next to the specification sit the **design stories**, which tell how and why each part came to be.
 
----
+It is written as a reference, not a tutorial. To try the language first, install [`zane`](https://github.com/zane-lang/zane) and look at its first-project steps.
+
+This repository is also a **prior art publication**. The techniques described in these documents were conceived and developed by the author and are dedicated to the public domain under [CC0 1.0 Universal](LICENSE). Anyone may use these ideas freely, for any purpose, without restriction or attribution. No patent claims are made by the author.
+
+## Where to start
+
+Read [`spec/foundations.md`](spec/foundations.md) first: it states the few commitments the rest of the language rests on. Then, roughly in this order:
+
+1. [`spec/syntax.md`](spec/syntax.md), for what each construct looks like;
+2. [`spec/types.md`](spec/types.md) and [`spec/functions.md`](spec/functions.md), for types, constructors and methods;
+3. [`spec/memory.md`](spec/memory.md) and [`spec/lifetimes.md`](spec/lifetimes.md), for ownership and references, where Zane differs most from other languages;
+4. [`spec/effects.md`](spec/effects.md), for what a call is allowed to change;
+5. [`spec/packages.md`](spec/packages.md), for how a project is laid out.
+
+Look up unfamiliar terms in [`spec/glossary.md`](spec/glossary.md). When a rule seems strange, its story usually explains it: spec sections with a story behind them link to the chapter.
+
+The spec describes the language; the [compiler](https://github.com/zane-lang/compiler) implements it, and lists where it differs in its [`docs/spec-divergences.md`](https://github.com/zane-lang/compiler/blob/main/docs/spec-divergences.md), checked against the spec commit named there.
 
 ## Repository layout
 
-```
-spec/             ← the specification itself (start here): what the language does
-stories/          ← design stories: how each part of the spec came to be
-contributing/     ← style guides for writing spec docs and stories docs
-memorybench/      ← reference C harness that models the memory design
-langbench/        ← compiled Zane programs timed against the same programs in other languages
+```text
+spec/             the specification itself: what the language does
+stories/          design stories: how each part of the spec came to be
+contributing/     style guides for writing spec and stories documents
+memorybench/      a C harness that models the memory design
+langbench/        compiled Zane programs timed against the same programs in other languages
+site/             the page that publishes both benchmarks
 ```
 
-The rendered results of both benchmarks' pinned runs are published at <https://zane-lang.github.io/spec/> and are redeployed whenever one of their pages changes on `main`. [`memorybench/`](memorybench/) measures a C model of the memory design ([`spec/memory.md`](spec/memory.md)); [`langbench/`](langbench/README.md) measures what a released compiler builds.
+The benchmarks' pinned results are published at <https://zane-lang.github.io/spec/>. [`memorybench/`](memorybench/) measures a C model of the memory design ([`spec/memory.md`](spec/memory.md)); [`langbench/`](langbench/README.md) measures what a released compiler builds.
 
 ## Specification documents
 
-The specification lives in [`spec/`](spec/) and is organized by topic. Each document has a single canonical home for its rules; everything else cross-references.
+Each rule has one canonical home; every other mention cross-references it.
 
 ### Foundations
 
@@ -61,49 +81,34 @@ The specification lives in [`spec/`](spec/) and is organized by topic. Each docu
 
 ## Design stories
 
-The spec states *what* the language does; the **why** lives in a parallel set of stories docs under [`stories/`](stories/), one per spec document. Each reads as a history — a handful of thematic chapters that recount, in the order the thinking moved, the situation that forced a choice, the roads not taken, and the costs accepted — kept separate so the spec stays terse while the reasoning has room to breathe. They are appended to as the design evolves, so each is the record of how its part of the spec came to be, not just why it is the way it is now.
+The spec states *what* the language does. The stories in [`stories/`](stories/), one per spec document, tell *why*: the situation that forced each choice, the roads not taken, and the costs accepted, in the order the thinking moved. They are appended to as the design changes, so each is the full record of how its part of the language came to be.
 
-| Document | Tells the story behind |
+| Story | Behind |
 |---|---|
-| [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md) — the bets behind captured intent, staged compilation, strictness-as-performance, and the collapse of value/reference into one `#` axis |
-| [`stories/syntax.md`](stories/syntax.md) | [`spec/syntax.md`](spec/syntax.md) — why a declaration names its type and writes the name before it, the one shape that turned out to cover constructors, constants, and function values, the two signature orders and the form rejected for a named verb that became the lambda variable, the word and separator budget a line is held to, why every commented line carries its own marker, the unnesting pipe that split what it unnested and left once a `{ }` could trail, why a reference document has a story at all, why `intrinsic` names the whole `@` space rather than any one namespace in it, and the list of callbacks that asked for braces, put the subscript on trial against a getter and a borrow, and stayed inside the parentheses, and why a value closed by a brace takes the postfixes that cannot open a statement |
-| [`stories/lexical.md`](stories/lexical.md) | [`spec/lexical.md`](spec/lexical.md) — casing as a hard-error kind signal and the `<>` disambiguation it buys, why field privacy lives in the name, first reaching across packages and then held to the package that declares the type, a delimiter for each kind of separated thing, and the axis that turned out never to have held — replaced by letting the bracket pick the separator, and the map literal that stood alone with no token in front of it, which retired the reassurance the bracket rule closed on and made banning the empty literal the thing that settles every brace, the audit that followed, which found the enum map wearing the wrong bracket all along, and the semicolon added to statements so that a brace could take over ending them, and separating string literal structure from consumer interpretation |
-| [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md) — the two-axis value/reference model, why `#` marks a distinct type rather than a box, constructing a type by what it is, confining `#` to the body forms, why every user-defined type must be named, dropping the `tuple` mould once a named `struct` does the job better, adding named constructors, naming the `enum`'s shape the peer mould, making `Unit` a real fundamental unit type, and the concept-typed lowering exception that grew from one legal line into container-wide coercion before it was taken back out, and the literal that had no way into storage — the storage primitives that construct explicitly from their literal's concept, the literal concepts renamed to what other languages call their literals, and the string primitive that became an owned value when interpolation met the implicit-constructor source restriction, reading a number from text as a method that aborts, since a constructor cannot, and the second string constructor, `escaped`, that reads text escapes for the consumers that ask |
-| [`stories/adt.md`](stories/adt.md) | [`spec/adt.md`](spec/adt.md) — splitting `enum` from `variant` against the hype, the shared struct body, escaping the matcher machine with case overloads and the turn to a central `match` block, matching variants rather than patterns, keeping enum data outside the members, reducing a match group to sugar for one arm per case, building a variant by naming a case rather than calling a constructor, the bindings that existed only to be pointed at, and making a recursive member an owned child boxed through a hosting handle rather than an `&`, and the sum that could not contain itself until a value copy became deep, and why a variant payload cannot originate a guest even though the whole reference variant can, with displaced hosting payloads floating within the same owner |
-| [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md) — the parameter model, the `<>`/`()` split, size-in-the-type, the deferred features, why a language without pointers needed a second, dynamically sized container primitive, and why an integer literal and a decimal literal carry different concept types, with the number parameter taking the integer one, and why a wrong-kind type argument is reported where the type was supplied |
-| [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md) — URL identity, the manifest/resolution split, prebuilt distribution, symbol-rewriting, the browsable global cache, the package-graph acyclicity rule, opt-in remapping, why `core` became a bundled implementation package, the floor that finally made it an ordinary one, moving prebuilt objects to Release assets with committed hashes, and recording where each dependency's code comes from — a release, a source build, or a local path — beside a lock file renamed `zane-lock.coda`, the manifest field that says whether a project is a library or an application, the `zane` command that launches the pinned compiler without being pinned itself, and that command driving only current compilers while the language is at major `0` |
-| [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md) — the no-GC-no-lifetimes goal, the move problem and the anchor, lazy backpointer creation, the indexed heap table, the rooted-guest rules and the host/guest terminology split, the collapse to one value/reference axis with a borrowed subject, the shift to segmented chunked bump arenas, the split into fixed-size and dynamic regions with anchors moved to a runtime-global recyclable pool, taking the bare symbol away as a guest source, the three passing modes that split out of it, giving both back when the ban cost more than the question it closed, and the dynamic region taking the boxes, each asking for exactly its own size, once recursion became hosting, and what a copy is for — the deep value copy that lets a value type recurse, and the reference-field ban that survived it, and the stable-place boundary that excludes subscripted paths and variant payloads from guest sources, and same-owner floating when contingent hosts disappear, what a move does to guests of the moved struct's fields, strings keeping their dynamic bytes without reference identity, the settled/roaming split that stopped guestable hosts from moving, the borrow returning as the bare spelling of a reference parameter, guests becoming plain offsets once anchors, backpointers and forwarders had nothing left to do, settled overwrites staying in place with only an escape relocating, and `ArrayRef` giving many settled objects a home, and dropping the verbless `guest` for `reference` and `host` for `owner`, with the store rule's lifetime becoming the `scope`, then a call that may not write what it borrows, a destination located after its value, no growable list of references, and overlap through a reference checked by the caller that knows where it points, and the bound on the fixed-size region that the root manifest sets once a scope's slots became one frame in a contiguous range, and native addresses replacing segmented offsets and their 32 GiB ceiling, then the close comparison with Goose that started by timing Zane against it: an outgrown span giving its memory back as the list leaves it, one box per cycle and a first list block of four elements, and references and boxes becoming 32-bit offsets from the program image |
-| [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md) — lexical scope in place of a borrow checker, what may be moved, the declaration-block rule that kills flow analysis, downgrade instead of use-after-move, parameter-rooted returned guests, why each strict rule is the minimal guard against one specific memory corruption, narrowing a returned guest's root to a guest parameter once borrows arrived, the root rule going back to "any parameter" once they left, the scope check that fired once at wiring and could be outrun by a later move, and the two lifetimes hiding behind that fix — a block and a hosting tree — which collapsed the raise enumeration into one owner comparison made at every store, paid for with a signature that records where a parameter comes to rest — and the stricter `init`-as-empty-template design that would have needed no signatures at all, kept on record with the two costs that turned it down, and the later distinction between an owner's lifetime and an interior place stable enough to originate a guest, plus same-owner floating when that contingent place disappears, and a moved host becoming spent rather than a guest, the three contradictions found by running the examples as compiler tests, and the parameter that lived at the call site going away once nothing guested could move, a call through a function value taken to store every reference, and package constants becoming return roots while an `&T` parameter stopped being a store root |
-| [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md) — inferring effects instead of annotating them, subject-scoped `mut`, capabilities in place of ambient I/O, the four-level ladder and the Total-Pure/Pure split, what deliberately is not an effect, and mutation through a borrowed subject, and where the first capability comes from: the runtime and console as objects only the root package reaches, and a mutating call as a write, which retired the four-level ladder, and the console moving into `core` once field privacy had put every verb on text there, and the runtime's `arguments` as the first read of capability-backed state, added so that a benchmark could have an input the compiler cannot evaluate ahead of time |
-| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md) — the parallelism/concurrency split and the refusal of `async` coloring, why `spawn` marks only a call, water-tower lifetimes, signature-based safety without locks, value-typed mutation closing the aliased-write gap, and the two safety rules that turned out to enforce less than they claimed |
-| [`stories/error-handling.md`](stories/error-handling.md) | [`spec/error-handling.md`](spec/error-handling.md) — the two-doors model and why failure is control flow rather than a `Result` value, `resolve` as expression-substitution rather than assignment, typed abort paths and the deliberately-absent propagate operator, keeping abortability orthogonal to effects, and explicit path values through `Unit` |
-| [`stories/control-flow.md`](stories/control-flow.md) | [`spec/control-flow.md`](spec/control-flow.md) — `guard` as an active exit that opens no scope of its own, doing without `while` behind a written loop bound, one-based counting after the loop that forced the question, why control-flow contracts use fundamental semantic types, and then the move that took branching and repetition out of the language entirely: the versioning pressure behind it, the block that captures because it is not a value, the capture `spawn` would have broken, the two intrinsics stated over storage primitives, the one exit a call could never become, and the exit that took no condition after all — a second bool nobody should have had to declare, and the "one level shallower" objection that turned out to be the mechanism — `guard` re-declared as four lines of `core`, and the block that stopped yielding a value once `core` found no intrinsic to hand one back |
-| [`stories/functions.md`](stories/functions.md) | [`spec/functions.md`](spec/functions.md) — pulling methods out of the type body and the verb model that revealed, mutation made visible with `:`/`!`, overloading on parameter shape alone, why callables are call-only while self-typed lambdas are values, why every return carries an explicit value, dropping the inherited word "receiver" for `subject`, and what `this` kept once private access moved to the package, and computations as functions rather than methods, which made the math functions `sqrt(x)` |
-| [`stories/operators.md`](stories/operators.md) | [`spec/operators.md`](spec/operators.md) — the fixed vocabulary worth overloading, `~` as the universal flip, laws enforced through derived operators, grammar-only grouping, home-package coherence, the keyword that was neither operator nor function and became `Bool`'s share of the existing set, the loose form that gave conjunction a tier below comparison, `and` and `or` returning as intersection and union, and operators that never coerce |
-| [`stories/math.md`](stories/math.md) | [`spec/math.md`](spec/math.md) — math as compiler intrinsics rather than a C foreign-function interface, and one `@math$` namespace for exact and approximate functions, with the platform's C math library behind the approximate ones, and moving the math functions out of `core` into a `math` package of their own |
-| [`stories/packages.md`](stories/packages.md) | [`spec/packages.md`](spec/packages.md) — the directory as namespace and compilation unit, declarations as move checks, explicit qualified access through `$`, keeping mutable state inside values so the effect model can see it, and the import forms that let a file state its own spelling once `core` became a package everyone writes, and the manifest field that names a package once every project's source sat in `src/`, a library's tests living in `test/` as packages that import what they test the way a consumer does, the tree of nested packages that a shared dependency broke and the `lib/`, `bin/` and `test/` layout that replaced `src/` along with the manifest's `name` and `kind`, and the subpackages that give a large library package internal structure only its parent reaches |
-| [`stories/ffi.md`](stories/ffi.md) | [`spec/ffi.md`](spec/ffi.md) — a C interface whose calls fold at compile time unless declared otherwise, impurity declared through a capability rather than a comment, capabilities that C code offers as globals and the root package declares, evaluating C at compile time as the target runs it, the toolchain building a package's C instead of CMake or a build script, C never writing Zane memory, with read-only views and foreign handles, and replacing a handle in place through its setter |
+| [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md): the bets behind captured intent, staged compilation and strictness as performance |
+| [`stories/syntax.md`](stories/syntax.md) | [`spec/syntax.md`](spec/syntax.md): why a declaration writes its name before its type, and how one shape came to cover constructors, constants and function values |
+| [`stories/lexical.md`](stories/lexical.md) | [`spec/lexical.md`](spec/lexical.md): casing as a hard signal for what a name is, and letting the bracket choose the separator |
+| [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md): the value/reference model, why `#` marks a distinct type, and how constructors and literals reach storage |
+| [`stories/adt.md`](stories/adt.md) | [`spec/adt.md`](spec/adt.md): splitting `enum` from `variant`, the central `match` block, and how a variant can contain itself |
+| [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md): one parameter model for types and sizes, the `<>`/`()` split, and why a second container primitive was needed |
+| [`stories/dependencies.md`](stories/dependencies.md) | [`spec/dependencies.md`](spec/dependencies.md): packages identified by URL, the manifest/lock split, prebuilt releases, and `core` as an ordinary package |
+| [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md): memory safety with no garbage collector and no lifetime annotations: owners, references and arenas |
+| [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md): lexical scope in place of a borrow checker, and the single owner comparison made at every store |
+| [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md): inferring effects instead of annotating them, and capabilities in place of ambient I/O |
+| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md): implicit parallelism without `async` coloring, and why `spawn` marks only a call |
+| [`stories/error-handling.md`](stories/error-handling.md) | [`spec/error-handling.md`](spec/error-handling.md): failure as a second return path rather than a `Result` value |
+| [`stories/control-flow.md`](stories/control-flow.md) | [`spec/control-flow.md`](spec/control-flow.md): how branching and repetition left the language and became ordinary `core` code |
+| [`stories/functions.md`](stories/functions.md) | [`spec/functions.md`](spec/functions.md): methods pulled out of the type body, mutation made visible with `:` and `!`, and overloading by shape |
+| [`stories/operators.md`](stories/operators.md) | [`spec/operators.md`](spec/operators.md): a fixed set of overloadable operators, laws enforced through derived operators, and no implicit coercion |
+| [`stories/math.md`](stories/math.md) | [`spec/math.md`](spec/math.md): math as compiler intrinsics with a `math` package over them |
+| [`stories/packages.md`](stories/packages.md) | [`spec/packages.md`](spec/packages.md): the directory as the package, explicit `$` access, and the `lib/`, `bin/` and `test/` layout |
+| [`stories/ffi.md`](stories/ffi.md) | [`spec/ffi.md`](spec/ffi.md): calling C, whose calls can fold at compile time, and which never writes Zane memory |
 
 ## Contributing
 
-Style and structural conventions live in two sibling guides; read the relevant one before editing or adding a document:
+Read the guide for the kind of document you are editing first:
 
-- [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md) — normative spec documents in [`spec/`](spec/).
-- [`contributing/writing-stories-docs.md`](contributing/writing-stories-docs.md) — stories docs in [`stories/`](stories/).
-- [`contributing/naming-terms.md`](contributing/naming-terms.md) — how the coined terms of art in [`glossary.md`](spec/glossary.md) are chosen.
-
-### Markdown formatting
-
-Every heading in every Markdown file here — `spec/`, `stories/`, `contributing/`, and this README — carries a blank line above and below it, at every heading level. The file's own edges are the exception: a title on line 1 has nothing above it to separate it from, and a heading that ends a file has nothing below. That is markdownlint's `MD022`, and the committed [`.markdownlint.jsonc`](.markdownlint.jsonc) is the canonical statement of it. It is also the *only* rule this repository has taken a position on: everything else markdownlint ships is switched off there, so a clean run means the headings are right and says nothing about the rest. Check a change with
-
-```sh
-devbox run lint
-```
-
-On Intel macOS, [Devbox currently fails because its default Nixpkgs no longer supports that platform](https://github.com/jetify-com/devbox/issues/2937). With Node.js installed, the same linter and committed rules can be run directly:
-
-```sh
-npx --yes markdownlint-cli2 "**/*.md"
-```
-
-A [workflow](.github/workflows/markdownlint.yml) runs that same command on every pull request. It names no rules itself — it finds the config the way the local run does.
+- [`contributing/writing-spec-docs.md`](contributing/writing-spec-docs.md): normative spec documents in [`spec/`](spec/).
+- [`contributing/writing-stories-docs.md`](contributing/writing-stories-docs.md): stories in [`stories/`](stories/).
+- [`contributing/naming-terms.md`](contributing/naming-terms.md): how the coined terms in [`glossary.md`](spec/glossary.md) are chosen.
+- [`contributing/markdown-formatting.md`](contributing/markdown-formatting.md): the one Markdown rule CI checks, and how to run the check.
