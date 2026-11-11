@@ -96,7 +96,7 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 | Meaning | has `a` **and** `b` | has `a` **or** `b` |
 | Construct | must set **all** members with `init{ }` | names **exactly one** case and supplies its payload (§3.2) |
 | Read `e.a` | total — always an `A` | partial — abortable, an `A` only if `a` is live |
-| Layout | room for every member | room for its widest case, and which case is live |
+| Layout | room for every member | room for its widest case, plus a record of which case is live |
 
 > **See also:** [`types.md`](types.md) §2.5 for the same relationship from the struct side.
 
