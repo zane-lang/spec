@@ -184,4 +184,4 @@ Each gives what its intrinsic gives, wrapped in the fundamental type, and is exa
 | Integer `abs` | Wraps on the most negative value, as `negate` does |
 | Exact float functions | IEEE 754's `squareRoot`, `roundToIntegral`, `fusedMultiplyAdd`, sign-bit operations, `minimum` and `maximum` |
 | Approximate float functions | `cbrt`, the trigonometric functions, `exp`, `log`, `pow`, `hypot`; special operands give what IEEE 754 §9.2 gives |
-| The `math` package | A public library package beside `core` in its project, declaring functions over `Int`, `Float`, `I32` and `F32` named and shaped like their intrinsics |
+| The `math` package | A public library package beside `core` in its project, that declares functions over `Int`, `Float`, `I32` and `F32` with the names and parameters of their intrinsics |
