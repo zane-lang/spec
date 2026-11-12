@@ -8,12 +8,12 @@ This document specifies Zane's math functions: the `@math$` intrinsics on the sc
 
 ## 1. Overview
 
-Zane's arithmetic operators cover addition, multiplication, division, negation, and comparison. Everything else a program computes on numbers — square roots, bit operations, trigonometry — is a function of the `@math$` intrinsic namespace, and the `math` package declares a function over each one for `core`'s `Int` and `Float`.
+Zane's arithmetic operators cover addition, multiplication, division, negation, and comparison. Everything else a program computes on numbers — square roots, bit operations, trigonometry — is a function of the `@math$` intrinsic namespace, and the `math` package declares a function over each one for `core`'s `Int`, `Float`, `I32` and `F32`.
 
 - **`@math$ holds the math functions`.** Each takes operands of one scalar primitive and has one overload per scalar primitive it takes, like the machine operations of `@operators$`.
 - **`Exact and approximate`.** An exact function's result is fully specified and the same on every platform. An approximate function's result is close to the true value and may differ between platforms.
 - **`Every exact function is total`.** Each has a result for every operand, as every integer machine operation does.
-- **`The math package`.** `core`'s project ships a second package, `math`, that declares the math functions over `Int` and `Float`. A program imports it beside `core`.
+- **`The math package`.** `core`'s project ships a second package, `math`, that declares the math functions over `Int`, `Float`, `I32` and `F32`. A program imports it beside `core`.
 - **`Math functions are functions`.** `sqrt(x)`, not `x:sqrt()`: they compute a result from their inputs ([`functions.md`](functions.md) §3.6).
 
 > **Story:** [`stories/math.md`](../stories/math.md#math-as-intrinsics-not-a-c-foreign-function-interface) — "Math as intrinsics, not a C foreign-function interface".
@@ -130,7 +130,7 @@ Compile-time evaluation ([`effects.md`](effects.md) §5.3) changes nothing a pro
 
 ### 3.1 A package beside `core`
 
-The project that holds `core` holds a second public library package, `math` ([`packages.md`](packages.md) §2.1). It imports `core` and declares a function over each `@math$` function `core`'s fundamental types can use: the integer ones over `Int`, which holds an `@primitives$I64`, and the float ones over `Float`, which holds an `@primitives$F64`. Each has the name and the parameters of the intrinsic it calls, and passes its operands to the intrinsic through `core`'s implicit conversions to the storage primitives ([`types.md`](types.md) §2.6).
+The project that holds `core` holds a second public library package, `math` ([`packages.md`](packages.md) §2.1). It imports `core` and declares a function over each `@math$` function `core`'s fundamental types can use: the integer ones over `Int`, which holds an `@primitives$I64`, and `I32`, which holds an `@primitives$I32`, and the float ones over `Float`, which holds an `@primitives$F64`, and `F32`, which holds an `@primitives$F32`. Each has the name and the parameters of the intrinsic it calls, and passes its operands to the intrinsic through `core`'s implicit conversions to the storage primitives ([`types.md`](types.md) §2.6).
 
 ```zane
 package math;
@@ -184,4 +184,4 @@ Each gives what its intrinsic gives, wrapped in the fundamental type, and is exa
 | Integer `abs` | Wraps on the most negative value, as `negate` does |
 | Exact float functions | IEEE 754's `squareRoot`, `roundToIntegral`, `fusedMultiplyAdd`, sign-bit operations, `minimum` and `maximum` |
 | Approximate float functions | `cbrt`, the trigonometric functions, `exp`, `log`, `pow`, `hypot`; special operands give what IEEE 754 §9.2 gives |
-| The `math` package | A public library package beside `core` in its project, declaring functions over `Int` and `Float` named and shaped like their intrinsics |
+| The `math` package | A public library package beside `core` in its project, that declares functions over `Int`, `Float`, `I32` and `F32` with the names and parameters of their intrinsics |

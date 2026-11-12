@@ -90,7 +90,7 @@ The operands of every operator are evaluated left to right, in written order, an
 | a set | the elements in both | the elements in either |
 | a set of flags | the flags both hold | the flags held by either |
 
-A number has no parts of that kind, so `Int` and `Float` implement neither.
+A number has no parts of that kind, so `Int`, `Float`, `I32` and `F32` implement neither.
 
 An implementation's operand and result types follow §2.2 like those of any other operator. A package may declare `or` over two members of its own enum and return a set of them:
 
@@ -124,7 +124,7 @@ For a type whose `~` is a complement, each of the two derives the other; see §4
 `!` is reserved for mutating method calls and is not boolean NOT in Zane. `~` is the unary complement/flip operator instead:
 
 - `~Bool` is logical complement
-- `~Int` / `~Float` are additive inverse
+- `~Int` / `~Float` / `~I32` / `~F32` are additive inverse
 - composite numeric types may define `~` as component-wise negation
 
 Zane does not specify a separate bitwise-complement meaning for `~`.

@@ -165,7 +165,7 @@ EnumName.property FieldType {
 
 ### 2.1 Fundamental types
 
-`Int`, `Float`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, `ListRef<T>`
+`Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, `ListRef<T>`
 
 These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
