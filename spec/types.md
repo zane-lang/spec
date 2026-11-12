@@ -116,6 +116,8 @@ What ties the fundamental types to ordinary source is `core`'s own declarations.
 
 `Int` and `Float` hold `@primitives$I64` and `@primitives$F64`, and they are the types a literal becomes by default. `I32` and `F32` hold `@primitives$I32` and `@primitives$F32`, for storing many values in half the space. They convert from the same literal concepts as `Int` and `Float`, and from each other only by constructor, under the rule for the scalar primitives (§2.9): `Int(x)` and `Float(x)` widen exactly, and `I32.wrap`, `I32.truncate`, and `F32.round` are named for their loss. A call whose arguments are all literals could then match both an `Int` and an `I32` overload, and the compiler does not choose between them ([`generics.md`](generics.md) §5.4). So wherever `core` and its `math` package declare a function for both widths, they also declare one taking the literal's concept type, which builds the `Int` or `Float`: `abs(3)` is an `Int`, and `sqrt(2.0)` a `Float`.
 
+> **Story:** [`stories/types.md`](../stories/types.md#core-gains-i32-and-f32-as-storage-types-and-int-stays-the-default) — "`core` gains `I32` and `F32` as storage types, and `Int` stays the default".
+
 Because `core` is an ordinary dependency, two of its versions may be linked side by side like any other package's ([`dependencies.md`](dependencies.md) §11), and a project that wants them collapsed opts into remapping (§15 there). No version of `Int` is forced on a program, and none is the language's.
 
 A file that writes `Int` therefore imports `core` first, most often with the whole-package form `import core$` ([`packages.md`](packages.md) §3.3). Examples throughout this specification are written as though that import were already present, so `core`'s members appear unqualified in them.
