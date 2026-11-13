@@ -517,6 +517,7 @@ Returning a dynamic block pushes its native base address onto the stack for its 
 When a scope drains — after all its spawned work completes ([`concurrency.md`](concurrency.md) §4.1) — the runtime restores the fixed-size frontier and releases the dynamic region in bulk, with no per-object teardown pass threaded through the exit. Logical destruction timing is independent of this: a value dies when its owner, container, or scope does ([`lifetimes.md`](lifetimes.md) §2.1); it is the *memory* that is reclaimed together at drain.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#when-the-free-stacks-fragment-and-the-arena-takes-the-scope) — "When the free stacks fragment, and the arena takes the scope".
+> **Story:** [`stories/memory.md`](../stories/memory.md#growth-past-1-mib-takes-a-span-an-overwrite-returned) — "Growth past 1 MiB takes a span an overwrite returned".
 
 ### 3.3 Instances are stored inline, their fields in an order the compiler chooses
 
@@ -597,6 +598,7 @@ Dynamic chunks and oversized spans begin at cache-line-aligned addresses. A bloc
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-lists-oversized-span-grows-in-place-within-a-reservation) — "A list's oversized span grows in place within a reservation".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-outgrown-span-gives-its-memory-back-as-the-list-leaves-it) — "An outgrown span gives its memory back as the list leaves it".
+> **Story:** [`stories/memory.md`](../stories/memory.md#growth-past-1-mib-takes-a-span-an-overwrite-returned) — "Growth past 1 MiB takes a span an overwrite returned".
 > **Story:** [`stories/memory.md`](../stories/memory.md#one-box-per-cycle-and-a-first-block-of-four-elements) — "One box per cycle, and a first block of four elements".
 > **Story:** [`stories/memory.md`](../stories/memory.md#references-and-boxes-become-32-bit-offsets-from-the-program-image) — "References and boxes become 32-bit offsets from the program image".
 
