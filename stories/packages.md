@@ -49,6 +49,9 @@ The property that keeps the original reason alive is narrower than qualification
 
 The rest fell out of rules already in place, which is usually the sign that a shape is right. Importing a single overload of a verb is not expressible, because an overloaded name is a set that only a call site collapses, so a member import takes the whole set or nothing. Colliding bare names are legal precisely when they form a valid overload set — verbs differing in parameter types — and are otherwise an error at the import declaration rather than at the use site, so the conflict is reported where the imports are listed. An `as` alias keeps the initial case of what it renames, because case is semantic. And an import reaches plain-name resolution only: it contributes no operator candidates, changes no method lookup, and alters no implicit-constructor visibility, each of which is settled by a home package rather than by what a file happened to import. Methods and operators are therefore not importable at all — not a restriction added for this feature, just the observation that neither was ever reached by a plain name.
 
+> [!NOTE]
+> Superseded: a method declared for a subject of any type is reached by a plain name, so an import may bring it and it takes part in method lookup. See "[A method's subject may be a type parameter](generics.md#a-methods-subject-may-be-a-type-parameter)".
+
 It is worth being clear that none of this is a linkage mechanism. An import is a spelling and nothing else: every name resolves to its fully qualified declaration before anything downstream sees it, and the package name a compiled symbol carries is the defining package's own, whatever the importing file chose to call it.
 
 ## The manifest names the package
