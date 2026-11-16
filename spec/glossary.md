@@ -495,3 +495,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package declares one, and passes it on.
 - **Why this name:** It is the variable counterpart of a foreign verb: declared like any symbol, with its value supplied by C.
 - **Canonical home:** [`ffi.md`](ffi.md) §5.1
+
+### 4.23 package rename / dropped package
+
+- **Meaning:** A `renames` row of a project's manifest gives a dependency's public library package another name in that project, the only name its files import it by. A **dropped package**, renamed to `_`, is importable by none of them and claims no name. Neither changes a compiled symbol.
+- **Why this name:** It renames the package for a whole project, where an `as` alias respells it in one file; `_` is the name that already means hidden.
+- **Canonical home:** [`dependencies.md`](dependencies.md) §2.1 and §8

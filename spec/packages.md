@@ -232,6 +232,8 @@ A package's **own subpackages** are those whose parent it is; a subpackage of on
 
 The **public library packages** of a project are its top-level library packages whose names do not begin with `_`. They are the only packages another project reaches.
 
+A project reaches each public library package of its dependencies under the name its manifest gives it, which is the package's own name unless a `renames` row renames or drops it ([`dependencies.md`](dependencies.md) §2.1 and §8). A dropped package is outside these sets.
+
 An import of a package outside these sets is a compile-time error.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#subpackages-nest-inside-a-library-package) — "Subpackages nest inside a library package".
@@ -348,7 +350,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |
-| Importable packages | A library package imports the project's top-level library packages, its own subpackages, and its dependencies' public library packages, without cycles; nothing imports a program or test package |
+| Importable packages | A library package imports the project's top-level library packages, its own subpackages, and its dependencies' public library packages under the names its manifest gives them, without cycles; nothing imports a program or test package |
 | Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
