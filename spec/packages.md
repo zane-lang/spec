@@ -145,13 +145,13 @@ Two imports that would give one entity two spellings in the same file are a comp
 
 ### 3.5 An imported name carries every declaration that shares it
 
-A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed.
+A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed. A method is a declaration an import brings only when its subject is a type parameter (§3.6).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
 ### 3.6 Imports affect plain-name resolution only
 
-An import changes how plain names resolve and nothing else. It does not contribute operator candidates ([`operators.md`](operators.md) §2.2), does not affect method lookup ([`functions.md`](functions.md) §6.1), and does not affect which implicit constructors apply at a coercion site, which the home-package rule of [`types.md`](types.md) §4.5 settles.
+An import changes how plain names resolve and nothing else. It does not contribute operator candidates ([`operators.md`](operators.md) §2.2), does not affect method lookup except as a plain name does ([`functions.md`](functions.md) §6.1), and does not affect which implicit constructors apply at a coercion site, which the home-package rule of [`types.md`](types.md) §4.5 settles.
 
 Methods and operators are therefore not importable members, because neither is reached by a plain name:
 
@@ -161,6 +161,13 @@ import math$+;       // ILLEGAL: operators resolve by operand home package
 ```
 
 A cross-package method call is written with the qualifier at the call site instead ([`functions.md`](functions.md) §6.2).
+
+A method whose subject is a type parameter ([`generics.md`](generics.md) §3.7) is the exception, because no subject type's home reaches it: its plain name reaches it, so an import brings it as it brings a function, and the spelling the import gives is the one method lookup searches ([`functions.md`](functions.md) §6.1, step 3). A name a package declares both for a subject of any type and for a subject type of its own is importable, and the import brings only the methods for a subject of any type; the others stay reached through their subject type's home, as before.
+
+```zane
+import core$work;    // legal: `work` is declared for a subject of any type
+machine!work(step);
+```
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
@@ -345,8 +352,8 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
-| Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors |
-| Import reach | Plain-name resolution only; never operator candidates, method lookup, or implicit-constructor applicability |
+| Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors; of the methods, only those for a subject of any type (§3.6) |
+| Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which its plain name reaches, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
 | Root package | The program package being built, or the test package of a test build; the only package that reaches `@program$` |

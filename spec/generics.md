@@ -17,6 +17,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
 - **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
+- **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type, and reaches it only by passing it on (§3.7).
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
 - **`Four container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type. `@primitives$List<T>` and `@primitives$ListRef<T>` are their dynamically sized counterparts, a value type and a reference type. `core` declares `Array`, `ArrayRef`, `List`, and `ListRef` over them.
@@ -231,6 +232,25 @@ r wrap(MainCharacter());           // error at MainCharacter(), not inside wrap
 ```
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-wrong-kind-type-argument-is-reported-at-its-origin) — "A wrong-kind type argument is reported at its origin".
+
+### 3.7 A method's subject may be a type parameter
+
+A method may introduce a type parameter as its subject's whole type. `this S Type` makes the method apply to a subject of every type, with `S` the subject's type at each call:
+
+```zane
+Unit work(this S Type, step Bool[this S] mut) mut {
+    @controlflow$work(this, step);
+    return Unit();
+}
+
+machine!work(Bool(this Machine) mut { ... });   // S is Machine
+```
+
+The introduction carries no passing marker, because the subject takes none ([`syntax.md`](syntax.md) §3.2): `this S Type` is a borrow of the caller's value or owner, mutable when the method is `mut` ([`functions.md`](functions.md) §2.4). `S` may be a value type or a reference type, and §3.6 applies to it as to any inferred parameter, with the subject expression as its origin.
+
+The body knows nothing of `S` beyond what the signature states, so it reaches the subject only by passing it on: to a function value whose type names `S`, to an intrinsic generic over its subject ([`control-flow.md`](control-flow.md) §4.1), or to another verb generic over `S`. Such a method has no declaring subject type, so method lookup reaches it through the spelling the file has for its package ([`functions.md`](functions.md) §6.1).
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-methods-subject-may-be-a-type-parameter) — "A method's subject may be a type parameter".
 
 ---
 
@@ -535,6 +555,7 @@ The following are intentionally not specified in this version:
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
 | Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
+| Type-parameter subject | `this S Type` introduces `S` as the subject's whole type, so the method applies to a subject of any type; the body only passes the subject on; lookup reaches it through the spelling the file has for its package |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |

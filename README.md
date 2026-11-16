@@ -71,7 +71,7 @@ Each rule has one canonical home; every other mention cross-references it.
 
 | Document | Purpose |
 |---|---|
-| [`spec/control-flow.md`](spec/control-flow.md) | Block arguments, the three control-flow intrinsics, the `core` branching and repetition built on them, and 1-based ordinal rules |
+| [`spec/control-flow.md`](spec/control-flow.md) | Block arguments, the control-flow intrinsics, the `core` branching, repetition, and workers built on them, and 1-based ordinal rules |
 | [`spec/operators.md`](spec/operators.md) | Operator set, derived operators, intersection and union, operands passed as written, and precedence |
 | [`spec/math.md`](spec/math.md) | The `@math$` intrinsics — bit operations, square root, rounding, trigonometry — exact and approximate functions, and the `math` package that declares them over `core`'s `Int` and `Float` |
 | [`spec/error-handling.md`](spec/error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
