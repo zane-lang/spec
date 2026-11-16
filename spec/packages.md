@@ -62,7 +62,7 @@ The names within one project are kept apart:
 - A program package's name differs from every top-level library package's name, and does not begin with `_`.
 - A subpackage's name differs from every top-level library package's name of its project, and does not begin with `_`.
 
-A violation is a compile-time error.
+A violation is a compile-time error. A subpackage's name also differs from every name under which its project reaches a dependency's package, which dependency resolution checks ([`dependencies.md`](dependencies.md) §8).
 
 ### 2.3 A library package may hold subpackages
 
@@ -349,7 +349,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Project layout | Library packages in `lib/`, program packages in `bin/`, test packages in `test/`; no `.zn` file directly in any of the three |
 | Package identity | A library or program package is named by its directory; every test package is named `test` |
 | Package source | The `.zn` files directly in the package's directory, beside any C code ([`ffi.md`](ffi.md) §2.1) |
-| Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project |
+| Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project; its name differs from every name its project reaches a dependency's package under |
 | Package declaration | Required in every source file; it matches the package's name |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
