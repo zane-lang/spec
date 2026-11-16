@@ -503,7 +503,7 @@ ReturnType name(this SubjectType<T Type, n @concepts$Int>, param ParamType, ...)
 ReturnType name(this S Type, param ParamType, ...) { body }
 ```
 
-`this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`. The last form introduces a type parameter as the subject's type, so the method applies to a subject of any type ([`generics.md`](generics.md) §3.7).
+`this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter has the name `this`. The last form introduces a type parameter as the subject's type, so the method applies to a subject of any type ([`generics.md`](generics.md) §3.7).
 
 The subject takes **no** marker, for either kind of type: neither `^` nor `&` is written on `this`. The subject is always a borrow of the caller's value or owner, mutable when the method is `mut`, and never stored or returned as `&T`. See [`functions.md`](functions.md) §2.4.
 
@@ -934,9 +934,11 @@ Zane has no control-flow grammar. Branching, repetition, and exiting are all cal
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
 @controlflow$repeat(count @primitives$I64, body @concepts$Block)
 @controlflow$exitFromCall()
+@controlflow$work(subject S Type, step R Type[this S] mut)
+@controlflow$workEvery(subject S Type, interval @primitives$I64, step R Type[this S] mut)
 ```
 
-The first two take storage primitives rather than fundamental types and the third takes nothing, so none depends on any package. Any package may call them.
+The first two take storage primitives rather than fundamental types, the third takes nothing, and the worker pair take a subject of any type, a function value over it, and, for `workEvery`, a primitive, so none depends on any package ([`control-flow.md`](control-flow.md) §4.1). Any package may call them.
 
 ### 5.2 Writing an exit
 

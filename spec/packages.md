@@ -162,7 +162,7 @@ import math$+;       // ILLEGAL: operators resolve by operand home package
 
 A cross-package method call is written with the qualifier at the call site instead ([`functions.md`](functions.md) §6.2).
 
-A method whose subject is a type parameter ([`generics.md`](generics.md) §3.7) is the exception, because no subject type's home reaches it: it is reached by its plain name, so an import brings it as it brings a function, and the spelling the import gives is the one method lookup searches ([`functions.md`](functions.md) §6.1, step 3).
+A method whose subject is a type parameter ([`generics.md`](generics.md) §3.7) is the exception, because no subject type's home reaches it: its plain name reaches it, so an import brings it as it brings a function, and the spelling the import gives is the one method lookup searches ([`functions.md`](functions.md) §6.1, step 3). A name a package declares both for a subject of any type and for a subject type of its own is importable, and the import brings only the methods for a subject of any type; the others stay reached through their subject type's home, as before.
 
 ```zane
 import core$work;    // legal: `work` is declared for a subject of any type
@@ -353,7 +353,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
 | Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors |
-| Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which is reached by its plain name, or implicit-constructor applicability |
+| Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which its plain name reaches, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
 | Root package | The program package being built, or the test package of a test build; the only package that reaches `@program$` |

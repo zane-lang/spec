@@ -341,12 +341,12 @@ These phases describe **static** overload resolution. Matching a `variant` on it
 For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolves candidates in this order:
 
 1. the subject type's home package, which for a fundamental type is `core` — for a type supplied by the compiler, its home is the intrinsic namespace that holds it, so `runtime!setThreads(...)` on an `@runtime$Runtime` finds the methods `@runtime$` declares
-2. the current package
+2. the current package, apart from its methods whose subject is a type parameter, which step 3 searches
 3. the methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7) that the file writes unqualified: those of the current package, and those an import spells bare (`import core$`, `import core$work`)
 
-A method whose subject is a type parameter is declared beside no subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. Step 3 is searched only when the first two leave no candidate, so a method declared for the subject's own type is preferred to one declared for every type.
+A method whose subject is a type parameter has no declaring subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. The compiler searches step 3 only when the first two leave no candidate, so it prefers a method declared for the subject's own type to one declared for every type.
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the subject type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the subject type's defining declarations first makes an unqualified call that steps 1 and 2 resolve resolve the same way wherever it is written, independent of which packages the caller has imported. Only a call that neither reaches depends on the file's imports, through step 3.
 
 ### 6.2 Qualified method calls
 

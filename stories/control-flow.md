@@ -62,6 +62,9 @@ This is precisely the shape the previous chapter's `guard` was built to express,
 
 But a loop that runs until something inside it decides to leave carries a risk we were not willing to ship as the default: nothing on the page bounds it. A loop whose only brake is a runtime condition can, if that condition never trips, run forever, and there is no written fact a reader — or the compiler — can point to that says otherwise. So Zane's `loop` always carries a written upper bound, and there is no unbounded form ([`control-flow.md` §4.3](https://github.com/zane-lang/spec/blob/6882e129f144607e300367684d640d1d79bc41f4/spec/control-flow.md#43-there-is-no-dedicated-while)). The retry above becomes a counted loop whose `guard` still does the real stopping, with the ceiling now visible in the source:
 
+> [!NOTE]
+> Superseded: Zane now has an unbounded form beside the counted loop, the worker, which runs a step until the step returns `false`. See "[Workers replace the unbounded loop: `work` and `setInterval`](#workers-replace-the-unbounded-loop-work-and-setinterval)".
+
 ```zane
 connection Connection()
 loop attempt from 1 to maxTries {
@@ -71,6 +74,9 @@ loop attempt from 1 to maxTries {
 ```
 
 The road we did not take was to keep `while` as a convenience and merely discourage it, or to offer a bare unbounded `loop` beside the counted one. We turned both down for the reason the [captured-intent bet](https://github.com/zane-lang/spec/blob/6882e129f144607e300367684d640d1d79bc41f4/stories/foundations.md#the-bet-on-captured-intent) turns down other conveniences: a form that is available is a form that gets used, and an unbounded loop hides exactly the fact we wanted every loop to surface — *will this end?* The honest objection is that some computations genuinely are indefinite: a server running until shutdown, a poll with no fixed ceiling. Our answer is that indefinite repetition is not really a *loop* in the counted sense at all — it is scheduled work, and should use a scheduler or timer facility that names it as such. We expect that facility to look something like `setInterval`, whatever name its eventual API takes, making the recurrence and its scheduling policy explicit instead of smuggling both inside `while true`. Zane would rather make you spell the unbounded case out as the special thing it is than let it borrow the syntax of the ordinary bounded one.
+
+> [!NOTE]
+> Superseded: indefinite repetition now has its facility in `core`: `work`, and `setInterval`, which waits a `Duration` between steps. See "[Workers replace the unbounded loop: `work` and `setInterval`](#workers-replace-the-unbounded-loop-work-and-setinterval)".
 
 The cost is real, and it lands on the loop that will certainly end but whose natural stopping condition is a test rather than a count. That loop must be given a bound anyway — a ceiling picked as a safe over-estimate, with a `guard` inside doing the actual stopping. The upper number is then sometimes a fiction: a figure large enough never to be reached in practice, written only to satisfy the rule that a loop must show a bound. We accept the awkwardness because the alternative — a loop with no written ceiling at all — is the precise thing we set out to remove.
 
