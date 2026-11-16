@@ -63,12 +63,13 @@ Either may be called at any time and any number of times. Compiler-scheduled par
 
 `spawn` starts a concurrent **function or method call**. Both forms expose a verb signature for effect and conflict analysis.
 
-A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned. A block captures the frame that wrote it ([`control-flow.md`](control-flow.md) §2.2), and capture is safe there only because the block runs inside that call. Spawning one would put captured state in a parallel task, which is exactly what §5.2 forbids for values. Since branching and repetition are such verbs ([`control-flow.md`](control-flow.md) §3), this is also what makes `spawn` on a conditional or a repetition illegal.
+A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned. A block captures the frame that wrote it ([`control-flow.md`](control-flow.md) §2.2), and capture is safe there only because the block runs inside that call. Spawning one would put captured state in a parallel task, which is exactly what §5.2 forbids for values. Since branching and repetition are such verbs ([`control-flow.md`](control-flow.md) §3), this is also what makes `spawn` on a conditional or a loop illegal. A worker takes a function value rather than a block, so a repetition that should run beside its caller is a spawned worker ([`control-flow.md`](control-flow.md) §3.7).
 
 ```zane
 spawn runServer(8080);            // ok: function call
 spawn server:listen(8080);        // ok: read-only method call
 spawn server!refreshConnections(); // ok: mutating method call
+spawn machine!work(step);         // ok: a worker takes a function value
 spawn if(cond) { f() }            // ILLEGAL: `if` takes a block argument
 ```
 
@@ -208,7 +209,7 @@ Zane does not define `async` or `await`. Concurrency is expressed only through `
 
 ### 5.4 No language-level process or channel abstraction
 
-Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls plus explicit state flow governed by ownership and effect rules.
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. Long-running concurrent work is expressed as ordinary spawned function or method calls, such as a spawned worker ([`control-flow.md`](control-flow.md) §3.7), plus explicit state flow governed by ownership and effect rules.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 

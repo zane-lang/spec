@@ -342,6 +342,9 @@ For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolve
 
 1. the subject type's home package, which for a fundamental type is `core` — for a type supplied by the compiler, its home is the intrinsic namespace that holds it, so `runtime!setThreads(...)` on an `@runtime$Runtime` finds the methods `@runtime$` declares
 2. the current package
+3. the methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7) that the file writes unqualified: those of the current package, and those an import spells bare (`import core$`, `import core$work`)
+
+A method whose subject is a type parameter is declared beside no subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. Step 3 is searched only when the first two leave no candidate, so a method declared for the subject's own type is preferred to one declared for every type.
 
 If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Searching the subject type's defining declarations first makes an unqualified call resolve the same way wherever it is written, independent of which packages the caller has imported.
 
@@ -510,5 +513,5 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Block argument | Not a verb and not a value: a braced run of statements passed to a call, which captures and cannot escape ([`control-flow.md`](control-flow.md) §2) |
 | Lambda-variable | Symbol bound to a lambda literal; has one function type; the only way to hold a function value |
 | Generic function value | Not specified in this version; deferred on runtime-representation grounds, not overloading (see [`generics.md`](generics.md) §9) |
-| Unqualified method lookup | Searches the subject's home package (`core` for a fundamental type, the intrinsic namespace for a compiler-supplied type), then the current package |
+| Unqualified method lookup | Searches the subject's home package (`core` for a fundamental type, the intrinsic namespace for a compiler-supplied type), then the current package, then, when neither has a candidate, the type-parameter-subject methods the file writes unqualified |
 | Extension methods | Any package may declare methods on imported types by naming the first parameter `this` |

@@ -68,6 +68,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** The term makes the rule about ordinal positions explicit and distinguishes it from raw numeric arithmetic.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §5
 
+### 2.9 worker / step
+
+- **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value run on that subject until it returns `false`. `core`'s `work` and `setInterval` run one, over `@controlflow$work` and `@controlflow$workEvery`; neither takes a block, so a worker may be spawned.
+- **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program it is written in; `step` is the one advance the worker repeats.
+- **Canonical home:** [`control-flow.md`](control-flow.md) §3.7
+
 ---
 
 ## 3. Types, Storage, and Binding
@@ -408,7 +414,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.9 control-flow intrinsic
 
-- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall`, the three intrinsics every branching, repeating, and exiting construct is built from. Each is stated over storage primitives or over nothing, and callable from any package.
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics every branching, repeating, exiting, and worker construct is built from. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
 - **Why this name:** They are the intrinsics (§4.8) that are operations of control flow.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 

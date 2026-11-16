@@ -500,9 +500,10 @@ ReturnType name(this SubjectType, param &ParamType, ...) mut => expr
 ReturnType?AbortType name(this SubjectType, param ParamType, ...) => expr
 ReturnType?AbortType name(this SubjectType, param ParamType, ...) mut => expr
 ReturnType name(this SubjectType<T Type, n @concepts$Int>, param ParamType, ...) { body }
+ReturnType name(this S Type, param ParamType, ...) { body }
 ```
 
-`this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`.
+`this` is legal only in the first parameter position. A declaration is a method if and only if its first parameter is named `this`. The last form introduces a type parameter as the subject's type, so the method applies to a subject of any type ([`generics.md`](generics.md) §3.7).
 
 The subject takes **no** marker, for either kind of type: neither `^` nor `&` is written on `this`. The subject is always a borrow of the caller's value or owner, mutable when the method is `mut`, and never stored or returned as `&T`. See [`functions.md`](functions.md) §2.4.
 
