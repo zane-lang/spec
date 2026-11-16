@@ -94,7 +94,7 @@ All source files of one package form a single compilation unit. Declaration orde
 
 An `import` declaration makes members of another package available in the source file containing it. It does not make them available to other files in the current package.
 
-The package must be one the importing package may import (§4.3), named by its package name. A package from another project reaches the importing project through the dependency rules of [`dependencies.md`](dependencies.md) §8.
+The package must be one the importing package may import (§4.3), named by its package name, or for a dependency's package by the name its project's manifest gives it. A package from another project reaches the importing project through the dependency rules of [`dependencies.md`](dependencies.md) §8.
 
 No other package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported package. `core` is not an exception: a file that writes `Int` imports it like any other dependency (see [`types.md`](types.md) §2.6), most often with the whole-package form `import core$` (§3.3).
 
@@ -236,7 +236,7 @@ A package's **own subpackages** are those whose parent it is; a subpackage of on
 
 The **public library packages** of a project are its top-level library packages whose names do not begin with `_`. They are the only packages another project reaches.
 
-A project reaches each public library package of its dependencies under the name its manifest gives it, which is the package's own name unless a `renames` row renames or drops it ([`dependencies.md`](dependencies.md) §2.1 and §8). A dropped package is outside these sets.
+A project reaches each public library package of its dependencies under the name its manifest gives it, which is the package's own name unless a `renames` row renames or drops it ([`dependencies.md`](dependencies.md) §2.1 and §8). A package the manifest drops is in none of the sets of the table above, for any of the project's packages.
 
 An import of a package outside these sets is a compile-time error.
 

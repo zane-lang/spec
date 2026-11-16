@@ -101,21 +101,21 @@ deps [
 ]
 
 renames [
-    key      package  name
-    impostor math     impostorMath
-    extras   json     _
+    dependency  package  name
+    impostor    math     impostorMath
+    extras      json     _
 ]
 ```
 
 Each `renames` row records:
 
-- **key**: the `deps` or `test-deps` key of the dependency that ships the package
+- **dependency**: the `deps` or `test-deps` key of the dependency that ships the package
 - **package**: the package's own name, which names a public library package of that dependency at its pinned version ([`packages.md`](packages.md) §4.3)
 - **name**: the name this project's packages import the package by, or `_`, which drops the package
 
-A `name` other than `_` is a camelCase identifier under [`lexical.md`](lexical.md) §3. It does not begin with `_`, is not `test`, and differs from the package's own name. No two rows name the same package of the same dependency. Dependency resolution aborts with an error naming the row's key and package on a row that breaks one of these rules, that names a key with no `deps` or `test-deps` row, or that names a package its dependency does not ship. It also aborts on a dependency whose every public library package is dropped, since such a dependency gives the project nothing to import.
+A `name` other than `_` is a camelCase identifier under [`lexical.md`](lexical.md) §3. It does not begin with `_`, is not `test`, and differs from the package's own name. No two rows name the same package of the same dependency. Dependency resolution aborts with an error naming the row's dependency and package on a row that breaks one of these rules, that names a key with no `deps` or `test-deps` row, or that names a package its dependency does not ship. It also aborts on a dependency whose every public library package is dropped, since such a dependency gives the project nothing to import.
 
-A `renames` block applies to the packages of the project whose manifest holds it, in every build that compiles them. A row whose key is a `test-deps` key takes effect only where that block does.
+A `renames` block applies to the packages of the project whose manifest holds it, in every build that compiles them. A row whose dependency is a `test-deps` key takes effect only where that block does. A dependency may have several rows, one per package.
 
 The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). A URL listed in `remaps` that matches no package in the resolved dependency graph is a likely stale entry or typo; the toolchain emits an informational warning during dependency resolution (not an error) so the manifest can be kept clean. `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -138,7 +138,7 @@ Each row records:
 - **url**: the canonical package identity.
 - **commit**: the exact commit that the recorded tag must resolve to.
 
-The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
+The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands, joining the two files, and naming the dependency in a `renames` row. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
 The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
@@ -329,7 +329,7 @@ A fully expanded cache path for the `math` example therefore looks like:
 
 ## 8. Importing a Dependency's Packages
 
-Source code imports a dependency's library package by the package's own name:
+Source code imports a dependency's library package by the name the project's manifest gives it, which is the package's own name unless a `renames` row gives it another (§2.1):
 
 ```zane
 import math;
@@ -343,14 +343,14 @@ math$vec(...)
 
 `import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). A project's packages reach the **public library packages** ([`packages.md`](packages.md) §4.3) of its direct dependencies and no others. A package that a dependency reaches only through its own dependencies is imported by adding it to `deps`. Source code never writes version-prefixed names or manifest keys.
 
-A package that a `renames` row of the project's manifest renames (§2.1) is imported by the row's name instead, and only by that name:
+A package that a `renames` row renames is imported by the row's name, and only by that name:
 
 ```zane
 import math;          // std's math
 import impostorMath;  // impostor's math
 ```
 
-A dropped package, one whose row names `_`, is imported by no package of the project. The name a project reaches a package under is the same in every one of its files: a file's `as` alias ([`packages.md`](packages.md) §3.3) is one more spelling of that package, never a way to reach another.
+An import of the renamed package's own name reaches only a package of the project, or of another dependency, that the project knows by that name, and is a compile-time error when there is none. A dropped package, one whose row names `_`, is imported by no package of the project. The name a project reaches a package under is the same in every one of its files: a file's `as` alias ([`packages.md`](packages.md) §3.3) is one more spelling of that package, never a way to reach another.
 
 A rename is a spelling, like an import. It leaves the package's compiled symbols, which carry its own name (§6.1), unchanged. It leaves the dependency's own packages unchanged too, since they import the package under the names their own manifest gives. A renamed or dropped package is still compiled and linked wherever a package that imports it is.
 
@@ -364,7 +364,7 @@ Within one project, the project's own top-level library and program packages and
 
 When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
 
-A dependency **MUST** have at least one public library package. Resolution aborts with an error naming any dependency that has none. A dependency's program and test packages are never compiled, and a fetched package's `test-deps` block contributes nothing to the graph (§2.1).
+A dependency **MUST** have at least one public library package. Resolution aborts with an error naming any dependency that has none, and, for a project whose `renames` block drops all of a direct dependency's packages, on that dependency (§2.1). A dependency's program and test packages are never compiled, and a fetched package's `test-deps` block contributes nothing to the graph (§2.1).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-projects-packages-move-into-lib-bin-and-test) — "A project's packages move into `lib/`, `bin/` and `test/`".
 
