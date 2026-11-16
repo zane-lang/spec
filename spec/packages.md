@@ -54,6 +54,8 @@ A package's source files are the `.zn` files directly in its directory. A packag
 
 A library or program package's name is the name of its directory, in camelCase under [`lexical.md`](lexical.md) §3. A library package's name may begin with `_`, which makes the package private to its project (§4.4). Every test package's name is `test` (§7.1).
 
+A project may reach a dependency's library package under another name, which its manifest gives it ([`dependencies.md`](dependencies.md) §2.1). The package keeps its own name in its own project.
+
 The names within one project are kept apart:
 
 - No library package is named `test`.
@@ -123,6 +125,8 @@ import math$;
 ```
 
 The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2: `,` separates entries and never trails. The `pkg$` form ends the qualifier at the separator and takes everything past it; it brings only members the importing package may access, so a `_`-prefixed declaration (§4.1) is never included.
+
+For a dependency's package, `pkg` is the name the project's manifest reaches it under: its own name, or the name a `renames` row gives it ([`dependencies.md`](dependencies.md) §8).
 
 An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
 
