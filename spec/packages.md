@@ -145,7 +145,7 @@ Two imports that would give one entity two spellings in the same file are a comp
 
 ### 3.5 An imported name carries every declaration that shares it
 
-A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed.
+A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed. A method is a declaration an import brings only when its subject is a type parameter (§3.6).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
@@ -352,7 +352,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
-| Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors |
+| Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors; of the methods, only those for a subject of any type (§3.6) |
 | Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which its plain name reaches, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
