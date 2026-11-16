@@ -12,6 +12,7 @@ Zane treats a project's full source URL as its identity and pins every dependenc
 - **`Exact versioning`.** Each dependency records a specific tag and the commit that tag must resolve to.
 - **`Prebuilt distribution`.** Libraries keep source in Git and publish prebuilt object archives as GitHub Release assets. A committed artifact manifest pins their download URLs and SHA-256 hashes.
 - **`Global caching`.** Fetched and versioned artifacts are shared across projects on the machine.
+- **`One name per package`.** A project reaches each dependency package under one name, the package's own or one its manifest gives it, and may drop a package it has no use for.
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#url-identity-and-the-two-file-manifest) — "URL identity and the two-file manifest" weighs URL identity against a central registry and records what the registry road would have bought.
 
@@ -89,6 +90,33 @@ A `test-deps` block takes effect only in a test build of the project whose manif
 
 No key appears in both `deps` and `test-deps`.
 
+The optional top-level **`renames`** block gives a public library package of a direct dependency another name in this project, or drops it (§8):
+
+```zane
+deps [
+    key      version  from
+    std      v1.4.0   release
+    impostor v0.2.0   release
+    extras   v3.1.0   release
+]
+
+renames [
+    dependency  package  name
+    impostor    math     impostorMath
+    extras      json     _
+]
+```
+
+Each `renames` row records:
+
+- **dependency**: the `deps` or `test-deps` key of the dependency that ships the package
+- **package**: the package's own name, which names a public library package of that dependency at its pinned version ([`packages.md`](packages.md) §4.3)
+- **name**: the name this project's packages import the package by, or `_`, which drops the package
+
+A `name` other than `_` is a camelCase identifier under [`lexical.md`](lexical.md) §3. It does not begin with `_`, is not `test`, and differs from the package's own name. No two rows name the same package of the same dependency. Dependency resolution aborts with an error naming the row's dependency and package on a row that breaks one of these rules, that names a key with no `deps` or `test-deps` row, or that names a package its dependency does not ship. It also aborts on a dependency whose every public library package is dropped, since such a dependency gives the project nothing to import.
+
+A `renames` block applies to the packages of the project whose manifest holds it, in every build that compiles them. A row whose dependency is a `test-deps` key takes effect only where that block does, and only a test build checks it against the packages its dependency ships, since no other build fetches that dependency. A dependency may have several rows, one per package.
+
 The optional top-level **`remaps`** block is a bare list of the canonical package **URLs** the consumer opts into compatibility-based symbol remapping (a single-column coda array, so it has no header row). It lists URLs rather than keys because a key is only a local nickname scoped to one project, whereas remapping may target a package that appears **only transitively** and therefore has no key in this project's `deps`; the URL is the canonical, globally unambiguous identity, so any package in the resolved graph can be named whether or not it is a direct dependency. Listing a URL requires no version pin, since the versions come from the resolved graph. A package whose URL is absent from `remaps` is never remapped and its versions coexist side by side (the default). A URL listed in `remaps` that matches no package in the resolved dependency graph is a likely stale entry or typo; the toolchain emits an informational warning during dependency resolution (not an error) so the manifest can be kept clean. `remaps` is the **only** place the remap decision is made; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
 ### 2.2 Lock file (`zane-lock.coda`)
@@ -110,7 +138,7 @@ Each row records:
 - **url**: the canonical package identity.
 - **commit**: the exact commit that the recorded tag must resolve to.
 
-The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands and joining the two files. Both files are committed. Users update them through CLI commands rather than by manual editing.
+The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands, joining the two files, and naming the dependency in a `renames` row. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
 The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
@@ -120,7 +148,7 @@ This pair records a project's **direct** dependencies only; it is not a flattene
 
 ### 2.3 Files are recorded and updated by commands
 
-`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-lock.coda`. The user does not type the commit hash manually in the normal workflow. `zane add` records `release` in the `from` column unless asked for `source` (§12.1), and writes the row into `test-deps` instead of `deps` when asked with `--test`. A command that records a release (`zane add`, `zane update`, `zane dev off`) records one only when every package the graph links as a release has a `zane-artifacts.coda` in its checkout (§3.1) that it can read, since no build could link a release that publishes no archive; otherwise it writes nothing, and for the project's own dependency it names `source` as the way to depend on it. Having the manifest shows only that the release declares archives: a manifest that lists none for the host target is recorded with a warning, and a build checks its target's row and archive when it fetches them (§3.1). Asked for `source` for a library the project already depends on, at the same URL, `zane add` sets that dependency's `from` to `source` and keeps its pinned tag. `zane dev key path` sets a dependency's `from` to a local path (§12.2), and `zane dev off key` sets it back to `release`. Remap opt-in is recorded separately in the `remaps` block.
+`zane add` resolves the requested tag to its current commit hash, writes the key and tag into the `deps` block of `zane.coda`, and writes the key, url, and commit into `zane-lock.coda`. The user does not type the commit hash manually in the normal workflow. `zane add` records `release` in the `from` column unless asked for `source` (§12.1), and writes the row into `test-deps` instead of `deps` when asked with `--test`. A command that records a release (`zane add`, `zane update`, `zane dev off`) records one only when every package the graph links as a release has a `zane-artifacts.coda` in its checkout (§3.1) that it can read, since no build could link a release that publishes no archive; otherwise it writes nothing, and for the project's own dependency it names `source` as the way to depend on it. Having the manifest shows only that the release declares archives: a manifest that lists none for the host target is recorded with a warning, and a build checks its target's row and archive when it fetches them (§3.1). Asked for `source` for a library the project already depends on, at the same URL, `zane add` sets that dependency's `from` to `source` and keeps its pinned tag. `zane dev key path` sets a dependency's `from` to a local path (§12.2), and `zane dev off key` sets it back to `release`. `zane rename key package name` writes a `renames` row for that dependency's package, replacing any row the package already has, so `zane rename key package _` drops it; `zane rename off key package` removes the row, and the package is imported by its own name again. A first argument of `off` names the second form only while the project has no dependency whose key is `off`; `zane rename key package package`, naming the package's own name, removes the row whatever the keys are. `zane add` takes `--rename package=name` for the dependency it adds, once per package, so a library whose package's name clashes with one the project already reaches can be added under another name or with that package dropped. Each checks the row against the rules of §2.1 before writing it. Remap opt-in is recorded separately in the `remaps` block.
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-lock.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
@@ -230,7 +258,7 @@ Conceptually:
 
 The **identity hash** is the first 16 hexadecimal digits, in lowercase, of the SHA-256 digest of the UTF-8 encoding of the package's normalized URL — the host-and-path string that also names its cache directory (§7). It is computed from the URL alone, so it is the same for every version of one package and for the HTTPS and SSH spellings of one repository, and it differs between packages at different URLs. The version tag and the identity hash together make a symbol name unique to one version of one package.
 
-The name after the second `%` is the library package's **path** within its project's `lib/` directory, its directory names joined by `.`: `math` for `lib/math/`, `gui.opengl` for `lib/gui/opengl/` ([`packages.md`](packages.md) §2.2). It is baked into the symbol when the project's author compiled it, never the consumer's manifest key, which is a local label (§2.1). Two projects that nickname one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
+The name after the second `%` is the library package's **path** within its project's `lib/` directory, its directory names joined by `.`: `math` for `lib/math/`, `gui.opengl` for `lib/gui/opengl/` ([`packages.md`](packages.md) §2.2). It is baked into the symbol when the project's author compiled it, never the consumer's manifest key, which is a local label, nor a name a consumer's `renames` row gives the package (§2.1, §8). Two projects that nickname or rename one library differently therefore link the same symbol, which is what lets the cache share one rewritten artifact between them (§7). The name keeps symbols readable; the identity hash is what tells two packages that share a name apart.
 
 The first `%` delimits the version, because `%` is reserved as the symbol separator and is forbidden in version tags by path-safety validation (§7). The identity hash contains only hexadecimal digits, so the second `%` always follows the first after exactly 16 characters. (`%` is deliberately not `@`, which ELF reserves for symbol versioning and which Mach-O/PE toolchains may reject.)
 
@@ -301,7 +329,7 @@ A fully expanded cache path for the `math` example therefore looks like:
 
 ## 8. Importing a Dependency's Packages
 
-Source code imports a dependency's library package by the package's own name:
+Source code imports a dependency's library package by the name the project's manifest gives it, which is the package's own name unless a `renames` row gives it another (§2.1):
 
 ```zane
 import math;
@@ -315,7 +343,20 @@ math$vec(...)
 
 `import math` is one of several import forms; which one a file writes fixes how that package's members are spelled at the use site ([`packages.md`](packages.md) §3.3). A project's packages reach the **public library packages** ([`packages.md`](packages.md) §4.3) of its direct dependencies and no others. A package that a dependency reaches only through its own dependencies is imported by adding it to `deps`. Source code never writes version-prefixed names or manifest keys.
 
-Within one project, the project's own top-level library and program packages and the public library packages of its direct dependencies **MUST** have distinct names, and so **MUST** the public library packages of its `test-deps`. Dependency resolution aborts with an error naming both packages and the dependencies that provide them otherwise.
+A package that a `renames` row renames is imported by the row's name, and only by that name:
+
+```zane
+import math;          // std's math
+import impostorMath;  // impostor's math
+```
+
+An import of the renamed package's own name reaches only a package of the project, or of another dependency, that the project knows by that name, and is a compile-time error when there is none. No package of the project imports a dropped package, one whose row names `_`. The name a project reaches a package under is the same in every one of its files: a file's `as` alias ([`packages.md`](packages.md) §3.3) is one more spelling of that package, never a way to reach another.
+
+A rename is a spelling, like an import. It leaves the package's compiled symbols, which carry its own name (§6.1), unchanged. It leaves the dependency's own packages unchanged too, since they import the package under the names their own manifest gives. The toolchain still compiles and links a renamed or dropped package wherever a package that imports it is.
+
+Within one project, the project's own top-level library and program packages and the public library packages of its direct dependencies **MUST** have distinct names, and so **MUST** the public library packages of its `test-deps`. A renamed package counts under its row's name, and a dropped package under none. Each of the project's subpackages ([`packages.md`](packages.md) §2.3) **MUST** also have a name apart from those of its direct dependencies' public library packages, since the package that holds a subpackage imports both ([`packages.md`](packages.md) §4.3). In a test build, a subpackage that a nested test package tests **MUST** also have a name apart from those of the `test-deps`' public library packages, since that test package imports both ([`packages.md`](packages.md) §7.3); a library package never imports a package of `test-deps`. Two subpackages may still share a name, since no package imports both. Dependency resolution aborts with an error naming both packages and the dependencies that provide them otherwise, and a `renames` row for the dependency's package resolves it.
+
+> **Story:** [`stories/dependencies.md`](../stories/dependencies.md#the-manifest-renames-or-drops-a-dependencys-package) — "The manifest renames or drops a dependency's package".
 
 ---
 
@@ -323,7 +364,7 @@ Within one project, the project's own top-level library and program packages and
 
 When a package is fetched, the toolchain recursively reads its `zane.coda` and installs all transitive dependencies needed by that package version before treating the package as ready to link.
 
-A dependency **MUST** have at least one public library package. Resolution aborts with an error naming any dependency that has none. A dependency's program and test packages are never compiled, and a fetched package's `test-deps` block contributes nothing to the graph (§2.1).
+A dependency **MUST** have at least one public library package. Resolution aborts with an error naming any dependency that has none, and, for a project whose `renames` block drops all of a direct dependency's packages, on that dependency (§2.1). A dependency's program and test packages are never compiled, and a fetched package's `test-deps` block contributes nothing to the graph (§2.1).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-projects-packages-move-into-lib-bin-and-test) — "A project's packages move into `lib/`, `bin/` and `test/`".
 
@@ -396,7 +437,7 @@ At a high level, dependency resolution proceeds in this order:
 2. validate the package URLs and version tags for path safety (§7)
 3. resolve each recorded tag and verify its commit against the corresponding lock file (§4), for every dependency whose `from` is not a path
 4. fetch and check out each verified commit into `~/.zane/packages/<mangled_url>/<mangled_version>/src/`
-5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, a dependency with no public library package, two packages a project reaches under one name, or a package whose `zane-version` is of a major other than the project's or newer than the project's (§6.1, §8, §9, §10, §14)
+5. recursively read the dependency manifests of each verified checkout and each path dependency (§12.2), apply the same pin checks, and reject cycles, identity-hash collisions, a dependency with no public library package, a `renames` row that breaks the rules of §2.1, two packages a project reaches under one name after its renames, a subpackage that shares a name with a dependency's package, or a package whose `zane-version` is of a major other than the project's or newer than the project's (§2.1, §6.1, §8, §9, §10, §14)
 6. for each package, read its committed artifact manifest and select the requested target (§3.1, §12); for a `source` dependency, use §12.1 instead, and for a path dependency, use §12.2 instead
 7. reuse a matching ready entry (§7), or download the archive, verify its SHA-256 before extraction, and safely extract its original objects into `artifacts/<target>/build/` (§5)
 8. on a prebuilt cache miss, rewrite the library's own `!`-prefixed exports with the resolved version tag and package identity hash, write the results to `build/<target>/`, and mark that cache entry ready only after success; on a matching ready cache hit, use the existing rewritten objects without repeating the rewrite; explicit source compilation follows §12.1 instead

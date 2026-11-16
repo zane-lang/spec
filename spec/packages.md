@@ -54,13 +54,15 @@ A package's source files are the `.zn` files directly in its directory. A packag
 
 A library or program package's name is the name of its directory, in camelCase under [`lexical.md`](lexical.md) §3. A library package's name may begin with `_`, which makes the package private to its project (§4.4). Every test package's name is `test` (§7.1).
 
+A project may reach a dependency's library package under another name, which its manifest gives it ([`dependencies.md`](dependencies.md) §2.1). The package keeps its own name in its own project.
+
 The names within one project are kept apart:
 
 - No library package is named `test`.
 - A program package's name differs from every top-level library package's name, and does not begin with `_`.
 - A subpackage's name differs from every top-level library package's name of its project, and does not begin with `_`.
 
-A violation is a compile-time error.
+A violation is a compile-time error. A subpackage's name also differs from every name under which its project reaches a dependency's package, which dependency resolution checks ([`dependencies.md`](dependencies.md) §8).
 
 ### 2.3 A library package may hold subpackages
 
@@ -92,7 +94,7 @@ All source files of one package form a single compilation unit. Declaration orde
 
 An `import` declaration makes members of another package available in the source file containing it. It does not make them available to other files in the current package.
 
-The package must be one the importing package may import (§4.3), named by its package name. A package from another project reaches the importing project through the dependency rules of [`dependencies.md`](dependencies.md) §8.
+The package must be one the importing package may import (§4.3), named by its package name, or for a dependency's package by the name its project's manifest gives it. A package from another project reaches the importing project through the dependency rules of [`dependencies.md`](dependencies.md) §8.
 
 No other package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported package. `core` is not an exception: a file that writes `Int` imports it like any other dependency (see [`types.md`](types.md) §2.6), most often with the whole-package form `import core$` (§3.3).
 
@@ -123,6 +125,8 @@ import math$;
 ```
 
 The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2: `,` separates entries and never trails. The `pkg$` form ends the qualifier at the separator and takes everything past it; it brings only members the importing package may access, so a `_`-prefixed declaration (§4.1) is never included.
+
+For a dependency's package, `pkg` is the name the project's manifest reaches it under: its own name, or the name a `renames` row gives it ([`dependencies.md`](dependencies.md) §8).
 
 An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
 
@@ -231,6 +235,8 @@ What a package may import depends on where it lies in its project:
 A package's **own subpackages** are those whose parent it is; a subpackage of one of them is not among them. A subpackage never imports its parent or a sibling. No package imports a program package or a test package, and the imports among a project's library packages form no cycle ([`dependencies.md`](dependencies.md) §10).
 
 The **public library packages** of a project are its top-level library packages whose names do not begin with `_`. They are the only packages another project reaches.
+
+A project reaches each public library package of its dependencies under the name its manifest gives it, which is the package's own name unless a `renames` row renames or drops it ([`dependencies.md`](dependencies.md) §2.1 and §8). A package the manifest drops is in none of the sets of the table above, for any of the project's packages.
 
 An import of a package outside these sets is a compile-time error.
 
@@ -343,12 +349,12 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Project layout | Library packages in `lib/`, program packages in `bin/`, test packages in `test/`; no `.zn` file directly in any of the three |
 | Package identity | A library or program package is named by its directory; every test package is named `test` |
 | Package source | The `.zn` files directly in the package's directory, beside any C code ([`ffi.md`](ffi.md) §2.1) |
-| Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project |
+| Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project; its name differs from every name its project reaches a dependency's package under |
 | Package declaration | Required in every source file; it matches the package's name |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |
-| Importable packages | A library package imports the project's top-level library packages, its own subpackages, and its dependencies' public library packages, without cycles; nothing imports a program or test package |
+| Importable packages | A library package imports the project's top-level library packages, its own subpackages, and its dependencies' public library packages under the names its manifest gives them, without cycles; nothing imports a program or test package |
 | Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
 | Imported member access | Written exactly as the import states it, and no other way |
