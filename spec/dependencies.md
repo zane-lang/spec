@@ -127,7 +127,7 @@ The optional top-level **`remaps`** block is a bare list of the canonical packag
 resolutions [
     key  url                                commit
     zane https://github.com/zane-lang/compiler  9f1c0aa
-    core https://github.com/zane-lang/core  4b7e91c
+    core https://github.com/zane-lang/std   4b7e91c
     math https://github.com/zane-lang/math  a3f8c2d
 ]
 ```
