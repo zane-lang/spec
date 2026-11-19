@@ -13,8 +13,8 @@ Zane treats operators as mathematical notation with a small, fixed vocabulary.
 - **`Fixed operator set`.** Operators are not user-defined tokens; only the built-in set exists.
 - **`Fixed precedence`.** Grouping is determined by syntax alone and never depends on types or user declarations.
 - **`Derived operators`.** Some operators are defined strictly in terms of others and cannot be reimplemented.
-- **`Intersection and union`.** `and` and `or` take what two values share and what either covers. `Bool` reads them as conjunction and disjunction, and they bind below every comparison.
-- **`Operands as written`.** An operand is never converted. An overload states each type it accepts, a literal's concept type included.
+- **`Intersection and union`.** `and` returns the part two values have in common, and `or` returns everything either value covers. `Bool` reads them as conjunction and disjunction, and they bind below every comparison.
+- **`Operands as written`.** An operand is never converted. An overload declares each type it accepts, a literal's concept type included.
 
 > **Story:** [`stories/operators.md`](../stories/operators.md#a-small-vocabulary-worth-overloading) — "A small vocabulary worth overloading".
 
@@ -82,7 +82,7 @@ The operands of every operator are evaluated left to right, in written order, an
 
 ### 2.4 Intersection and union
 
-`and` and `or` are the operators of **intersection** and **union**. `a and b` is what `a` and `b` share, and `a or b` is what either of them covers. A type implements them when its values have parts in common in that sense:
+`and` and `or` are the operators of **intersection** and **union**. `a and b` is the part that `a` and `b` have in common, and `a or b` is everything that either of them covers. A type implements them when its values have parts in common in that sense:
 
 | Type | `a and b` | `a or b` |
 |---|---|---|
@@ -104,7 +104,7 @@ access Permissions = Permission.read or Permission.write;
 
 `Bool` implements `and`, `or`, `~` as complement, and `==`, and declares nothing beyond them. `a ~= b` follows from §2.3 and is exclusive or on `Bool`. `Bool` declares no `*`, `/`, `+`, or `<`, so those operators and the ones §2.3 derives from them are no-match errors on two `Bool` operands.
 
-Both operands are evaluated. `and` and `or` are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when it decides the result is written inside a branch on the other: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The evaluation then shows at the call site.
+Both operands are evaluated. `and` and `or` are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when the result depends on it is written inside a branch on the other operand: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The conditional evaluation is then visible at the call site.
 
 `and` and `or` bind below every comparison (§3), so a combination of comparisons needs no brackets:
 
@@ -318,6 +318,6 @@ An operator token may appear only in operator position; it has no value form. Th
 | Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`, and a storage primitive has none. |
 | Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `conjoin`, `disjoin`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
-| Intersection and union | `and` and `or` take what two values share and what either covers, binding below every comparison with `and` tighter; `Bool` reads them as conjunction and disjunction, and the numeric types implement neither. Both operands are evaluated. |
+| Intersection and union | `and` returns the part two values have in common and `or` returns everything either value covers, binding below every comparison with `and` tighter; `Bool` reads them as conjunction and disjunction, and the numeric types implement neither. Both operands are evaluated. |
 | Operands | An operand is never converted; an overload accepts a literal by declaring its concept type, and `core` declares one for each side of each operator over a fundamental type. `~` on a numeric literal is the literal of the opposite sign. |
 | Callability | Operator tokens are call-only; behavior is passed as a value through a lambda-variable. |
