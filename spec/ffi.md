@@ -17,7 +17,7 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 - **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from a `c.coda` file in the package's directory. No build script runs.
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
 - **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call; the only Zane memory C writes is the bytes it allocates for a string it returns. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
-- **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation.
+- **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation. A call marked `comptime` may also read through a capability at compile time ([`effects.md`](effects.md) §5.6).
 - **`The declaration is trusted`.** The compiler cannot see what C code touches. A foreign verb declared without a capability that in fact reads outside state is evaluated at compile time, and the value the build machine produced is built into the program (§5.5).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#a-c-interface-that-keeps-compile-time-evaluation) — "A C interface that keeps compile-time evaluation".
@@ -148,7 +148,7 @@ A package's linker set would be shared with every other package, and every other
 
 A project's release archive holds the objects compiled from its library packages' C sources beside their Zane objects ([`dependencies.md`](dependencies.md) §3.1), for the archive's target. Its prebuilt archives are part of its source tree. A consumer compiles against a dependency's source ([`dependencies.md`](dependencies.md) §14), C sources and interface headers included, so the compiler reads a dependency's C code as it reads its Zane code: to check foreign verbs against their declarations (§3.7) and to evaluate calls at compile time (§5.4).
 
-A `release` dependency's objects were compiled by that package's own compiler ([`dependencies.md`](dependencies.md) §14), which may compile its C differently from the consumer's, such as against other system headers. A call into the dependency's C is evaluated at compile time only where the consumer, compiling the dependency's source, gets the same code the dependency's object was compiled from. Where it does not, the call runs only in the running program, as a call into an archive does (§2.4).
+A `release` dependency's objects were compiled by that package's own compiler ([`dependencies.md`](dependencies.md) §14), which may compile its C differently from the consumer's, such as against other system headers. A call into the dependency's C is evaluated at compile time only where the consumer, compiling the dependency's source, gets the same code the dependency's object was compiled from. Where it does not, the call runs only in the running program, as a call into an archive does (§2.4), and a call marked `comptime` that reaches it is a compile-time error.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
@@ -505,6 +505,8 @@ Two computations that call C are never evaluated at compile time, because what t
 - one whose result depends on where an object is stored: the numeric value of an address, such as a pointer converted to an integer, or the order of two different objects' addresses;
 - one that ends with a data handle it made still alive, since that handle's C object exists only in the process that made it.
 
+A call marked `comptime` that makes either computation is a compile-time error ([`effects.md`](effects.md) §5.6).
+
 Evaluating a foreign call at compile time changes nothing the program computes. Its result is the one the C function gives on the build's target, as the C code is compiled for that target (§2.2), and for a `release` dependency as the dependency's object was compiled (§2.6).
 
 A call to a foreign verb that reads capability-backed state is not evaluated at compile time under [`effects.md`](effects.md) §5.3, and neither is anything that depends on its result. Inside a call marked `comptime` it is evaluated with the call, reading the build machine's state, when the compiler has the body of every C function it reaches ([`effects.md`](effects.md) §5.6). A call that writes capability-backed state happens at run time, at the point and in the order the program makes it.
@@ -640,7 +642,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Difference | Zig | Zane |
 |---|---|---|
 | What crosses the boundary | C's own types, pointers included | the types of §3.3; a C object only behind a handle |
-| C at compile time | never | when the call touches no capability |
+| C at compile time | never | when the call touches no capability, and inside a `comptime` call when it reads one |
 | Releasing a C object | `defer` written at each use | the handle's free function, when the handle is destroyed |
 
 ---

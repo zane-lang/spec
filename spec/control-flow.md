@@ -45,7 +45,7 @@ A block **MUST NOT** escape the call it is written at. It may not be stored, ret
 
 This non-escape is what makes capture safe here while it stays forbidden for lambdas ([`functions.md`](functions.md) §7.4, [`concurrency.md`](concurrency.md) §5.2). A lambda may be stored and run later, possibly in parallel, so captured state could be reached from somewhere the compiler cannot see. A block runs during the call that receives it, in the frame that wrote it.
 
-A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`concurrency.md`](concurrency.md) §3.1).
+A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`concurrency.md`](concurrency.md) §3.1), and a call to one **MUST NOT** be marked `comptime` ([`effects.md`](effects.md) §5.6).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-verb-with-a-block-parameter-cannot-be-spawned) — "A verb with a block parameter cannot be spawned".
 
 
