@@ -239,7 +239,7 @@ type Buffer<T Type, n @concepts$Int> = struct {
 }
 ```
 
-Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
+Parameters are referenced by bare name. The case of a parameter's identifier marks whether it is a type or a number: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
 
 A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n @concepts$Int>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
@@ -894,7 +894,7 @@ g();
 ```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#statements-end-in--so-a-trailing-brace-can-end-one) — "Statements end in `;` so a trailing brace can end one".
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a `[ ]` does not trail.
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" gives the reason a `[ ]` does not trail.
 
 An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
 

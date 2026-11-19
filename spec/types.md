@@ -157,7 +157,7 @@ Each of the five has a compiler-provided constructor from its literal's concept 
 @primitives$String.escaped(text @concepts$String)
 ```
 
-A concept is not storage, so the constructor it is passed to decides which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
+A concept is not storage, so the constructor that receives the concept determines which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
 
 These constructors are not `implicit`, so a literal never becomes a primitive by itself. A literal is accepted where the parameter's type is the literal's own concept type, or a type with an implicit constructor from that concept type (§4.2). Such a type calls the primitive's constructor inside its own conversion:
 
@@ -251,7 +251,7 @@ A conversion that is exact for every value of its source is the target's anonymo
 @primitives$F64(value @primitives$I32)
 ```
 
-Every other conversion can lose a value, and is a named constructor (§3.4) whose name says how it does:
+Every other conversion can lose a value, and is a named constructor (§3.4) whose name states how the conversion loses a value:
 
 | Constructor | Source | Result |
 |---|---|---|
@@ -388,7 +388,7 @@ starter Weapon{fireRate = Float(2.0);}
 
 ### 3.4 Named constructors
 
-The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
+The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths that a bare `Type(...)` cannot distinguish.
 
 ```zane
 package Math;

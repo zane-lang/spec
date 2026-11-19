@@ -77,7 +77,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.10 worker pool / element
 
 - **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
-- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" says it is many; "element" is what any container calls what it holds.
+- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" signals that it holds many workers; "element" is what any container calls what it holds.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 
 ### 2.11 funnel
@@ -194,7 +194,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.17 struct/variant body symmetry
 
-- **Meaning:** A `struct` body and a `variant` body use the exact same grammar; the keyword alone decides product versus sum. The symmetry applies to the declaration, not to consuming code, where construction and reads differ.
+- **Meaning:** A `struct` body and a `variant` body use the exact same grammar; the keyword alone determines whether the type is a product or a sum. The symmetry applies to the declaration, not to consuming code, where construction and reads differ.
 - **Why this name:** The label states the shared property directly: one body shape serves both kinds, distinguished only by keyword.
 - **Canonical home:** [`adt.md`](adt.md) §3.1
 
@@ -231,7 +231,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.23 settled owner
 
 - **Meaning:** An owner that may be referenced and never moves again: a bare reference-type symbol, or a field or `ArrayRef` element of a settled root. A roaming owner settles by moving into a settled place. Overwriting it writes the replacement at the same address.
-- **Why this name:** A settler has stopped travelling and taken a fixed home; a reference can name only an owner that has done so, and the word says the owner has stopped moving for good.
+- **Why this name:** A settler has stopped travelling and taken a fixed home; a reference can name only an owner that has done so, and the word "settled" marks an owner that has stopped moving for good.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.24 roaming owner
@@ -272,7 +272,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.30 value mould / reference mould
 
-- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through references. It does not decide whether the type may recurse — both forms may, through a boxed member (§3.39).
+- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form determines whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through references. It does not determine whether the type may recurse — both forms may, through a boxed member (§3.39).
 - **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
@@ -351,7 +351,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.43 scope
 
 - **Meaning:** The block whose lifetime bounds a place, and the only thing the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
-- **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's scope tells you everything.
+- **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position does not bound its lifetime, and its root's scope does.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
 ### 3.44 spent symbol
@@ -369,7 +369,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.46 scalar primitive
 
 - **Meaning:** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, or `@primitives$F64`: a signed integer or IEEE 754 float of the width its name gives. Each is built from its literal's concept, and converts to each other through a constructor of the target, named for its loss when it can lose a value.
-- **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out the kind and the width, which is all that tells the four apart.
+- **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out whether the number is an integer or a float and how many bits wide it is, which is all that separates the four.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
 
 ### 3.47 growing-argument rule
@@ -397,7 +397,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.3 URL identity
 
 - **Meaning:** A dependency's canonical identity is its project's full source URL, while manifest keys are only local labels.
-- **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
+- **Why this name:** The rule makes the repository URL itself the package's identity, not from whichever alias a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
 
 ### 4.4 import spelling rule
@@ -463,13 +463,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.14 test package
 
 - **Meaning:** A directory of a project's `test/` holding `.zn` files, each declaring `package test`. It imports what the tested package's real user imports and is the root package of its own test build.
-- **Why this name:** It is the package that tests the others, and its name is fixed, so every test package's declaration says `test`.
+- **Why this name:** It is the package that tests the others, and its name is fixed, so every test package is declared with the name `test`.
 - **Canonical home:** [`packages.md`](packages.md) §7
 
 ### 4.15 library package / program package
 
 - **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports.
-- **Why this name:** The directories already say it: `lib/` holds what others link against, `bin/` what becomes a program.
+- **Why this name:** The directory names already show it: `lib/` holds the packages that other packages link against, and `bin/` holds the packages that become programs.
 - **Canonical home:** [`packages.md`](packages.md) §2.1
 
 ### 4.16 subpackage
@@ -487,7 +487,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.18 math function / exact / approximate
 
 - **Meaning:** A function of `@math$`, on scalar primitives. An **exact** one's result is fully specified and the same on every platform; an **approximate** one's is close to the true value and may differ between platforms.
-- **Why this name:** The everyday words: the namespace holds what a math library holds, and exact and approximate say how far its result can be trusted to the last bit.
+- **Why this name:** The everyday words: the namespace holds what a math library holds, and the words exact and approximate state whether a function's result can be trusted to the last bit.
 - **Canonical home:** [`math.md`](math.md) §2.2
 
 ### 4.19 foreign verb
@@ -523,5 +523,5 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.24 `comptime` call
 
 - **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities standing for the build machine's; it writes none, and its result is a value type built into the program.
-- **Why this name:** The keyword says when the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
+- **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
 - **Canonical home:** [`effects.md`](effects.md) §5.6

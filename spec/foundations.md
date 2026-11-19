@@ -46,7 +46,7 @@ Three consequences that other documents depend on:
 
 ## 4. Identifier Casing and Parsing
 
-The surface grammar uses enforced identifier casing to simplify parsing and distinguish type names from value names. The initial-case rule and the ambiguities it resolves are specified by [`lexical.md`](lexical.md) §3 and §5. It supports the syntax; it does not define the staging, ownership, or layout model described here.
+The surface grammar uses enforced identifier casing to simplify parsing and distinguish type names from value names. The initial-case rule and the ambiguities it resolves are specified by [`lexical.md`](lexical.md) §3 and §5. The casing rule supports the syntax; it does not define the staging, ownership, or layout model described here.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
 
@@ -66,11 +66,11 @@ It is the foundation under a large part of the runtime model:
 
 ## 6. Strictness Is the Performance Model
 
-Zane is strict — single ownership, fixed layout, read-only parameters, mandatory error handling — and the strictness is not a separate concern from its performance. It *is* the performance story.
+Zane is strict — single ownership, fixed layout, read-only parameters, mandatory error handling — and this strictness is what produces its performance.
 
 High-level expression, on its own, usually costs speed. What buys it back is that the rules preserve enough invariants for the compiler to generate good code without guessing: ownership is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
 
-So the rules should not be read as a usability tax levied next to the performance. They are the bargain itself: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
+The rules are therefore not a usability tax levied next to the performance. They are the trade that produces it: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#strictness-is-the-performance-model) — "Strictness is the performance model" weighs this bet against the permissive alternative and records its real ergonomic cost.
 
@@ -78,11 +78,11 @@ So the rules should not be read as a usability tax levied next to the performanc
 
 ## 7. Identity Is Opt-In
 
-Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and it decides everything that separates a plain value from a shared object. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; their kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
+Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and everything that separates a plain value from a shared object follows from which side of it a type is on. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; their kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping. A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and reaches a new place by being moved rather than duplicated.
 
-What the axis does **not** decide is **recursion**. Either kind may contain itself, through a member the compiler boxes. That rule and the reasoning behind it belong to [`adt.md`](adt.md) §4.
+The axis does **not** affect **recursion**: either kind may contain itself, through a member the compiler boxes. That rule and the reasoning behind it belong to [`adt.md`](adt.md) §4.
 
 Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and it is the same thing in each: a *borrow* of the caller's value or owner, so a value is mutable without gaining identity and an object is mutable without the method taking ownership. Neither consumes the caller's owner.
 
@@ -91,7 +91,7 @@ Both kinds are mutated in place through a `mut` method, and the subject is writt
 - **A value copy is deep.** Copying a value copies every payload it owns out of line into fresh storage, which is what lets a value type recurse without ever aliasing. See [`memory.md`](memory.md) §2.3.
 - **`&` rides on `#`.** A non-owning `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
 - **A reference names an owner that never moves.** An owner is either settled — referenceable, never moving again — or roaming — movable, and referenced by nothing. A new `&` is minted only from a settled place, so the object it names stays where it is until its scope drains. See [`memory.md`](memory.md) §2.1, §2.8, and §2.8.1.
-- **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. A worker pool's element may be a reference type only when every `&` in it names a constant. See [`concurrency.md`](concurrency.md) §4 and §6.4.
+- **Concurrency depends on this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. A worker pool's element may be a reference type only when every `&` in it names a constant. See [`concurrency.md`](concurrency.md) §4 and §6.4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
 

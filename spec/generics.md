@@ -15,7 +15,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`Types are templated functions`.** A parameterized *type* lists its parameters in a `<>` header and produces a result. Applying arguments to those parameters (`Vector<Int>`) evaluates the template into a concrete type.
 - **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n @concepts$Int>`) and references it bare elsewhere.
 - **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
-- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
+- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the case of a parameter's identifier follows the parameter's concept — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type, and reaches it only by passing it on (§3.7).
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
@@ -121,9 +121,9 @@ Unit func3(  T Type)     //                              T : value Int, type Typ
 ```
 
 - `func3(T Type)` declares the type-symbol `T` directly. The caller supplies its value: `func3(Int)` gives `T` the value `Int`. This is **explicit passing**.
-- `func2(x T Type)` declares a value-symbol `x` whose type is `T`, but says nothing about `T`'s value. The caller supplies a value for `x` — `func2(Int(3))` — and the compiler reads `T`'s value off it: `Int(3)` has type `Int`, so `T` is `Int`. This is **inference**.
+- `func2(x T Type)` declares a value-symbol `x` whose type is `T`, but does not give `T` a value. The caller supplies a value for `x` — `func2(Int(3))` — and the compiler reads `T`'s value off it: `Int(3)` has type `Int`, so `T` is `Int`. This is **inference**.
 
-Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. The leading value name decides which form you get: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
+Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. Whether the parameter has a leading value identifier determines which form it is: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
 
 Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
 
@@ -258,7 +258,7 @@ The body knows nothing of `S` beyond what the signature states, so it reaches th
 
 ### 4.1 `<>` is the application syntax of the type system
 
-A type expression applies arguments to a parameterized type. It is a compile-time, structural description — it says what a value's architecture *is*, it does not build a value. Type expressions appear wherever a type is expected:
+A type expression applies arguments to a parameterized type. It is a compile-time, structural description: it describes the architecture of a value's type, and it does not build a value. Type expressions appear wherever a type is expected:
 
 ```zane
 type Wrapper = struct {
@@ -290,7 +290,7 @@ type Buffer<T Type, n @concepts$Int> = struct {
 
 ### 4.3 Casing makes `<>` unambiguous
 
-The token before `<` in a type expression is always a type, which is always uppercase-initial (see [`lexical.md`](lexical.md) §3). A comparison operator never has a type on its left. This is why `Vector<Int>` parses as a type application while `a < b` parses as a comparison: the casing of the left operand decides. Case-sensitive parsing is what makes the `<>` type syntax viable.
+The token before `<` in a type expression is always a type, which is always uppercase-initial (see [`lexical.md`](lexical.md) §3). A comparison operator never has a type on its left. This is why `Vector<Int>` parses as a type application while `a < b` parses as a comparison: the case of the left operand's first letter determines which. Case-sensitive parsing is what makes the `<>` type syntax viable.
 
 ### 4.4 Inside a verb, a `<>` entry may introduce a parameter
 

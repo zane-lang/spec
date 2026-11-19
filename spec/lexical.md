@@ -8,12 +8,12 @@ This document specifies Zane's lexical layer: how source text is tokenised, how 
 
 ## 1. Overview
 
-Zane is case-sensitive. The first letter of a name selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
+Zane is case-sensitive. The first letter of an identifier selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
 - **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
-- **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
+- **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
 - **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement or declaration ending in `}`, that brace — so line breaks are free everywhere.
 - **`String structure is language-defined`.** Double quotes delimit a string; quote and backslash escapes and interpolation are recognized by the compiler. Other backslash sequences remain text for the consumer (§7.1).
@@ -130,7 +130,7 @@ type Holder = struct {
 ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison operator
 ```
 
-A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The casing rule therefore tells the two apart by inspecting a single token's first letter.
+A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single token.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
@@ -241,7 +241,7 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 | `( )` | a parameter list or an argument list | `,`, never trailing |
 | `< >` | a generic header or a generic argument list | `,`, never trailing |
 
-A `{ }` is the one bracket with two readings. Most are introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, and both hold `;`-terminated things, so the terminator does not separate them. In **argument position**, where the two can meet, what separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.10).
+A `{ }` is the one bracket with two readings. Most are introduced by a token that shows which reading applies — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, and both hold `;`-terminated things, so the terminator does not separate them. In **argument position**, where the two can meet, what separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.10).
 
 ```zane
 f({ key, value; });  // a map literal: ',' follows the first expression
@@ -262,7 +262,7 @@ Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and t
 
 ## 7. Literals
 
-A numeric literal is written in decimal digits, in one of two forms, and the form decides its concept type ([`syntax.md`](syntax.md) §2.8):
+A numeric literal is written in decimal digits, in one of two forms, and the form determines its concept type ([`syntax.md`](syntax.md) §2.8):
 
 - An **integer literal** is one or more digits. It carries `@concepts$Int`.
 - A **float literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Float`.
@@ -279,7 +279,7 @@ A numeric literal consists of digits and at most one `.`, which has at least one
 
 A numeric literal is written without a sign. `~` before one gives the literal of the opposite sign ([`operators.md`](operators.md) §2.7), so `~3` is a negative integer literal.
 
-Because the spelling decides the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
+Because the spelling determines the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" tells how the concepts took their names.
