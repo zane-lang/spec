@@ -276,7 +276,7 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
-An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
+An intrinsic operation has one signature, with four exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
 - the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
