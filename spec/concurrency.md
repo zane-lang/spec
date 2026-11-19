@@ -203,13 +203,13 @@ A **block argument** captures and is exempt, because it cannot be stored and can
 
 ### 5.3 No `async`/`await` syntax
 
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of thing merely because some caller chooses to run it concurrently, whether as a spawned call or as a pool's step.
+Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of verb merely because some caller chooses to run it concurrently, whether as a spawned call or as a pool's step.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
 ### 5.4 No language-level process or channel abstraction
 
-Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. A program expresses long-running concurrent work as ordinary spawned function or method calls, such as a spawned worker ([`control-flow.md`](control-flow.md) §3.7), and bulk work as a worker pool (§6), plus explicit state flow governed by ownership and effect rules. A worker pool is neither an actor system nor a channel: its workers send events only to its own funnel, the funnel sends nowhere, and nothing addresses anything else.
+Zane does not define a dedicated `Process` type, actor primitive, or channel primitive in the core language. A program expresses long-running concurrent work as ordinary spawned function or method calls, such as a spawned worker ([`control-flow.md`](control-flow.md) §3.7), and bulk work as a worker pool (§6), plus explicit state flow governed by ownership and effect rules. A worker pool is neither an actor system nor a channel: its workers send events only to its own funnel, the funnel sends nowhere, and nothing sends a message to a particular worker or element.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#what-the-core-deliberately-leaves-out) — "What the core deliberately leaves out".
 
@@ -270,13 +270,13 @@ A worker started without event sources has its step called again as soon as it r
 
 An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them.
 
-A step waits for nothing by design: what it reads is what is already there, and it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
+A step waits for nothing by design: it reads only values that already exist, and it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
 
 ### 6.4 An element may reference constants
 
-An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. This is an exception to §4.2, and it keeps what §4.2 protects. The pool alone owns the element, so no other path reaches it, and no `&` in it reaches program state that anything writes: a package constant is immutable, and a capability holds no state of the program. What a call through a capability changes is capability-backed state, ordered by §4.5. A capability stored in the element from a writable source is written through it as [`effects.md`](effects.md) §6.2 permits, and one stored from a read-only source stays read-only.
+An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. This is an exception to §4.2, and it preserves the guarantee that §4.2 provides. The pool alone owns the element, so no other path reaches it, and no `&` in it reaches program state that anything writes: a package constant is immutable, and a capability holds no state of the program. What a call through a capability changes is capability-backed state, ordered by §4.5. A capability stored in the element from a writable source is written through it as [`effects.md`](effects.md) §6.2 permits, and one stored from a read-only source stays read-only.
 
 ```zane
 type Session = #struct {
