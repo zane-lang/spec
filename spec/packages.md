@@ -274,7 +274,9 @@ Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`]
 
 ### 6.2 `main` is the entry point
 
-A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly. Its return type may be any type, and the value it returns is discarded. It declares no abort type, because no caller exists to handle an abort.
+A program starts at `main()`, which the root package declares in any of its source files. `main` takes no parameters, because the root package reaches the program's console and runtime through `@program$` directly. Its return type may be any type, and the value it returns is discarded.
+
+The program itself calls `main`, so it is the caller that handles an abort of `main` (§6.3). The one abort type `main` may declare is `@primitives$String`, the message the program reports. Any other abort type on `main` is a compile-time error.
 
 Every program package and every test package **MUST** declare `main`. A package without it is a compile-time error.
 
@@ -289,6 +291,31 @@ Unit main() {
     return Unit();
 }
 ```
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#main-may-abort-with-a-primitivesstring-and-the-program-ends-with-a-status) — "`main` may abort with a `@primitives$String`, and the program ends with a status".
+
+### 6.3 A program ends with an exit status
+
+A program ends with an **exit status**, a number it hands to whatever started it. How the program ends decides the status:
+
+- **`main` returns.** The status is `0`. A program whose printed output could not all be written ends with status `1` instead.
+- **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.
+- **The program stops.** A stop, such as an index out of range or a call that nests too deep ([`memory.md`](memory.md) §3.7), is not an abort, and no handler sees it. The status is not `0`.
+
+```zane
+Unit?@primitives$String main() {
+    console Console(@program$console);
+    settings String = readSettings() ? reason {
+        abort @primitives$String("cannot read the settings: " + reason);
+    }
+    console!print(settings);
+    return Unit();
+}
+```
+
+An abort is not a coercion site ([`types.md`](types.md) §4.2), so a `core` `String` message is converted to `@primitives$String` explicitly, through the implicit constructor `core` declares for it ([`types.md`](types.md) §4.1).
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#main-may-abort-with-a-primitivesstring-and-the-program-ends-with-a-status) — "`main` may abort with a `@primitives$String`, and the program ends with a status".
 
 ---
 
@@ -311,7 +338,7 @@ Every source file of a test package **MUST** begin with the declaration `package
 
 ### 7.2 Each test package is the root of its own test build
 
-A **test build** compiles one test package with the library packages it reaches and runs the result. The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
+A **test build** compiles one test package with the library packages it reaches and runs the result. The test build passes when the program ends with status `0`, and fails otherwise (§6.3). The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
 
 A library package under test is a package of its own, distinct from every release of the same project that the build's dependency graph also reaches. When a dependency of the test package itself depends on the project, the two copies coexist in one program as two versions do ([`dependencies.md`](dependencies.md) §11), and a type of one is not a type of the other.
 
@@ -363,7 +390,9 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
 | Root package | The program package being built, or the test package of a test build; the only package that reaches `@program$` |
-| Entry point | `main()`, declared in any source file of the root package, with no parameters and no abort type; any return type, whose value is discarded; required in every program and test package |
+| Entry point | `main()`, declared in any source file of the root package, with no parameters, and either no abort type or `@primitives$String`; any return type, whose value is discarded; required in every program and test package |
+| Exit status | `0` when `main` returns and its output was written; `1` when `main` aborts, after an attempt to write its message and a line feed to standard error, whether or not the write succeeds; not `0` when the program stops |
+| Test result | Passed when the program ends with status `0` |
 | Test package | Each directory of `test/` with `.zn` files; a nested one mirrors a subpackage and imports it, and each is the root of its own test build |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
