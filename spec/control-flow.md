@@ -51,7 +51,7 @@ A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`co
 
 ### 2.3 A block is a scope for bindings, not for control transfer
 
-A block is the scope of the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1).
+A block is the scope of the symbols declared inside it, and they are destroyed when it ends, like any other lexical block ([`lifetimes.md`](lifetimes.md) §2.1). Each time a callee runs the block, its scope opens anew and drains when that run ends, so a block that runs repeatedly is a sequence of scopes, one per run, and a spawned call made in one run completes before the next run begins ([`concurrency.md`](concurrency.md) §4.1).
 
 It is **transparent** to control transfer. `return` and `abort` written inside a block act on the invocation containing the *call*, not on the block, and a call to an exiting verb such as `core`'s `guard` (§3.6) ends that same invocation:
 
