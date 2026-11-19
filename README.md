@@ -65,7 +65,7 @@ Each rule has one canonical home; every other mention cross-references it.
 | [`spec/memory.md`](spec/memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, and capability wiring |
-| [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
+| [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, and concurrency safety |
 
 ### Programs and program structure
 
@@ -95,7 +95,7 @@ The spec states *what* the language does. The stories in [`stories/`](stories/),
 | [`stories/memory.md`](stories/memory.md) | [`spec/memory.md`](spec/memory.md): memory safety with no garbage collector and no lifetime annotations: owners, references and arenas |
 | [`stories/lifetimes.md`](stories/lifetimes.md) | [`spec/lifetimes.md`](spec/lifetimes.md): lexical scope in place of a borrow checker, and the single owner comparison made at every store |
 | [`stories/effects.md`](stories/effects.md) | [`spec/effects.md`](spec/effects.md): inferring effects instead of annotating them, and capabilities in place of ambient I/O |
-| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md): implicit parallelism without `async` coloring, and why `spawn` marks only a call |
+| [`stories/concurrency.md`](stories/concurrency.md) | [`spec/concurrency.md`](spec/concurrency.md): implicit parallelism without `async` coloring, why `spawn` marks only a call, and worker pools for bulk work |
 | [`stories/error-handling.md`](stories/error-handling.md) | [`spec/error-handling.md`](spec/error-handling.md): failure as a second return path rather than a `Result` value |
 | [`stories/control-flow.md`](stories/control-flow.md) | [`spec/control-flow.md`](spec/control-flow.md): how branching and repetition left the language and became ordinary `core` code |
 | [`stories/functions.md`](stories/functions.md) | [`spec/functions.md`](spec/functions.md): methods pulled out of the type body, mutation made visible with `:` and `!`, and overloading by shape |

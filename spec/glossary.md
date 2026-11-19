@@ -40,13 +40,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.4 value-typed mutation rule
 
-- **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
+- **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location; a worker pool's element may also be a reference type whose every `&` names a constant. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
 - **Why this name:** Concurrent mutation is gated on the subject being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
-- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
+- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2, §4.3, and §6.4
 
 ### 2.5 water-tower lifetimes
 
-- **Meaning:** Objects owned in a scope stay alive until every `spawn`ed call in that scope has completed and the scope drains.
+- **Meaning:** Objects owned in a scope stay alive until every `spawn`ed call in that scope has completed, and every worker of a pool it owns has finished, and the scope drains. A pool's element is the exception: it dies when its own step returns `false`.
 - **Why this name:** The source document explains the rule through a water-tower analogy in which each still-running spawned call acts like a plate holding the water level up.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.1
 
@@ -73,6 +73,24 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value that runs on that subject until it returns `false`. `core`'s `work` and `setInterval` run one, over `@controlflow$work` and `@controlflow$workEvery`; neither takes a block, so a program may spawn a worker.
 - **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the one advance the worker repeats.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3.7
+
+### 2.10 worker pool / element
+
+- **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
+- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" says it is many; "element" is what any container calls what it holds.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §6
+
+### 2.11 funnel
+
+- **Meaning:** A worker pool's one writer of its shared state. It applies the value-typed events the pool's steps publish, each copied into its queue, one at a time, in order per worker, and never touches an element.
+- **Why this name:** Many workers pour events in and one outlet applies them, the shape of a funnel; "handler" already names the `?` abort handler.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §6.5
+
+### 2.12 event source
+
+- **Meaning:** An `@primitives$EventSource` a worker pool's worker is started with, such as a timer. The runtime calls the worker's step again when one is ready, so the worker waits without occupying a thread.
+- **Why this name:** It is the standard term in event loops for something that becomes ready; the qualifier keeps it apart from a reference source.
+- **Canonical home:** [`concurrency.md`](concurrency.md) §6.3
 
 ---
 
@@ -414,7 +432,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.9 control-flow intrinsic
 
-- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics that build every branching, repeating, exiting, and worker construct. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics that build every branching, repeating, and exiting construct and the single worker; a worker pool is a primitive of its own. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
 - **Why this name:** They are the intrinsics (§4.8) that are operations of control flow.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
