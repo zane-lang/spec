@@ -87,7 +87,7 @@ The spec states *what* the language does. The stories in [`stories/`](stories/),
 |---|---|
 | [`stories/foundations.md`](stories/foundations.md) | [`spec/foundations.md`](spec/foundations.md): the bets behind captured intent, staged compilation and strictness as performance |
 | [`stories/syntax.md`](stories/syntax.md) | [`spec/syntax.md`](spec/syntax.md): why a declaration writes its name before its type, and how one shape came to cover constructors, constants and function values |
-| [`stories/lexical.md`](stories/lexical.md) | [`spec/lexical.md`](spec/lexical.md): casing as a hard signal for what a name is, and letting the bracket choose the separator |
+| [`stories/lexical.md`](stories/lexical.md) | [`spec/lexical.md`](spec/lexical.md): casing as a hard signal for an identifier's kind, and letting the bracket choose the separator |
 | [`stories/types.md`](stories/types.md) | [`spec/types.md`](spec/types.md): the value/reference model, why `#` marks a distinct type, and how constructors and literals reach storage |
 | [`stories/adt.md`](stories/adt.md) | [`spec/adt.md`](spec/adt.md): splitting `enum` from `variant`, the central `match` block, and how a variant can contain itself |
 | [`stories/generics.md`](stories/generics.md) | [`spec/generics.md`](spec/generics.md): one parameter model for types and sizes, the `<>`/`()` split, and why a second container primitive was needed |

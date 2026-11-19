@@ -12,7 +12,7 @@ interpretation of pinned numbers lives in explanations.txt.
 # beside the source. Clang builds C and C++, so they share Zane's
 # LLVM backend; every language builds at its level-2 optimization, with the
 # safety checks it keeps by default. OCaml's compiler without flambda, the
-# one nixpkgs builds, has a single optimization level.
+# build nixpkgs provides, has a single optimization level.
 LANGUAGES = {
     "zane": {
         "name": "Zane",
@@ -79,7 +79,7 @@ LANGUAGES = {
 # The order rows appear in on the page.
 LANGUAGE_ORDER = ["zane", "c", "cpp", "rust", "go", "d", "zig", "ocaml"]
 
-# What a fold profile means, shown beside each test.
+# The definition of each fold profile, shown beside each test.
 PROFILES = {
     "static": "Reads no input: an optimized build may compute the whole "
               "program while it compiles.",

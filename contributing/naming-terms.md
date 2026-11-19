@@ -7,8 +7,8 @@ documentation leans on, not the surface keywords of the language itself.
 
 Terminology is worth naming deliberately because a good term is used on nearly
 every page: it is the handle a reader carries the concept around by. A term that
-fights its reader — one that already means something else, or that says too much,
-or too little — taxes every sentence it appears in.
+fights its reader — one that already means something else, or that implies more,
+or less, than the concept holds — taxes every sentence it appears in.
 
 ---
 
@@ -24,8 +24,8 @@ does the teaching before the definition is even read.
   sentence: the subject is what the verb acts from, so `player!setScale(...)`
   reads subject–verb–object down the line.
 - **`mould`** — a `struct`/`variant`/`enum` form. A mould gives shapeless
-  material a fixed form; these forms give a type its shape, and the type is what
-  is cast from them.
+  material a fixed form; these forms give a type its shape, and a type is cast
+  from them.
 - **`borrow`** — the passing mode for a value type. The callee is *lent* the
   caller's storage for the call and must give it back; it cannot keep it.
 - **`settled` / `roaming`** — the two states of an owner. A settler has stopped
@@ -80,8 +80,8 @@ resonance that rewards a second look rather than announcing itself.
 ### 2.6 It takes every form the prose needs
 
 A term that names a relationship is needed as a verb as often as a noun: the
-rules say what *may* stand in that relationship, not only what the thing is
-called. Check that the word bends into every form the spec will write — noun,
+rules state which constructs *may* stand in that relationship, not only what the
+relationship is called. Check that the word bends into every form the spec will write — noun,
 verb, participle, and the compounds built from them — before adopting it. A
 noun with no natural verb pushes the prose into forced coinages ("may be
 guested") or into a generic word that drifts from the term.

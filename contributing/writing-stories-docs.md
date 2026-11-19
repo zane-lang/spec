@@ -57,13 +57,13 @@ A chapter is **not pinned to a spec section.** It is free to range across whatev
 
 ### 2.3 A heading says what happened
 
-A chapter heading tells the reader what the chapter is about and what was decided in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing carries the kind") both do this.
+A chapter heading names what the chapter is about and what was decided in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing carries the kind") both do this.
 
 The test is to read the heading without the chapter. A reader who knows the spec should be able to say which rule it explains and roughly which way the decision went. A heading that only makes sense once the chapter has been read is a teaser, and it is rewritten until it passes.
 
 Teasers fail in a few recurring ways:
 
-- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the owner — and *Y* a riddle about it. The chapter knows which one it means; the heading names it.
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the owner — and *Y* a riddle about it. The chapter knows which construct it means; the heading names that construct.
 - **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
 - **Personification.** A heading in which a construct *wanted*, *outran*, *outlived*, or *could not contain itself* treats a rule as a character. State what the rule does.
 - **A paradox or punchline** that inverts an expectation the reader has not formed yet. State the outcome instead of staging a surprise.
@@ -116,7 +116,7 @@ A stories doc is joined to the spec, and its chapters are joined to each other. 
 
 ### 4.1 The companion pointer (living)
 
-The top-of-file `> **See also:**` line, and the spec's own `> **Story:**` pointers back (§4.4), are **navigational**: they say "here is the companion document." A reader following one wants the *current* doc, so these stay ordinary repo-relative links (`../spec/<topic>.md`, `../stories/<topic>.md`). They are expected to track the files as they move.
+The top-of-file `> **See also:**` line, and the spec's own `> **Story:**` pointers back (§4.4), are **navigational**: each points the reader to the companion document. A reader following one wants the *current* doc, so these stay ordinary repo-relative links (`../spec/<topic>.md`, `../stories/<topic>.md`). They are expected to track the files as they move.
 
 ### 4.2 In-prose spec references (point-in-time → permalink)
 
@@ -126,7 +126,7 @@ When a chapter says *"the spec says X"* — when it quotes or leans on a specifi
 [`lexical.md` §5](https://github.com/zane-lang/spec/blob/<commit-sha>/spec/lexical.md#5-how-casing-disambiguates-the-grammar)
 ```
 
-The reason is the update model (§5). A story accumulates; a chapter written today describes the spec *as it is today*. A relative link would silently re-point as the spec changes, so an old chapter would end up "citing" a rule that no longer says what the chapter claims — invisible drift, exactly the failure the anti-drift discipline exists to prevent. Pinning the link to the commit freezes the citation to the spec the chapter was actually written against, so a later reader can always see what was true *then* and judge the reasoning on its own terms.
+The reason is the update model (§5). A story accumulates; a chapter written today describes the spec *as it is today*. A relative link would silently re-point as the spec changes, so an old chapter would end up "citing" a rule whose current text no longer matches what the chapter claims — invisible drift, exactly the failure the anti-drift discipline exists to prevent. Pinning the link to the commit freezes the citation to the spec the chapter was actually written against, so a later reader can always see what was true *then* and judge the reasoning on its own terms.
 
 Use a full GitHub blob permalink with a commit SHA (`/blob/<sha>/...`), not a branch or tag name — branches and tags move, which defeats the point. Pin to the latest commit that holds the spec text the chapter describes; for a chapter written alongside a spec change, that is the commit that change lands in. The visible link text should still name the file and section (`` `lexical.md` §5``) so the citation reads naturally; the SHA rides in the URL.
 
@@ -190,7 +190,7 @@ git diff --word-diff origin/main -- stories/<topic>.md
 
 Comparing against what is published keeps the diff quiet while you rearrange your own branch's new chapters and shows every change to a merged one. Each change inside a published chapter is either a supersession note or, in a change that does nothing else, an adjustment that passes the claims test above; anything that alters what the chapter says the design was belongs in a new chapter. New chapters land at the tail, after every published one.
 
-Nothing runs this for you. There is no CI job and no hook, because whether an edit changes a claim is a judgement no check could make. The rule is enforced by the author reading the diff before committing and by the reviewer reading it again on the branch, so a rewritten claim reaches `main` only if both skip it. Treat the diff as part of the commit, not as an optional audit.
+Nothing runs this diff check for you. There is no CI job and no hook, because whether an edit changes a claim is a judgement no check could make. The rule is enforced by the author reading the diff before committing and by the reviewer reading it again on the branch, so a rewritten claim reaches `main` only if both skip it. Treat the diff as part of the commit, not as an optional audit.
 
 **Consolidate dead threads, sparingly.** Appending forever would bury the present under history. So a chapter *may* be rewritten or folded down — but only when its narrative has become pure dead weight: it no longer illuminates the present design *and* is not interesting as history. That is a high bar, and consolidation is the one adjustment that may drop claims rather than keep them standing; like any other, it is the whole of its change. The default is to append; consolidation is the rare exception, not routine cleanup, and when in doubt you keep the history.
 
