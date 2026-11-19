@@ -203,7 +203,7 @@ A **block argument** captures and is exempt, because it cannot be stored and can
 
 ### 5.3 No `async`/`await` syntax
 
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn` and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of thing merely because some caller chooses to run it concurrently.
+Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of thing merely because some caller chooses to run it concurrently, whether as a spawned call or as a pool's step.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
