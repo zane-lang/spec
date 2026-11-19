@@ -299,7 +299,7 @@ Unit main() {
 A program ends with an **exit status**, a number it hands to whatever started it. How the program ends decides the status:
 
 - **`main` returns.** The status is `0`. A program whose printed output could not all be written ends with status `1` instead.
-- **`main` aborts.** The program writes the abort's string, followed by a line feed, to its standard error stream, and the status is `1`. What the program printed before the abort is written first.
+- **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.
 - **The program stops.** A stop, such as an index out of range or a call that nests too deep ([`memory.md`](memory.md) §3.7), is not an abort, and no handler sees it. The status is not `0`.
 
 ```zane
