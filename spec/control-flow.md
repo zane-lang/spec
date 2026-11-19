@@ -8,7 +8,7 @@ This document specifies how Zane branches and repeats. Neither is a language con
 
 ## 1. Overview
 
-Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run one conditionally, run one repeatedly, or end the invocation that called it, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
+Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run the handed statements conditionally, run them repeatedly, or end the invocation that called the verb, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
@@ -90,7 +90,7 @@ An exit therefore names no scope and unwinds to none, which Zane does not do ([`
 
 ### 2.4 A block yields nothing
 
-A block has no value. A callee runs it for what it does, through the control-flow intrinsics (§4.1), and nothing written in the block is handed back to the call that receives it.
+A block has no value. A callee runs it for its effects, through the control-flow intrinsics (§4.1), and nothing written in the block is handed back to the call that receives it.
 
 `resolve` is transparent to a block in the same way as `return` and `abort` (§2.3). Written in a block that sits inside an abort handler, it finishes that handler ([`error-handling.md`](error-handling.md) §4). Written in a block with no handler around it, it is a compile-time error.
 
@@ -116,7 +116,7 @@ The result need not be bound. An unbound value-type result is discarded ([`lifet
 
 ### 3.2 `elif` and `else` continue the chain
 
-A chain names the `if` result and continues it. `elif` runs its block when no earlier branch has run and its own condition holds, and it writes the chain value; it is therefore a `mut` method called with `!`. `else` runs its block when no earlier branch has run, and only reads the chain value, so it is called with `:`.
+A chain binds the `if` result to a symbol and continues it with calls on that symbol. `elif` runs its block when no earlier branch has run and its own condition holds, and it writes the chain value; it is therefore a `mut` method called with `!`. `else` runs its block when no earlier branch has run, and only reads the chain value, so it is called with `:`.
 
 ```zane
 ran Bool = if(age > Int(18)) {
@@ -195,7 +195,7 @@ Unit configure(settings Settings) {
 }
 ```
 
-Its condition is an ordinary argument, so it is `core`'s `Bool` and reaches it through the same coercion as any other argument. A type usable in an `if` is usable in a `guard` on identical terms; the language itself names no type for either.
+Its condition is an ordinary argument, so the condition has `core`'s `Bool` as its type and reaches that type through the same coercion as any other argument. A type usable in an `if` is usable in a `guard` on identical terms; the language itself names no type for either.
 
 `guard` takes no block. A run of statements before an exit is a branch whose block ends with a `guard`, which is the same shape written one level out.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
@@ -308,7 +308,7 @@ The intrinsic **MUST NOT** appear in a lambda's body, including a block argument
 
 `repeat` takes a count, so a single invocation runs its body at most that many times and every loop built on it carries a written bound, whoever declares it. The bound counts passes; a pass that calls an unbounded form (below) runs as long as that form does. The guarantee is a property of the intrinsic rather than of who may call it.
 
-A repetition without a written bound has two forms, and each names itself as one. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `workEvery`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `workEvery` step turns on no state but the subject the caller passes. A worker pool's step turns on its element and on the pool's shared state, which it receives read-only and a change to which can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
+A repetition without a written bound has two forms, and each is recognizable as one in the source. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `workEvery`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `workEvery` step turns on no state but the subject the caller passes. A worker pool's step turns on its element and on the pool's shared state, which it receives read-only and a change to which can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
@@ -369,6 +369,6 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
 | Worker | `subject!work(step)` runs a non-capturing `Bool[this S] mut` step on the subject until it returns `false`; `subject!setInterval(every, step)` also waits `every` between steps; neither takes a block, so either may be spawned |
 | Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`; stated over `@primitives$Bool`, `@primitives$I64`, a step function value whose result converts to `@primitives$Bool`, a subject of any type, or nothing; the worker pair write their subject as a `!` call does; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
-| Bounded repetition | `repeat` takes a count, so one invocation runs its body at most that many times and every loop built on it carries a written bound; recursion and workers are the unbounded forms, and each names itself |
+| Bounded repetition | `repeat` takes a count, so one invocation runs its body at most that many times and every loop built on it carries a written bound; recursion and workers are the unbounded forms, and each is recognizable in the source |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit`, and a lambda's body may not contain it |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

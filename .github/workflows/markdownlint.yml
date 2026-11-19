@@ -1,4 +1,4 @@
-# Runs the same check the README and CLAUDE.md tell contributors to run locally.
+# Runs the same check that contributors run locally (see contributing/markdown-formatting.md).
 #
 # This file deliberately states no rules of its own: markdownlint-cli2 discovers
 # the committed `.markdownlint.jsonc`, which stays the single source of truth for

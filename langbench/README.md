@@ -7,12 +7,12 @@ measures what a released Zane compiler actually produces.
 
 ## Layout
 
-| path | what it is |
+| path | contents |
 | --- | --- |
 | `zane.coda`, `zane-lock.coda` | the Zane project: the pinned compiler release and `core` |
 | `devbox.json`, `devbox.lock` | the other languages' compilers, pinned |
 | `bin/<test>/main.zn` | each test's Zane program |
-| `lib/bench/` | what the Zane programs share: reading the size from the arguments, and the random numbers |
+| `lib/bench/` | code the Zane programs share: reading the size from the arguments, and the random numbers |
 | `c/`, `cpp/`, `rust/`, `go/`, `d/`, `zig/`, `ocaml/` | the other languages, one file per program |
 | `tests.py` | each test's size, expected output and fold profile, and each language's build command |
 | `langbench.py` | builds, checks, times and renders |
@@ -72,7 +72,7 @@ has by default, and is written the way that language is usually written.
 OCaml's level-2 optimization needs flambda, and nixpkgs builds `ocamlopt`
 without it, so OCaml builds at its one level.
 `primes` also has a variant that asks the compiler to evaluate the sieve, in
-the languages that can ask. It is the only test whose whole result is fixed
+the languages that can ask. That variant is the only test whose whole result is fixed
 when the program is built. The fixed setup in `trialdiv` and `nbody` could be
 marked the same way, but code in these languages rarely marks setup for
 compile-time evaluation, so those tests have no such variant. `gameloop`

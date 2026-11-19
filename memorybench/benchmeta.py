@@ -1,7 +1,7 @@
 """Per-test metadata and chart colours for the Zane benchmark page.
 
 Split out of runbench.py so the driver holds only the pipeline: the tables
-here describe what each test *is*, which is editorial content that changes
+here describe each test, which is editorial content that changes
 independently of how the page is built.
 """
 
@@ -211,7 +211,7 @@ TEST_META = {
             ("Blocks", "2,000 per size per round"),
             ("Rounds", "10 — round 1 bumps, rounds 2-10 pop"),
             ("Reuse key", "(byte size, alignment) — never approximate"),
-            ("Static vs runtime", "a boxed payload indexes its stack directly; a backing store looks its up"),
+            ("Static vs runtime", "a boxed payload indexes its stack directly; a backing store looks it up"),
             ("Small blocks", "blocks smaller than a native pointer keep return addresses in separate vectors; larger blocks copy link bytes without requiring pointer alignment"),
             ("Asserted", "exact-key LIFO reuse, separation of different keys, neighboring live bytes preserved for tiny blocks, weakly aligned 12-byte blocks, and empty stacks after drain"),
             ("Runs", "20 — median reported"),
