@@ -1,6 +1,6 @@
 # Zane Foundations
 
-This document states the few ideas the rest of the specification rests on. Every topic document assumes them; this one names them in a single place and points to where each is specified in full. It introduces no rules of its own — each foundation is specified canonically by another document, and this is the map that shows how they fit together.
+This document states the few ideas the rest of the specification rests on. Every topic document assumes these ideas; this document names them in a single place and points to the document that specifies each one in full. This document introduces no rules of its own — another document specifies each foundation canonically, and this document is the map that shows how the foundations fit together.
 
 > **See also:** [`lexical.md`](lexical.md) §3 for the casing rule. [`generics.md`](generics.md) §2 and §7 for types-as-functions and uniform stride. [`memory.md`](memory.md) §3 for layout. [`effects.md`](effects.md) for how the strictness is enforced.
 
@@ -10,10 +10,10 @@ This document states the few ideas the rest of the specification rests on. Every
 
 ## 1. Overview
 
-Zane is built on a small number of commitments that the rest of the language derives from. They are not features; they are the ground the features stand on. Read this document first, then read any topic document as a working-out of these ideas in one area.
+Zane is built on a small number of commitments that the rest of the language derives from. These commitments are not features; every feature is built on them. Read this document first, then read any topic document as a working-out of these ideas in one area.
 
-- **`Source is captured intent`.** Zane code is a high-level description of architecture and thought, not a transcript of machine steps. It is intentionally high-level because that is the form in which intent is clearest.
-- **`Compilation is staged; types are values`.** A type is an ordinary compile-time value that the compiler *executes* in an earlier stage to produce a layout. Parameterization, and the split between type expressions and calls, fall out of this.
+- **`Source is captured intent`.** Zane code is a high-level description of architecture and thought, not a transcript of machine steps. Zane code is high-level on purpose, because intent is clearest in a high-level form.
+- **`Compilation is staged; types are values`.** A type is an ordinary compile-time value that the compiler *executes* in an earlier stage to produce a layout. Parameterization, and the split between type expressions and calls, follow from this staging.
 - **`Layout is fixed`.** Every value of a given type is the same number of bytes. Uniform stride is a global invariant, not a per-type choice.
 - **`Identity is opt-in`.** A type defined in Zane is a value unless it is marked `#`; the mark makes it a reference type with identity and aliasing, moved rather than copied. Value versus reference is one axis, orthogonal to the product/sum shape of the body.
 - **`Strictness is the performance model`.** The language forbids high-level conveniences that would dissolve a low-level guarantee. The rules are not a tax paid alongside fast code — they are the mechanism that produces it.
@@ -24,7 +24,7 @@ Zane is built on a small number of commitments that the rest of the language der
 
 Zane source is meant to read as a captured *idea* — the shape of a program's architecture and the thoughts behind it — rather than a step-by-step encoding of how a machine should proceed. This is why the surface is deliberately high-level: intent is clearest when it is expressed directly, not buried under manual bookkeeping.
 
-The high level is not in tension with performance. Because the source carries *intent* rather than *mechanism*, the compiler is left with more freedom to choose the mechanism — provided the intent was expressed well. Expressing it well is not optional; the language's rules (the rest of this document) force enough structure that the captured intent is unambiguous. A well-expressed Zane program is therefore both easier to read and easier to compile to fast code, for the same reason: nothing important was left implicit.
+The high level is not in tension with performance. Because the source carries *intent* rather than *mechanism*, the compiler is left with more freedom to choose the mechanism — provided the intent was expressed well. Expressing the intent well is not optional; the language's rules (the rest of this document) force enough structure that the captured intent is unambiguous. A well-expressed Zane program is therefore both easier to read and easier to compile to fast code, for the same reason: nothing important was left implicit.
 
 This framing recurs throughout the spec. The two parallel document sets — `spec/` for *what* and `stories/` for *why* — are the same idea at the level of the specification itself: capture the definition and the intent behind it, separately and explicitly.
 
@@ -56,7 +56,7 @@ The surface grammar uses enforced identifier casing to simplify parsing and dist
 
 Every value of a given type occupies the same number of bytes. Size is part of the type, not a runtime property of the value. This uniform-stride invariant is global: it holds for every type, all the way up every containment chain.
 
-It is the foundation under a large part of the runtime model:
+The uniform-stride invariant is the foundation of a large part of the runtime model:
 
 - Indexing is `base + i * stride` with a compile-time `stride`; copying, struct embedding, and calling conventions all assume a fixed size. The full argument is in [`generics.md`](generics.md) §7.
 - A type whose size could vary would propagate that variability into everything that contains it, so the invariant has to be global to be worth anything.
@@ -68,9 +68,9 @@ It is the foundation under a large part of the runtime model:
 
 Zane is strict — single ownership, fixed layout, read-only parameters, mandatory error handling — and this strictness is what produces its performance.
 
-High-level expression, on its own, usually costs speed. What buys it back is that the rules preserve enough invariants for the compiler to generate good code without guessing: ownership is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
+High-level expression, on its own, usually costs speed. What buys the speed back is that the rules preserve enough invariants for the compiler to generate good code without guessing: ownership is known, so destruction is deterministic and needs no collector; layout is fixed, so access is direct; effects are known, so independent work can be parallelized. Each rule that forbids a convenience is the same rule that licenses an optimization.
 
-The rules are therefore not a usability tax levied next to the performance. They are the trade that produces it: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
+The rules are therefore not a usability tax levied next to the performance. They are the trade that produces the performance: *give up the conveniences that would force the compiler to be conservative, and in exchange the compiler can be aggressive.* This is why the language forbids, rather than merely discourages, the constructs that would dissolve a guarantee — a guarantee that holds only sometimes is one the compiler cannot rely on. The enforcement mechanisms live in [`memory.md`](memory.md), [`effects.md`](effects.md), and [`lifetimes.md`](lifetimes.md); this section is only the principle that unifies them.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#strictness-is-the-performance-model) — "Strictness is the performance model" weighs this bet against the permissive alternative and records its real ergonomic cost.
 
@@ -78,13 +78,13 @@ The rules are therefore not a usability tax levied next to the performance. They
 
 ## 7. Identity Is Opt-In
 
-Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and everything that separates a plain value from a shared object follows from which side of it a type is on. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; their kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
+Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and everything that separates a plain value from a shared object follows from which side of the axis a type is on. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; their kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping. A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and reaches a new place by being moved rather than duplicated.
 
 The axis does **not** affect **recursion**: either kind may contain itself, through a member the compiler boxes. That rule and the reasoning behind it belong to [`adt.md`](adt.md) §4.
 
-Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and it is the same thing in each: a *borrow* of the caller's value or owner, so a value is mutable without gaining identity and an object is mutable without the method taking ownership. Neither consumes the caller's owner.
+Both kinds are mutated in place through a `mut` method, and the subject is written the same way in each — bare `this`, no marker — and in both kinds the subject is a *borrow* of the caller's value or owner, so a value is mutable without gaining identity and an object is mutable without the method taking ownership. Neither consumes the caller's owner.
 
 - **`#` is the only kind modifier**, applied uniformly to any type. See [`types.md`](types.md) §2 and [`adt.md`](adt.md) §2–§3.
 - **A value type is transitively value** (no reference-type or `&` field, anywhere downstream). This closed value world is specified by [`memory.md`](memory.md) §2.10.
