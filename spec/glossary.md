@@ -71,13 +71,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.9 worker / step
 
 - **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value that runs on that subject until it returns `false`. `core`'s `work` and `setInterval` run one, over `@controlflow$work` and `@controlflow$workEvery`; neither takes a block, so a program may spawn a worker.
-- **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the one advance the worker repeats.
+- **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the single advance that the worker repeats.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3.7
 
 ### 2.10 worker pool / element
 
 - **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
-- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" signals that it holds many workers; "element" is what any container calls what it holds.
+- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" marks that it holds many workers; "element" is the standard term for an item held by a container.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 
 ### 2.11 funnel
@@ -117,7 +117,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.4 compiler concept types
 
 - **Meaning:** Compiler-provided types for source constructs, permitted in parameters but not storage. The leaf concepts `Type`, `@concepts$Int`, and `@concepts$Float` are compile-time values. String concepts may contain runtime interpolation; array and map concepts may contain runtime entries. A concept is not necessarily a compile-time value.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages: `@concepts$Int` is an integer literal, whichever integer primitive's constructor it is passed to.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named with the term that other languages usually use for that literal: `@concepts$Int` is an integer literal, whichever integer primitive's constructor it is passed to.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor
@@ -164,20 +164,20 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.12 distinct type vs alias
 
-- **Meaning:** `type Name = T` introduces a new distinct type that is structurally equal to `T` but not interchangeable with it; `alias Name = T` introduces a fully interchangeable name. The keyword carries the distinction.
+- **Meaning:** `type Name = T` introduces a new distinct type that is structurally equal to `T` but not interchangeable with it; `alias Name = T` introduces a fully interchangeable name. The keyword, `type` or `alias`, selects between the two.
 - **Why this name:** The pairing names the only difference between the two declaration forms — whether the result is a new type or just another name.
 - **Canonical home:** [`types.md`](types.md) §5
 
 ### 3.13 casing-determined kind
 
-- **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial name is a type, a lowercase-initial name is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
+- **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial identifier is a type, and a lowercase-initial identifier is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
 - **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
 ### 3.14 `Type` and `@concepts$Int` parameter concepts
 
 - **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type or nested type they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
-- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the one an integer literal already carries — rather than a bespoke parameter-kind keyword.
+- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the concept that an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
 ### 3.15 variant (sum mould)
@@ -218,8 +218,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.21 bracket-picked separator
 
-- **Meaning:** The bracket decides how the things inside it are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
-- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states what does the picking.
+- **Meaning:** The bracket determines how its contents are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
+- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states that the bracket does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
 ### 3.22 verb
@@ -315,7 +315,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.37 passing mode
 
 - **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **reference** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one. An array literal's elements each travel in the mode written on its parameter's `@concepts$Array` element.
-- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in each, and only the caller's obligations and resulting state differ.
+- **Why this name:** "Mode" names a choice of *how* the same argument is passed, not of *which type* it has: the type is unchanged in each mode, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.38 subject / subject parameter / subject expression
@@ -350,7 +350,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.43 scope
 
-- **Meaning:** The block whose lifetime bounds a place, and the only thing the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
+- **Meaning:** The block whose lifetime bounds a place, and the only property of a place that the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
 - **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position does not bound its lifetime, and its root's scope does.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
@@ -397,7 +397,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.3 URL identity
 
 - **Meaning:** A dependency's canonical identity is its project's full source URL, while manifest keys are only local labels.
-- **Why this name:** The rule makes the repository URL itself the package's identity, not from whichever alias a project chooses locally.
+- **Why this name:** The rule makes the repository URL itself the package's identity, rather than any alias that a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
 
 ### 4.4 import spelling rule
@@ -420,7 +420,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.7 trailing argument
 
-- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last thing in its statement.
+- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last item in its statement.
 - **Why this name:** It trails the argument list rather than sitting in it.
 - **Canonical home:** [`syntax.md`](syntax.md) §4.8
 
@@ -492,14 +492,14 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.19 foreign verb
 
-- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and what it touches outside the program is what that signature states.
+- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and the signature states everything the verb touches outside the program.
 - **Why this name:** "Foreign" is the established word for code in another language reached through an interface, as in a foreign-function interface; "verb" is the spec's word for a function or method.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.1
 
 ### 4.20 foreign handle / data handle / outside handle / foreign capability
 
 - **Meaning:** A **foreign handle** (`#handle`) is a reference type referring to one C object. One without a free function is a **foreign capability**, referring to a C global; one with a free function owns its object, and is an **outside handle**, part of capability-backed state, when a method on a foreign capability makes it, and a **data handle**, state of the program's own, otherwise.
-- **Why this name:** C APIs already call an opaque pointer to their object a handle; a capability is what the effect model calls an object that reaches outside state.
+- **Why this name:** C APIs already call an opaque pointer to their object a handle; "capability" is the effect model's term for an object that reaches outside state.
 - **Canonical home:** [`ffi.md`](ffi.md) §4.1
 
 ### 4.21 interface header
