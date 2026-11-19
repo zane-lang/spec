@@ -307,7 +307,7 @@ Unit?@primitives$String main() {
     console Console(@program$console);
     settings String = readSettings() ? reason {
         abort @primitives$String("cannot read the settings: " + reason);
-    };
+    }
     console!print(settings);
     return Unit();
 }
