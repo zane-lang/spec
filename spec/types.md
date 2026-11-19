@@ -583,6 +583,8 @@ printDistance(Feet(Float(10.0)));  // coercion site: parameter expects Meters, F
 // desugars to: printDistance(Meters(Feet(Float(10.0))))
 ```
 
+An implicit constructor is also an ordinary constructor, which a call may name to convert explicitly. A call that names it finds it where a coercion site does, in the home package of either of its types (§4.5), so `Meters(feet)` reaches a conversion `Feet`'s package declares, and `@primitives$String(text)` reaches the one `core` declares from its `String`.
+
 A named field entry of a field-constructor call is a coercion site too, so the conversion fires inside the braces:
 
 ```zane

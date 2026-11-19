@@ -143,6 +143,10 @@ result Int = match token {
 
 > **Story:** [`stories/error-handling.md`](../stories/error-handling.md#failure-as-a-second-exit-not-a-result-value) — "Failure as a second exit, not a `Result` value".
 
+### 3.6 The program handles `main`'s abort
+
+No call site calls `main`: the program calls it, and is its handler. An abort of `main` ends the program with status `1` after reporting the abort's string ([`packages.md`](packages.md) §6.3). This is why `main`'s one abort type is the string the program writes, `@primitives$String` ([`packages.md`](packages.md) §6.2).
+
 ---
 
 ## 4. The `resolve` Keyword
@@ -173,7 +177,7 @@ Abortability is not itself a side effect. A verb of any kind may be abortable or
 
 | Guarantee | Meaning |
 |---|---|
-| No unhandled aborts | Every abortable call must have a `?` or `??` handler attached directly to that call expression. |
+| No unhandled aborts | Every abortable call must have a `?` or `??` handler attached directly to that call expression; the program is the handler of `main`. |
 | Exhaustive handlers | Every path through a handler block must terminate with `resolve`, `return`, or `abort`. |
 | Return-path type safety | `resolve` values must match the primary return type; `abort` values must match the parent function's abort type. |
 | Abort-free functions stay abort-free | A function with no abort type is verified never to abort transitively. |
