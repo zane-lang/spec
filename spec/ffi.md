@@ -276,7 +276,7 @@ C lends what it passes for the call, as Zane lends C a view (§3.4): the functio
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
-C may call a function value that touches no capability from several threads at once. The function values one foreign call is passed that read or write capability-backed state are called one call at a time: while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other as [`concurrency.md`](concurrency.md) §4.5 orders every access to capability-backed state, since the compiler orders the foreign call as a whole and sees none of the calls C makes inside it.
+C may call a function value that touches no capability from several threads at once. The function values one foreign call is passed that read or write capability-backed state are called one call at a time: while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other, since the compiler orders the foreign call as a whole against the state it reaches ([`concurrency.md`](concurrency.md) §4.5) and sees none of the calls C makes inside it.
 
 ### 3.7 The declaration is checked against the interface header
 
@@ -580,9 +580,9 @@ The rule protects the binding's users, and only the binding's author can follow 
 
 A call to a foreign verb that touches no capability may run in parallel with other work, including other calls to the same C function, as any call that writes nothing its caller can see ([`concurrency.md`](concurrency.md) §2.1). Its C code is therefore called from more than one thread at a time.
 
-Every call that reads or writes capability-backed state through a foreign capability is taken to touch one external state, whatever capability it is made through, because C code behind two capabilities may share what it touches. Such calls, and the destruction and overwriting of outside handles (§5.2), are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write.
+C state is independent per handle. A `mut` method on a foreign capability that takes an outside handle writes that handle's state and only reads the capability's own; one that takes no outside handle writes the capability's own state. A method without `mut` reads the same state. Two calls therefore conflict only when they reach the same capability's own state or the same outside handle's, and the destruction and overwriting of an outside handle (§5.2) count as writes to that handle's state and to the own state of the capability whose method made it (§4.4). Conflicting calls are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write of the same state. The compiler cannot see what C code behind two handles shares, so a package whose C does share state between them routes every call that reaches it through methods of one capability that take no outside handle; the destruction of that capability's outside handles is ordered against those calls already.
 
-A foreign handle is a reference type, so a spawned call never mutates one ([`concurrency.md`](concurrency.md) §4.2). Calls that only read a handle may run at the same time.
+A foreign handle is a reference type, so a spawned call never mutates one ([`concurrency.md`](concurrency.md) §4.2), though a worker pool's element may own one ([`concurrency.md`](concurrency.md) §6.4). Calls that only read a handle may run at the same time.
 
 ---
 
@@ -671,4 +671,4 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |
 | Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result, unless the computation observes an address or leaves a data handle it made alive; inside a `comptime` call one that reads is evaluated too, when every C function it reaches has a body in the build |
 | Undeclared outside state | A foreign verb that touches outside state without its capability, or a data handle's free function or setter that touches it at all, may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
-| Concurrency | Capability-free foreign calls may run in parallel; capability calls are ordered as one external state |
+| Concurrency | Capability-free foreign calls may run in parallel; capability calls conflict only on the same capability's own state or the same outside handle's, since C state is independent per handle |
