@@ -2,9 +2,9 @@
 
 What every construct of the Zane language means, what programs are legal, and how memory, effects and packages work.
 
-It is written as a reference, not a tutorial: to learn the language, start with the [Learn pages](https://github.com/zane-lang/docs/blob/main/docs/README.md). Each design decision's history is in the [design stories](../stories/README.md).
+The specification is a reference, not a tutorial: to learn the language, start with the [Learn pages](https://github.com/zane-lang/docs/blob/main/docs/README.md). The [design stories](../stories/README.md) record the history of each design decision.
 
-Each rule has one canonical home; every other mention cross-references it.
+Each rule is specified in exactly one document, the rule's canonical home; every other document that mentions the rule links to that home.
 
 ## Foundations
 
@@ -55,6 +55,6 @@ Read [`foundations.md`](foundations.md) first: it states the few commitments the
 4. [`effects.md`](effects.md), for what a call is allowed to change;
 5. [`packages.md`](packages.md), for how a project is laid out.
 
-Look up unfamiliar terms in [`glossary.md`](glossary.md). When a rule seems strange, its story usually explains it: spec sections with a story behind them link to the chapter.
+Look up unfamiliar terms in [`glossary.md`](glossary.md). When a rule seems strange, its design story usually explains the reason for the rule: each spec section with a story behind it links to the story's chapter.
 
-The spec describes the language; the [compiler](https://github.com/zane-lang/compiler) implements it, and lists where it differs in its [`docs/spec-divergences.md`](https://github.com/zane-lang/compiler/blob/main/docs/spec-divergences.md), checked against the spec commit named there.
+The spec describes the language; the [compiler](https://github.com/zane-lang/compiler) implements the language, and lists where the compiler differs from the spec in its [`docs/spec-divergences.md`](https://github.com/zane-lang/compiler/blob/main/docs/spec-divergences.md), checked against the spec commit named there.

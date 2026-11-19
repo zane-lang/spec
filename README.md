@@ -5,7 +5,7 @@
 
 This repository defines the [Zane](https://github.com/zane-lang/zane) programming language: what every construct means, what programs are legal, and how memory, effects and packages work. Next to the specification sit the **design stories**, which tell how and why each part came to be.
 
-It is written as a reference, not a tutorial. To learn the language first, start at <https://zane-lang.org/docs>.
+The specification is a reference, not a tutorial. To learn the language first, start at <https://zane-lang.org/docs>.
 
 This repository is also a **prior art publication**. The techniques described in these documents were conceived and developed by the author and are dedicated to the public domain under [CC0 1.0 Universal](LICENSE). Anyone may use these ideas freely, for any purpose, without restriction or attribution. No patent claims are made by the author.
 

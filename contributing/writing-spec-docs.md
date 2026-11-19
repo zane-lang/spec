@@ -375,7 +375,7 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match what readers will type when looking for it).
 2. Follow the required shape from §2.
-3. Add a row to the appropriate table in [`spec/README.md`](../spec/README.md). A document the index does not link is not published on the website.
+3. Add a row to the appropriate table in [`spec/README.md`](../spec/README.md). A document that the index does not link to is not published on the website.
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
 5. Create the matching `stories/<topic>.md` stories doc (see [`writing-stories-docs.md`](writing-stories-docs.md)) and add `> **Story:**` pointers from the non-trivial sections.
 6. If meaningful language comparisons exist, add a Language Comparisons section (§4 format).

@@ -1,12 +1,12 @@
 # Design stories
 
-The spec states *what* the language does. The stories, one per spec document, tell *why*: the situation that forced each choice, the roads not taken, and the costs accepted, in the order the thinking moved. They are appended to as the design changes, so each is the full record of how its part of the language came to be.
+The spec states *what* the language does. The stories, one per spec document, tell *why*: the situation that forced each choice, the roads not taken, and the costs accepted, in the order the thinking moved. Each story gains new chapters as the design changes, so each story is the full record of how its part of the language came to be.
 
 | Story | Behind |
 |---|---|
 | [`foundations.md`](foundations.md) | [`spec/foundations.md`](../spec/foundations.md): the bets behind captured intent, staged compilation and strictness as performance |
 | [`syntax.md`](syntax.md) | [`spec/syntax.md`](../spec/syntax.md): why a declaration writes its name before its type, and how one shape came to cover constructors, constants and function values |
-| [`lexical.md`](lexical.md) | [`spec/lexical.md`](../spec/lexical.md): casing as a hard signal for what a name is, and letting the bracket choose the separator |
+| [`lexical.md`](lexical.md) | [`spec/lexical.md`](../spec/lexical.md): why an identifier's case shows whether the identifier names a type or a value, and why the bracket chooses the separator |
 | [`types.md`](types.md) | [`spec/types.md`](../spec/types.md): the value/reference model, why `#` marks a distinct type, and how constructors and literals reach storage |
 | [`adt.md`](adt.md) | [`spec/adt.md`](../spec/adt.md): splitting `enum` from `variant`, the central `match` block, and how a variant can contain itself |
 | [`generics.md`](generics.md) | [`spec/generics.md`](../spec/generics.md): one parameter model for types and sizes, the `<>`/`()` split, and why a second container primitive was needed |
@@ -21,4 +21,4 @@ The spec states *what* the language does. The stories, one per spec document, te
 | [`operators.md`](operators.md) | [`spec/operators.md`](../spec/operators.md): a fixed set of overloadable operators, laws enforced through derived operators, and no implicit coercion |
 | [`math.md`](math.md) | [`spec/math.md`](../spec/math.md): math as compiler intrinsics with a `math` package over them |
 | [`packages.md`](packages.md) | [`spec/packages.md`](../spec/packages.md): the directory as the package, explicit `$` access, and the `lib/`, `bin/` and `test/` layout |
-| [`ffi.md`](ffi.md) | [`spec/ffi.md`](../spec/ffi.md): calling C, whose calls can fold at compile time, and which never writes Zane memory |
+| [`ffi.md`](ffi.md) | [`spec/ffi.md`](../spec/ffi.md): calling C, C calls that fold at compile time, and the rule that C code never writes Zane memory |
