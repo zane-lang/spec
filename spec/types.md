@@ -15,7 +15,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to the package that declares its type.
 - **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8).
-- **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
+- **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` are types that the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
 
