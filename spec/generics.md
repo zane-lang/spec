@@ -125,7 +125,7 @@ Unit func3(  T Type)     //                              T : value Int, type Typ
 
 Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. Whether the parameter has a leading value identifier determines which form it is: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
 
-Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
+§3.2 states where a parameter is introduced, and §5.2 and §5.3 state how each form reaches a call; each section applies this same idea.
 
 A number parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n @concepts$Int` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n @concepts$Int>`, where `n` comes from the argument's length).
 
@@ -163,7 +163,7 @@ Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 
 A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction is bare, since no other type argument is passed.
 
-This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
+These rules let a reader, and the compiler, read a bare `T` unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
@@ -172,7 +172,7 @@ This is what lets a bare `T` be read unambiguously. In a **type**, a name in the
 
 `Type` and `@concepts$Int` are compiler-provided concept types. `Type` is the concept of a type; `@concepts$Int` is the concept of a compile-time integer, and is the same concept type an integer literal carries ([`syntax.md`](syntax.md) §2.8). Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `@concepts$Int` is a compile-time integer, whether it arrives as a number argument in a type expression or as an integer literal passed to a verb, because both are leaf concept types ([`syntax.md`](syntax.md) §2.8). Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, an `@concepts$Int` value in a number position.
 
-These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of what that slot accepts. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Float` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
+These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of the argument that slot accepts: a type, or an integer. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Float` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 
