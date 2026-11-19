@@ -121,26 +121,29 @@ The optional top-level **`remaps`** block is a bare list of the canonical packag
 
 ### 2.2 Lock file (`zane-lock.coda`)
 
-`zane-lock.coda` records how each key resolves to a concrete source and commit:
+`zane-lock.coda` records the commit the toolchain tag resolves to, and how each key resolves to a concrete source and commit:
 
 ```zane
+zane-commit 9f1c0aa
+
 resolutions [
-    key  url                                commit
-    zane https://github.com/zane-lang/compiler  9f1c0aa
-    core https://github.com/zane-lang/std   4b7e91c
-    math https://github.com/zane-lang/math  a3f8c2d
+    key  url                               commit
+    core https://github.com/zane-lang/std  4b7e91c
+    math https://github.com/zane-lang/math a3f8c2d
 ]
 ```
 
-Each row records:
+The **`zane-commit`** field records the exact commit that the `zane-version` toolchain tag of `zane.coda` must resolve to (§14). It is required.
 
-- **key**: matches a `deps` or `test-deps` key in `zane.coda`. The reserved key `zane` holds the resolution of the `zane-version` toolchain tag and **MUST NOT** be used as an ordinary dependency key.
+Each `resolutions` row records:
+
+- **key**: matches a `deps` or `test-deps` key in `zane.coda`.
 - **url**: the canonical package identity.
 - **commit**: the exact commit that the recorded tag must resolve to.
 
 The repository URL is the canonical identity; the key is only a local label for naming the dependency in commands, joining the two files, and naming the dependency in a `renames` row. Both files are committed. Users update them through CLI commands rather than by manual editing.
 
-The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda`, plus the reserved `zane` key, **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
+The two files **MUST** stay in sync: every `deps` and `test-deps` key in `zane.coda` **MUST** have exactly one matching `resolutions` row in `zane-lock.coda`, and every `resolutions` row **MUST** correspond to such a key. The toolchain validates this when reading the files (build flow step 1) and **MUST** abort with an error on any missing, extra, or mismatched key rather than guessing the user's intent.
 
 A dependency's `from` value leaves its pinned tag and its `resolutions` row unchanged. A `source` or path dependency keeps both, so setting `from` back to `release` returns to the pinned version.
 
@@ -152,7 +155,7 @@ This pair records a project's **direct** dependencies only; it is not a flattene
 
 `zane update key version` replaces the recorded tag in `zane.coda` and the recorded commit in `zane-lock.coda` for that key, keeping the two files in sync. A whole-project update re-resolves each dependency and refreshes both files.
 
-`zane toolchain update [version]` does the same for the compiler (§14): it writes the toolchain tag named, or else the newest release of the project's current major, into the `zane-version` field of `zane.coda` and the commit that tag resolves to into the reserved `zane` row of `zane-lock.coda`, installing that toolchain if it is missing. Moving the project to another major takes a named tag.
+`zane toolchain update [version]` does the same for the compiler (§14): it writes the toolchain tag named, or else the newest release of the project's current major, into the `zane-version` field of `zane.coda` and the commit that tag resolves to into the `zane-commit` field of `zane-lock.coda`, installing that toolchain if it is missing. Moving the project to another major takes a named tag.
 
 If a tag has moved and the user intentionally wants to trust the new commit, the update flow requires an explicit override flag rather than silently refreshing the hash, for example:
 
@@ -450,7 +453,7 @@ A test build ([`packages.md`](packages.md) §7.2) runs the same steps with the `
 
 ## 14. Toolchain Version
 
-The `zane-version` field in `zane.coda` names a compiler release by its tag, `vMAJOR.MINOR`. It states the oldest compiler that builds the project's code. The reserved `zane` key in `zane-lock.coda` records the commit that tag must resolve to.
+The `zane-version` field in `zane.coda` names a compiler release by its tag, `vMAJOR.MINOR`. It states the oldest compiler that builds the project's code. The `zane-commit` field of `zane-lock.coda` records the commit that tag must resolve to (§2.2).
 
 - **One compiler builds the whole graph.** The compiler the project's own `zane-version` names compiles the project, and every `source` and path dependency (§12), and it rewrites, remaps, and links every object of the build. A consumer is compiled against its dependencies' source and emits the generic instances it needs from their bodies, so that compiler also reads every package of the graph. A `release` dependency's objects are the exception: they were compiled by that package's own `zane-version` (§3.2).
 - **A major keeps compatibility.** A compiler builds any code that an earlier compiler of the same major builds, with the same meaning, and links the objects such a compiler wrote. Compilers of different majors make no promise about each other. Major `0` is exempt: a release of major `0` promises nothing about the releases before it.
@@ -458,7 +461,7 @@ The `zane-version` field in `zane.coda` names a compiler release by its tag, `vM
 - The tag covers the compiler alone. What the compiler supplies is the grammar and the intrinsics — none of which name a declaration in any package ([`syntax.md`](syntax.md) §2.7, [`control-flow.md`](control-flow.md) §4.1) — so pinning it fixes the language without fixing any library.
 - **No library is coupled to the toolchain tag, `core` included.** `core` and every other library are ordinary packages, each fetched, versioned, pinned, and remapped like any other dependency, with its own `deps` row in `zane.coda` and entry in `zane-lock.coda`.
 - Nothing has to preserve backward compatibility across package versions. A package that changes incompatibly does not force its consumers forward: versions coexist side by side under version-prefixed symbols (§6, §11), and a project that wants two of them collapsed opts in through `remaps` (§15). That holds for the fundamental types exactly as it holds for anything else — a program may reach two versions of `Int`, and remapping is what collapses them when their compatibility windows say it is safe.
-- The reserved `zane` key is subject to the same tag/commit verification as every other entry (§4): a moved toolchain tag is detected, not silently trusted.
+- `zane-commit` is subject to the same tag/commit verification as every `resolutions` row (§4): a moved toolchain tag is detected, not silently trusted.
 - The `zane` command that reads the manifest is not part of the toolchain the tag pins. It installs the compiler the tag names and runs it, so one installed `zane` command builds projects pinned to any toolchain tag of major `1` or later. Major `0` is exempt: a `zane` command drives only the major-`0` releases that take the command-line interface it was written against, and a project pinned to an earlier one moves its pin to a release the command drives by naming that release's tag to `zane toolchain update` (§2.3).
 
 > **Story:** [`stories/dependencies.md`](../stories/dependencies.md#core-becomes-part-of-the-language-again) — "`core` becomes part of the language again".
