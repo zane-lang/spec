@@ -169,7 +169,7 @@ A package may declare the same names over its own types. Imported together with 
 | `Int` | `bitAnd`, `bitOr`, `bitXor`, `bitNot`, `shiftLeft`, `shiftRight`, `shiftRightLogical`, `rotateLeft`, `rotateRight`, `popCount`, `leadingZeros`, `trailingZeros`, `abs`, `min`, `max` |
 | `Float` | `sqrt`, `abs`, `floor`, `ceil`, `trunc`, `roundEven`, `fma`, `copySign`, `min`, `max`, `cbrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `exp`, `log`, `pow`, `hypot` |
 
-Each gives what its intrinsic gives, wrapped in the fundamental type, and is exact or approximate as its intrinsic is.
+Each returns its intrinsic's result wrapped in the fundamental type, and is exact or approximate exactly when that intrinsic is.
 
 ---
 
