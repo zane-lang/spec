@@ -98,7 +98,7 @@ The bound symbol has the handled primary type, and reading it still blocks until
 
 ### 3.4 Stalling calls are parked
 
-A stalling function or method called without `spawn` blocks the caller. The same call made with `spawn` is parked by the runtime so it does not consume a worker thread while waiting.
+A stalling function or method called without `spawn` blocks the caller. The same call made with `spawn`, or made in a worker pool's step (§6.3), is parked by the runtime so it does not consume a worker thread while waiting.
 
 ### 3.5 Stalling without `spawn` is ordinary blocking
 
@@ -122,7 +122,7 @@ Independent work may still be parallelized only when doing so preserves those so
 
 ### 4.1 Water-tower lifetime extension
 
-A scope does not complete until all `spawn`ed calls inside it have completed. Objects owned in that scope are destroyed only when the scope is **drained**.
+A scope does not complete until all `spawn`ed calls inside it have completed, and every worker of a pool it owns has finished (§6.7). Objects owned in that scope are destroyed only when the scope is **drained**, except a pool's elements, each destroyed when its own step returns `false` (§6.2).
 
 The analogy is a vertical water tower with water at the top and one horizontal plate for each still-running spawned call in that scope. The water cannot fall past a plate that is still in place, so destruction cannot pass that still-live concurrent work either.
 
@@ -245,9 +245,14 @@ chat WorkerPool(Session, Room(), Unit(this Room, event Said) mut {
 @primitives$Unit start(this @primitives$WorkerPool<T, S, E>, element ^T, sources @primitives$List<@primitives$EventSource>, step @primitives$Bool[this T, S, @primitives$Unit[E]] mut) mut
 ```
 
-`start` takes the element, which moves into the pool ([`memory.md`](memory.md) §2.9), and returns at once. The step then runs concurrently with the caller and with every other worker. Each call receives the element as `this`, the pool's state as a read-only parameter, and a function value that publishes an event to the funnel. Reading the state into a binding takes a coherent snapshot (§4.4). When the step returns `false`, the element is destroyed and leaves the pool.
+`start` takes the element into the pool and returns at once. A reference-typed element moves in, and a value-typed one is copied in, as a `ListRef` takes its elements ([`memory.md`](memory.md) §2.9). The step then runs concurrently with the caller and with every other worker. Each call receives the element as `this`, the pool's state as a read-only parameter, and a function value that publishes an event to the funnel. The state a call receives is a coherent snapshot taken when the call begins (§4.4), so it does not change during the call. When the step returns `false`, the element is destroyed and leaves the pool.
 
-In a pool built without state, the step takes only its element, as `@primitives$Bool[this T] mut`.
+A pool built without state has `start` overloads whose step takes only its element:
+
+```zane
+@primitives$Unit start(this @primitives$WorkerPool<T, @primitives$Unit, @primitives$Unit>, element ^T, step @primitives$Bool[this T] mut) mut
+@primitives$Unit start(this @primitives$WorkerPool<T, @primitives$Unit, @primitives$Unit>, element ^T, sources @primitives$List<@primitives$EventSource>, step @primitives$Bool[this T] mut) mut
+```
 
 ```zane
 chat!start(session, [EventSource.every(Duration.milliseconds(Int(50)))], Bool(this Session, shared Room, publish Unit[Said]) mut {
@@ -265,13 +270,13 @@ A worker started without event sources has its step called again as soon as it r
 
 An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them.
 
-A step does not wait for anything itself: what it reads is what is already there, and it returns. A step that makes a stalling call is parked like a spawned call (§3.4).
+A step waits for nothing by design: what it reads is what is already there, and it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
 
 ### 6.4 An element may reference constants
 
-An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. Neither is ever written by the program. A package constant is immutable, and a capability holds no state of the program, while what its calls change is capability-backed state, ordered by §4.5. A step therefore writes only its own element, as the value-subject rule of §4.2 requires, even when the element is a reference type.
+An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. This is an exception to §4.2, and it keeps what §4.2 protects. The pool alone owns the element, so no other path reaches it, and no `&` in it reaches program state that anything writes: a package constant is immutable, and a capability holds no state of the program. What a call through a capability changes is capability-backed state, ordered by §4.5. A capability stored in the element from a writable source is written through it as [`effects.md`](effects.md) §6.2 permits, and one stored from a read-only source stays read-only.
 
 ```zane
 type Session = #struct {
@@ -281,7 +286,7 @@ type Session = #struct {
 }
 ```
 
-An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step uses a fixed-size region of its own only while it runs, bounded as a spawned call's is, and returns it when it returns ([`memory.md`](memory.md) §3.7). A parked step keeps its region until it resumes.
+An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, bounded as a spawned call's is, from when it begins until it returns, parked or not ([`memory.md`](memory.md) §3.7). Between calls an element uses none.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-worker-pools-element-may-reference-constants) — "A worker pool's element may reference constants".
 
@@ -291,7 +296,7 @@ A step publishes an event by calling the function value it receives with the eve
 
 Events from one worker are applied in the order that worker published them. Events from different workers are applied in the order they arrive, which depends on scheduling (§3.7). The queue holding published events has no limit, so publishing never aborts and never waits.
 
-A publish writes the pool's state. It is ordered like a write to capability-backed state (§4.5), and the compiler never evaluates it at compile time, reorders it, or leaves it out ([`effects.md`](effects.md) §5.3).
+A publish is a write of the pool's state, made when the funnel applies the event. The compiler never evaluates a publish at compile time, reorders it against the step's other writes, or leaves it out ([`effects.md`](effects.md) §5.3).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#workers-send-events-to-one-owner-workerpool) — "Workers send events to one owner: `WorkerPool`".
 
@@ -302,7 +307,7 @@ S state(this @primitives$WorkerPool<T, S, E>)
 @primitives$List<T> elements(this @primitives$WorkerPool<T, S, E>)
 ```
 
-`state` returns a snapshot of the shared state. `elements`, for a value-typed `T`, returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, and the list as a whole is not one snapshot.
+`state` returns a snapshot of the shared state. `elements` returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, and the list as a whole is not one snapshot. It is defined only for a value-typed `T`: a reference-typed element is owned by the pool alone, and a snapshot would copy it.
 
 ### 6.7 A pool's scope waits for its workers
 
@@ -321,6 +326,6 @@ A worker pool holds up the scope that owns it like a spawned call does (§4.1). 
 | Mutation | A spawned mutating call requires a value-typed subject, which is the only path by which a call writes caller-visible state, except that a root-package verb may write the program's console and runtime; at most one mutable borrow per storage location; a spawn in a loop body completes before the next pass; concurrent reads take a coherent snapshot |
 | Snapshot of a boxed value | A value owning boxed members is snapshotted by a walk bounded at the scope's live block count — a depth no correct walk can reach, so exhaustion always means recycled bytes and stays retryable — that validates structure-directing metadata before typed interpretation and validates each handle's complete payload span — address, size, and alignment, inside a live region; the copy allocates in its destination binding's scope, rejected attempts return all provisional blocks before retrying, and a retry costs O(structure) |
 | Worker pool | `@primitives$WorkerPool<T, S, E>` runs bulk work; `start` moves an element in and runs its step concurrently, again right away or when an event source is ready or the shared state changed, never twice at once for one element |
-| Pool element | A value type, or a reference type whose every `&` names a package constant or a capability; a step uses a fixed-size region only while it runs |
+| Pool element | A value type, or a reference type whose every `&` names a package constant or a capability; a value is copied in and a reference-typed element moved in; a step call uses a fixed-size region from its start until it returns |
 | Funnel | The one writer of a pool's value-typed shared state; applies published events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write |
 | Conflicts on capability-backed state | Two accesses conflict only when they reach the same state: the console, the runtime, a foreign capability's own state, or one outside handle's |

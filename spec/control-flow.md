@@ -13,7 +13,7 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
 - **`Five control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` act on blocks and invocations; `@controlflow$work` and `@controlflow$workEvery` run a worker. They are the whole of the control flow the language supplies, and they are stated over storage primitives, function values, and type parameters, so none depends on a package.
-- **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work` and `setInterval` and which may be spawned.
+- **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work` and `setInterval` and which may be spawned. Many workers doing the same thing run in a worker pool.
 - **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
 
@@ -308,7 +308,7 @@ The intrinsic **MUST NOT** appear in a lambda's body, including a block argument
 
 `repeat` takes a count, so a single invocation runs its body at most that many times and every loop built on it carries a written bound, whoever declares it. The bound counts passes; a pass that calls an unbounded form (below) runs as long as that form does. The guarantee is a property of the intrinsic rather than of who may call it.
 
-A repetition without a written bound has two forms, and each names itself as one. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `workEvery`) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), so the only state an unbounded repetition turns on is the subject the caller passes, and the place the repetition starts is the call that names it.
+A repetition without a written bound has two forms, and each names itself as one. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `workEvery`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), so the only state an unbounded repetition turns on is the subject the caller passes, and the place the repetition starts is the call that names it.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 

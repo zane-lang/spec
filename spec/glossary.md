@@ -42,7 +42,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 - **Meaning:** A spawned call may mutate only a value-typed subject, and at most one live spawn may mutably borrow a given storage location; a worker pool's element may also be a reference type whose every `&` names a constant. A value type is transitively alias-free, so the rule rules out an aliased data race from the subject's type alone; concurrent reads take a coherent snapshot instead of serializing.
 - **Why this name:** Concurrent mutation is gated on the subject being a value type — the property that makes race-freedom checkable without whole-program alias analysis.
-- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2 and §4.3
+- **Canonical home:** [`concurrency.md`](concurrency.md) §4.2, §4.3, and §6.4
 
 ### 2.5 water-tower lifetimes
 
@@ -432,7 +432,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.9 control-flow intrinsic
 
-- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics that build every branching, repeating, exiting, and worker construct. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics that build every branching, repeating, and exiting construct and the single worker; a worker pool is a primitive of its own. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
 - **Why this name:** They are the intrinsics (§4.8) that are operations of control flow.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
