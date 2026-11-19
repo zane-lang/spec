@@ -296,7 +296,7 @@ Unit main() {
 
 ### 6.3 A program ends with an exit status
 
-A program ends with an **exit status**, a number it hands to whatever started it. How the program ends decides the status:
+A program ends with an **exit status**, a number it hands to whatever started it. How the program ends determines the status:
 
 - **`main` returns.** The status is `0`. A program whose printed output could not all be written ends with status `1` instead.
 - **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.

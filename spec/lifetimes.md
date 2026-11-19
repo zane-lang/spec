@@ -273,7 +273,7 @@ Unit main() {
 }
 ```
 
-Because the signature alone decides the caller's state, there is no interprocedural consumption inference. The resting-place summary of §1.11 does not reopen this. It records **where** a parameter's reference comes to rest, which the caller needs in order to compare scopes; it never changes **whether** passing an owner spends the caller's symbol, which the declared mode fixes on its own. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whatever its mode.
+Because the signature alone determines the caller's state, there is no interprocedural consumption inference. The resting-place summary of §1.11 does not reopen this. It records **where** a parameter's reference comes to rest, which the caller needs in order to compare scopes; it never changes **whether** passing an owner spends the caller's symbol, which the declared mode fixes on its own. Leaving a parameter entirely unused is a separate, general matter — a release build rejects an unused parameter whatever its mode.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-signature-is-the-whole-contract-retiring-inferred-consumption) — "The signature is the whole contract: retiring inferred consumption".
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
@@ -309,7 +309,7 @@ do() {
 }                                  //   block, and parked is scoped above it
 ```
 
-The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. That decides only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
+The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. That determines only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
 
 A value with **no source owner** — a verb result or a `#variant` case form (§1.2) — is asked the same question, against the owner it is bound into:
 
@@ -492,7 +492,7 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Move-source | A roaming owner symbol (local or `^T` parameter), a field of a roaming root, a `^T` verb result, or a `#variant` case form; not a settled owner, an `&`, a borrow, a container element, or a case payload |
 | Move declaration-block restriction | A roaming owner symbol may only be moved in the exact lexical block where it was declared; `^T` parameters may be moved at the body top level |
 | Move destination scope | Needs no comparison of its own: nothing references a moved owner, and a symbol moves only in its declaration block |
-| Carried reference | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the type decides whether to look, the value's construction decides what is named. Each keeps its scope and is compared at every store of the value |
+| Carried reference | A value carries every `&` reachable from its **declared** type along owning edges — for a `#variant`, across every case — stopping at each `&` rather than continuing through it; the declared type determines whether to look, and the value's construction determines what is named. Each keeps its scope and is compared at every store of the value |
 | Resting place | Where a verb stores an `&T` parameter, or a reference a `^T` parameter carries, is part of its signature: a path rooted at `this` or the result, continuing by owning steps only, never stepping through an `&`. Derived from the body, transitive through the calls the body makes, and published with the signature. A call substitutes the supplied path for the root, keeps the recorded steps, and applies the store rule to the result. A call through a function value takes every parameter to come to rest in the result and, under a `mut` function type, in `this` |
 | Spent symbol | After a move, a roaming source symbol is spent: any use is a compile-time error until a store refills it, and it changes between owning and spent only in its declaration block; a parameter is read-only and is never refilled |
 | Parameter modes | A borrow (`T`, and `this`) lasts for the call; a take (`^T`) moves the caller's roaming owner into the body, as an owner of the body; a reference (`&T`) stands for the caller's path |

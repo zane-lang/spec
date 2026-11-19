@@ -366,7 +366,7 @@ log = files!fs$open("b.log");             // ERROR: File has no setter
 
 ### 4.4 Passing a handle
 
-A handle crosses into C as the pointer it holds. Where it stands in the foreign verb decides how C may use the object:
+A handle crosses into C as the pointer it holds. The position of the handle in the foreign verb's signature determines how C may use the object:
 
 - **A foreign capability** stands, in a foreign verb, only as the subject of a foreign method (§5.1). C receives `C *` when the method is `mut`, and `const C *` otherwise.
 - **An outside handle** stands, in a foreign verb, only as a parameter other than the subject of a method on a foreign capability, or as its result. C receives `C *` when the method is `mut`, and `const C *` otherwise: the object is part of the outside state the capability reaches, so a write through the capability may change it.

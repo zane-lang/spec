@@ -313,7 +313,7 @@ do() {
 &Weapon weapon(this Player) => this.weapon;        // ILLEGAL: this is a borrow
 ```
 
-This rule preserves uniform call syntax. The call site writes `inspect(e)`, `setSpare(e)`, or `setEngine(e)` identically; only the callee's signature says which mode applies and therefore what the caller must supply and what state the caller is left in.
+This rule preserves uniform call syntax. The call site writes `inspect(e)`, `setSpare(e)`, or `setEngine(e)` identically; only the callee's signature declares which mode applies, and therefore what the caller must supply and what state the caller is left in.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-borrow-comes-back-without-a-sigil) — "The borrow comes back, without a sigil".
@@ -531,7 +531,7 @@ A reference-type instance carries no metadata of its own: a reference names it b
 
 A **boxed member** is laid out the same way: a fixed-size handle inline, with the instance it names placed in the dynamic region (§3.6). Which members are boxed is [`adt.md`](adt.md) §4's rule — required for a variant's payload on a cycle of owning edges that runs through no list's elements, where no finite inline layout exists, and for a field on a cycle that passes through no payload; permitted elsewhere for a variant's payload. §3.5 makes the choice unobservable.
 
-Boxing is available on **both** sides of the `#` axis. Two separate questions decide what a boxed member means, and they are answered by **different** types:
+Boxing is available on **both** sides of the `#` axis. Two separate questions determine what a boxed member means, and they are answered by **different** types:
 
 - **What the payload is** follows the **member's own declared type**, never the enclosing one. A reference-typed payload is an ordinary reference-type instance with identity: a boxed field takes its root's state as any field does (§2.8.1), and a boxed variant payload is roaming like any payload — being boxed neither grants nor withholds a reference. A value-typed payload is an ordinary value: no identity and nothing to reference. Because boxing is permitted off a cycle (§3.3, [`adt.md`](adt.md) §4), a reference-type variant may box a value-typed payload; that stores a plain value out of line and does **not** give it identity.
 - **What becomes of the payload when the enclosing instance moves, is copied, or dies** follows the **enclosing type's kind**. A reference type owns what it boxes and *moves* it: it destroys the payload when it dies, and moving it while it roams carries the payload with it (§3.5). A value type owns what it boxes and *copies* it: the payload is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2).

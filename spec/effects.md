@@ -13,7 +13,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
-- **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature says which.
+- **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature shows which kind a verb is.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package, from `@program$` and the foreign variables it declares.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
@@ -47,7 +47,7 @@ Parameters other than `this` are read-only (§4.1). A number parameter read in a
 
 ## 3. What Each Kind of Verb May Write
 
-A verb's signature says what it may write. There are three kinds:
+A verb's signature shows what it may write. There are three kinds:
 
 | Verb | Called with | May write |
 |---|---|---|
