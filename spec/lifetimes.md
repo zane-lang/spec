@@ -13,7 +13,7 @@ This document specifies Zane's lexical lifetime rules: the scope comparison ever
 Every place has a **scope**: the block whose lifetime bounds it.
 
 - a **symbol** — a local binding — has the block that declares it as its scope
-- a **field or element** reached from its root by **owning** steps takes that root symbol's scope, never one of its own. Every element of a container shares the container's scope, so which element it is does not enter the comparison.
+- a **field or element** reached from its root by **owning** steps takes that root symbol's scope, never one of its own. Every element of a container shares the container's scope, so the choice of element does not enter the comparison.
 - a **`^T` parameter** is an owner of the body, scoped to the body's top block ([`memory.md`](memory.md) §2.9).
 - `this` and an **`&T` parameter**, and a constructor's `init{ }`, have no scope in the body. Each stands for a path in the caller's frame. A store through `this` or `init{ }` is settled at the call site (§1.11). Every other parameter, an `&T` parameter included, is read-only ([`effects.md`](effects.md) §4.1) and is never a destination.
 
@@ -51,7 +51,7 @@ io IO();
 terminal Terminal(io);  // legal: one scope holds terminal and io
 ```
 
-That costs nothing while both sit there. A settled `terminal` never moves, so the comparison is made once. A roaming value moves, and every store of it runs the comparison again over the references it carries (§1.10). A store through a path that has **no** scope in this frame is the deferred case: `init{ }` fills an object whose destination the constructor cannot see, so the obligation is published in the signature and discharged by each caller (§1.11).
+Sharing one scope costs nothing while both stay there. A settled `terminal` never moves, so the comparison is made once. A roaming value moves, and every store of it runs the comparison again over the references it carries (§1.10). A store through a path that has **no** scope in this frame is the deferred case: `init{ }` fills an object whose destination the constructor cannot see, so the obligation is published in the signature and discharged by each caller (§1.11).
 
 The comparison the compiler makes is between two declaration blocks, after resolving each place to its scope. It does not perform borrow inference or lifetime annotation solving.
 
@@ -248,7 +248,7 @@ car:inspect();        // ILLEGAL: car is spent
 truck Truck(car);     // ILLEGAL: car is spent
 ```
 
-A verb that takes an owner in one of three ways, each fixed by its signature:
+A verb takes an owner in one of three ways, each fixed by its signature:
 
 - it **borrows** — declares the parameter `T`; the caller stays a full owner, and the callee may read it.
 - it **relays** the owner — declares `^T` and returns `^T`; the caller's symbol is spent, and the symbol the return is bound to owns the object again.
@@ -289,7 +289,7 @@ car2 ^Car = repair(car);  // bind: car2 owns the result, and may move it on
 repair(car3);             // legal: the result is destroyed here
 ```
 
-Binding the return is how the caller keeps the owner. A relayed owner that is not bound is gone, which the caller can see at the call: a bare statement keeps nothing.
+The caller keeps the owner by binding the result. A relayed owner that is not bound is gone, and the bare statement shows this at the call, since it keeps nothing.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#lifetime-rules-after-settled-and-roaming-hosts) — "Lifetime rules after settled and roaming hosts".
 
@@ -309,7 +309,7 @@ do() {
 }                                  //   block, and parked is scoped above it
 ```
 
-The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. That determines only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
+The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. The declared type determines only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
 
 A value with **no source owner** — a verb result or a `#variant` case form (§1.2) — is asked the same question, against the owner it is bound into:
 
@@ -380,7 +380,7 @@ do() {
 }                                     //   and main is scoped above it
 ```
 
-A `^T` parameter is recorded the same way for the references it carries, and that is what settles an argument carrying a reference. Neither frame sees the problem alone — the argument's reference names an owner in the call-site scope, and inside the callee the parameter lands in another parameter's object:
+A `^T` parameter is recorded the same way for the references it carries, and this record settles an argument that carries a reference. Neither frame sees the problem alone — the argument's reference names an owner in the call-site scope, and inside the callee the parameter lands in another parameter's object:
 
 ```zane
 cars ListRef<Car>;

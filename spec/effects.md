@@ -13,7 +13,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`No purity keywords`.** Users do not write `pure`, `readonly`, or capability qualifiers.
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
-- **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature shows which kind a verb is.
+- **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature shows whether a verb is a `mut` method, a method without `mut`, or a function.
 - **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package, from `@program$` and the foreign variables it declares.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
@@ -35,7 +35,7 @@ A capability is an object whose methods model access to external state, such as 
 
 ### 2.3 `mut`
 
-`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare for both kinds and carries no marker: it is a **borrow** of the caller's value or owner (see [`functions.md`](functions.md) §2.4). It never takes ownership: a `mut` call may change the caller's object, but the caller still holds it afterwards.
+`mut` is the only effect modifier in the language. It appears on methods and grants write access to state reachable through `this`; the write lands on the caller's object or on state reachable from it. `this` is written bare, in methods with and without `mut`, and carries no marker: it is a **borrow** of the caller's value or owner (see [`functions.md`](functions.md) §2.4). It never takes ownership: a `mut` call may change the caller's object, but the caller still holds it afterwards.
 
 ### 2.4 Parameters are read-only
 
@@ -107,7 +107,7 @@ Unit f(console &Console) {
 }
 ```
 
-Each verb judges this against its own bindings. Inside a verb, its parameters are read-only. At a call site, a reference the verb stores or returns takes the writability of the argument it came from, the same substitution that [`lifetimes.md`](lifetimes.md) §1.11 makes for scopes. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only reference when `engine` is a parameter of the caller.
+Each verb judges read-only status against its own bindings. Inside a verb, its parameters are read-only. At a call site, a reference the verb stores or returns takes the writability of the argument it came from, the same substitution that [`lifetimes.md`](lifetimes.md) §1.11 makes for scopes. So `car!setEngine(engine)` leaves `car` writable when `engine` is the caller's own local, and makes `car` reach a read-only reference when `engine` is a parameter of the caller.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#a-mutating-call-is-a-write) — "A mutating call is a write".
 
@@ -125,7 +125,7 @@ Two facts about a call are not in the signature: whether the call reads capabili
 
 ### 5.3 Compile-time evaluation
 
-A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes. A call marked `comptime` is evaluated at compile time whether or not the compiler would choose to, and may also read capability-backed state (§5.6).
+A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating such a computation at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes. A call marked `comptime` is evaluated at compile time whether or not the compiler would choose to, and may also read capability-backed state (§5.6).
 
 ```zane
 Int loud(n Int) {
@@ -192,7 +192,7 @@ There is no ambient global I/O capability. Code can reach external state only th
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
-Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit owning path by which later methods can reach the capability. A capability stored from a writable source can be written by the object's `mut` methods; one stored from a read-only source stays read-only (§4.4).
+Capabilities may be stored into objects at construction time. This does not create ambient authority; it only records an explicit owning path by which later methods can reach the capability. A capability stored from a writable source can be written by the object's `mut` methods; a capability stored from a read-only source stays read-only (§4.4).
 
 ### 6.3 `&` fields can also expose read access paths
 
