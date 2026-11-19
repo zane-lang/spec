@@ -14,7 +14,7 @@ If you need to mention a concept that is canonically specified elsewhere, keep t
 
 When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write it* (`syntax.md`), *what the spec calls it* (`glossary.md`), or *how it came to be decided that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
 
-See [`README.md`](../README.md) for the canonical index of every spec document and its purpose.
+See [`spec/README.md`](../spec/README.md) for the canonical index of every spec document and its purpose.
 
 ---
 
@@ -375,7 +375,7 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match what readers will type when looking for it).
 2. Follow the required shape from §2.
-3. Add a row to the appropriate table in [`README.md`](../README.md).
+3. Add a row to the appropriate table in [`spec/README.md`](../spec/README.md). A document the index does not link is not published on the website.
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.
 5. Create the matching `stories/<topic>.md` stories doc (see [`writing-stories-docs.md`](writing-stories-docs.md)) and add `> **Story:**` pointers from the non-trivial sections.
 6. If meaningful language comparisons exist, add a Language Comparisons section (§4 format).

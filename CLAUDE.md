@@ -11,21 +11,21 @@ before editing**:
 - `contributing/writing-spec-docs.md` — spec prose, document shape, cross-references.
 - `contributing/writing-stories-docs.md` — story prose, append-only rule (§5), spec↔story linking (§4).
 - `contributing/naming-terms.md` — coining a term of art.
-- `README.md` — the topic index (spec docs are **not** alphabetical); read it first to locate anything.
+- `spec/README.md` and `stories/README.md` — the topic indexes (spec docs are **not** alphabetical); read the right one first to locate anything. They are also the website's indexes (<https://github.com/zane-lang/website/blob/main/PUBLISHING.md>).
 
 If this file *explains* a rule instead of pointing at its home, that is a
 defect: delete the explanation and cite the home.
 
 ## Before you edit
 
-1. Read `README.md`, then **the target doc in full**.
+1. Read `spec/README.md` (or `stories/README.md`), then **the target doc in full**.
 2. For **type-system** changes, re-read the *un-updated* spec files and
    `memorybench/zane_bench.c` against the new design before the PR; single-pass
    self-review has missed contradictions here.
 3. **Changing a rule's home leaves every echo stale** — the most common defect
    on this repo, and reviewers caught most of them, not authors. After editing a
    normative rule, grep the **old form** (retired bracket, keyword, spelling)
-   across `spec/`, `README.md`, `contributing/`, this file, and story chapters
+   across `spec/`, `README.md`, `spec/README.md`, `contributing/`, this file, and story chapters
    *your branch adds* — the concept name won't find it. Then read these five
    places, each of which has hosted a drift:
    - `spec/glossary.md` — the term's entry. A rule correction is not done until
