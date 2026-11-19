@@ -1,6 +1,6 @@
 # Zane Effect Model
 
-This document specifies Zane's effect model: `mut`, read-only bindings, what each kind of verb may write, capability access, and the compiler guarantees built on top of those rules.
+This document specifies Zane's effect model: `mut`, read-only bindings, what each kind of verb may write, capability access, compile-time evaluation, and the compiler guarantees built on top of those rules.
 
 > **See also:** [`functions.md`](functions.md) §2 for method declarations. [`concurrency.md`](concurrency.md) §2 and §4 for parallelism and conflict rules. [`error-handling.md`](error-handling.md) §5 for the connection between effects and abortability.
 
@@ -121,11 +121,11 @@ The compiler uses reachability from `this` to determine which state is writable 
 
 ### 5.2 Capability access
 
-Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead, and from the function values the call passes it ([`ffi.md`](ffi.md) §5.2).
+Two facts about a call are not in the signature: whether the call reads capability-backed state, and whether it writes it (§3, §6.6). The compiler derives both from the verb's body and from every verb it calls, and uses them only to decide what it may evaluate at compile time, which turns on reads alone (§5.3), what a call marked `comptime` may do (§5.6), and what it may run in parallel, which turns on both ([`concurrency.md`](concurrency.md) §2). A foreign verb's body is C, so for it both facts come from its signature instead, and from the function values the call passes it ([`ffi.md`](ffi.md) §5.2).
 
 ### 5.3 Compile-time evaluation
 
-A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes.
+A verb receives what it works with through its parameters and through capability-backed state; everything else it uses is a literal, a constant, or computed from them. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating one at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes. A call marked `comptime` is evaluated at compile time whether or not the compiler would choose to, and may also read capability-backed state (§5.6).
 
 ```zane
 Int loud(n Int) {
@@ -147,6 +147,40 @@ Reading through an `&` is a read like any other. What a verb may write follows f
 When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state. A foreign verb is the exception: what it reads and writes is what its signature states ([`ffi.md`](ffi.md) §5.2), whatever of its C body the compiler sees.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
+
+### 5.6 Explicit compile-time evaluation
+
+A call marked `comptime` is evaluated at compile time, and its result is built into the program as a constant. Unlike the evaluation of §5.3, it is not optional: a marked call the compiler cannot evaluate is a compile-time error naming the call.
+
+```zane
+notes String = comptime readNotes(files, "notes.txt");
+```
+
+`comptime` marks a function or method call, as `spawn` does, and may stand wherever an expression may, a package constant's value included. A call to a verb that declares a `@concepts$Block` parameter **MUST NOT** be marked. Every call the marked call makes is evaluated at compile time with it, and none needs a marker of its own. The evaluation runs to completion: the compiler may give up on a computation under §5.3, but not on a marked one, so a marked call that does not terminate is a build that does not terminate.
+
+A marked call may read capability-backed state. Inside it, a capability stands for its counterpart on the machine that runs the build. A read through it reads that machine's state, and the runtime's `arguments` gives the arguments the build was started with (§6.6). Such a read is not a side effect of the program (§2.1). The result reflects what the reads return in the current build, and is never taken from an earlier one. A marked call that reaches a foreign function the build has no body for, which the compiler cannot run ([`ffi.md`](ffi.md) §5.4), is a compile-time error.
+
+The result **MUST** be a value type, so no reference, capability, or handle crosses into the program ([`memory.md`](memory.md) §2.10). A marked call **MUST NOT** write capability-backed state, and a marked `!` call is a compile-time error, since its subject is run-time storage. Inside the call, writes to its own locals and to the values it creates are unrestricted.
+
+Every argument **MUST** be computable at compile time, and so must the callee of a call through a function value. An argument qualifies when everything it depends on is a literal, a constant, the result of another marked call, or a computation §5.3 permits to be evaluated at compile time. Such a computation is evaluated at compile time with the marked call, and a write it makes still happens at run time, as in §5.3. An argument that depends on a read of capability-backed state made outside a marked call is a compile-time error.
+
+```zane
+now Time = Time.now(clock);
+late String = comptime readNotes(files, String(now));     // compile error: now depends on a run-time read
+
+built Time = comptime Time.now(clock);                    // the build's time
+notes String = comptime readNotes(files, String(built));  // String(built) is evaluated at compile time with the call
+```
+
+An abortable marked call carries its `?` or `??` handler on the marked expression, like any abortable call ([`error-handling.md`](error-handling.md) §3.1). The handler is evaluated at compile time with the call, under the same rules, so the whole expression is one constant.
+
+> **See also:** [`syntax.md`](syntax.md) §4.10 for the `comptime` forms.
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#comptime-marks-a-call-not-a-scope) — "`comptime` marks a call, not a scope".
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#a-comptime-call-reads-the-build-machine) — "A `comptime` call reads the build machine".
+
+> **Story:** [`stories/effects.md`](../stories/effects.md#pure-dependencies-join-a-comptime-call-and-reads-need-their-own-marker) — "Pure dependencies join a `comptime` call, and reads need their own marker".
 
 ---
 
@@ -201,7 +235,7 @@ The runtime's `arguments` method gives the arguments the program was started wit
 
 It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
 
-Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time (§5.3).
+Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time under §5.3. Inside a call marked `comptime`, it gives the arguments the build was started with (§5.6).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 > **Story:** [`stories/effects.md`](../stories/effects.md#the-console-moves-into-core) — "The console moves into `core`".
@@ -252,7 +286,8 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package | Any verb may write the program's console and runtime and the foreign capabilities its foreign variables give |
-| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation and parallelism |
+| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation, what a `comptime` call may do, and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
+| `comptime` call | Evaluated at compile time or the build fails, to completion; may read capability-backed state, through capabilities standing for the build machine's; writes none and no subject; its result is a value type; its arguments depend only on constants, other marked calls, and computations §5.3 permits |
 | Capabilities | Reachable only as objects passed or stored; they originate in the root package, from `@program$` and its foreign variables |
-| Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time |
+| Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time under §5.3; inside a `comptime` call they are the build's arguments |

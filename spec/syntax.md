@@ -922,6 +922,24 @@ A trailing argument closes its call on a `}` as well, and that brace ends the st
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#a-value-closed-by-a-brace-takes-----and-) — "A value closed by a brace takes `.`, `:`, `!`, `?` and `??`".
 
+### 4.10 `comptime`
+
+```zane
+comptime functionName(args...)
+comptime subject:methodName(args...)
+comptime functionName(args...) ? binder { ... }
+comptime subject:methodName(args...) ?? fallbackExpr
+name VarType = comptime functionName(args...)
+name VarType = comptime subject:methodName(args...) ? binder { ... }
+name VarType(comptime functionName(args...))
+```
+
+`comptime` is legal only on function-call and `:` method-call expressions; a `!` call is never marked. A marked call stands wherever an expression may. An abortable call may carry a `?` or `??` handler after the marked call. See [`effects.md`](effects.md) §5.6.
+
+```zane
+comptime list!sort();   // ILLEGAL: a `comptime` call writes no subject
+```
+
 ---
 
 ## 5. Control Flow
