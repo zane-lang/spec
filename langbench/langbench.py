@@ -249,13 +249,16 @@ def first_line(cmd):
 
 
 def lock_commits():
-    """The commits zane-lock.coda pins, by key."""
-    commits = {}
+    """The commits zane-lock.coda pins: the compiler's, from `zane-commit`, and
+    each dependency's by key."""
+    commits = {"dependencies": {}}
     with open(os.path.join(SCRIPT_DIR, "zane-lock.coda")) as f:
         for line in f:
             parts = line.split()
-            if len(parts) == 3 and re.fullmatch(r"[0-9a-f]{40}", parts[2]):
-                commits[parts[0]] = parts[2]
+            if len(parts) == 2 and parts[0] == "zane-commit" and re.fullmatch(r"[0-9a-f]{40}", parts[1]):
+                commits["compiler"] = parts[1]
+            elif len(parts) == 3 and re.fullmatch(r"[0-9a-f]{40}", parts[2]):
+                commits["dependencies"][parts[0]] = parts[2]
     return commits
 
 
@@ -286,8 +289,8 @@ def provenance():
     return {
         "date": datetime.date.today().isoformat(),
         "machine": {"cpu": cpu_model(), "os": platform.platform()},
-        "zane": {"version": zane_version(), "compiler_commit": commits.get("zane"),
-                 "core_commit": commits.get("core")},
+        "zane": {"version": zane_version(), "compiler_commit": commits.get("compiler"),
+                 "core_commit": commits["dependencies"].get("core")},
         "toolchains": {lang: first_line(tests.LANGUAGES[lang]["version"])
                        for lang in tests.LANGUAGE_ORDER},
         "flags": {lang: tests.LANGUAGES[lang]["flags"] for lang in tests.LANGUAGE_ORDER},
