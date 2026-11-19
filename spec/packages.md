@@ -391,7 +391,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
 | Root package | The program package being built, or the test package of a test build; the only package that reaches `@program$` |
 | Entry point | `main()`, declared in any source file of the root package, with no parameters, and either no abort type or `@primitives$String`; any return type, whose value is discarded; required in every program and test package |
-| Exit status | `0` when `main` returns and its output was written; `1` when `main` aborts, after its message and a line feed are written to standard error, whether or not the write succeeds; not `0` when the program stops |
+| Exit status | `0` when `main` returns and its output was written; `1` when `main` aborts, after an attempt to write its message and a line feed to standard error, whether or not the write succeeds; not `0` when the program stops |
 | Test result | Passed when the program ends with status `0` |
 | Test package | Each directory of `test/` with `.zn` files; a nested one mirrors a subpackage and imports it, and each is the root of its own test build |
 | Package separator | `$`; distinct from field access and method-call markers |
