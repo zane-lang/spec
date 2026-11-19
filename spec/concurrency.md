@@ -296,7 +296,7 @@ A step publishes an event by calling the function value it receives with the eve
 
 Events from one worker are applied in the order that worker published them. Events from different workers are applied in the order they arrive, which depends on scheduling (§3.7). The queue holding published events has no limit, so publishing never aborts and never waits.
 
-A publish is a write of the pool's state, made when the funnel applies the event. The compiler never evaluates a publish at compile time, reorders it against the step's other writes, or leaves it out ([`effects.md`](effects.md) §5.3).
+A publish is a write of the pool's state, made when the funnel applies the event. The compiler never reorders a publish against the step's other writes or leaves it out, and never evaluates one at compile time under [`effects.md`](effects.md) §5.3. A pool created inside a `comptime` call runs at compile time with that call, like every other call it makes ([`effects.md`](effects.md) §5.6).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#workers-send-events-to-one-owner-workerpool) — "Workers send events to one owner: `WorkerPool`".
 

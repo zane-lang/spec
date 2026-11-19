@@ -519,3 +519,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A `renames` row of a project's manifest gives a dependency's public library package another name in that project, the only name its files import it by. A **dropped package**, renamed to `_`, is importable by none of them and claims no name. Neither changes a compiled symbol.
 - **Why this name:** It renames the package for a whole project, where an `as` alias respells it in one file; `_` is the name that already means hidden.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §2.1 and §8
+
+### 4.24 `comptime` call
+
+- **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities standing for the build machine's; it writes none, and its result is a value type built into the program.
+- **Why this name:** The keyword says when the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
+- **Canonical home:** [`effects.md`](effects.md) §5.6

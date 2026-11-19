@@ -64,7 +64,7 @@ Each rule has one canonical home; every other mention cross-references it.
 | [`spec/generics.md`](spec/generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array`, `ArrayRef`, `List`, and `ListRef` container primitives |
 | [`spec/memory.md`](spec/memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
-| [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, and capability wiring |
+| [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, capability wiring, and compile-time evaluation, implicit and marked with `comptime` |
 | [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, and concurrency safety |
 
 ### Programs and program structure
