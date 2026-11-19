@@ -46,7 +46,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.5 water-tower lifetimes
 
-- **Meaning:** Objects owned in a scope stay alive until every `spawn`ed call in that scope has completed, and every worker of a pool it owns has finished, and the scope drains.
+- **Meaning:** Objects owned in a scope stay alive until every `spawn`ed call in that scope has completed, and every worker of a pool it owns has finished, and the scope drains. A pool's element is the exception: it dies when its own step returns `false`.
 - **Why this name:** The source document explains the rule through a water-tower analogy in which each still-running spawned call acts like a plate holding the water level up.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §4.1
 
@@ -76,7 +76,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.10 worker pool / element
 
-- **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** moved in by `start` and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
+- **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
 - **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" says it is many; "element" is what any container calls what it holds.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 

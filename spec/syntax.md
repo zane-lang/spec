@@ -279,6 +279,7 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
+- the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
 - the constructors of a scalar primitive: the anonymous one, with one signature from its literal's concept and one from each scalar it converts from exactly, and each named one, with one signature per scalar it converts from ([`types.md`](types.md) §2.9).
 

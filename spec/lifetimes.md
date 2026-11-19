@@ -456,7 +456,7 @@ A **value** has death points that are equally static: its slot is overwritten, o
 
 ### 2.2 Scopes drain before destruction
 
-If a scope launches concurrent work, objects owned in that scope remain alive until all spawned work in that scope finishes and every worker of a pool it owns has finished. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
+If a scope launches concurrent work, objects owned in that scope remain alive until all spawned work in that scope finishes and every worker of a pool it owns has finished. A pool's element is the exception: it is destroyed when its own step returns `false`, while other workers may still run (§2.1). This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
 ### 2.3 Reference storage never extends lifetime
 
