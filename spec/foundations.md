@@ -91,7 +91,7 @@ Both kinds are mutated in place through a `mut` method, and the subject is writt
 - **A value copy is deep.** Copying a value copies every payload it owns out of line into fresh storage, which is what lets a value type recurse without ever aliasing. See [`memory.md`](memory.md) §2.3.
 - **`&` rides on `#`.** A non-owning `&` exists only for reference types; a value is shared by copy or by a scoped borrow, never by a stored `&`. See [`memory.md`](memory.md) §2.4.
 - **A reference names an owner that never moves.** An owner is either settled — referenceable, never moving again — or roaming — movable, and referenced by nothing. A new `&` is minted only from a settled place, so the object it names stays where it is until its scope drains. See [`memory.md`](memory.md) §2.1, §2.8, and §2.8.1.
-- **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. See [`concurrency.md`](concurrency.md) §4.
+- **Concurrency reads this axis.** A spawned call may mutate only a value-typed subject, because a value's transitive alias-freedom is exactly what lets the compiler rule out a data race from the signature alone. A worker pool's element may be a reference type only when every `&` in it names a constant. See [`concurrency.md`](concurrency.md) §4 and §6.4.
 
 > **Story:** [`stories/foundations.md`](../stories/foundations.md#identity-is-opt-in-one-axis-for-value-and-reference) — "Identity is opt-in: one axis for value and reference".
 

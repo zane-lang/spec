@@ -233,7 +233,7 @@ Neither method takes a block, so either may be spawned, which is how a worker ru
 spawn machine!work(Bool(this Machine) mut { ... });
 ```
 
-A spawned worker mutates its subject, so the subject is value-typed ([`concurrency.md`](concurrency.md) §4.2), and the scope that spawns it waits for it to finish before it ends ([`concurrency.md`](concurrency.md) §4.1).
+A spawned worker mutates its subject, so the subject is value-typed ([`concurrency.md`](concurrency.md) §4.2), and the scope that spawns it waits for it to finish before it ends ([`concurrency.md`](concurrency.md) §4.1). Many workers doing the same thing run in a worker pool ([`concurrency.md`](concurrency.md) §6).
 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#workers-replace-the-unbounded-loop-work-and-setinterval) — "Workers replace the unbounded loop: `work` and `setInterval`".
 

@@ -65,7 +65,7 @@ Each rule has one canonical home; every other mention cross-references it.
 | [`spec/memory.md`](spec/memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`spec/lifetimes.md`](spec/lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
 | [`spec/effects.md`](spec/effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, and capability wiring |
-| [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
+| [`spec/concurrency.md`](spec/concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, and concurrency safety |
 
 ### Programs and program structure
 

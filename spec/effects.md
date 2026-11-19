@@ -235,11 +235,11 @@ A call to a method without `mut` or to a function writes nothing its caller can 
 
 ### 8.2 Reads compose with concurrent mutation
 
-Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write is serialized by the compiler/runtime. For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
+Multiple concurrent reads are legal. For external, capability-backed state a read that conflicts with a concurrent write to the same state is serialized by the compiler/runtime ([`concurrency.md`](concurrency.md) §4.5). For in-memory value state, a concurrent read instead takes a coherent snapshot rather than blocking (see [`concurrency.md`](concurrency.md) §4.4).
 
 ### 8.3 Concurrent mutation is governed by the spawn rules
 
-Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage — including two iterations of one spawn site inside a loop. A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
+Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, and no two concurrent spawns may mutably borrow the same storage. A worker pool's element may be a reference type whose every `&` names a constant ([`concurrency.md`](concurrency.md) §6.4). A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
 
 ---
 
