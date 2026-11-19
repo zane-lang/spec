@@ -228,7 +228,7 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 @primitives$WorkerPool<T, @primitives$Unit, @primitives$Unit>(T Type)
 ```
 
-The first builds a pool with shared state `state` and the funnel that writes it. `S` **MUST** be a value type, since workers read it by snapshot (§4.4). The second builds a pool whose workers share nothing.
+The first builds a pool with shared state `state` and the funnel that writes it. `S` **MUST** be a value type, since workers read it by snapshot (§4.4). `E` **MUST** be a value type too, since a published event waits in the funnel's queue after the step that published it has returned (§6.5). The second builds a pool whose workers share nothing.
 
 ```zane
 chat WorkerPool(Session, Room(), Unit(this Room, event Said) mut {
@@ -292,7 +292,7 @@ An element is stored by the pool, as a `ListRef` element is stored by its list (
 
 ### 6.5 The funnel is the one writer of the shared state
 
-A step publishes an event by calling the function value it receives with the event. The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. It is the only writer of the shared state, and it never touches an element.
+A step publishes an event by calling the function value it receives with the event, which copies the event into the funnel's queue. The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. It is the only writer of the shared state, and it never touches an element.
 
 Events from one worker are applied in the order that worker published them. Events from different workers are applied in the order they arrive, which depends on scheduling (§3.7). The queue holding published events has no limit, so publishing never aborts and never waits.
 
@@ -327,5 +327,5 @@ A worker pool holds up the scope that owns it like a spawned call does (§4.1). 
 | Snapshot of a boxed value | A value owning boxed members is snapshotted by a walk bounded at the scope's live block count — a depth no correct walk can reach, so exhaustion always means recycled bytes and stays retryable — that validates structure-directing metadata before typed interpretation and validates each handle's complete payload span — address, size, and alignment, inside a live region; the copy allocates in its destination binding's scope, rejected attempts return all provisional blocks before retrying, and a retry costs O(structure) |
 | Worker pool | `@primitives$WorkerPool<T, S, E>` runs bulk work; `start` moves an element in and runs its step concurrently, again right away or when an event source is ready or the shared state changed, never twice at once for one element |
 | Pool element | A value type, or a reference type whose every `&` names a package constant or a capability; a value is copied in and a reference-typed element moved in; a step call uses a fixed-size region from its start until it returns |
-| Funnel | The one writer of a pool's value-typed shared state; applies published events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write |
+| Funnel | The one writer of a pool's value-typed shared state; applies published value-typed events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write |
 | Conflicts on capability-backed state | Two accesses conflict only when they reach the same state: the console, the runtime, a foreign capability's own state, or one outside handle's |

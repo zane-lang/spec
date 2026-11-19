@@ -82,7 +82,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.11 funnel
 
-- **Meaning:** A worker pool's one writer of its shared state. It applies the events the pool's steps publish, one at a time, in order per worker, and never touches an element.
+- **Meaning:** A worker pool's one writer of its shared state. It applies the value-typed events the pool's steps publish, each copied into its queue, one at a time, in order per worker, and never touches an element.
 - **Why this name:** Many workers pour events in and one outlet applies them, the shape of a funnel; "handler" already names the `?` abort handler.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.5
 
