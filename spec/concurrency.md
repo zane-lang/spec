@@ -96,13 +96,13 @@ fallback Int = spawn listen(8081) ?? Int(404);
 
 The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.
 
-### 3.4 A wait holds back only the code that waits
+### 3.4 A wait holds back only its caller
 
 The language has two calls that wait. A read of the symbol a spawned call is bound to waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
 
-A wait holds back only the code that waits. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. This holds wherever the wait is: in a spawned call, in a worker pool's step, or in code that runs without `spawn`.
+A waiting call holds back only its caller: the statements after the call run once the wait is over. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. The rule applies wherever the call is made: in a spawned call, in a worker pool's step, or in code that runs without `spawn`. For example, a pool step that reads a spawned call's result holds back only its own worker, and the pool's other workers keep calling their steps.
 
-> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parking-is-dropped-a-wait-holds-back-only-the-code-that-waits) — "Parking is dropped: a wait holds back only the code that waits".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parking-is-dropped-a-wait-holds-back-only-its-caller) — "Parking is dropped: a wait holds back only its caller".
 
 ### 3.5 A call that waits needs no `spawn`
 

@@ -88,7 +88,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.12 event source
 
-- **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and while the worker waits, everything else keeps running.
+- **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and while the worker waits, every other spawned call and pool worker keeps running.
 - **Why this name:** It is the standard term in event loops for something that becomes ready; the qualifier keeps it apart from a reference source.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.3
 

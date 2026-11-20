@@ -356,7 +356,7 @@ Cross-package extension methods are written explicitly:
 vec:Physics$kineticEnergy();
 ```
 
-An intrinsic namespace qualifies a method the same way. The worker intrinsics are methods of a subject of any type, and a call names them with their namespace: `this!@controlflow$work(step)` ([`control-flow.md`](control-flow.md) §4.1).
+A method that an intrinsic namespace supplies is called with that namespace as its qualifier in the same way. The worker intrinsics are such methods, on a subject of any type, so a call to one is written `this!@controlflow$work(step)` ([`control-flow.md`](control-flow.md) §4.1).
 
 ### 6.3 Extension methods may be declared in any package
 
