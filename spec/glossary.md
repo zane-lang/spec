@@ -77,7 +77,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.10 worker pool / element
 
 - **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
-- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" marks that it holds many workers; "element" is the standard term for an item held by a container.
+- **Why this name:** A pool holds many workers in the sense of [`control-flow.md`](control-flow.md) §3.7, each a subject and its step, and "pool" is the usual word for many interchangeable workers; "element" is the standard term for an item that a container holds.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 
 ### 2.11 funnel
@@ -522,6 +522,6 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.24 `comptime` call
 
-- **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities standing for the build machine's; it writes none, and its result is a value type built into the program.
-- **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
+- **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities that stand for the build machine's own; it writes no capability-backed state, and its result is a value type built into the program.
+- **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig understands it correctly, and it names a stage rather than a property of the verb.
 - **Canonical home:** [`effects.md`](effects.md) §5.6
