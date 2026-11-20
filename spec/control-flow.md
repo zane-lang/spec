@@ -210,7 +210,7 @@ Unit register(this S Type, source EventSource, step Bool[this S] mut) mut;
 Unit setInterval(this S Type, every Duration, step Bool[this S] mut) mut;
 ```
 
-`work` calls the step again as soon as it returns `true`, until it returns `false`. `register` calls the step again only once `source` is ready, and waits for `source` in between. An **event source** is a timer or another source the runtime can watch ([`concurrency.md`](concurrency.md) §6.3), and `EventSource.every(interval)` makes a timer that is ready each time `interval` has passed. `setInterval` is `register` on `EventSource.every(every)`. Its timer counts each `every` from the moment the timer was last ready, not from the end of a step: with `every` at 10 ms, a step that takes 3 ms is called again 7 ms after it returns, and a step that takes 12 ms is called again as soon as it returns. None of the three waits before the first step. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
+`work` calls the step again as soon as it returns `true`, until it returns `false`. `register` calls the step again only once `source` is ready, and waits for `source` in between. An **event source** is a timer or another source the runtime can watch ([`concurrency.md`](concurrency.md) §6.3), and `EventSource.every(interval)` makes a timer that is ready each time `interval` has passed. `setInterval` is `register` on `EventSource.every(every)`. Its timer counts each `every` from the moment the timer was last ready, not from the end of a step: with `every` at 10 ms, `setInterval` calls the step again 7 ms after a 3 ms step returns, and at once after a 12 ms step returns. None of the three waits before the first step. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
 
 ```zane
 machine!work(Bool(this Machine) mut {
@@ -235,7 +235,7 @@ The step runs at least once. Its result is the one stopping condition, stated wh
 
 A step leaves early with `return` and a `Bool`, which continues or stops the worker. It cannot call `guard`: the lambda is the exit's caller (§4.2), and a step returns `Bool`, not `Unit`.
 
-None of the three methods takes a block, so each may be spawned, which is how a worker runs without blocking the caller ([`concurrency.md`](concurrency.md) §3.1):
+None of the three methods takes a block, so a caller may spawn any of them, which is how a worker runs without blocking the caller ([`concurrency.md`](concurrency.md) §3.1):
 
 ```zane
 spawn machine!work(Bool(this Machine) mut { ... });

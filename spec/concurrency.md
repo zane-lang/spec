@@ -98,15 +98,15 @@ The bound symbol has the handled primary type, and reading it still blocks until
 
 ### 3.4 A wait holds back only its caller
 
-The language has two calls that wait. A read of the symbol a spawned call is bound to waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
+The language has two calls that wait. A read of the symbol that holds a spawned call's result waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
 
-A waiting call holds back only its caller: the statements after the call run once the wait is over. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. The rule applies wherever the call is made: in a spawned call, in a worker pool's step, or in code that runs without `spawn`. For example, a pool step that reads a spawned call's result holds back only its own worker, and the pool's other workers keep calling their steps.
+A waiting call holds back only its caller: the statements after the call run once the wait is over. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. The rule applies wherever the waiting call occurs: in a spawned call, in a worker pool's step, or in code that runs without `spawn`. For example, a pool step that reads a spawned call's result holds back only its own worker, and the pool's other workers keep calling their steps.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parking-is-dropped-a-wait-holds-back-only-its-caller) — "Parking is dropped: a wait holds back only its caller".
 
 ### 3.5 A call that waits needs no `spawn`
 
-A call that waits is an ordinary call. Made without `spawn`, it returns once its wait is over, and the statement after it runs only then (§5.3). Made with `spawn`, it runs beside its caller, which continues at once.
+A call that waits is an ordinary call. Without `spawn`, the call returns once its wait is over, and the statement after it runs only then (§5.3). With `spawn`, the call runs beside its caller, which continues at once.
 
 ### 3.6 Ordering is explicit
 
@@ -290,7 +290,7 @@ type Session = #struct {
 }
 ```
 
-An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, bounded as a spawned call's is, from when it begins until it returns, including any time it waits ([`memory.md`](memory.md) §3.7). Between calls, an element uses no fixed-size region.
+An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, with the same bounds as a spawned call's region, from when it begins until it returns, including any time it waits ([`memory.md`](memory.md) §3.7). Between calls, an element uses no fixed-size region.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-worker-pools-element-may-reference-constants) — "A worker pool's element may reference constants".
 
