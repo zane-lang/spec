@@ -161,12 +161,23 @@ Box<T>(value ^T Type) => init{value;}   // takes the owner, to store it
 Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 ```
 
-A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction is bare, since no other type argument is passed.
+A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction in a type argument is bare, since no other type argument is passed.
+
+When a value parameter's own type is a function type ([`syntax.md`](syntax.md) §2.13), its return slot and parameter slots take an introduction too, in the form a value parameter's own type uses: `T Type`, `^T Type` or `&T Type`. A slot of a function type already carries a passing mode, so the marker on an introduction there is that slot's mode. As every introduction does, the parameter belongs to the verb whose signature contains the function type. The verb is therefore generic, and each function value a call passes to it is not: the compiler reads the parameter off the function value's own type. Here `make ^T Type[Int]` introduces `T` at the return slot of `make`'s type, and a call passes a lambda that returns an owner of `T`:
+
+```zane
+ArrayRef<T, n>.fill(n @concepts$Int, make ^T Type[Int]) => init{
+	_value = @primitives$ArrayRef.fill(n, make);
+}
+
+jars ArrayRef<Jar, 3> = ArrayRef.fill(3, ^Jar(i Int) => Jar(i));   // T is Jar
+```
 
 These rules let a reader and the compiler read a bare `T` unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
 
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
@@ -483,7 +494,7 @@ copy[Int(1)] = String("Alan");    // names[Int(1)] is still "Ada"
 
 `@primitives$ArrayRef<T, n>` is a reference-type storage primitive: `n` contiguous elements of type `T`, laid out as `@primitives$Array<T, n>` is. `T` may be a value type, a reference type, or an `&` type, since a reference type may contain any of them ([`memory.md`](memory.md) §2.10). `core` declares `ArrayRef<T, n>` over it as a `#` reference type. Its size is statically known, so it lives inline in the fixed-size region like any other statically sized owner ([`memory.md`](memory.md) §3.5).
 
-An `ArrayRef` is built from an array literal by one of three constructors, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index:
+An `ArrayRef` is built from an array literal by one of three constructors, or by `ArrayRef.fill`, which calls a lambda once per position, in order, with that position's 1-based index. The lambda takes the position as a type `I`, which the compiler reads off the lambda: `@primitives$I64`, or a type with an implicit constructor from `@primitives$I64` ([`types.md`](types.md) §4.1). Each position reaches the lambda through that constructor, as a worker's step result reaches `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), so the lambda below takes `core`'s `Int`:
 
 ```zane
 counts ArrayRef([Int(1), Int(2), Int(3)]);
@@ -509,6 +520,7 @@ Its elements are fixed storage: they are all present from construction and never
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
 
 ### 8.5 ListRef is the dynamically sized reference primitive
 
@@ -554,13 +566,13 @@ The following are intentionally not specified in this version:
 | Reference | A parameter is referenced by bare name; casing carries the kind. A type's header or a verb's inline concept marks a name as a parameter |
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
-| Inferred parameter | Introduced inline on a verb parameter's type or in a nested type; deduced from the value arguments at the call |
+| Inferred parameter | Introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type; deduced from the value arguments at the call |
 | Type-parameter subject | `this S Type` introduces `S` as the subject's whole type, so the method applies to a subject of any type; the body only passes the subject on; lookup reaches it through the spelling the file has for its package |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |
 | `@primitives$Array<T, n>` | Fixed-size value-type storage primitive: `n` contiguous elements of type `T`; `core` declares `Array` over it |
-| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal by `ArrayRef`, which borrows each element and so copies values and `&` values, by `ArrayRef.roaming`, which takes owners, or by `ArrayRef.refs`, which mints or copies references and may mix the two in one literal, or by `fill`; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
+| `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal by `ArrayRef`, which borrows each element and so copies values and `&` values, by `ArrayRef.roaming`, which takes owners, or by `ArrayRef.refs`, which mints or copies references and may mix the two in one literal, or by `fill`, whose lambda takes each position as `@primitives$I64` or a type with an implicit constructor from it; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized value-type storage primitive over a value `T`: elements in the dynamic region behind a fixed-size handle; a copy copies every element; `core` declares `List` over it |
 | `@primitives$ListRef<T>` | Dynamically sized reference-type storage primitive with `List`'s layout; its elements are owners or values, never `&`, and roaming; `core` declares `ListRef` over it |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |

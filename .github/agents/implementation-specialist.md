@@ -35,7 +35,7 @@ When asked to add or update content, put it in the repo that "owns" it:
     - Repo: https://github.com/zane-lang/coda
 - **Tree-sitter grammar for Coda**
     - Repo: https://github.com/zane-lang/tree-sitter-coda
-- **Docs site content sourced by zane-lang.org**
+- **Learn pages of the website (zane-lang.org/docs)**
     - Repo: https://github.com/zane-lang/docs
 - **Website**
     - Repo: https://github.com/zane-lang/website

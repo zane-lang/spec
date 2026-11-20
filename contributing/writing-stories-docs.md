@@ -224,4 +224,4 @@ Stories docs share the spec guide's [§6 prose rules](writing-spec-docs.md): `` 
 3. Write the chapters in the order the thinking moved (§3), grouping related decisions rather than splitting one chapter per spec rule, in the first-person-plural "we" voice throughout (§6).
 4. Add a `> **Story:**` pointer from each non-trivially-justified section of the matching spec doc (§4.4), and pin in-prose spec references by permalink (§4.2).
 5. For every term of art the topic coins that carries a [`glossary.md`](../spec/glossary.md) entry, make sure some chapter defends its name — the developed rationale the glossary only summarizes (§3.1).
-6. Add a row to the stories table in [`README.md`](../README.md): one short phrase naming what the story is about. The row does not list chapters, so appending a chapter later leaves it as it is.
+6. Add a row to the stories table in [`stories/README.md`](../stories/README.md): one short phrase naming what the story is about. The row does not list chapters, so appending a chapter later leaves the row unchanged.
