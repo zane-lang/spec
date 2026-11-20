@@ -272,7 +272,7 @@ def zane_version():
 
 
 def cpu_model():
-    """The CPU's model name, where the system says it."""
+    """The CPU's model name, where the system reports it."""
     try:
         with open("/proc/cpuinfo") as f:
             for line in f:

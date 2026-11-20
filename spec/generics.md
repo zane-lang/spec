@@ -15,7 +15,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`Types are templated functions`.** A parameterized *type* lists its parameters in a `<>` header and produces a result. Applying arguments to those parameters (`Vector<Int>`) evaluates the template into a concrete type.
 - **`Types use a header; verbs introduce inline`.** A type's parameters are applied positionally, so a type keeps its `<>` header — an ordered, explicit signature. A verb's parameters are always inferred and never applied positionally, so a verb has no header: it introduces each parameter inline at its first marked occurrence (`x T Type`, `Array<T Type, n @concepts$Int>`) and references it bare elsewhere.
 - **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
-- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the parameter's casing follows what it names — `T` is a type, `n` is a number.
+- **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the case of a parameter's identifier follows the parameter's concept — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
 - **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type, and reaches it only by passing it on (§3.7).
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
@@ -121,11 +121,11 @@ Unit func3(  T Type)     //                              T : value Int, type Typ
 ```
 
 - `func3(T Type)` declares the type-symbol `T` directly. The caller supplies its value: `func3(Int)` gives `T` the value `Int`. This is **explicit passing**.
-- `func2(x T Type)` declares a value-symbol `x` whose type is `T`, but says nothing about `T`'s value. The caller supplies a value for `x` — `func2(Int(3))` — and the compiler reads `T`'s value off it: `Int(3)` has type `Int`, so `T` is `Int`. This is **inference**.
+- `func2(x T Type)` declares a value-symbol `x` whose type is `T`, but does not give `T` a value. The caller supplies a value for `x` — `func2(Int(3))` — and the compiler reads `T`'s value off it: `Int(3)` has type `Int`, so `T` is `Int`. This is **inference**.
 
-Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. The leading value name decides which form you get: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
+Inference is therefore not a separate mechanism. It is the same `T Type` binding with its value left blank, to be filled from the value argument. Whether the parameter has a leading value identifier determines which form it is: write it (`x T Type`) and `T`'s value is recovered from that value; omit it (`T Type`) and the caller gives `T`'s value directly.
 
-Where a parameter is introduced (§3.2) and how each form reaches a call (§5.2, §5.3) are this same idea made precise.
+§3.2 states where a parameter is introduced, and §5.2 and §5.3 state how each form reaches a call; each section applies this same idea.
 
 A number parameter is the one asymmetry. A type can be the type of a value, so a type parameter can be recovered from a value (`x T Type`). A number cannot be the type of a value — `x n @concepts$Int` is meaningless — so a number parameter has no value to read it from, and is instead inferred *structurally*, from a nested type that carries it (`Array<T Type, n @concepts$Int>`, where `n` comes from the argument's length).
 
@@ -173,7 +173,7 @@ ArrayRef<T, n>.fill(n @concepts$Int, make ^T Type[Int]) => init{
 jars ArrayRef<Jar, 3> = ArrayRef.fill(3, ^Jar(i Int) => Jar(i));   // T is Jar
 ```
 
-This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
+These rules let a reader and the compiler read a bare `T` unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
@@ -183,7 +183,7 @@ This is what lets a bare `T` be read unambiguously. In a **type**, a name in the
 
 `Type` and `@concepts$Int` are compiler-provided concept types. `Type` is the concept of a type; `@concepts$Int` is the concept of a compile-time integer, and is the same concept type an integer literal carries ([`syntax.md`](syntax.md) §2.8). Like every concept type, they may appear only in parameter positions and **MUST NOT** be used as storage (see [`syntax.md`](syntax.md) §2.8 and §2.11). A value of concept type `Type` is a type; a value of concept type `@concepts$Int` is a compile-time integer, whether it arrives as a number argument in a type expression or as an integer literal passed to a verb, because both are leaf concept types ([`syntax.md`](syntax.md) §2.8). Both are available at compile time and may be used in the positions their kind allows — a `Type` value in a type position, an `@concepts$Int` value in a number position.
 
-These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of what that slot accepts. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Float` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
+These are the only two kinds a type's `<>` header holds. A header parameter's value is substituted into the body it parameterizes, so every such parameter ends in a slot of a compiler-provided type — `@primitives$Array<T, n>` takes a type and an integer (§8.1) — and its concept is the concept of the argument that slot accepts: a type, or an integer. A header entry of any other concept type is a compile-time error. A new kind of header parameter comes into being only with a compiler-provided type whose slot accepts it. A verb may still declare a value parameter of another concept type, such as `@concepts$Float` (§5.4) or `@concepts$Block`, to accept a literal or a block argument.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 
@@ -269,7 +269,7 @@ The body knows nothing of `S` beyond what the signature states, so it reaches th
 
 ### 4.1 `<>` is the application syntax of the type system
 
-A type expression applies arguments to a parameterized type. It is a compile-time, structural description — it says what a value's architecture *is*, it does not build a value. Type expressions appear wherever a type is expected:
+A type expression applies arguments to a parameterized type. It is a compile-time, structural description: it describes the architecture of a value's type, and it does not build a value. Type expressions appear wherever a type is expected:
 
 ```zane
 type Wrapper = struct {
@@ -301,7 +301,7 @@ type Buffer<T Type, n @concepts$Int> = struct {
 
 ### 4.3 Casing makes `<>` unambiguous
 
-The token before `<` in a type expression is always a type, which is always uppercase-initial (see [`lexical.md`](lexical.md) §3). A comparison operator never has a type on its left. This is why `Vector<Int>` parses as a type application while `a < b` parses as a comparison: the casing of the left operand decides. Case-sensitive parsing is what makes the `<>` type syntax viable.
+The token before `<` in a type expression is always a type, which is always uppercase-initial (see [`lexical.md`](lexical.md) §3). A comparison operator never has a type on its left. This is why `Vector<Int>` parses as a type application while `a < b` parses as a comparison: the case of the left operand's first letter determines which. Case-sensitive parsing is what makes the `<>` type syntax viable.
 
 ### 4.4 Inside a verb, a `<>` entry may introduce a parameter
 

@@ -2,7 +2,7 @@
 
 This document specifies how a Zane package calls C: the C code a package holds and how the toolchain builds it, foreign verbs and the types that cross into C, foreign handles, and what foreign code is taken to read and write.
 
-It states what a Zane program and a package's C code can rely on: what is accepted, what a call does, and when a call is evaluated at compile time. How the compiler meets it, from compiling the C and generating the code around each foreign verb to renaming symbols, caching, and running C at compile time, is the compiler's design ([`docs/design/ffi.md`](https://github.com/zane-lang/compiler/blob/main/docs/design/ffi.md) in the compiler repository), which this document does not specify.
+It states what a Zane program and a package's C code can rely on: what is accepted, what a call does, and when a call is evaluated at compile time. How the compiler implements these rules, from compiling the C and generating the code around each foreign verb to renaming symbols, caching, and running C at compile time, is the compiler's design ([`docs/design/ffi.md`](https://github.com/zane-lang/compiler/blob/main/docs/design/ffi.md) in the compiler repository), which this document does not specify.
 
 > **See also:** [`effects.md`](effects.md) §5 and §6 for capability access and compile-time evaluation. [`memory.md`](memory.md) §2.9 for passing modes. [`dependencies.md`](dependencies.md) §3 and §6 for release archives and symbol rewriting. [`syntax.md`](syntax.md) §2.16 and §3.11 for the declaration forms.
 
@@ -274,7 +274,7 @@ A narrower C integer type, such as `char` or `int16_t`, corresponds to no functi
 
 C lends what it passes for the call, as Zane lends C a view (§3.4): the function value receives a string, a list, or an array of its own, copied from the bytes or elements C passed before it runs, so it keeps nothing of C's. A data handle `H` is a borrow of the C object C passes, which the function value never releases. A roaming owner `^H` takes the C object: C gives up the object, and the handle releases it through its free function when it is destroyed, as a handle a foreign verb returns does (§4.2). C passes no null pointer for either; a null one stops the program, as a foreign verb's null handle result does (§3.5).
 
-C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
+C may call the function value any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
 C may call a function value that touches no capability from several threads at once. The function values one foreign call is passed that read or write capability-backed state are called one call at a time: while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other, since the compiler orders the foreign call as a whole against the state it reaches ([`concurrency.md`](concurrency.md) §4.5) and sees none of the calls C makes inside it.
 
@@ -366,7 +366,7 @@ log = files!fs$open("b.log");             // ERROR: File has no setter
 
 ### 4.4 Passing a handle
 
-A handle crosses into C as the pointer it holds. Where it stands in the foreign verb decides how C may use the object:
+A handle crosses into C as the pointer it holds. The position of the handle in the foreign verb's signature determines how C may use the object:
 
 - **A foreign capability** stands, in a foreign verb, only as the subject of a foreign method (§5.1). C receives `C *` when the method is `mut`, and `const C *` otherwise.
 - **An outside handle** stands, in a foreign verb, only as a parameter other than the subject of a method on a foreign capability, or as its result. C receives `C *` when the method is `mut`, and `const C *` otherwise: the object is part of the outside state the capability reaches, so a write through the capability may change it.
@@ -455,7 +455,7 @@ Only the root package declares foreign variables ([`packages.md`](packages.md) �
 
 ### 5.2 What a foreign verb touches follows from its signature
 
-What a foreign verb reads and writes outside the program is stated by its signature, and the compiler takes it from there ([`effects.md`](effects.md) §5.2):
+What a foreign verb reads and writes outside the program is determined by its signature, and the compiler derives the effects of each call from that signature ([`effects.md`](effects.md) §5.2):
 
 | Foreign verb | Outside the program, it |
 |---|---|
@@ -515,7 +515,7 @@ A call to a foreign verb that reads capability-backed state is not evaluated at 
 
 ### 5.5 A foreign verb that touches outside state MUST say so
 
-The compiler cannot see what a C function reads or writes. It takes each foreign verb's signature at its word (§5.2), and a foreign verb that is not a method on a foreign capability is taken to read and write nothing outside the program.
+The compiler cannot see what a C function reads or writes. It trusts each foreign verb's signature (§5.2): a foreign verb that is not a method on a foreign capability is taken to read and write nothing outside the program.
 
 A foreign verb whose C function reads or writes state outside the program **MUST** be declared as a method on the foreign capability that reaches that state, `mut` if it writes. Outside state includes anything one run of the program can see differently from another: a file, the clock, the environment, a random source, a device, another process, and a C variable that another call changes.
 
@@ -572,7 +572,7 @@ Unit main() {
 }
 ```
 
-The rule protects the binding's users, and only the binding's author can follow it.
+Only the author of a binding can keep this rule, and every user of the binding relies on it.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#impurity-is-a-capability-not-a-comment) — "Impurity is a capability, not a comment".
 

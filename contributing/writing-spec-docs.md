@@ -12,7 +12,7 @@ Every spec document lives in [`spec/`](../spec/), and each file covers one topic
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
-When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write it* (`syntax.md`), *what the spec calls it* (`glossary.md`), or *how it came to be decided that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
+When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write a construct* (`syntax.md`), *which term the spec uses for a concept* (`glossary.md`), or *how a decision came to be made that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
 
 See [`spec/README.md`](../spec/README.md) for the canonical index of every spec document and its purpose.
 
@@ -147,7 +147,7 @@ Zane uses a **structural effect model** with a single user-facing effect modifie
 - **Owner and reference.** An object is held by an owner; an `&` reference may access it without controlling its lifetime.
 ```
 
-The Overview is orientation, not rationale: it says what the feature *is*, not why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
+The Overview is orientation, not rationale: it describes the feature, and leaves out why it was chosen over the alternatives. If one of the core ideas is non-obvious, name it here in one line and point to the stories doc for the argument.
 
 ### 3.2 Core topic sections
 
@@ -200,9 +200,9 @@ Format as a two-column table: left column is the concept name, right column is t
 
 The spec is about the language, not about a compiler. Some language rules exist to make compiler behaviour possible, though, and a few of those behaviours are distinctive enough to be part of what the language is: implicit parallelism ([`concurrency.md`](../spec/concurrency.md) §2) and compile-time evaluation ([`effects.md`](../spec/effects.md) §5.3) are the examples.
 
-Such a behaviour is stated next to the rule that enables it: in the subsection directly after that rule, when one subsection holds it, as compile-time evaluation follows capability access. It says what the compiler may do and what that guarantees a program, such as that the program cannot observe it. It never says how the compiler does it: the algorithm, its bounds, and its heuristics belong in the compiler's own documentation.
+Such a behaviour is stated next to the rule that enables it: in the subsection directly after that rule, when one subsection holds it, as compile-time evaluation follows capability access. The statement covers what the compiler may do and what that guarantees a program, such as that a program cannot observe the behaviour. It never covers how the compiler does it: the algorithm, its bounds, and its heuristics belong in the compiler's own documentation.
 
-Not every compiler behaviour needs a mention. Write one down only when it shows what the rule before it buys.
+Not every compiler behaviour needs a mention. Write a behaviour down only when it makes visible the benefit of the rule that enables it.
 
 ---
 
@@ -260,7 +260,7 @@ The table header is always one of:
 
 ## 5. `syntax.md` Conventions
 
-`syntax.md` is the canonical grammar reference. It contains *only* surface syntax — the form of things, not their meaning.
+`syntax.md` is the canonical grammar reference. It contains *only* surface syntax — the form of each construct, not its meaning.
 
 ### 5.1 What belongs in `syntax.md`
 
@@ -305,7 +305,7 @@ name = expr
 
 When showing declaration syntax, avoid examples that look like a symbol is being re-declared. If the symbol already exists, use `name = expr` rather than `name Type`, `name Type(...)`, or `name Type{...}`.
 
-**Examples elide `import core$`.** `core` is an ordinary package, so a real source file imports it before writing `Int`, `Bool`, `if`, or counted repetition ([`packages.md`](../spec/packages.md) §3, [`types.md`](../spec/types.md) §2.6). Repeating that line in every example would bury what each one is showing, so every example is written as though the file already carried it, and `core`'s members appear unqualified. Write an `import` in an example only when the example is *about* imports. The same applies to the intrinsic namespaces, which need no import at all.
+**Examples elide `import core$`.** `core` is an ordinary package, so a real source file imports it before writing `Int`, `Bool`, `if`, or counted repetition ([`packages.md`](../spec/packages.md) §3, [`types.md`](../spec/types.md) §2.6). Repeating that line in every example would bury the point of each example, so every example is written as though the file already carried it, and `core`'s members appear unqualified. Write an `import` in an example only when the example is *about* imports. The same applies to the intrinsic namespaces, which need no import at all.
 
 **Examples that print use a `console` in scope.** A real program prints through a console it was given: the root package builds one from `@program$console` and passes it on ([`effects.md`](../spec/effects.md) §6.6). Every example that prints is written as though a writable `core` `Console` named `console` were already in scope, and calls `console!print(...)`. A console received as a parameter is read-only ([`effects.md`](../spec/effects.md) §4.1), so an example that shows one being passed prints only where it is reached through `this`. Show where the console comes from only when the example is *about* capabilities.
 
@@ -373,7 +373,7 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 ## 7. Adding a New Spec Document
 
-1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match what readers will type when looking for it).
+1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match the term readers will look for).
 2. Follow the required shape from §2.
 3. Add a row to the appropriate table in [`spec/README.md`](../spec/README.md). A document that the index does not link to is not published on the website.
 4. If the document introduces new syntax forms, add them to `syntax.md` and cross-reference from the topic doc.

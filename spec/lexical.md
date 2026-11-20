@@ -8,12 +8,12 @@ This document specifies Zane's lexical layer: how source text is tokenised, how 
 
 ## 1. Overview
 
-Zane is case-sensitive. The first letter of a name selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
+Zane is case-sensitive. The first letter of an identifier selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
-- **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing one where the casing implies the other is a compile-time error.
+- **`Casing determines kind`.** An uppercase-initial name is a type, including a type parameter such as `T`; a lowercase-initial name is a value, binding, field, or any other parameter. Using a lowercase name as a type, or giving a binding, a field, or a parameter other than a type parameter an uppercase name, is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
-- **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser tells `Vector<Int>` from `a < b` by casing alone.
+- **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
 - **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement or declaration ending in `}`, that brace — so line breaks are free everywhere.
 - **`String structure is language-defined`.** Double quotes delimit a string; quote and backslash escapes and interpolation are recognized by the compiler. Other backslash sequences remain text for the consumer (§7.1).
@@ -57,7 +57,7 @@ vec vector(int(2));          // ILLEGAL: lowercase names are not types
 
 ### 3.2 Values must be lowercase
 
-A binding, parameter, or field name is lowercase-initial. This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
+The name of a binding, a field, or a parameter other than a type parameter is lowercase-initial; a type parameter names a type and is uppercase-initial (§3.1). This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
 
 ```zane
 type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is a number parameter
@@ -130,7 +130,7 @@ type Holder = struct {
 ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison operator
 ```
 
-A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The casing rule therefore tells the two apart by inspecting a single token's first letter.
+A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single identifier token. A value on the left that is not an identifier, such as the literal `1` in `1 < count`, has no first letter, and the `<` after it is the comparison operator.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
@@ -139,7 +139,7 @@ A comparison never has a type on its immediate left, and a type expression never
 
 ## 6. Delimiters and Brackets
 
-The **bracket picks the separator**. A `{ }` body terminates each entry with `;`; a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule turns on the bracket alone rather than on what the construct means, so the same character never means two things in one context.
+The **bracket picks the separator**. A `{ }` body terminates each entry with `;`; a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule depends only on the bracket, not on the meaning of the construct, so a separator character never has two meanings in one context.
 
 ### 6.1 `;` terminates an entry inside `{ }`
 
@@ -181,7 +181,7 @@ Unit main() {
 }
 ```
 
-A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing. Whatever comes after the brace is the next statement, so a `(` or a `[` written there opens a statement of its own rather than calling or subscripting what the brace closed ([`syntax.md`](syntax.md) §4.8). A value closed by its own brace may still go on through a token that opens no statement — a `.`, `:`, `!`, `?`, `??`, or an operator, though a map literal takes the first three only once parenthesized — and the statement then ends where that longer expression does ([`syntax.md`](syntax.md) §4.9).
+A statement that ends with a `}` is the exception, and it takes no terminator: **the brace itself ends the statement**. A `;` after it would mark nothing. Whatever comes after the brace is the next statement, so a `(` or a `[` written there opens a statement of its own rather than calling or subscripting the expression that the brace closed ([`syntax.md`](syntax.md) §4.8). A value closed by its own brace may still go on through a token that opens no statement — a `.`, `:`, `!`, `?`, `??`, or an operator, though a map literal takes the first three only once parenthesized — and the statement then ends where that longer expression does ([`syntax.md`](syntax.md) §4.9).
 
 ```zane
 Unit main() {
@@ -241,11 +241,11 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 | `( )` | a parameter list or an argument list | `,`, never trailing |
 | `< >` | a generic header or a generic argument list | `,`, never trailing |
 
-A `{ }` is the one bracket with two readings. Most are introduced by a token that says which they are — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two that stand alone with no such token, and both hold `;`-terminated things, so the terminator does not separate them. In **argument position**, where the two can meet, what separates them is the first entry: parse one expression, then read the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.10).
+A `{ }` is the one bracket with two readings. Most are introduced by a token that shows which reading applies — a mould keyword, `match`, `init`, a type name, or a verb's signature. A **map literal** and a **block argument** are the two readings with no such token, and both hold `;`-terminated entries or statements, so the `;` alone does not distinguish them. In **argument position**, where both can appear, the parser distinguishes them by the mark after the first entry: it parses one expression, then reads the next mark. A `,` opens a map entry's value; a `;` ends a statement. A map literal is never empty, so a bare `{}` is a block ([`syntax.md`](syntax.md) §2.10).
 
 ```zane
 f({ key, value; });  // a map literal: ',' follows the first expression
-f({ doWork(); });    // a block argument: ';' follows it
+f({ doWork(); });    // a block argument: ';' follows the first expression
 ```
 
 Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and those commas belong to the `match` expression itself, so they are consumed before the entry's own mark is read.
@@ -262,7 +262,7 @@ Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and t
 
 ## 7. Literals
 
-A numeric literal is written in decimal digits, in one of two forms, and the form decides its concept type ([`syntax.md`](syntax.md) §2.8):
+A numeric literal is written in decimal digits, in one of two forms, and the form determines its concept type ([`syntax.md`](syntax.md) §2.8):
 
 - An **integer literal** is one or more digits. It carries `@concepts$Int`.
 - A **float literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Float`.
@@ -272,14 +272,14 @@ A numeric literal consists of digits and at most one `.`, which has at least one
 ```zane
 3      // integer literal: @concepts$Int
 3.1    // float literal: @concepts$Float
-3.0    // float literal: the spelling decides, not the value
+3.0    // float literal: the `.` makes it a float literal, whatever the value
 3.     // ILLEGAL: a digit must follow the `.`
 .5     // ILLEGAL: a digit must precede the `.`
 ```
 
 A numeric literal is written without a sign. `~` before one gives the literal of the opposite sign ([`operators.md`](operators.md) §2.7), so `~3` is a negative integer literal.
 
-Because the spelling decides the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
+Because the spelling determines the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" tells how the concepts took their names.
@@ -301,11 +301,11 @@ After `\%`, the scanner consumes the longest value identifier allowed by §4, in
 "say \"hello\""  // literal fragment: say "hello"
 "\\%name"        // literal fragment: \%name; no interpolation
 "\w+"           // literal fragment: \w+; compiler preserves the backslash
-"\n"            // two literal characters; consumer decides their interpretation
+"\n"            // two literal characters; the consumer interprets them
 "\%name!"       // interpolation of name, followed by !
 ```
 
-Structural escapes are recognized once. Neither a backslash produced by `\\` nor bytes inserted by interpolation are rescanned for another language escape. The consumer interprets the remaining text by its own rules, or has its text escapes read by `@primitives$String.escaped` ([`types.md`](types.md) §2.7).
+Structural escapes are recognized once. Neither a backslash produced by `\\` nor bytes inserted by interpolation are rescanned for another language escape. The consumer interprets the remaining text by its own rules, or reads the text escapes in it with `@primitives$String.escaped` ([`types.md`](types.md) §2.7).
 
 > **See also:** [`syntax.md`](syntax.md) §2.15 for surface forms. [`types.md`](types.md) §2.8 for interpolation resolution, copying, and concept typing.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#literal-structure-and-consumer-interpretation) — "Literal structure and consumer interpretation".

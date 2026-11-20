@@ -11,11 +11,11 @@ This document specifies Zane's package model: how a project's directories form p
 Zane packages are directory-defined namespaces and compilation units that contain every type, function, constant, and other package-scope declaration in the language.
 
 - **`Three kinds of package`.** A project's packages live in three directories beside its manifest: library packages in `lib/`, program packages in `bin/`, and test packages in `test/`.
-- **`The directory names the package`.** Every source file declares the name of the directory that holds it, which detects a file copied or moved into the wrong package.
+- **`The directory names the package`.** Every source file of a library or program package declares the name of the directory that holds it, so that a file copied or moved into the wrong package is detected; every test package's files declare `package test` (§7.1).
 - **`One compilation unit`.** All source files in a package compile together without source-order dependencies.
 - **`Library packages share, subpackages nest`.** A project's library packages import one another; a library package may hold subpackages that only it imports.
-- **`The import form is the spelling`.** An import makes members of one package available to one source file, written the way the import writes them — qualified, aliased, or bare.
-- **`One spelling per entity`.** Whatever an import states is the only way that entity may be written in the file.
+- **`The import form is the spelling`.** An import makes members of one package available to one source file, written in the form the import gives them — qualified, aliased, or bare.
+- **`One spelling per entity`.** The spelling an import gives an entity is the only way the file may write that entity.
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
 - **`Programs and tests start a build`.** A program or test package is the root of its build: it declares `main` and alone reaches the program's console and runtime.
@@ -104,7 +104,7 @@ A source file may refer to any accessible declaration in its own package by its 
 
 ### 3.3 The import form fixes how its members are written
 
-What an import writes after `import` is what the file writes at the use site.
+The import form sets how the file writes the imported members at each use site.
 
 | Form | Members are written as |
 |---|---|
@@ -134,7 +134,7 @@ An import is a **spelling**, not a linkage. Every imported name resolves to its 
 
 ### 3.4 Each imported entity has exactly one spelling
 
-An import states one spelling and that spelling is the only one available in the file. `import math as m` makes `m$sqrt` legal and `math$sqrt` illegal; `import math$sqrt as root` makes `root` legal and `sqrt` illegal.
+An import gives each imported entity one spelling, and the file may use only that spelling. `import math as m` makes `m$sqrt` legal and `math$sqrt` illegal; `import math$sqrt as root` makes `root` legal and `sqrt` illegal.
 
 ```zane
 import math as m;
@@ -191,7 +191,7 @@ import math$sqrt as Root;     // ILLEGAL: a value renamed to a type-shaped name
 
 Two imports may bring one bare name into a file only when the result is a legal overload set: every declaration sharing the name must be a verb, and they must differ in the ordered parameter types that decide overload identity ([`functions.md`](functions.md) §4.1). Dispatch is then an ordinary call-site choice.
 
-Any other collision is a compile-time error reported at the import declaration rather than at the use site, so the file's own import list states the conflict. A lambda-variable is a symbol rather than a verb and can never accumulate an overload set ([`functions.md`](functions.md) §7.3), so a collision involving one is always an error. A bare name that collides with a member of the file's own package (§3.2) is an error on the same terms; an import never shadows.
+Any other collision is a compile-time error reported at the import declaration rather than at the use site, so the conflict shows in the file's own import list. A lambda-variable is a symbol rather than a verb and can never accumulate an overload set ([`functions.md`](functions.md) §7.3), so a collision involving one is always an error. A bare name that collides with a member of the file's own package (§3.2) is an error on the same terms; an import never shadows.
 
 The narrower forms of §3.3 are the remedy: where `import pkg$` would collide, `import pkg$member` or an `as` alias takes only what the file needs.
 
@@ -296,7 +296,7 @@ Unit main() {
 
 ### 6.3 A program ends with an exit status
 
-A program ends with an **exit status**, a number it hands to whatever started it. How the program ends decides the status:
+A program ends with an **exit status**, a number it hands to whatever started it. How the program ends determines the status:
 
 - **`main` returns.** The status is `0`. A program whose printed output could not all be written ends with status `1` instead.
 - **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.
@@ -363,7 +363,7 @@ Unit main() {
 }
 ```
 
-A test package reaches what a package's real user reaches. A package's `_`-prefixed declarations are inaccessible from it (§4.1), and a nested test package sees its subpackage as the subpackage's parent does, without the subpackage's own subpackages, which have test packages of their own.
+A test package has the same access as a package that imports the package under test. A package's `_`-prefixed declarations are inaccessible from it (§4.1), and a nested test package sees its subpackage as the subpackage's parent does, without the subpackage's own subpackages, which have test packages of their own.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#subpackages-nest-inside-a-library-package) — "Subpackages nest inside a library package".
 
@@ -384,7 +384,7 @@ A test package reaches what a package's real user reaches. A package's `_`-prefi
 | Importable packages | A library package imports the project's top-level library packages, its own subpackages, and its dependencies' public library packages under the names its manifest gives them, without cycles; nothing imports a program or test package |
 | Implicit packages | None; the current package comes from the file's declaration, and every other package requires an explicit import, `core` included |
 | Import forms | `import pkg`, `import pkg as alias`, `import pkg$member`, `import pkg$member as alias`, `import pkg$[a, b]`, `import pkg$` |
-| Imported member access | Written exactly as the import states it, and no other way |
+| Imported member access | Written in the spelling the import gives it, and no other way |
 | Imported name contents | Every accessible declaration of that name: a verb's whole overload set, or a type with its constructors; of the methods, only those for a subject of any type (§3.6) |
 | Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which its plain name reaches, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |

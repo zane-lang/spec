@@ -71,13 +71,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.9 worker / step
 
 - **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value that runs on that subject until it returns `false`. `core`'s `work` and `setInterval` run one, over `@controlflow$work` and `@controlflow$workEvery`; neither takes a block, so a program may spawn a worker.
-- **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the one advance the worker repeats.
+- **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the single advance that the worker repeats.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3.7
 
 ### 2.10 worker pool / element
 
 - **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
-- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" says it is many; "element" is what any container calls what it holds.
+- **Why this name:** It holds many workers in the existing sense, a subject and its step, so "pool" marks that it holds many workers; "element" is the standard term for an item held by a container.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 
 ### 2.11 funnel
@@ -117,7 +117,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.4 compiler concept types
 
 - **Meaning:** Compiler-provided types for source constructs, permitted in parameters but not storage. The leaf concepts `Type`, `@concepts$Int`, and `@concepts$Float` are compile-time values. String concepts may contain runtime interpolation; array and map concepts may contain runtime entries. A concept is not necessarily a compile-time value.
-- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named for what that literal is usually called across languages: `@concepts$Int` is an integer literal, whichever integer primitive's constructor it is passed to.
+- **Why this name:** These are compiler-defined concept-level placeholders for source literals, not ordinary user storage types. Each literal concept is named with the term that other languages usually use for that literal: `@concepts$Int` is an integer literal, whichever integer primitive's constructor it is passed to.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.8–§2.12; lowering in [`types.md`](types.md) §2.7
 
 ### 3.5 field constructor
@@ -164,20 +164,20 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.12 distinct type vs alias
 
-- **Meaning:** `type Name = T` introduces a new distinct type that is structurally equal to `T` but not interchangeable with it; `alias Name = T` introduces a fully interchangeable name. The keyword carries the distinction.
+- **Meaning:** `type Name = T` introduces a new distinct type that is structurally equal to `T` but not interchangeable with it; `alias Name = T` introduces a fully interchangeable name. The keyword, `type` or `alias`, selects between the two.
 - **Why this name:** The pairing names the only difference between the two declaration forms — whether the result is a new type or just another name.
 - **Canonical home:** [`types.md`](types.md) §5
 
 ### 3.13 casing-determined kind
 
-- **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial name is a type, a lowercase-initial name is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
+- **Meaning:** The first letter of an identifier selects its lexical class: an uppercase-initial identifier is a type, and a lowercase-initial identifier is a value, binding, or parameter. A lowercase name in a type position is a compile-time error.
 - **Why this name:** Casing alone, not a declaration or lookahead, determines whether a bare name is a type or a value.
 - **Canonical home:** [`lexical.md`](lexical.md) §3
 
 ### 3.14 `Type` and `@concepts$Int` parameter concepts
 
 - **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
-- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the one an integer literal already carries — rather than a bespoke parameter-kind keyword.
+- **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the concept that an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
 ### 3.15 variant (sum mould)
@@ -194,7 +194,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.17 struct/variant body symmetry
 
-- **Meaning:** A `struct` body and a `variant` body use the exact same grammar; the keyword alone decides product versus sum. The symmetry applies to the declaration, not to consuming code, where construction and reads differ.
+- **Meaning:** A `struct` body and a `variant` body use the exact same grammar; the keyword alone determines whether the type is a product or a sum. The symmetry applies to the declaration, not to consuming code, where construction and reads differ.
 - **Why this name:** The label states the shared property directly: one body shape serves both kinds, distinguished only by keyword.
 - **Canonical home:** [`adt.md`](adt.md) §3.1
 
@@ -218,8 +218,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.21 bracket-picked separator
 
-- **Meaning:** The bracket decides how the things inside it are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
-- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states what does the picking.
+- **Meaning:** The bracket determines how its contents are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
+- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states that the bracket does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
 ### 3.22 verb
@@ -231,7 +231,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.23 settled owner
 
 - **Meaning:** An owner that may be referenced and never moves again: a bare reference-type symbol, or a field or `ArrayRef` element of a settled root. A roaming owner settles by moving into a settled place. Overwriting it writes the replacement at the same address.
-- **Why this name:** A settler has stopped travelling and taken a fixed home; a reference can name only an owner that has done so, and the word says the owner has stopped moving for good.
+- **Why this name:** A settler has stopped travelling and taken a fixed home; a reference can name only an owner that has done so, and the word "settled" marks an owner that has stopped moving for good.
 - **Canonical home:** [`memory.md`](memory.md) §2.1
 
 ### 3.24 roaming owner
@@ -272,7 +272,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.30 value mould / reference mould
 
-- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form decides whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through references. It does not decide whether the type may recurse — both forms may, through a boxed member (§3.39).
+- **Meaning:** A mould is written in one of two forms: a **value form**, unmarked, or a **reference form**, carrying a leading `#`. The form determines whether the declared type is copied and transitively value, or identity-bearing, moved, and accessible through references. It does not determine whether the type may recurse — both forms may, through a boxed member (§3.39).
 - **Why this name:** The `#` mark names one axis — value versus reference — that crosses every mould.
 - **Canonical home:** [`types.md`](types.md) §2.1
 
@@ -315,7 +315,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.37 passing mode
 
 - **Meaning:** Which of three ways a reference-type argument reaches a callee, fixed entirely by the parameter's surface form: `T` **borrows** it (§3.27), `^T` **takes** it (§3.34), and `&T` takes a **reference** (§3.33). A value-type parameter is always a borrow, and the subject parameter (§3.38) always is one. An array literal's elements each travel in the mode written on its parameter's `@concepts$Array` element.
-- **Why this name:** "Mode" names a choice about *how* the same argument travels rather than *what* it is — the type is unchanged in each, and only the caller's obligations and resulting state differ.
+- **Why this name:** "Mode" names a choice of *how* the same argument is passed, not of *which type* it has: the type is unchanged in each mode, and only the caller's obligations and resulting state differ.
 - **Canonical home:** [`memory.md`](memory.md) §2.9
 
 ### 3.38 subject / subject parameter / subject expression
@@ -350,8 +350,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.43 scope
 
-- **Meaning:** The block whose lifetime bounds a place, and the only thing the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
-- **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position tells you nothing, its root's scope tells you everything.
+- **Meaning:** The block whose lifetime bounds a place, and the only property of a place that the store rule compares. A **symbol**'s scope is its declaring block; a **field or element** takes its root symbol's scope rather than having one of its own; a `^T` parameter's is the body's top block; `this`, an `&T` parameter, and a constructor's `init{ }` have none in the body at all, each standing instead for a path in the caller's frame.
+- **Why this name:** A place's scope is a lexical scope — a block — so the ordinary word fits. It names where a place's lifetime is bounded rather than where the place is written, which is the distinction the rule turns on — a field's own position does not bound its lifetime, and its root's scope does.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.1
 
 ### 3.44 spent symbol
@@ -369,7 +369,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.46 scalar primitive
 
 - **Meaning:** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, or `@primitives$F64`: a signed integer or IEEE 754 float of the width its name gives. Each is built from its literal's concept, and converts to each other through a constructor of the target, named for its loss when it can lose a value.
-- **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out the kind and the width, which is all that tells the four apart.
+- **Why this name:** A scalar is a single number, as against the containers and the string; the names spell out whether the number is an integer or a float and how many bits wide it is, which is all that separates the four.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
 
 ### 3.47 growing-argument rule
@@ -397,7 +397,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.3 URL identity
 
 - **Meaning:** A dependency's canonical identity is its project's full source URL, while manifest keys are only local labels.
-- **Why this name:** The rule says identity comes from the repository URL itself, not from whichever alias a project chooses locally.
+- **Why this name:** The rule makes the repository URL itself the package's identity, rather than any alias that a project chooses locally.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §1 and §2
 
 ### 4.4 import spelling rule
@@ -420,7 +420,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.7 trailing argument
 
-- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last thing in its statement.
+- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last item in its statement.
 - **Why this name:** It trails the argument list rather than sitting in it.
 - **Canonical home:** [`syntax.md`](syntax.md) §4.8
 
@@ -463,13 +463,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.14 test package
 
 - **Meaning:** A directory of a project's `test/` holding `.zn` files, each declaring `package test`. It imports what the tested package's real user imports and is the root package of its own test build.
-- **Why this name:** It is the package that tests the others, and its name is fixed, so every test package's declaration says `test`.
+- **Why this name:** It is the package that tests the others, and its name is fixed, so every test package is declared with the name `test`.
 - **Canonical home:** [`packages.md`](packages.md) §7
 
 ### 4.15 library package / program package
 
 - **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports.
-- **Why this name:** The directories already say it: `lib/` holds what others link against, `bin/` what becomes a program.
+- **Why this name:** The directory names already show it: `lib/` holds the packages that other packages link against, and `bin/` holds the packages that become programs.
 - **Canonical home:** [`packages.md`](packages.md) §2.1
 
 ### 4.16 subpackage
@@ -487,19 +487,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.18 math function / exact / approximate
 
 - **Meaning:** A function of `@math$`, on scalar primitives. An **exact** one's result is fully specified and the same on every platform; an **approximate** one's is close to the true value and may differ between platforms.
-- **Why this name:** The everyday words: the namespace holds what a math library holds, and exact and approximate say how far its result can be trusted to the last bit.
+- **Why this name:** The everyday words: the namespace holds what a math library holds, and the words exact and approximate state whether a function's result can be trusted to the last bit.
 - **Canonical home:** [`math.md`](math.md) §2.2
 
 ### 4.19 foreign verb
 
-- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and what it touches outside the program is what that signature states.
+- **Meaning:** A function or method whose body is a C function, named by its symbol in place of a body. Its Zane signature is checked against the C declaration, and the signature states everything the verb touches outside the program.
 - **Why this name:** "Foreign" is the established word for code in another language reached through an interface, as in a foreign-function interface; "verb" is the spec's word for a function or method.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.1
 
 ### 4.20 foreign handle / data handle / outside handle / foreign capability
 
 - **Meaning:** A **foreign handle** (`#handle`) is a reference type referring to one C object. One without a free function is a **foreign capability**, referring to a C global; one with a free function owns its object, and is an **outside handle**, part of capability-backed state, when a method on a foreign capability makes it, and a **data handle**, state of the program's own, otherwise.
-- **Why this name:** C APIs already call an opaque pointer to their object a handle; a capability is what the effect model calls an object that reaches outside state.
+- **Why this name:** C APIs already call an opaque pointer to their object a handle; "capability" is the effect model's term for an object that reaches outside state.
 - **Canonical home:** [`ffi.md`](ffi.md) §4.1
 
 ### 4.21 interface header
@@ -523,5 +523,5 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.24 `comptime` call
 
 - **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities standing for the build machine's; it writes none, and its result is a value type built into the program.
-- **Why this name:** The keyword says when the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
+- **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig reads it right, and it names a stage rather than a property of the verb.
 - **Canonical home:** [`effects.md`](effects.md) §5.6

@@ -239,7 +239,7 @@ type Buffer<T Type, n @concepts$Int> = struct {
 }
 ```
 
-Parameters are referenced by bare name. The casing of a name marks its kind: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
+Parameters are referenced by bare name. The case of a parameter's identifier marks whether it is a type or a number: `T` is a type, `n` is a number. Type expressions (§2.4) supply arguments positionally at use sites.
 
 A **verb** — a function, method, or constructor — has no `<>` header. It introduces its type and number parameters inline within its value parameters, at each parameter's first marked occurrence, by carrying the concept there (`x T Type`, `param Array<T Type, n @concepts$Int>`); see §3.1 and [`generics.md`](generics.md) §3. See also [`lexical.md`](lexical.md) §3.
 
@@ -285,7 +285,7 @@ An intrinsic operation has one signature, with four exceptions, each an overload
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 
-A namespace is named for what its members are or what they are for. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
+A namespace is named for the kind of member it holds or for the purpose those members serve. Every member of every intrinsic namespace is an intrinsic, so no namespace takes that word as its name.
 
 Every intrinsic namespace except `@program$` is reachable from every package without an import. `@program$` is reachable only from the root package ([`packages.md`](packages.md) §6.1), which passes its instances to any other package that needs one.
 
@@ -343,7 +343,7 @@ A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`l
 }
 ```
 
-Entries are evaluated in written order. A key is an ordinary expression rather than a name, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
+Entries are evaluated in written order. A key is an ordinary expression rather than an identifier, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
 
 ```zane
 first String("y");
@@ -442,7 +442,7 @@ type Tree = #variant { leaf Int; node Tree; }    // reference sum type; `node` r
 "literal \\%name"
 ```
 
-A string is delimited by double quotes. `\"`, `\\`, and `\%name` are the language-defined forms inside it. After `\%`, `name` is one lowercase value identifier (§4 of [`lexical.md`](lexical.md)); it ends at the first character not belonging to that identifier. There is no expression-delimited interpolation form, and qualification, member selection, and calls are not part of the interpolation name.
+A string is delimited by double quotes. `\"`, `\\`, and `\%name` are the language-defined forms inside it. After `\%`, `name` is one lowercase value identifier (§4 of [`lexical.md`](lexical.md)); it ends at the first character not belonging to that identifier. There is no expression-delimited interpolation form, and qualification, member selection, and calls are not part of the interpolation identifier.
 
 ```zane
 "\%"          // ILLEGAL: missing interpolation identifier
@@ -868,7 +868,7 @@ ran Bool = if(ready) {
 }
 ```
 
-A trailing argument **MUST** be the last thing in its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
+A trailing argument **MUST** be the last element of its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
 
 A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last. Given a verb declaring two `@concepts$Block` parameters:
 
@@ -901,7 +901,7 @@ g();
 ```
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#statements-end-in--so-a-trailing-brace-can-end-one) — "Statements end in `;` so a trailing brace can end one".
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a `[ ]` does not trail.
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" gives the reason a `[ ]` does not trail.
 
 An argument list with nothing left inside it still writes its `( )`; the trailing form elides only the `)`, never the whole list:
 

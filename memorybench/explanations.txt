@@ -147,7 +147,7 @@ is ~256us (~3.1x slower). Even best against best, ~162us concurrent
 versus ~44.6us sequential is ~3.6x slower. The concurrent samples span
 ~162-504us. This small read-only workload does not benefit from this
 parallel execution path, despite the persistent workers being pre-started
-and warmed; it says nothing about larger workloads that amortize scheduling.
+and warmed; this result cannot be extended to larger workloads that amortize scheduling.
 
 [Test 13]
 Static-key boxed blocks take ~482us, runtime-key backing stores ~494us,

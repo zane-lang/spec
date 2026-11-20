@@ -62,7 +62,7 @@ def row_stats(row):
     A row carries either every per-run sample (what the harness emits) or
     precomputed median/min/max (what the migrated pinned results carry).
     A row marked "eliminated" has no timing at all: its loop is a no-op the
-    compiler removes, so the only honest thing to report is that fact.
+    compiler removes, so the row reports only that the loop was eliminated.
     """
     if row.get("eliminated"):
         return None
@@ -115,7 +115,7 @@ def load_results(path):
 def pin_results(doc):
     """Replace the committed results file, atomically and without narrowing it.
 
-    It is the artifact everything else is pinned to, so it is never left
+    The results file is the artifact everything else is pinned to, so it is never left
     half-written: serialize to a temporary file beside it and rename only once
     the write has closed cleanly. mkstemp creates that file 0600, so carry the
     target's own mode across -- otherwise pinning a run silently makes the

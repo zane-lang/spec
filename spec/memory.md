@@ -88,7 +88,7 @@ w Vector2 = v;                       // copies the existing value in v
 
 A value-type parameter is a read-only borrow rather than a copy (§2.9), so passing one costs nothing. Binding through that borrow into fresh storage is a copy because the parameter denotes the caller's existing place. Where a copy does happen, it copies the **whole value**, including any storage that value owns. For a value whose members are all laid out inline, that is a copy of its inline bytes and nothing more; this is every value type that owns neither a backing store nor a boxed member (§2.10, §3.3). A value that owns out-of-line storage is copied **deeply**: the copy allocates a block for each backing store or boxed payload and copies its live contents into it, recursively, so the original and the copy share no storage at all. This includes `String`, `List`, and their primitives ([`types.md`](types.md) §2.7, [`generics.md`](generics.md) §8.3).
 
-Depth is not an extra feature bolted onto the copy; it is what the ordinary meaning of "copied" requires once a value may own out-of-line storage. A value's central promise is that nothing reachable from it is reachable from anywhere else, and a shallow copy would break exactly that by leaving two values naming one payload.
+A copy is deep because "copied" requires it once a value may own out-of-line storage. A value's central promise is that nothing reachable from it is reachable from anywhere else, and a shallow copy would break that promise by leaving two values that name one payload.
 
 The cost is real and is accepted: copying such a value allocates and takes time proportional to its owned bytes and structure, where copying a flat value is one fixed-size write. Fresh construction does not pay that copy cost merely because its result is nested: `Countdown.more(Countdown.more(Countdown.done(Unit())))` constructs each node once in its final owning payload rather than repeatedly copying each completed prefix. Where a copied place is never read again — the argument a callee stores was the caller's last use of it — an implementation may move it instead of copying, since a value has no identity by which the two could be told apart.
 
@@ -222,7 +222,7 @@ parked Car = make(Int(1));     // settles here
 garage.car = make(Int(2));     // settles in garage.car when garage is settled
 ```
 
-What an owner contains takes a state from where it sits:
+The parts of an owner take their state, settled or roaming, from the owner's position:
 
 - **Fixed storage inherits its root's state.** A struct's fields and an `ArrayRef`'s elements are settled under a settled root and roaming under a roaming one: they are fixed in number and all initialized at construction ([`generics.md`](generics.md) §8.4). An `Array` and a `List` are value types ([`generics.md`](generics.md) §8.1, §8.3), so they hold no owner at all (§2.10).
 - **Dynamic storage is always roaming.** A `ListRef`'s elements and a variant's payload come and go while the `ListRef` or variant holding them lives, so they are roaming even under a settled root. A settled `ListRef` may be referenced as a whole; its elements may not.
@@ -265,7 +265,7 @@ spare ^Engine = Engine();
 t Float = topSpeed(spare);   // legal: a borrow takes a roaming owner too
 ```
 
-A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type. `T` there is never an `&` type: a reference has no owner to hand over, so filling it with one is ill-formed ([`generics.md`](generics.md) §3.6). One written `&T` takes a reference, so `T` is always filled with a reference type there ([`generics.md`](generics.md) §3.6).
+A **value type** parameter has one mode, the borrow: a read-only borrow of the caller's slot for the duration of the call. A borrow is not storage, but that restriction is on the borrow, not on what is read through one. Binding through a borrow into a fresh slot (an assignment, a new declaration, or a field or return store) **copies** the value (§2.3). The copy outlives the call perfectly well; what does not escape is the borrow. Neither `^` nor `&` is written on a value-type parameter. A type parameter written `^T` takes an owner when `T` is a reference type, and is a borrow when `T` is a value type. `T` there is never an `&` type: a reference has no owner to hand over, so filling it with one is ill-formed ([`generics.md`](generics.md) §3.6). A type parameter written `&T` takes a reference, so `T` is always filled with a reference type there ([`generics.md`](generics.md) §3.6).
 
 Passing a value by borrow is the semantic model rather than an optimization; where a read-only borrow is indistinguishable from a copy, the compiler may still pass a small value by copy, the same latitude placement has (§3.5). The distinction becomes observable under concurrent sharing, where a spawned reader sees the borrowed value live (see [`concurrency.md`](concurrency.md) §4.4).
 
@@ -306,14 +306,14 @@ do() {
 }
 ```
 
-**The subject is always a borrow.** `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is a borrow of the object the method was called on, settled or roaming, and mutable under `mut`. A method never moves `this`, never stores it, and never returns it as `&T`. Nothing is written on `this` to say so, because a subject has no other mode. A verb that hands out a reference into an object takes that object as an `&T` parameter instead:
+**The subject is always a borrow.** `this` — the first parameter, and only it ([`functions.md`](functions.md) §2.1) — is a borrow of the object the method was called on, settled or roaming, and mutable under `mut`. A method never moves `this`, never stores it, and never returns it as `&T`. Nothing is written on `this`, because a subject has no other mode. A verb that hands out a reference into an object takes that object as an `&T` parameter instead:
 
 ```zane
 &Weapon weaponOf(player &Player) => player.weapon; // legal: rooted in an `&T` parameter
 &Weapon weapon(this Player) => this.weapon;        // ILLEGAL: this is a borrow
 ```
 
-This rule preserves uniform call syntax. The call site writes `inspect(e)`, `setSpare(e)`, or `setEngine(e)` identically; only the callee's signature says which mode applies and therefore what the caller must supply and what state the caller is left in.
+This rule preserves uniform call syntax. The call site writes `inspect(e)`, `setSpare(e)`, or `setEngine(e)` identically; only the callee's signature declares which mode applies, and therefore what the caller must supply and what state the caller is left in.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#three-ways-to-hand-over-an-object) — "Three ways to hand over an object".
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-borrow-comes-back-without-a-sigil) — "The borrow comes back, without a sigil".
@@ -406,12 +406,12 @@ Value types form a closed world of plain value storage. A value-type field may c
 
 Here, **downstream** means "through nested value-type fields." The restriction is checked recursively through the full value graph.
 
-The rule is about **copying**, and both banned field kinds fail it the same way. An existing value is copied whole whenever a place expression is bound into a different slot (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one owner at a time (§2.1), an identity that references name (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and both dissolve that:
+The rule is about **copying**, and both banned field kinds fail it the same way. An existing value is copied whole whenever a place expression is bound into a different slot (§2.3). A reference type is the opposite by construction: it exists in order *not* to be copied. It has exactly one owner at a time (§2.1), an identity that references name (§4), and it reaches a new place by being **moved** rather than duplicated (see [`lifetimes.md`](lifetimes.md) §1.2). Copying a value that contained one would have to do one of two things, and each defeats the reference type's single owner and identity:
 
 - **Duplicate the object**, minting a second instance with its own identity. References to the original would not follow the copy, and "exactly one owner" would describe nothing.
 - **Share the object**, so two values reach one owner. Ownership would no longer be single, and a value would have become a way to alias.
 
-An `&` field fails on the second directly: copying it would duplicate a reference inside a copied value, putting aliasing inside the one world that is defined by having none. `ListRef` is a reference type and is covered by this restriction. `String` and `List`, with their primitives, are value types with owned backing stores; variable payload size does not itself imply reference semantics ([`types.md`](types.md) §2.7, [`generics.md`](generics.md) §8.3).
+An `&` field fails on the second alternative directly: copying it would duplicate a reference inside a copied value, putting aliasing inside the one world that is defined by having none. `ListRef` is a reference type and is covered by this restriction. `String` and `List`, with their primitives, are value types with owned backing stores; variable payload size does not itself imply reference semantics ([`types.md`](types.md) §2.7, [`generics.md`](generics.md) §8.3).
 
 What this closure does **not** bar is **recursion**, and the reason is that a **boxed member** (§3.3) is not a reference-type field: it is out-of-line placement of the member's own declared type, and placement is not language-visible (§3.5). Nothing this rule forbids has entered the value. The recursion rule itself lives in [`adt.md`](adt.md) §4, and the copy that keeps such a value alias-free in §2.3.
 
@@ -531,14 +531,14 @@ A reference-type instance carries no metadata of its own: a reference names it b
 
 A **boxed member** is laid out the same way: a fixed-size handle inline, with the instance it names placed in the dynamic region (§3.6). Which members are boxed is [`adt.md`](adt.md) §4's rule — required for a variant's payload on a cycle of owning edges that runs through no list's elements, where no finite inline layout exists, and for a field on a cycle that passes through no payload; permitted elsewhere for a variant's payload. §3.5 makes the choice unobservable.
 
-Boxing is available on **both** sides of the `#` axis. Two separate questions decide what a boxed member means, and they are answered by **different** types:
+Boxing is available on **both** sides of the `#` axis. Two separate questions determine what a boxed member means, and they are answered by **different** types:
 
 - **What the payload is** follows the **member's own declared type**, never the enclosing one. A reference-typed payload is an ordinary reference-type instance with identity: a boxed field takes its root's state as any field does (§2.8.1), and a boxed variant payload is roaming like any payload — being boxed neither grants nor withholds a reference. A value-typed payload is an ordinary value: no identity and nothing to reference. Because boxing is permitted off a cycle (§3.3, [`adt.md`](adt.md) §4), a reference-type variant may box a value-typed payload; that stores a plain value out of line and does **not** give it identity.
 - **What becomes of the payload when the enclosing instance moves, is copied, or dies** follows the **enclosing type's kind**. A reference type owns what it boxes and *moves* it: it destroys the payload when it dies, and moving it while it roams carries the payload with it (§3.5). A value type owns what it boxes and *copies* it: the payload is copied into fresh storage whenever the value is copied (§2.3) and returned when the value dies (§3.2).
 
 Either way the member's declared type is unchanged by being boxed, and the box is placement rather than an extra level of type.
 
-A variant with two cases, one whose payload is `Unit` and one whose payload is a boxed member or an `&`, is stored as that handle or reference alone, with zero for the `Unit` case. Neither is ever zero, because nothing it names starts at the image itself (§3.1).
+A variant with two cases, one whose payload is `Unit` and one whose payload is a boxed member or an `&`, is stored as that handle or reference alone, with zero for the `Unit` case. Neither a handle nor a reference is ever zero, because nothing either one names starts at the image itself (§3.1).
 
 ### 3.4 Booleans may be packed
 
@@ -554,7 +554,7 @@ The **dynamic blocks** the owner owns — the backing store behind a `ListRef`, 
 
 Relocation is **recursive**, because a relocated block may itself own dynamic blocks: a boxed payload holds its own boxed members, and a backing store holds its elements' owned storage. Relocating the root of a roaming recursive structure therefore relocates the whole structure, at a cost proportional to the number of boxed nodes it contains rather than to the root alone.
 
-When a **value itself** is copied into a slot owned by another scope, it reaches that scope by copying rather than moving, and the same recursion applies to its blocks: the copy allocates each backing store and boxed payload afresh in the destination scope's dynamic region and copies into it, so the copy owns storage in the scope that holds it and the source keeps its own (§2.3). This governs the value being copied, not every value-typed payload in sight: one that an owner of a reference type holds through a boxed member travels with that owner under the relocation rule above, because what becomes of a boxed payload follows the enclosing type's kind (§3.3).
+When a **value itself** is copied into a slot owned by another scope, it reaches that scope by copying rather than moving, and the same recursion applies to its blocks: the copy allocates each backing store and boxed payload afresh in the destination scope's dynamic region and copies into it, so the copy owns storage in the scope that holds it and the source keeps its own (§2.3). This governs the value being copied. A value-typed payload that a reference-type owner holds through a boxed member travels with that owner under the relocation rule above, because the enclosing type's kind determines what becomes of a boxed payload (§3.3).
 
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a reference names a settled owner, which no placement decision moves once it has settled (§4).
 

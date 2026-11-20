@@ -15,7 +15,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to the package that declares its type.
 - **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8).
-- **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
+- **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` are types that the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
 
@@ -106,15 +106,15 @@ The `#` modifier (§2.1) is the other axis: `struct`/`#struct` are the product p
 
 ### 2.6 The fundamental types and the `core` package
 
-`Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Duration`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, and `ListRef<T>` are the **fundamental types**: the types the `core` package declares and nearly every Zane program uses. The name records their purpose, not a standing in the language. `core` is an ordinary package — a project fetches, versions, pins, and remaps it like any other dependency ([`dependencies.md`](dependencies.md) §14) — and a program reaches its members through an import on the same terms as any other package's ([`packages.md`](packages.md) §3).
+`Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Duration`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, and `ListRef<T>` are the **fundamental types**: the types the `core` package declares and nearly every Zane program uses. The term *fundamental* describes their purpose, not a standing in the language. `core` is an ordinary package — a project fetches, versions, pins, and remaps it like any other dependency ([`dependencies.md`](dependencies.md) §14) — and a program reaches its members through an import on the same terms as any other package's ([`packages.md`](packages.md) §3).
 
 The language names none of them. The control-flow intrinsics take storage primitives, a subject of any type and a function value over it, or no arguments at all ([`control-flow.md`](control-flow.md) §4.1), so no construct in the grammar depends on a declaration in any package.
 
-What ties the fundamental types to ordinary source is `core`'s own declarations. It defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$I64`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String`, which builds through `@primitives$String.escaped` (§2.7), and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. `Duration` is a span of time, a whole number of nanoseconds held in an `Int`; `Duration.nanoseconds`, `Duration.milliseconds`, and `Duration.seconds` each build one from an `Int`, and it is what `core`'s `setInterval` waits ([`control-flow.md`](control-flow.md) §3.7). Explicit `Bool(true)` and `Int(20)` construction remains legal. A storage primitive has no operators, so `core` writes the fundamental types' operators over the machine operations of `@operators$` ([`operators.md`](operators.md) §2.6). None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
+`core`'s own declarations tie the fundamental types to ordinary source. The `core` package defines them over storage primitives in the `@primitives$` namespace, and it declares the implicit constructors that carry a value into one: from the compiler concept types that represent source literals, so `20` becomes an `Int`, `2.5` a `Float`, and `"a"` a `String` at a coercion site, and from a fundamental type back to its own storage primitive — `Bool` to `@primitives$Bool`, which is what carries a condition into `@controlflow$branch`, and `Int` to `@primitives$I64`, which is what carries a count into `@controlflow$repeat`. `core` also declares `String` as a value type over `@primitives$String`, with an implicit constructor from `@concepts$String`, which builds through `@primitives$String.escaped` (§2.7), and one back to `@primitives$String`. Strings follow the ordinary deep-copy and borrowed-parameter rules ([`memory.md`](memory.md) §2.3 and §2.9); they have no owning identity and cannot be targeted by an `&` reference. `core`'s `Unit` is declared over `@primitives$Unit` in the same way. `Duration` is a span of time, a whole number of nanoseconds held in an `Int`; `Duration.nanoseconds`, `Duration.milliseconds`, and `Duration.seconds` each build one from an `Int`, and it is what `core`'s `setInterval` waits ([`control-flow.md`](control-flow.md) §3.7). Explicit `Bool(true)` and `Int(20)` construction remains legal. A storage primitive has no operators, so `core` writes the fundamental types' operators over the machine operations of `@operators$` ([`operators.md`](operators.md) §2.6). None of this is special-cased: the conversions are ordinary implicit constructors under §4, visible by the home-package rule of §4.5, and another package may declare the same kind of conversion for its own types.
 
-`Int` accepts a literal only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` at a coercion site that needs an `Int`. `Float` accepts a literal implicitly only from `@concepts$Float`, so a `2` at a coercion site that needs a `Float` is a type error. `Float(2)` is legal: `core` declares an explicit `Float` constructor that takes `@concepts$Int` and builds the `Int` first. The conversions a numeric type's package declares decide which literals it accepts, so a package declaring its own numeric type chooses the same way ([`lexical.md`](lexical.md) §7).
+`Int` accepts a literal only from `@concepts$Int`, so a float literal never becomes an `Int`: `Int(2.5)` is a type error, and so is a `2.5` at a coercion site that needs an `Int`. `Float` accepts a literal implicitly only from `@concepts$Float`, so a `2` at a coercion site that needs a `Float` is a type error. `Float(2)` is legal: `core` declares an explicit `Float` constructor that takes `@concepts$Int` and builds the `Int` first. The conversions a numeric type's package declares determine which literals the type accepts, so a package declaring its own numeric type chooses which literals it accepts by declaring its own conversions ([`lexical.md`](lexical.md) §7).
 
-`Int` and `Float` hold `@primitives$I64` and `@primitives$F64`, and they are the types a literal becomes by default. `I32` and `F32` hold `@primitives$I32` and `@primitives$F32`, for storing many values in half the space. They convert from the same literal concepts as `Int` and `Float`, and from each other only by constructor, under the rule for the scalar primitives (§2.9): `Int(x)` and `Float(x)` widen exactly, and `I32.wrap`, `I32.truncate`, and `F32.round` name their loss. A call whose arguments are all literals could then match both an `Int` and an `I32` overload, and the compiler does not choose between them ([`generics.md`](generics.md) §5.4). So wherever `core` and its `math` package declare a function for both widths, they also declare one taking the literal's concept type, which builds the `Int` or `Float`: `abs(3)` is an `Int`, and `sqrt(2.0)` a `Float`.
+`Int` and `Float` hold `@primitives$I64` and `@primitives$F64`, and they are the types a literal becomes by default. `I32` and `F32` hold `@primitives$I32` and `@primitives$F32`, for storing many values in half the space. They convert from the same literal concepts as `Int` and `Float`, and from each other only by constructor, under the rule for the scalar primitives (§2.9): `Int(x)` and `Float(x)` widen exactly, and the names `I32.wrap`, `I32.truncate`, and `F32.round` show how each conversion loses a value. A call whose arguments are all literals could then match both an `Int` and an `I32` overload, and the compiler does not choose between them ([`generics.md`](generics.md) §5.4). So wherever `core` and its `math` package declare a function for both widths, they also declare one taking the literal's concept type, which builds the `Int` or `Float`: `abs(3)` is an `Int`, and `sqrt(2.0)` a `Float`.
 
 > **Story:** [`stories/types.md`](../stories/types.md#core-gains-i32-and-f32-as-storage-types-and-int-stays-the-default) — "`core` gains `I32` and `F32` as storage types, and `Int` stays the default".
 
@@ -157,7 +157,7 @@ Each of the five has a compiler-provided constructor from its literal's concept 
 @primitives$String.escaped(text @concepts$String)
 ```
 
-A concept is not storage, so the constructor it is passed to decides which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
+A concept is not storage, so the constructor that receives the concept determines which primitive it becomes: `@primitives$I32(7)` and `@primitives$I64(7)` are both legal.
 
 These constructors are not `implicit`, so a literal never becomes a primitive by itself. A literal is accepted where the parameter's type is the literal's own concept type, or a type with an implicit constructor from that concept type (§4.2). Such a type calls the primitive's constructor inside its own conversion:
 
@@ -251,7 +251,7 @@ A conversion that is exact for every value of its source is the target's anonymo
 @primitives$F64(value @primitives$I32)
 ```
 
-Every other conversion can lose a value, and is a named constructor (§3.4) whose name says how it does:
+Every other conversion can lose a value, and is a named constructor (§3.4), named for the way it loses a value:
 
 | Constructor | Source | Result |
 |---|---|---|
@@ -331,7 +331,7 @@ Positional constructors **MAY** be overloaded by arity or parameter types.
 
 Constructor parameters do not need to repeat private-field underscores. It is normal to map a public-facing parameter such as `id` into a private field such as `_id` explicitly inside `init{ }`.
 
-A constructor body is an ordinary verb body: a sequence of statements that ends by returning an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns `init{ }` — it is indistinguishable from a builder helper that ends in a constructor call, apart from that sugar.
+A constructor body is an ordinary verb body: a sequence of statements that ends by returning an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns `init{ }` — it is indistinguishable from a builder helper that ends in a constructor call, apart from its name.
 
 ```zane
 package Graph;
@@ -388,7 +388,7 @@ starter Weapon{fireRate = Float(2.0);}
 
 ### 3.4 Named constructors
 
-The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths a bare `Type(...)` cannot tell apart.
+The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths that a bare `Type(...)` cannot distinguish.
 
 ```zane
 package Math;
@@ -402,7 +402,7 @@ o Vector2.zeros();           // o : Vector2
 d Vector2.diagonal(Float(3.0)); // d : Vector2
 ```
 
-A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes it; it does not change what it returns. So a named constructor:
+A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
 
 - declares positional parameters or the field-header form (§3.2, §3.3) like any constructor;
 - overloads by parameter types, alongside the anonymous constructor and the other named ones;
@@ -410,7 +410,7 @@ A named constructor is an ordinary constructor in every other respect. Naming a 
 
 The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase subject, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase subject, so `.zeros` is a field or method of a *value*. The two never collide.
 
-A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a name has nothing to insert.
+A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a named constructor is only ever called by its written name, so the compiler has nothing to insert.
 
 Because a named constructor builds through `init{ }`, a package declares one on a type that has fields — a `struct`, in either its value or `#` reference form (§3). A storage primitive's named constructors are the compiler's own, such as the lossy conversions of §2.9. A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
 
@@ -508,7 +508,7 @@ car Car(engine);    // legal: a bare settled symbol is a reference source
 car Car(Engine());  // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-What still constrains such a field is lifetime, not source: the object it points at must have an owner whose scope outlives the scope of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's scope, so that comparison does not stop at construction — every later store of the containing value asks it again, over the references that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no scope until the caller says where the object goes; it records which parameters land in `&` fields and each call settles it ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no reference source (see [`adt.md`](adt.md) §4).
+What still constrains such a field is lifetime, not source: the object it points at must have an owner whose scope outlives the scope of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's scope, so that comparison does not stop at construction — every later store of the containing value asks it again, over the references that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no scope until the caller says where the object goes; it records which parameters land in `&` fields and each call settles the comparison ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no reference source (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#bare-symbols-become-guest-sources-again) — "Bare symbols become guest sources again".
 
@@ -616,7 +616,7 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Entries of an enum-map declaration ([`adt.md`](adt.md) §6)
 - String interpolation sites `\%var`, whose destination is `@primitives$String` (§2.8)
 
-Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way, and an enum-map entry fills the slot its declaration's header states. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
+Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way, and an enum-map entry fills the slot its declaration's header declares. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 
@@ -649,7 +649,7 @@ The **source type** (parameter type) of an implicit constructor **MUST** be a va
 
 The **destination type** (return type, i.e., the type name of the constructor) **MAY** be a value type, a reference type, or a storage primitive in the `@primitives$` namespace.
 
-A primitive destination is what lets an intrinsic state its contract without naming any package's type. `@controlflow$branch` takes a `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which its own home package satisfies.
+A primitive destination is what lets an intrinsic state its contract without naming any package's type. `@controlflow$branch` takes a `@primitives$Bool` ([`control-flow.md`](control-flow.md) §4.1), and `core` supplies the conversion from its own `Bool`; any other type may supply one too, subject to the orphan rule of §4.5, which a conversion declared in the type's own home package satisfies.
 
 ```zane
 type Celsius = struct { value Float; }

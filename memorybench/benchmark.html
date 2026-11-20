@@ -802,7 +802,7 @@ const TESTS=[
       }
     ],
     "setup": "Four read-only shards of one owned inline array, summed either sequentially or on four worker threads. Each run asserts the aggregate matches the deterministic baseline.",
-    "note": "The sequential shard scan takes ~82.3us, whereas the four-worker scan is ~256us (~3.1x slower). Even best against best, ~162us concurrent versus ~44.6us sequential is ~3.6x slower. The concurrent samples span ~162-504us. This small read-only workload does not benefit from this parallel execution path, despite the persistent workers being pre-started and warmed; it says nothing about larger workloads that amortize scheduling.",
+    "note": "The sequential shard scan takes ~82.3us, whereas the four-worker scan is ~256us (~3.1x slower). Even best against best, ~162us concurrent versus ~44.6us sequential is ~3.6x slower. The concurrent samples span ~162-504us. This small read-only workload does not benefit from this parallel execution path, despite the persistent workers being pre-started and warmed; this result cannot be extended to larger workloads that amortize scheduling.",
     "noteStale": false
   },
   {
@@ -863,7 +863,7 @@ const TESTS=[
       },
       {
         "label": "Static vs runtime",
-        "val": "a boxed payload indexes its stack directly; a backing store looks its up"
+        "val": "a boxed payload indexes its stack directly; a backing store looks it up"
       },
       {
         "label": "Small blocks",
