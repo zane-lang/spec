@@ -210,7 +210,7 @@ Unit register(this S Type, source EventSource, step Bool[this S] mut) mut;
 Unit setInterval(this S Type, every Duration, step Bool[this S] mut) mut;
 ```
 
-`work` calls the step again as soon as it returns `true`, until it returns `false`. `register` calls the step again only once `source` is ready, and waits for it in between. An **event source** is a timer or another source the runtime can watch ([`concurrency.md`](concurrency.md) §6.3), and `EventSource.every(interval)` makes a timer that is ready each time `interval` has passed. `setInterval` is `register` on `EventSource.every(every)`, so it waits `every` between one step and the next. None of the three waits before the first step. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
+`work` calls the step again as soon as it returns `true`, until it returns `false`. `register` calls the step again only once `source` is ready, and waits for it in between. An **event source** is a timer or another source the runtime can watch ([`concurrency.md`](concurrency.md) §6.3), and `EventSource.every(interval)` makes a timer that is ready each time `interval` has passed. `setInterval` is `register` on `EventSource.every(every)`, so its timer is ready each time `every` has passed since it was last ready, counted from the timer rather than from the end of a step: a step that takes part of `every` leaves the rest as the wait, and one that takes longer is called again as soon as it returns. None of the three waits before the first step. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
 
 ```zane
 machine!work(Bool(this Machine) mut {
@@ -229,7 +229,7 @@ clock!setInterval(Duration.milliseconds(Int(16)), Bool(this Clock) mut {
 });
 ```
 
-The `register` and `setInterval` calls above run the same worker. While a `register` waits for its source, every other spawned call and pool worker keeps running ([`concurrency.md`](concurrency.md) §3.4).
+The `register` and `setInterval` calls above run the same worker. While a `register` call waits for its source, every other spawned call and pool worker keeps running ([`concurrency.md`](concurrency.md) §3.4).
 
 The step runs at least once. Its result is the one stopping condition, stated where the step ends. The step is a lambda, so it captures nothing ([`functions.md`](functions.md) §7.4): everything it reads or writes is the subject or reached from it, and the state a worker turns on is gathered in the subject rather than spread through the frame that starts it. A step that cannot stop leaves the worker running for as long as the program does, which is the meaning `work` names.
 
@@ -318,7 +318,7 @@ The intrinsic **MUST NOT** appear in a lambda's body, including a block argument
 
 `repeat` takes a count, so a single invocation runs its body at most that many times and every loop built on it carries a written bound, whoever declares it. The bound counts passes; a pass that calls an unbounded form (below) runs as long as that form does. The guarantee is a property of the intrinsic rather than of who may call it.
 
-A repetition without a written bound has two forms, and each is recognizable as one in the source. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `register`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `register` step depends on no state but the subject the call runs on. A worker pool's step depends on its element and on the pool's shared state. The step receives that state read-only, and a change to the state can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
+A repetition without a written bound has two forms, and each is recognizable as one in the source. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `register`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `register` step depends on no state but the call's subject. A worker pool's step depends on its element and on the pool's shared state. The step receives that state read-only, and a change to the state can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 

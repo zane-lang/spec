@@ -98,7 +98,7 @@ The bound symbol has the handled primary type, and reading it still blocks until
 
 ### 3.4 A wait holds back only the code that waits
 
-The language has two calls that wait. A read of the symbol a spawned call is bound to waits until that call returns (§3.2). A `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
+The language has two calls that wait. A read of the symbol a spawned call is bound to waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
 
 A wait holds back only the code that waits. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. This holds wherever the wait is: in a spawned call, in a worker pool's step, or in code that runs without `spawn`.
 
@@ -272,9 +272,9 @@ The runtime never runs two calls of one element's step at once. Steps of differe
 
 A worker started without event sources has its step called again as soon as it returns `true`. A worker started with **event sources** has its step called again when one of them is ready, or when the funnel has changed the shared state since the step's last call. Between calls, such a worker waits without occupying a thread. With or without event sources, the step's first call comes right after `start`.
 
-An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them. A worker outside a pool waits on an event source through `register` ([`control-flow.md`](control-flow.md) §3.7).
+An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them. A worker outside a pool waits on an event source through the `register` method ([`control-flow.md`](control-flow.md) §3.7).
 
-A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does wait, in a `register` or on a spawned call's result, holds back only its own worker (§3.4).
+A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does wait, in a `register` call or on a spawned call's result, holds back only its own worker (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
 

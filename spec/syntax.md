@@ -755,7 +755,7 @@ subject!packageName$method(args...)
 subject!@namespace$method(args...)
 ```
 
-A method that an intrinsic namespace supplies for a subject of every type is called with that namespace as its qualifier, as the worker intrinsics are (§5.1).
+A method that an intrinsic namespace supplies for a subject of any type is called with that namespace as its qualifier, as the worker intrinsics are (§5.1).
 
 ### 4.3 Callables are call-only
 
