@@ -14,7 +14,7 @@ Zane separates **parallelism** (compiler-managed, unobservable) from **concurren
 - **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility. A worker pool runs bulk work: many workers that run the same step, each on an element of its own.
 - **`Water-tower lifetimes`.** Objects owned in a scope live until all spawned work in that scope completes.
 - **`Mutation needs a value subject`.** A spawned call may mutate only a value-typed subject; a value type's transitive alias-freedom lets the compiler rule out a data race from the subject's type, and at most one spawn may mutably borrow a given location. A worker pool's element may also be a reference type whose every `&` names a constant.
-- **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
+- **`Plain calls return in order`.** A call without `spawn` returns before the statement after it runs; the caller chooses concurrency at the call site, and a verb's signature is the same either way.
 
 ---
 
@@ -201,9 +201,9 @@ A **block argument** captures and is exempt, because it cannot be stored and can
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
 
-### 5.3 No `async`/`await` syntax
+### 5.3 A call without `spawn` returns before the next statement runs
 
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb needs no different declaration when a caller runs it concurrently, whether as a spawned call or as a pool's step.
+A call made without `spawn` returns before the statement after it runs. Every such call keeps this order: no verb declaration lets a plain call return early, and implicit parallelism (§2) changes only timing, never the order the program observes. Only `spawn` and a worker pool's `start` (§6) run work alongside the statements after them, and the caller chooses either at the call site. A verb's declaration is therefore the same whether a caller calls it plainly, spawns it, or runs it as a pool's step.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
