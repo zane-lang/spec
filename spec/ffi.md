@@ -17,7 +17,7 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 - **`The toolchain builds the C`.** A package's C sources are compiled by the toolchain's own C compiler, for whatever target the build is for, with settings from a `c.coda` file in the package's directory. No build script runs.
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
 - **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call; the only Zane memory C writes is the bytes it allocates for a string it returns. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
-- **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation.
+- **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation. A call marked `comptime` may also read through a capability at compile time ([`effects.md`](effects.md) §5.6).
 - **`The declaration is trusted`.** The compiler cannot see what C code touches. A foreign verb declared without a capability that in fact reads outside state is evaluated at compile time, and the value the build machine produced is built into the program (§5.5).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#a-c-interface-that-keeps-compile-time-evaluation) — "A C interface that keeps compile-time evaluation".
@@ -119,7 +119,7 @@ C code reaches a build in one of three forms:
 
 Building for a target needs what each applying row names for that target. The toolchain carries, for every target it builds for, the system libraries a Zane program links already. Any other system library, and the headers that declare it, is supplied to the build for its target. A build that lacks one fails with an error naming the package and the library.
 
-The three forms differ in what the compiler can evaluate ahead of time. C code compiled from source is evaluated at compile time where a call to it folds (§5.4). C code from an archive or from the system is run only by the running program.
+The three forms differ in what the compiler can evaluate ahead of time. C code compiled from source is evaluated at compile time where a call to it folds (§5.4). C code from an archive or from the system is run only by the running program, so a call marked `comptime` that reaches it is a compile-time error ([`effects.md`](effects.md) §5.6).
 
 ### 2.5 A package's C symbols belong to the package
 
@@ -148,7 +148,7 @@ A package's linker set would be shared with every other package, and every other
 
 A project's release archive holds the objects compiled from its library packages' C sources beside their Zane objects ([`dependencies.md`](dependencies.md) §3.1), for the archive's target. Its prebuilt archives are part of its source tree. A consumer compiles against a dependency's source ([`dependencies.md`](dependencies.md) §14), C sources and interface headers included, so the compiler reads a dependency's C code as it reads its Zane code: to check foreign verbs against their declarations (§3.7) and to evaluate calls at compile time (§5.4).
 
-A `release` dependency's objects were compiled by that package's own compiler ([`dependencies.md`](dependencies.md) §14), which may compile its C differently from the consumer's, such as against other system headers. A call into the dependency's C is evaluated at compile time only where the consumer, compiling the dependency's source, gets the same code the dependency's object was compiled from. Where it does not, the call runs only in the running program, as a call into an archive does (§2.4).
+A `release` dependency's objects were compiled by that package's own compiler ([`dependencies.md`](dependencies.md) §14), which may compile its C differently from the consumer's, such as against other system headers. A call into the dependency's C is evaluated at compile time only where the consumer, compiling the dependency's source, gets the same code the dependency's object was compiled from. Where it does not, the call runs only in the running program, as a call into an archive does (§2.4), and a call marked `comptime` that reaches it is a compile-time error.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#the-toolchain-builds-the-c-and-cmake-does-not) — "The toolchain builds the C, and CMake does not".
 
@@ -276,7 +276,7 @@ C lends what it passes for the call, as Zane lends C a view (§3.4): the functio
 
 C may call it any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
-C may call a function value that touches no capability from several threads at once. The function values one foreign call is passed that read or write capability-backed state are called one call at a time: while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other as [`concurrency.md`](concurrency.md) §4.5 orders every access to capability-backed state, since the compiler orders the foreign call as a whole and sees none of the calls C makes inside it.
+C may call a function value that touches no capability from several threads at once. The function values one foreign call is passed that read or write capability-backed state are called one call at a time: while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other, since the compiler orders the foreign call as a whole against the state it reaches ([`concurrency.md`](concurrency.md) §4.5) and sees none of the calls C makes inside it.
 
 ### 3.7 The declaration is checked against the interface header
 
@@ -505,9 +505,11 @@ Two computations that call C are never evaluated at compile time, because what t
 - one whose result depends on where an object is stored: the numeric value of an address, such as a pointer converted to an integer, or the order of two different objects' addresses;
 - one that ends with a data handle it made still alive, since that handle's C object exists only in the process that made it.
 
+A call marked `comptime` that makes either computation is a compile-time error ([`effects.md`](effects.md) §5.6).
+
 Evaluating a foreign call at compile time changes nothing the program computes. Its result is the one the C function gives on the build's target, as the C code is compiled for that target (§2.2), and for a `release` dependency as the dependency's object was compiled (§2.6).
 
-A call to a foreign verb that reads capability-backed state is never evaluated at compile time, and neither is anything that depends on its result. A call that writes capability-backed state happens at run time, at the point and in the order the program makes it.
+A call to a foreign verb that reads capability-backed state is not evaluated at compile time under [`effects.md`](effects.md) §5.3, and neither is anything that depends on its result. Inside a call marked `comptime` it is evaluated with the call, reading the build machine's state, when the compiler has the body of every C function it reaches ([`effects.md`](effects.md) §5.6). A call that writes capability-backed state happens at run time, at the point and in the order the program makes it.
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#evaluating-c-as-the-target-runs-it) — "Evaluating C as the target runs it".
 
@@ -578,9 +580,9 @@ The rule protects the binding's users, and only the binding's author can follow 
 
 A call to a foreign verb that touches no capability may run in parallel with other work, including other calls to the same C function, as any call that writes nothing its caller can see ([`concurrency.md`](concurrency.md) §2.1). Its C code is therefore called from more than one thread at a time.
 
-Every call that reads or writes capability-backed state through a foreign capability is taken to touch one external state, whatever capability it is made through, because C code behind two capabilities may share what it touches. Such calls, and the destruction and overwriting of outside handles (§5.2), are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write.
+C state is independent per handle. A `mut` method on a foreign capability that takes an outside handle writes that handle's state and only reads the capability's own; one that takes no outside handle writes the capability's own state. A method without `mut` reads the same state. Two calls therefore conflict only when they reach the same capability's own state or the same outside handle's, and the destruction and overwriting of an outside handle (§5.2) count as writes to that handle's state and to the own state of the capability whose method made it (§4.4). Conflicting calls are ordered by [`concurrency.md`](concurrency.md) §4.5: reads may run together, and a write is serialized with every other read and write of the same state. The compiler cannot see what C code behind two handles shares, so a package whose C does share state between them routes every call that reaches it through methods of one capability that take no outside handle; the destruction of that capability's outside handles is ordered against those calls already.
 
-A foreign handle is a reference type, so a spawned call never mutates one ([`concurrency.md`](concurrency.md) §4.2). Calls that only read a handle may run at the same time.
+A foreign handle is a reference type, so a spawned call never mutates one ([`concurrency.md`](concurrency.md) §4.2), though a worker pool's element may own one ([`concurrency.md`](concurrency.md) §6.4). Calls that only read a handle may run at the same time.
 
 ---
 
@@ -640,7 +642,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Difference | Zig | Zane |
 |---|---|---|
 | What crosses the boundary | C's own types, pointers included | the types of §3.3; a C object only behind a handle |
-| C at compile time | never | when the call touches no capability |
+| C at compile time | never | when the call touches no capability, and inside a `comptime` call when it reads one |
 | Releasing a C object | `defer` written at each use | the handle's free function, when the handle is destroyed |
 
 ---
@@ -667,6 +669,6 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Outside and data handles | A handle made by a method on a foreign capability is an outside handle, part of capability-backed state; any other is a data handle, program state |
 | Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |
-| Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result, unless the computation observes an address or leaves a data handle it made alive |
+| Compile-time evaluation | A foreign call that reads no capability-backed state may be evaluated at compile time, giving the target's result, unless the computation observes an address or leaves a data handle it made alive; inside a `comptime` call one that reads is evaluated too, when every C function it reaches has a body in the build |
 | Undeclared outside state | A foreign verb that touches outside state without its capability, or a data handle's free function or setter that touches it at all, may be folded with the build machine's value, dropped, merged, reordered, or parallelized |
-| Concurrency | Capability-free foreign calls may run in parallel; capability calls are ordered as one external state |
+| Concurrency | Capability-free foreign calls may run in parallel; capability calls conflict only on the same capability's own state or the same outside handle's, since C state is independent per handle |

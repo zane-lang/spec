@@ -30,8 +30,8 @@ Each rule is specified in exactly one document, the rule's canonical home; every
 | [`generics.md`](generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array`, `ArrayRef`, `List`, and `ListRef` container primitives |
 | [`memory.md`](memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`lifetimes.md`](lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
-| [`effects.md`](effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, and capability wiring |
-| [`concurrency.md`](concurrency.md) | Implicit parallelism, `spawn`, water-tower lifetimes, and concurrency safety |
+| [`effects.md`](effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, capability wiring, and compile-time evaluation, implicit and marked with `comptime` |
+| [`concurrency.md`](concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, and concurrency safety |
 
 ## Programs and program structure
 

@@ -14,7 +14,7 @@ The spec states *what* the language does. The stories, one per spec document, te
 | [`memory.md`](memory.md) | [`spec/memory.md`](../spec/memory.md): memory safety with no garbage collector and no lifetime annotations: owners, references and arenas |
 | [`lifetimes.md`](lifetimes.md) | [`spec/lifetimes.md`](../spec/lifetimes.md): lexical scope in place of a borrow checker, and the single owner comparison made at every store |
 | [`effects.md`](effects.md) | [`spec/effects.md`](../spec/effects.md): inferring effects instead of annotating them, and capabilities in place of ambient I/O |
-| [`concurrency.md`](concurrency.md) | [`spec/concurrency.md`](../spec/concurrency.md): implicit parallelism without `async` coloring, and why `spawn` marks only a call |
+| [`concurrency.md`](concurrency.md) | [`spec/concurrency.md`](../spec/concurrency.md): implicit parallelism without `async` coloring, why `spawn` marks only a call, and worker pools for bulk work |
 | [`error-handling.md`](error-handling.md) | [`spec/error-handling.md`](../spec/error-handling.md): failure as a second return path rather than a `Result` value |
 | [`control-flow.md`](control-flow.md) | [`spec/control-flow.md`](../spec/control-flow.md): how branching and repetition left the language and became ordinary `core` code |
 | [`functions.md`](functions.md) | [`spec/functions.md`](../spec/functions.md): methods pulled out of the type body, mutation made visible with `:` and `!`, and overloading by shape |

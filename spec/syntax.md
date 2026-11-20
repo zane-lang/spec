@@ -189,7 +189,7 @@ TypeName
 ArrayRef<&Node, 4>
 ```
 
-`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments, except on the introduction that is the element of a parameter's own `@concepts$Array`, where it is the mode each literal element is passed in ([`generics.md`](generics.md) §3.2). `^` and `&` are the only markers a type may carry, and never together.
+`^TypeName` is a **roaming** owner of a reference type. It is legal on a local-variable declaration, a parameter, a return type, and an abort type, and nowhere else: never on a field, and never inside another type's arguments, except on the introduction that is the element of a parameter's own `@concepts$Array`, where it is the mode each literal element is passed in ([`generics.md`](generics.md) §3.2). In a function type it marks a return or parameter slot (§2.13). `^` and `&` are the only markers a type may carry, and never together.
 
 ```zane
 spare ^Engine = Engine();
@@ -268,7 +268,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, the worker pool primitive `@primitives$WorkerPool` and its `@primitives$EventSource` ([`concurrency.md`](concurrency.md) §6), opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
@@ -276,9 +276,10 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
-An intrinsic operation has one signature, with three exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
+An intrinsic operation has one signature, with four exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
+- the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
 - the constructors of a scalar primitive: the anonymous one, with one signature from its literal's concept and one from each scalar it converts from exactly, and each named one, with one signature per scalar it converts from ([`types.md`](types.md) §2.9).
 
@@ -402,6 +403,13 @@ ReturnType[&ParamType, ...]
 ReturnType[this SubjectType, ParamType, ...] mut
 ```
 
+When the function type is a value parameter's own type, a slot may also introduce a type parameter of the verb whose signature contains it, as `T Type`, `^T Type` or `&T Type`, where the marker is the slot's mode ([`generics.md`](generics.md) §3.2):
+
+```zane
+^T Type[Int]                  // the return slot introduces T
+Unit[T Type, Int]             // a parameter slot introduces T
+```
+
 `mut` is legal only when the first parameter is `this`.
 
 ```zane
@@ -480,7 +488,7 @@ ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 
 A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type carries `^` or `&` (`^ReturnType`, `&AbortType`); a bare one is ill-formed, because a borrow is never returned or aborted.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`), or in a slot of a value parameter's function type (`make ^T Type[Int]`, §2.13) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
@@ -921,6 +929,24 @@ n Int = { "a", 1; "b", 2; }:size();   // ILLEGAL: a method call needs the map li
 A trailing argument closes its call on a `}` as well, and that brace ends the statement, so nothing continues the call (§4.8).
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#a-value-closed-by-a-brace-takes-----and-) — "A value closed by a brace takes `.`, `:`, `!`, `?` and `??`".
+
+### 4.10 `comptime`
+
+```zane
+comptime functionName(args...)
+comptime subject:methodName(args...)
+comptime functionName(args...) ? binder { ... }
+comptime subject:methodName(args...) ?? fallbackExpr
+name VarType = comptime functionName(args...)
+name VarType = comptime subject:methodName(args...) ? binder { ... }
+name VarType(comptime functionName(args...))
+```
+
+`comptime` is legal only on function-call and `:` method-call expressions; a `!` call is never marked. A marked call stands wherever an expression may. An abortable call may carry a `?` or `??` handler after the marked call. See [`effects.md`](effects.md) §5.6.
+
+```zane
+comptime list!sort();   // ILLEGAL: a `comptime` call writes no subject
+```
 
 ---
 

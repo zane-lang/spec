@@ -445,7 +445,7 @@ A reference-type object is destroyed at one of three points, each known from the
 
 - its owner's **scope drains** without the object having moved elsewhere, which ends every owner scoped to it;
 - its owner is **overwritten** ([`memory.md`](memory.md) §2.2);
-- its place **disappears**: a `ListRef` element is removed or a variant changes case, and the operation does not move the occupant out first.
+- its place **disappears**: a `ListRef` element is removed, a worker pool's element's step returns `false` ([`concurrency.md`](concurrency.md) §6.2), or a variant changes case, and the operation does not move the occupant out first.
 
 A settled owner never moves, so it dies at its own scope's drain or at an overwrite. A roaming owner may move first, and dies wherever it last landed. An object in a disappearing place is roaming ([`memory.md`](memory.md) §2.8.1), so nothing references it and destroying it with the place leaves nothing to dangle.
 
@@ -456,7 +456,7 @@ A **value** has death points that are equally static: its slot is overwritten, o
 
 ### 2.2 Scopes drain before destruction
 
-If a scope launches concurrent work, objects owned in that scope remain alive until all spawned work in that scope finishes. This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
+If a scope launches concurrent work, objects owned in that scope remain alive until all spawned work in that scope finishes and every worker of a pool it owns has finished. A pool's element is the exception: it is destroyed when its own step returns `false`, while other workers may still run (§2.1). This is the water-tower rule (see [`concurrency.md`](concurrency.md) §4.1).
 
 ### 2.3 Reference storage never extends lifetime
 
@@ -498,6 +498,6 @@ An `&` is never optional and is never tested for emptiness; the runtime exposes 
 | Parameter modes | A borrow (`T`, and `this`) lasts for the call; a take (`^T`) moves the caller's roaming owner into the body, as an owner of the body; a reference (`&T`) stands for the caller's path |
 | Owning argument | A verb **borrows** an owner (`T`, caller keeps it), **relays** it (`^T` and returns `^T`, caller may bind it to own the object again), or **consumes** it (`^T`, no owner returned); passing to `^T` spends the caller's symbol whatever the body does |
 | Return value | A return need not be bound; an unbound `^T` result is destroyed at the end of its statement, and an ignored value-type result is discarded |
-| Destruction | Deterministic: at the owner's scope drain, at an overwrite, or when a `ListRef` element or variant payload disappears without being moved out; a settled owner dies only at its drain or an overwrite |
+| Destruction | Deterministic: at the owner's scope drain, at an overwrite, or when a `ListRef` element, a worker pool's element, or a variant payload disappears without being moved out; a settled owner dies only at its drain or an overwrite |
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#no-rule-to-spare-the-specific-hole-each-restriction-plugs) — "No rule to spare: the specific hole each restriction plugs".
