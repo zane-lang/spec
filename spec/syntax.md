@@ -752,7 +752,10 @@ subject:method(args...)
 subject!method(args...)
 subject:packageName$method(args...)
 subject!packageName$method(args...)
+subject!@namespace$method(args...)
 ```
+
+To call a method that an intrinsic namespace supplies for a subject of any type, a program qualifies the method with that namespace, as with the worker intrinsics (§5.1).
 
 ### 4.3 Callables are call-only
 
@@ -960,11 +963,11 @@ Zane has no control-flow grammar. Branching, repetition, and exiting are all cal
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
 @controlflow$repeat(count @primitives$I64, body @concepts$Block)
 @controlflow$exitFromCall()
-@controlflow$work(subject S Type, step R Type[this S] mut)
-@controlflow$workEvery(subject S Type, interval @primitives$I64, step R Type[this S] mut)
+@controlflow$work(this S Type, step R Type[this S] mut) mut
+@controlflow$register(this S Type, source @primitives$EventSource, step R Type[this S] mut) mut
 ```
 
-The first two take storage primitives rather than fundamental types, the third takes nothing, and the worker pair take a subject of any type, a function value over it, and, for `workEvery`, a primitive, so none depends on any package ([`control-flow.md`](control-flow.md) §4.1). Any package may call them.
+The first two take storage primitives rather than fundamental types, and the third takes nothing. The worker pair are `mut` methods of a subject of any type, which a program calls as `subject!@controlflow$work(step)`; they take a function value over the subject and, for `register`, a primitive event source. None of the five depends on any package ([`control-flow.md`](control-flow.md) §4.1), and any package may call them.
 
 ### 5.2 Writing an exit
 

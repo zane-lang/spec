@@ -250,7 +250,7 @@ A method may introduce a type parameter as its subject's whole type. `this S Typ
 
 ```zane
 Unit work(this S Type, step Bool[this S] mut) mut {
-    @controlflow$work(this, step);
+    this!@controlflow$work(step);
     return Unit();
 }
 

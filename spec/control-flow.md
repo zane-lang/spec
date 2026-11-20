@@ -1,6 +1,6 @@
 # Zane Control Flow
 
-This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls declared by the `core` package over intrinsics. Branching and counted repetition take a **block argument**; a worker (`work`, `setInterval`) repeats a function value instead, and takes no block. What the language itself contributes is the block, the control-flow intrinsics, and the 1-based ordinal convention.
+This document specifies how Zane branches and repeats. Neither is a language construct: both are ordinary calls declared by the `core` package over intrinsics. Branching and counted repetition take a **block argument**; a worker (`work`, `register`, `setInterval`) repeats a function value instead, and takes no block. What the language itself contributes is the block, the control-flow intrinsics, and the 1-based ordinal convention.
 
 > **See also:** [`syntax.md`](syntax.md) §4.8 and §5 for the canonical surface syntax. [`operators.md`](operators.md) §2.4 for `Bool`'s `and` and `or`. [`types.md`](types.md) §2.6 for the fundamental types these calls are written in terms of.
 
@@ -12,8 +12,8 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
-- **`Five control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` act on blocks and invocations; `@controlflow$work` and `@controlflow$workEvery` run a worker. They are the whole of the control flow the language supplies, and they are stated over storage primitives, function values, and type parameters, so none depends on a package.
-- **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work` and `setInterval` and which may be spawned. Many workers that run the same step run in a worker pool.
+- **`Five control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` act on blocks and invocations; `@controlflow$work` and `@controlflow$register` run a worker. They are the whole of the control flow the language supplies, and they are stated over storage primitives, function values, and type parameters, so none depends on a package.
+- **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work`, `register`, and `setInterval` and which may be spawned. Many workers that run the same step run in a worker pool.
 - **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
 
@@ -200,21 +200,27 @@ Its condition is an ordinary argument, so the condition has `core`'s `Bool` as i
 `guard` takes no block. A run of statements before an exit is a branch whose block ends with a `guard`, which is the same shape written one level out.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 
-### 3.7 `work` and `setInterval` run a worker
+### 3.7 `work` and `register` run a worker
 
-A **worker** is a subject and a **step**: a function value that takes the subject as `this`, advances it, and returns `true` to be run again or `false` when its work is done. `core` declares two ways to run one, as `mut` methods on a subject of any type ([`generics.md`](generics.md) §3.7):
+A **worker** is a subject and a **step**: a function value that takes the subject as `this`, advances it, and returns `true` to run again or `false` to stop. `core` declares three ways to run one, as `mut` methods on a subject of any type ([`generics.md`](generics.md) §3.7):
 
 ```zane
 Unit work(this S Type, step Bool[this S] mut) mut;
+Unit register(this S Type, source EventSource, step Bool[this S] mut) mut;
 Unit setInterval(this S Type, every Duration, step Bool[this S] mut) mut;
 ```
 
-`work` runs the step until it returns `false`. `setInterval` does the same and waits `every` between one step and the next; it does not wait before the first. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
+`work` calls the step again as soon as it returns `true`, until it returns `false`. `register` calls the step again only once `source` is ready, and waits for `source` in between. An **event source** is a timer or another source the runtime can watch ([`concurrency.md`](concurrency.md) §6.3), and `EventSource.every(interval)` makes a timer that is ready each time `interval` has passed. `setInterval` is `register` on `EventSource.every(every)`. Its timer counts each `every` from the moment the timer was last ready, not from the end of a step: with `every` at 10 ms, `setInterval` calls the step again 7 ms after a 3 ms step returns, and at once after a 12 ms step returns. None of the three waits before the first step. `Duration` is `core`'s span of time, a whole number of nanoseconds ([`types.md`](types.md) §2.6).
 
 ```zane
 machine!work(Bool(this Machine) mut {
     this!execute();
     return this.pc <= this.count;
+});
+
+clock!register(EventSource.every(Duration.milliseconds(Int(16))), Bool(this Clock) mut {
+    this!tick();
+    return this.running;
 });
 
 clock!setInterval(Duration.milliseconds(Int(16)), Bool(this Clock) mut {
@@ -223,11 +229,13 @@ clock!setInterval(Duration.milliseconds(Int(16)), Bool(this Clock) mut {
 });
 ```
 
+The `register` and `setInterval` calls above run the same worker. While a `register` call waits for its source, every other spawned call and pool worker keeps running ([`concurrency.md`](concurrency.md) §3.4).
+
 The step runs at least once. Its result is the one stopping condition, stated where the step ends. The step is a lambda, so it captures nothing ([`functions.md`](functions.md) §7.4): everything it reads or writes is the subject or reached from it, and the state a worker turns on is gathered in the subject rather than spread through the frame that starts it. A step that cannot stop leaves the worker running for as long as the program does, which is the meaning `work` names.
 
 A step leaves early with `return` and a `Bool`, which continues or stops the worker. It cannot call `guard`: the lambda is the exit's caller (§4.2), and a step returns `Bool`, not `Unit`.
 
-Neither method takes a block, so either may be spawned, which is how a worker runs without blocking the caller ([`concurrency.md`](concurrency.md) §3.1):
+None of the three methods takes a block, so a caller may spawn any of them, which is how a worker runs without blocking the caller ([`concurrency.md`](concurrency.md) §3.1):
 
 ```zane
 spawn machine!work(Bool(this Machine) mut { ... });
@@ -236,6 +244,8 @@ spawn machine!work(Bool(this Machine) mut { ... });
 A spawned worker mutates its subject, so the subject is value-typed ([`concurrency.md`](concurrency.md) §4.2), and the scope that spawns it waits for it to finish before it ends ([`concurrency.md`](concurrency.md) §4.1). Many workers that run the same step run in a worker pool ([`concurrency.md`](concurrency.md) §6).
 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#workers-replace-the-unbounded-loop-work-and-setinterval) — "Workers replace the unbounded loop: `work` and `setInterval`".
+
+> **Story:** [`stories/control-flow.md`](../stories/control-flow.md#register-replaces-workevery-and-the-worker-intrinsics-become-methods) — "`register` replaces `workEvery`, and the worker intrinsics become methods".
 
 ---
 
@@ -249,17 +259,17 @@ The language provides exactly five control-flow operations:
 @controlflow$branch(condition @primitives$Bool, body @concepts$Block)
 @controlflow$repeat(count @primitives$I64, body @concepts$Block)
 @controlflow$exitFromCall()
-@controlflow$work(subject S Type, step R Type[this S] mut)
-@controlflow$workEvery(subject S Type, interval @primitives$I64, step R Type[this S] mut)
+@controlflow$work(this S Type, step R Type[this S] mut) mut
+@controlflow$register(this S Type, source @primitives$EventSource, step R Type[this S] mut) mut
 ```
 
-`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the invocation that called the verb containing it (§4.2). `work` calls `step` with `subject` as its `this`, and calls it again each time it returns `true`, until it returns `false`. `workEvery` does the same and suspends the calling thread for `interval` nanoseconds between one call and the next; an `interval` below `1` does not suspend it. The worker pair introduce `S` at the subject and `R` at the step's result, as a verb introduces a parameter at its first marked occurrence ([`generics.md`](generics.md) §3.2), and the compiler reads both off the arguments. `R` is `@primitives$Bool` or a type with an implicit constructor to it, and each result reaches `@primitives$Bool` through that constructor, as a condition reaches `branch`; the compiler therefore accepts a step that returns `core`'s `Bool` as written.
+`branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the invocation that called the verb containing it (§4.2). `work` calls `step` on its subject, and calls it again each time it returns `true`, until it returns `false`. `register` does the same, but calls `step` again only once `source` is ready, and waits for it in between ([`concurrency.md`](concurrency.md) §3.4, §6.3). The worker pair introduce `S` at the subject and `R` at the step's result, as a verb introduces a parameter at its first marked occurrence ([`generics.md`](generics.md) §3.2), and the compiler reads both off the arguments. `R` is `@primitives$Bool` or a type with an implicit constructor to it, and each result reaches `@primitives$Bool` through that constructor, as a condition reaches `branch`; the compiler therefore accepts a step that returns `core`'s `Bool` as written.
 
-`subject` is the one argument a control-flow intrinsic writes. The caller passes it as it passes the subject of a `!` call: a writable place, which the call borrows mutably, or a temporary, and every `step` runs on that one borrow ([`functions.md`](functions.md) §2.4). The call settles the subject once, before the first step, so each step writes the place the call named. A caller therefore hands it a place it may write, most often its own `this` under `mut`, and the call writes that place like any `!` call.
+The worker pair are `mut` methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7). A program calls them with their intrinsic namespace as the qualifier of a qualified method call ([`functions.md`](functions.md) §6.2): `this!@controlflow$work(step)`. The subject is the one thing a control-flow intrinsic writes. The call borrows the subject mutably, as every `!` call borrows its subject, whether the subject is a writable place or a temporary, and every `step` runs on that one borrow ([`functions.md`](functions.md) §2.4). The call settles the subject once, before the first step, so each step writes the place the call named. A caller therefore calls the pair on a place it may write, most often its own `this` under `mut`.
 
-None takes a fundamental type. The block-taking three take **storage primitives** or nothing at all, and the worker pair take a subject of any type, a function value over it, and, for `workEvery`, a primitive. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
+None takes a fundamental type. The block-taking three take **storage primitives** or nothing at all, and the worker pair take a subject of any type, a function value over it, and, for `register`, a primitive event source. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
-A control-flow intrinsic is called like a function, so its arguments are coercion sites ([`types.md`](types.md) §4.2). A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. A literal is not accepted bare, because a primitive has no implicit constructor from a concept type ([`types.md`](types.md) §2.7). A type that declares its own conversion is accepted on the same terms.
+Every argument of a control-flow intrinsic is a coercion site ([`types.md`](types.md) §4.2), and the compiler coerces no method's subject, a worker's included. A caller therefore writes ordinary values and never unwraps anything: a `Bool` reaches `branch` through the implicit constructor `core` declares to `@primitives$Bool`. The compiler rejects a bare literal, because a primitive has no implicit constructor from a concept type ([`types.md`](types.md) §2.7). The compiler accepts a type that declares its own conversion on the same terms.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
@@ -308,7 +318,7 @@ The intrinsic **MUST NOT** appear in a lambda's body, including a block argument
 
 `repeat` takes a count, so a single invocation runs its body at most that many times and every loop built on it carries a written bound, whoever declares it. The bound counts passes; a pass that calls an unbounded form (below) runs as long as that form does. The guarantee is a property of the intrinsic rather than of who may call it.
 
-A repetition without a written bound has two forms, and each is recognizable as one in the source. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `workEvery`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `workEvery` step depends on no state but the subject the caller passes. A worker pool's step depends on its element and on the pool's shared state. The step receives that state read-only, and a change to the state can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
+A repetition without a written bound has two forms, and a reader can recognize each in the source. Recursion re-enters a verb, which can re-enter `repeat` without limit. A worker (`work`, `register`, or one of a worker pool's, [`concurrency.md`](concurrency.md) §6) runs its step until the step returns `false`. A worker's step is a function value that captures nothing (§3.7), and the place the repetition starts is the call that names it. A `work` or `register` step depends on no state but the call's subject. A worker pool's step depends on its element and on the pool's shared state. The step receives that state read-only, and a change to the state can schedule the step's next call ([`concurrency.md`](concurrency.md) §6.3).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#two-intrinsics-and-what-they-are-stated-over) — "Two intrinsics, and what they are stated over".
 
 
@@ -367,8 +377,8 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |
 | Condition evaluation | A condition is an ordinary argument and is evaluated before the call; one that must run only when reached is nested in the chain's `else` |
 | Counted repetition | `i!to(end)` advances the caller's own `Int` and captures it in the block |
-| Worker | `subject!work(step)` runs a non-capturing `Bool[this S] mut` step on the subject until it returns `false`; `subject!setInterval(every, step)` also waits `every` between steps; neither takes a block, so either may be spawned |
-| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`; stated over `@primitives$Bool`, `@primitives$I64`, a step function value whose result converts to `@primitives$Bool`, a subject of any type, or nothing; the worker pair write their subject as a `!` call does; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
+| Worker | `subject!work(step)` runs a non-capturing `Bool[this S] mut` step on the subject until it returns `false`; `subject!register(source, step)` runs it again each time the event source is ready, and `subject!setInterval(every, step)` is `register` on a timer; none takes a block, so each may be spawned |
+| Control-flow intrinsics | `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$register`; stated over `@primitives$Bool`, `@primitives$I64`, `@primitives$EventSource`, a step function value whose result converts to `@primitives$Bool`, a subject of any type, or nothing; the worker pair are `mut` methods of their subject, called as `subject!@controlflow$work(...)`; reachable from any package, with ordinary values reaching them through the implicit constructors their types' packages declare |
 | Bounded repetition | `repeat` takes a count, so one invocation runs its body at most that many times and every loop built on it carries a written bound; recursion and workers are the unbounded forms, and each is recognizable in the source |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit`, and a lambda's body may not contain it |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |

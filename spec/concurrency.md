@@ -96,13 +96,17 @@ fallback Int = spawn listen(8081) ?? Int(404);
 
 The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.
 
-### 3.4 Stalling calls are parked
+### 3.4 A wait holds back only its caller
 
-A stalling function or method called without `spawn` blocks the caller. The same call made with `spawn`, or made in a worker pool's step (§6.3), is parked by the runtime so it does not consume a worker thread while waiting.
+The language has two calls that wait. A read of the symbol that holds a spawned call's result waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
 
-### 3.5 Stalling without `spawn` is ordinary blocking
+A waiting call holds back only its caller: the statements after the call run once the wait is over. Every other spawned call, and every worker of every worker pool (§6), keeps running while the wait lasts. The rule applies wherever the waiting call occurs: in a spawned call, in a worker pool's step, or in code that runs without `spawn`. For example, a pool step that reads a spawned call's result holds back only its own worker, and the pool's other workers keep calling their steps.
 
-A stalling function or method does not require `spawn`. When called normally, it simply blocks the current execution until it returns.
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parking-is-dropped-a-wait-holds-back-only-its-caller) — "Parking is dropped: a wait holds back only its caller".
+
+### 3.5 A call that waits needs no `spawn`
+
+A call that waits is an ordinary call. Without `spawn`, the call returns once its wait is over, and the statement after it runs only then (§5.3). With `spawn`, the call runs beside its caller, which continues at once.
 
 ### 3.6 Ordering is explicit
 
@@ -268,9 +272,9 @@ The runtime never runs two calls of one element's step at once. Steps of differe
 
 A worker started without event sources has its step called again as soon as it returns `true`. A worker started with **event sources** has its step called again when one of them is ready, or when the funnel has changed the shared state since the step's last call. Between calls, such a worker waits without occupying a thread. With or without event sources, the step's first call comes right after `start`.
 
-An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them.
+An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them. A worker outside a pool waits on an event source through the `register` method ([`control-flow.md`](control-flow.md) §3.7).
 
-A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
+A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does wait, in a `register` call or on a spawned call's result, holds back only its own worker (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
 
@@ -286,7 +290,7 @@ type Session = #struct {
 }
 ```
 
-An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, bounded as a spawned call's is, from when it begins until it returns, parked or not ([`memory.md`](memory.md) §3.7). Between calls, an element uses no fixed-size region.
+An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, with the same bounds as a spawned call's region, from when it begins until it returns, including any time it waits ([`memory.md`](memory.md) §3.7). Between calls, an element uses no fixed-size region.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-worker-pools-element-may-reference-constants) — "A worker pool's element may reference constants".
 
