@@ -11,7 +11,7 @@ This document specifies Zane's concurrency model: compiler-managed parallelism, 
 Zane separates **parallelism** (compiler-managed, unobservable) from **concurrency** (explicit, programmer-controlled).
 
 - **`Implicit parallelism`.** The compiler may run provably independent work in parallel when it cannot change program results.
-- **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility. A worker pool runs bulk work: many workers doing the same thing, each on an element of its own.
+- **`Explicit concurrency`.** `spawn` starts a concurrent function or method call; ordering is the programmer’s responsibility. A worker pool runs bulk work: many workers that run the same step, each on an element of its own.
 - **`Water-tower lifetimes`.** Objects owned in a scope live until all spawned work in that scope completes.
 - **`Mutation needs a value subject`.** A spawned call may mutate only a value-typed subject; a value type's transitive alias-freedom lets the compiler rule out a data race from the subject's type, and at most one spawn may mutably borrow a given location. A worker pool's element may also be a reference type whose every `&` names a constant.
 - **`No async coloring`.** Concurrency is chosen at the call site rather than encoded into function signatures.
@@ -144,7 +144,7 @@ A direct consequence is that spawned work never mutates a reference-typed object
 
 For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` subject of a spawned `mut` call. By §4.2 that subject is always value-typed, so every borrow this rule counts is a value borrow ([`memory.md`](memory.md) §2.9). Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two subjects denote the same slot — so this disjointness is checked at the spawn site by inspecting the subjects, not by tracing the program. The spawning scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
 
-A spawn site inside a loop body holds one live borrow at a time. Each pass of the body is a scope, and it drains only once that pass's spawned calls have completed (§4.1), so the passes run one after another and a spawn of one pass never overlaps a spawn of the next. Work that should run at once, many workers doing the same thing, runs in a worker pool (§6).
+A spawn site inside a loop body holds one live borrow at a time. Each pass of the body is a scope, and it drains only once that pass's spawned calls have completed (§4.1), so the passes run one after another and a spawn of one pass never overlaps a spawn of the next. Many workers that should run the same step at once run in a worker pool instead (§6).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
@@ -203,7 +203,7 @@ A **block argument** captures and is exempt, because it cannot be stored and can
 
 ### 5.3 No `async`/`await` syntax
 
-Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb does not become a different kind of verb merely because some caller chooses to run it concurrently, whether as a spawned call or as a pool's step.
+Zane does not define `async` or `await`. Concurrency is expressed only through `spawn`, worker pools (§6), and compiler-managed parallelism. This avoids function coloring: a verb needs no different declaration when a caller runs it concurrently, whether as a spawned call or as a pool's step.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#parallelism-you-cant-see-concurrency-you-must-ask-for) — "Parallelism you can't see, concurrency you must ask for".
 
@@ -219,9 +219,9 @@ Zane does not define a dedicated `Process` type, actor primitive, or channel pri
 
 ### 6.1 A worker pool runs bulk work
 
-`spawn` starts one call that does one particular job beside the others. A **worker pool** runs bulk work: many workers doing the same thing, such as one per network connection. Each worker is an **element** and a **step**, as a worker is ([`control-flow.md`](control-flow.md) §3.7). Its workers may share a state, written only by the pool's **funnel**.
+`spawn` starts one call that runs alongside the rest of the program. A **worker pool** runs bulk work: many workers that run the same step, such as one worker per network connection. Each worker in a pool has the two parts of any worker ([`control-flow.md`](control-flow.md) §3.7): an **element**, which plays the role of the subject, and a **step**. The pool's workers may share a state, which only the pool's **funnel** writes.
 
-`@primitives$WorkerPool<T, S, E>` is a reference-type primitive. `T` is the element type, `S` the shared state, and `E` the event a step publishes to the funnel. `core` declares `WorkerPool<T, S, E>` over it, and `EventSource` over `@primitives$EventSource` (§6.3). Its two constructors take the element type as an explicit parameter ([`generics.md`](generics.md) §5.3):
+`@primitives$WorkerPool<T, S, E>` is a reference-type primitive. `T` is the element type, `S` the shared state, and `E` the event a step publishes to the funnel. `core` declares `WorkerPool<T, S, E>` over it, and `EventSource` over `@primitives$EventSource` (§6.3). The primitive's two constructors take the element type as an explicit parameter ([`generics.md`](generics.md) §5.3):
 
 ```zane
 @primitives$WorkerPool<T, S, E>(T Type, state S Type, funnel @primitives$Unit[this S, E Type] mut)
@@ -245,7 +245,7 @@ chat WorkerPool(Session, Room(), Unit(this Room, event Said) mut {
 @primitives$Unit start(this @primitives$WorkerPool<T, S, E>, element ^T, sources @primitives$List<@primitives$EventSource>, step @primitives$Bool[this T, S, @primitives$Unit[E]] mut) mut
 ```
 
-`start` takes the element into the pool and returns at once. A reference-typed element moves in, and a value-typed one is copied in, as a `ListRef` takes its elements ([`memory.md`](memory.md) §2.9). The step then runs concurrently with the caller and with every other worker. Each call receives the element as `this`, the pool's state as a read-only parameter, and a function value that publishes an event to the funnel. The state a call receives is a coherent snapshot taken when the call begins (§4.4), so it does not change during the call. When the step returns `false`, the element is destroyed and leaves the pool.
+`start` takes the element into the pool and returns at once. A reference-typed element moves in, and a value-typed one is copied in, as a `ListRef` takes its elements ([`memory.md`](memory.md) §2.9). The step then runs concurrently with the caller and with every other worker. Each call of the step receives the element as `this`, the pool's state as a read-only parameter, and a function value that publishes an event to the funnel. The state a step call receives is a coherent snapshot taken when the call begins (§4.4), so that state does not change during the call. When the step returns `false`, the element is destroyed and leaves the pool.
 
 A pool built without state has `start` overloads whose step takes only its element:
 
@@ -266,17 +266,17 @@ chat!start(session, [EventSource.every(Duration.milliseconds(Int(50)))], Bool(th
 
 The runtime never runs two calls of one element's step at once. Steps of different elements may run in parallel.
 
-A worker started without event sources has its step called again as soon as it returns `true`. A worker started with **event sources** has its step called again when one of them is ready, or when the funnel has changed the shared state since the step's last call. Between calls, such a worker waits without occupying a thread. The first call follows `start` in either case.
+A worker started without event sources has its step called again as soon as it returns `true`. A worker started with **event sources** has its step called again when one of them is ready, or when the funnel has changed the shared state since the step's last call. Between calls, such a worker waits without occupying a thread. With or without event sources, the step's first call comes right after `start`.
 
 An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them.
 
-A step waits for nothing by design: it reads only values that already exist, and it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
+A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does make a stalling call is parked, as a spawned call is (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
 
 ### 6.4 An element may reference constants
 
-An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. This is an exception to §4.2, and it preserves the guarantee that §4.2 provides. The pool alone owns the element, so no other path reaches it, and no `&` in it reaches program state that anything writes: a package constant is immutable, and a capability holds no state of the program. What a call through a capability changes is capability-backed state, ordered by §4.5. A capability stored in the element from a writable source is written through it as [`effects.md`](effects.md) §6.2 permits, and one stored from a read-only source stays read-only.
+An element is a value type, or a reference type every `&` of which, however deep, names a **constant**: a package constant ([`packages.md`](packages.md) §5.1) or a capability. This rule is an exception to §4.2 that keeps the guarantee §4.2 provides, for two reasons. The pool alone owns the element, so no other path reaches the element. And no `&` in the element reaches program state that anything writes: a package constant is immutable, and a capability holds no state of the program. A call through a capability changes only capability-backed state, which §4.5 orders. A capability that the element got from a writable source may be written through the element, as [`effects.md`](effects.md) §6.2 permits; a capability that the element got from a read-only source stays read-only.
 
 ```zane
 type Session = #struct {
@@ -286,13 +286,13 @@ type Session = #struct {
 }
 ```
 
-An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, bounded as a spawned call's is, from when it begins until it returns, parked or not ([`memory.md`](memory.md) §3.7). Between calls an element uses none.
+An element is stored by the pool, as a `ListRef` element is stored by its list ([`generics.md`](generics.md) §8.5). A step call uses a fixed-size region of its own, bounded as a spawned call's is, from when it begins until it returns, parked or not ([`memory.md`](memory.md) §3.7). Between calls, an element uses no fixed-size region.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-worker-pools-element-may-reference-constants) — "A worker pool's element may reference constants".
 
 ### 6.5 The funnel is the one writer of the shared state
 
-A step publishes an event by calling the function value it receives with the event, which copies the event into the funnel's queue. The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. It is the only writer of the shared state, and it never touches an element.
+A step publishes an event by calling the function value it receives with the event, which copies the event into the funnel's queue. The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. The funnel is the only writer of the shared state, and it never touches an element.
 
 Events from one worker are applied in the order that worker published them. Events from different workers are applied in the order they arrive, which depends on scheduling (§3.7). The queue holding published events has no limit, so publishing never aborts and never waits.
 
@@ -307,7 +307,7 @@ S state(this @primitives$WorkerPool<T, S, E>)
 @primitives$List<T> elements(this @primitives$WorkerPool<T, S, E>)
 ```
 
-`state` returns a snapshot of the shared state. `elements` returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, and the list as a whole is not one snapshot. It is defined only for a value-typed `T`: a reference-typed element is owned by the pool alone, and a snapshot would copy it.
+`state` returns a snapshot of the shared state. `elements` returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, but the list as a whole is not one snapshot. `elements` is defined only for a value-typed `T`: a reference-typed element is owned by the pool alone, and a snapshot would copy it.
 
 ### 6.7 A pool's scope waits for its workers
 
