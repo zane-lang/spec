@@ -63,7 +63,7 @@ The test is to read the heading without the chapter. A reader who knows the spec
 
 Teasers fail in a few recurring ways:
 
-- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the owner — and *Y* a riddle about it. The chapter knows which construct it means; the heading names that construct.
+- **A withheld subject.** "The *X* that *Y*", where *X* is a generic noun — the keyword, the word, the check, the ban, the owner — and *Y* a riddle about it. The chapter knows which construct it means, but the heading does not name it; the rewrite names that construct.
 - **A metaphor standing in for the subject.** A chapter may build its argument on an image, but the heading names the thing the image stands for, since a reader meets the heading before the image is explained.
 - **Personification.** A heading in which a construct *wanted*, *outran*, *outlived*, or *could not contain itself* treats a rule as a character. State what the rule does.
 - **A paradox or punchline** that inverts an expectation the reader has not formed yet. State the outcome instead of staging a surprise.

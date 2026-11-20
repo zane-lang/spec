@@ -455,7 +455,7 @@ Only the root package declares foreign variables ([`packages.md`](packages.md) �
 
 ### 5.2 What a foreign verb touches follows from its signature
 
-What a foreign verb reads and writes outside the program is determined by its signature alone, and the compiler derives the effects of each call from that signature ([`effects.md`](effects.md) §5.2):
+What a foreign verb reads and writes outside the program is determined by its signature, and the compiler derives the effects of each call from that signature ([`effects.md`](effects.md) §5.2):
 
 | Foreign verb | Outside the program, it |
 |---|---|

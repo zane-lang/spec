@@ -11,7 +11,7 @@ This document specifies Zane's lexical layer: how source text is tokenised, how 
 Zane is case-sensitive. The first letter of an identifier selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
-- **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Writing a lowercase name where a type is required, or an uppercase name where a value is required, is a compile-time error.
+- **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Using a lowercase name as a type, or declaring a binding, parameter, or field with an uppercase name, is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
@@ -130,7 +130,7 @@ type Holder = struct {
 ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison operator
 ```
 
-A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single token.
+A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single identifier token. A value on the left that is not an identifier, such as the literal `1` in `1 < count`, has no first letter, and the `<` after it is the comparison operator.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".

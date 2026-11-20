@@ -163,7 +163,7 @@ Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 
 A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction is bare, since no other type argument is passed.
 
-These rules let a reader, and the compiler, read a bare `T` unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
+These rules let a reader and the compiler read a bare `T` unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".

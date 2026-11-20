@@ -120,7 +120,7 @@ A reference-type method parameter selects one of three passing modes ([`memory.m
 
 - A parameter declared as a plain reference type `T` is a **borrow**: the caller passes any owner, settled or roaming, or a temporary, and stays a full owner. The callee may read it; it may not store, return, or move it.
 - A parameter declared as `^T` **takes** its argument: the caller passes a roaming owner, which is spent ([`lifetimes.md`](lifetimes.md) §1.8), or a temporary. The callee owns it and may move it on, store it, or return it.
-- A parameter declared as `&T` is a **reference**: the caller either supplies a settled place under [`memory.md`](memory.md) §2.8, which mints a reference, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. The signature records where the reference comes to rest ([`lifetimes.md`](lifetimes.md) §1.11), and each call decides whether that store is legal.
+- A parameter declared as `&T` is a **reference**: the caller either supplies a settled place under [`memory.md`](memory.md) §2.8, which mints a reference, or passes an existing `&T` value. The callee may read it, return it, or store it into an `&` field or element. The signature records where the reference comes to rest ([`lifetimes.md`](lifetimes.md) §1.11), and the compiler checks at each call whether that store is legal.
 
 Only an `&T` parameter may be bound into `&` storage: a borrow is never stored, and a taken owner is roaming, which nothing references. A value-type parameter is always a read-only borrow.
 
@@ -346,7 +346,7 @@ For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolve
 
 A method whose subject is a type parameter has no declaring subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. The compiler searches step 3 only when the first two leave no candidate, so it prefers a method declared for the subject's own type to one declared for every type.
 
-If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Because the subject type's defining declarations are searched first, an unqualified call that step 1 or 2 resolves resolves the same way wherever it is written, independent of which packages the caller has imported. Only a call that neither reaches depends on the file's imports, through step 3.
+If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Because the subject type's defining declarations are searched first, an unqualified call resolved by step 1 or 2 resolves the same way in every file of the calling package, independent of which packages that file imports. Only a call that neither reaches depends on the file's imports, through step 3.
 
 ### 6.2 Qualified method calls
 

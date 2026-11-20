@@ -11,7 +11,7 @@ This document specifies Zane's package model: how a project's directories form p
 Zane packages are directory-defined namespaces and compilation units that contain every type, function, constant, and other package-scope declaration in the language.
 
 - **`Three kinds of package`.** A project's packages live in three directories beside its manifest: library packages in `lib/`, program packages in `bin/`, and test packages in `test/`.
-- **`The directory names the package`.** Every source file declares the name of the directory that holds it, so that a file copied or moved into the wrong package is detected.
+- **`The directory names the package`.** Every source file of a library or program package declares the name of the directory that holds it, so that a file copied or moved into the wrong package is detected; every test package's files declare `package test` (§7.1).
 - **`One compilation unit`.** All source files in a package compile together without source-order dependencies.
 - **`Library packages share, subpackages nest`.** A project's library packages import one another; a library package may hold subpackages that only it imports.
 - **`The import form is the spelling`.** An import makes members of one package available to one source file, written in the form the import gives them — qualified, aliased, or bare.
@@ -104,7 +104,7 @@ A source file may refer to any accessible declaration in its own package by its 
 
 ### 3.3 The import form fixes how its members are written
 
-The text after `import` is the spelling the file writes at each use site.
+The import form sets how the file writes the imported members at each use site.
 
 | Form | Members are written as |
 |---|---|
