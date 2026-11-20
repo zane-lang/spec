@@ -616,7 +616,7 @@ A coercion site is a position that passes a value into a contract whose destinat
 - Entries of an enum-map declaration ([`adt.md`](adt.md) §6)
 - String interpolation sites `\%var`, whose destination is `@primitives$String` (§2.8)
 
-Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way, and an enum-map entry fills the slot its declaration's header declares. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions, so their conditions and bounds are already covered by the argument entries above.
+Anonymous and named positional constructors use their declared parameter types identically, so `Type(...)` and `Type.name(...)` arguments receive the same implicit conversions. A field-constructor call entry fills the constructor's declared slot in the same way, and an enum-map entry fills the slot its declaration's header declares. Control flow needs no entry of its own: branching and repetition are ordinary calls ([`control-flow.md`](control-flow.md) §3) and the intrinsics beneath them are called like functions or methods, so their conditions, bounds, and event sources are already covered by the argument entries above.
 
 An implicit constructor is **never** inserted at any other position. In particular, the following are **not** coercion sites:
 

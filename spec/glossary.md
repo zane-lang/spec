@@ -70,7 +70,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.9 worker / step
 
-- **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value that runs on that subject until it returns `false`. `core`'s `work` and `setInterval` run one, over `@controlflow$work` and `@controlflow$workEvery`; neither takes a block, so a program may spawn a worker.
+- **Meaning:** A repetition with no written bound: a subject and a step, a non-capturing `Bool[this S] mut` function value that runs on that subject until it returns `false`. `core`'s `work`, `register`, and `setInterval` run one, over `@controlflow$work` and `@controlflow$register`; none takes a block, so a program may spawn a worker.
 - **Why this name:** It is a unit of ongoing work with state of its own, which is what separates it from a loop, a step of the program that contains it; `step` is the single advance that the worker repeats.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §3.7
 
@@ -88,7 +88,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.12 event source
 
-- **Meaning:** An `@primitives$EventSource` a worker pool's worker is started with, such as a timer. The runtime calls the worker's step again when one is ready, so the worker waits without occupying a thread.
+- **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and while the worker waits, everything else keeps running.
 - **Why this name:** It is the standard term in event loops for something that becomes ready; the qualifier keeps it apart from a reference source.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.3
 
@@ -432,7 +432,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.9 control-flow intrinsic
 
-- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$workEvery`, the five intrinsics that build every branching, repeating, and exiting construct and the single worker; a worker pool is a primitive of its own. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
+- **Meaning:** `@controlflow$branch`, `@controlflow$repeat`, `@controlflow$exitFromCall`, `@controlflow$work`, and `@controlflow$register`, the five intrinsics that build every branching, repeating, and exiting construct and the single worker; a worker pool is a primitive of its own. Each is stated over storage primitives, function values, a subject of any type, or nothing, and callable from any package.
 - **Why this name:** They are the intrinsics (§4.8) that are operations of control flow.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.1
 
