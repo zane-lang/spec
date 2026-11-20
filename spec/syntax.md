@@ -403,7 +403,7 @@ ReturnType[&ParamType, ...]
 ReturnType[this SubjectType, ParamType, ...] mut
 ```
 
-A slot may also introduce a type parameter of the verb whose signature the function type is written in, as `T Type`, `^T Type` or `&T Type`, where the marker is the slot's mode ([`generics.md`](generics.md) §3.2):
+A slot may also introduce a type parameter of the verb whose signature contains the function type, as `T Type`, `^T Type` or `&T Type`, where the marker is the slot's mode ([`generics.md`](generics.md) §3.2):
 
 ```zane
 ^T Type[Int]                  // the return slot introduces T
