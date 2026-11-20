@@ -173,12 +173,11 @@ ArrayRef<T, n>.fill(n @concepts$Int, make ^T Type[Int]) => init{
 jars ArrayRef<Jar, 3> = ArrayRef.fill(3, ^Jar(i Int) => Jar(i));   // T is Jar
 ```
 
-> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
-
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
 
 ### 3.3 `Type` and `@concepts$Int` are concept types
 
@@ -521,6 +520,7 @@ Its elements are fixed storage: they are all present from construction and never
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 > **Story:** [`stories/memory.md`](../stories/memory.md#passing-stays-implicit-and-an-arrayref-takes-its-element-type) — "Passing stays implicit, and an `ArrayRef` takes its element type".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-arrayref-constructor-names-the-mode-of-its-elements) — "An `ArrayRef` constructor names the mode of its elements".
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
 
 ### 8.5 ListRef is the dynamically sized reference primitive
 
