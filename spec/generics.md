@@ -173,6 +173,8 @@ ArrayRef<T, n>.fill(n @concepts$Int, make ^T Type[Int]) => init{
 jars ArrayRef<Jar, 3> = ArrayRef.fill(3, ^Jar(i Int) => Jar(i));   // T is Jar
 ```
 
+> **Story:** [`stories/generics.md`](../stories/generics.md#a-function-types-slot-may-introduce-a-type-parameter) — "A function type's slot may introduce a type parameter".
+
 This is what lets a bare `T` be read unambiguously. In a **type**, a name in the enclosing header is a parameter. In a **verb**, a name introduced (marked with its concept) anywhere in the signature is a parameter for that whole signature. A name that is never introduced is a concrete type.
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-type-parameters-introduction-carries-the-passing-mode-t-type-and-t-type) — "A type parameter's introduction carries the passing mode: `^T Type` and `&T Type`".
