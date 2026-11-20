@@ -163,7 +163,7 @@ Pin<T>(at &T Type) => init{at;}         // takes a reference, to store it
 
 A nested introduction carries a marker in one place: the element of a value parameter's own `@concepts$Array`, the concept type an array literal carries ([`syntax.md`](syntax.md) §2.9). Each element of the literal is passed on its own, so the marker there is the mode each element is passed in, as the marker on a parameter's own type is that parameter's: `values @concepts$Array<^T Type, n @concepts$Int>` takes each element's owner, and `values @concepts$Array<&T Type, n @concepts$Int>` takes a reference to each (§8.4). Every other nested introduction in a type argument is bare, since no other type argument is passed.
 
-A function type's return slot and parameter slots ([`syntax.md`](syntax.md) §2.13) take an introduction too, in the form a value parameter's own type uses: `T Type`, `^T Type` or `&T Type`. A slot of a function type already carries a passing mode, so the marker on an introduction there is that slot's mode. As every introduction does, the parameter belongs to the verb whose signature contains the function type. The verb is therefore generic, and each function value a call passes to it is not: the compiler reads the parameter off the function value's own type. Here `make ^T Type[Int]` introduces `T` at the return slot of `make`'s type, and a call passes a lambda that returns an owner of `T`:
+When a value parameter's own type is a function type ([`syntax.md`](syntax.md) §2.13), its return slot and parameter slots take an introduction too, in the form a value parameter's own type uses: `T Type`, `^T Type` or `&T Type`. A slot of a function type already carries a passing mode, so the marker on an introduction there is that slot's mode. As every introduction does, the parameter belongs to the verb whose signature contains the function type. The verb is therefore generic, and each function value a call passes to it is not: the compiler reads the parameter off the function value's own type. Here `make ^T Type[Int]` introduces `T` at the return slot of `make`'s type, and a call passes a lambda that returns an owner of `T`:
 
 ```zane
 ArrayRef<T, n>.fill(n @concepts$Int, make ^T Type[Int]) => init{
@@ -566,7 +566,7 @@ The following are intentionally not specified in this version:
 | Reference | A parameter is referenced by bare name; casing carries the kind. A type's header or a verb's inline concept marks a name as a parameter |
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
-| Inferred parameter | Introduced inline on a verb parameter's type, in a nested type, or in a slot of a function type in the signature; deduced from the value arguments at the call |
+| Inferred parameter | Introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type; deduced from the value arguments at the call |
 | Type-parameter subject | `this S Type` introduces `S` as the subject's whole type, so the method applies to a subject of any type; the body only passes the subject on; lookup reaches it through the spelling the file has for its package |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |

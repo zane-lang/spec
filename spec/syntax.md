@@ -403,7 +403,7 @@ ReturnType[&ParamType, ...]
 ReturnType[this SubjectType, ParamType, ...] mut
 ```
 
-A slot may also introduce a type parameter of the verb whose signature contains the function type, as `T Type`, `^T Type` or `&T Type`, where the marker is the slot's mode ([`generics.md`](generics.md) §3.2):
+When the function type is a value parameter's own type, a slot may also introduce a type parameter of the verb whose signature contains it, as `T Type`, `^T Type` or `&T Type`, where the marker is the slot's mode ([`generics.md`](generics.md) §3.2):
 
 ```zane
 ^T Type[Int]                  // the return slot introduces T
@@ -488,7 +488,7 @@ ReturnType name(param Container<T Type, n @concepts$Int>, ...) { body }
 
 A **reference-type** parameter independently selects one of the three passing modes (see [`memory.md`](memory.md) §2.9): bare `ParamType` borrows, `^ParamType` takes the owner, `&ParamType` takes a reference. A **value-type** parameter has no such choice — it is always a read-only borrow — so neither `^` nor `&` is written on one. A reference-typed return type or abort type carries `^` or `&` (`^ReturnType`, `&AbortType`); a bare one is ill-formed, because a borrow is never returned or aborted.
 
-A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`), including a slot of a function type (`make ^T Type[Int]`, §2.13) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
+A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`), or in a slot of a value parameter's function type (`make ^T Type[Int]`, §2.13) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
