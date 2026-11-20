@@ -307,7 +307,7 @@ S state(this @primitives$WorkerPool<T, S, E>)
 @primitives$List<T> elements(this @primitives$WorkerPool<T, S, E>)
 ```
 
-`state` returns a snapshot of the shared state. `elements` returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, but the list as a whole is not one snapshot. `elements` is defined only for a value-typed `T`: a reference-typed element is owned by the pool alone, and a snapshot would copy it.
+`state` returns a snapshot of the shared state. `elements` returns a list holding a snapshot of each element in the pool. Each element is coherent on its own, but the list as a whole is not one snapshot. `elements` is defined only for a value-typed `T`: the pool alone owns a reference-typed element, and a snapshot would copy it.
 
 ### 6.7 A pool's scope waits for its workers
 

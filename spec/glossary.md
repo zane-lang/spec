@@ -77,7 +77,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.10 worker pool / element
 
 - **Meaning:** `@primitives$WorkerPool<T, S, E>`, which runs bulk work: each worker is an **element** that `start` copies in, or moves in when it is a reference type, and a step the runtime calls again right away, or when an event source is ready or the shared state changed. Workers share a value-typed state that only the funnel writes.
-- **Why this name:** A pool holds many workers in the sense of [`control-flow.md`](control-flow.md) §3.7, each a subject and its step, and "pool" is the usual word for many interchangeable workers; "element" is the standard term for an item held by a container.
+- **Why this name:** A pool holds many workers in the sense of [`control-flow.md`](control-flow.md) §3.7, each a subject and its step, and "pool" is the usual word for many interchangeable workers; "element" is the standard term for an item that a container holds.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6
 
 ### 2.11 funnel

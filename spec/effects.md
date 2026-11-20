@@ -125,7 +125,7 @@ Two facts about a call are not in the signature: whether the call reads capabili
 
 ### 5.3 Compile-time evaluation
 
-A verb receives its inputs through its parameters and through capability-backed state; every other value it uses is a literal, a constant, or computed from those. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating such a computation at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes. A call marked `comptime` is evaluated at compile time whether or not the compiler would choose to, and may also read capability-backed state (§5.6).
+A verb receives its inputs through its parameters and through capability-backed state; every other value it uses is a literal, a constant, or a value the verb computes from those. So the compiler can tell which computations depend on neither a parameter nor a read of capability-backed state, and it may evaluate any of them at compile time. It may also leave any of them for run time. Evaluating such a computation at compile time changes none of the program's side effects (§2.1) and nothing it computes: each write the computation makes still happens at run time, at the same point and in the same order. Only how long the program takes to run changes. A call marked `comptime` is evaluated at compile time whether or not the compiler would choose to, and may also read capability-backed state (§5.6).
 
 ```zane
 Int loud(n Int) {
