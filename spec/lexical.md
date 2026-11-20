@@ -11,7 +11,7 @@ This document specifies Zane's lexical layer: how source text is tokenised, how 
 Zane is case-sensitive. The first letter of an identifier selects its lexical class, so the parser can distinguish type names from value names without consulting their declarations.
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
-- **`Casing determines kind`.** An uppercase-initial name is a type; a lowercase-initial name is a value, binding, or parameter. Using a lowercase name as a type, or declaring a binding, parameter, or field with an uppercase name, is a compile-time error.
+- **`Casing determines kind`.** An uppercase-initial name is a type, including a type parameter such as `T`; a lowercase-initial name is a value, binding, field, or any other parameter. Using a lowercase name as a type, or giving a binding, a field, or a parameter other than a type parameter an uppercase name, is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
@@ -57,7 +57,7 @@ vec vector(int(2));          // ILLEGAL: lowercase names are not types
 
 ### 3.2 Values must be lowercase
 
-A binding, parameter, or field name is lowercase-initial. This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
+The name of a binding, a field, or a parameter other than a type parameter is lowercase-initial; a type parameter names a type and is uppercase-initial (§3.1). This is why a number parameter such as `n` is known to be a number and not a type: its casing places it in the value class even when it appears inside a `<>` slot.
 
 ```zane
 type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is a number parameter
