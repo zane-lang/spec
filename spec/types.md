@@ -323,18 +323,18 @@ The string primitive has one constructor from each scalar primitive, which write
 @primitives$String(value @primitives$F64)
 ```
 
-A number becomes text only where one of these is called, directly or inside a package's own conversion. Interpolation does no formatting of its own (§2.8).
+A number becomes text only where a program calls one of these, directly or inside a package's own conversion. Interpolation does no formatting of its own (§2.8).
 
 An integer's text is its decimal digits, with no leading zeros, preceded by `-` when it is negative: `0`, `42`, `-42`.
 
-A float's text is `nan` for a NaN, and `inf` or `-inf` for an infinity. Any other float is written as the shortest decimal that spells it. The text is chosen from **candidates**, made for each digit count `k` from 1 to 17 for an `@primitives$F64`, and from 1 to 9 for an `@primitives$F32`:
+A float's text is `nan` for a NaN, and `inf` or `-inf` for an infinity. The constructor writes any other float as the shortest decimal that spells it. It chooses the text from **candidates**, which it makes for each digit count `k` from 1 to 17 for an `@primitives$F64`, and from 1 to 9 for an `@primitives$F32`:
 
-- The value is rounded to the nearest number of `k` significant decimal digits, and its digits after the last nonzero one are dropped.
-- The digits are written in **scientific notation**: the first digit, then `.` and the remaining digits when any remain, then `e` and the decimal exponent. The exponent is preceded by `-` when it is negative and has no `+` and no leading zeros, as in `2.5e-7` and `1e22`.
-- When the exponent is at least `-4` and less than `k`, the digits are also written in **fixed notation**: the digits with a `.` placed by the exponent, and `0.` before them when the exponent is negative. Zeros needed to reach the `.` are written, the `.` is omitted when no digit follows it, and so the candidates include `0.001`, `100`, and `2.5`.
+- It rounds the value to the nearest number of `k` significant decimal digits and drops the digits after the last nonzero one.
+- It writes the digits in **scientific notation**: the first digit, then `.` and the remaining digits when any remain, then `e` and the decimal exponent. A `-` precedes a negative exponent, and the exponent has no `+` and no leading zeros, as in `2.5e-7` and `1e22`.
+- When the exponent is at least `-4` and less than `k`, it also writes the digits in **fixed notation**: the digits with a `.` placed by the exponent, and `0.` before them when the exponent is negative. It writes the zeros needed to reach the `.` and omits the `.` when no digit follows it, so the candidates include `0.001`, `100`, and `2.5`.
 - A negative value's candidates begin with `-`, a negative zero's included.
 
-A candidate is kept when it **spells the value**: the number it writes, rounded to the float's own width as `round` rounds (§2.9), is the value itself, a zero's sign included. A candidate of 17 digits, or 9 for an `@primitives$F32`, always spells the value, so at least one is kept. The text is the shortest candidate kept. A tie in length goes to the candidate with fewer digits, not counting the zeros before its first nonzero digit, and a remaining tie goes to fixed notation.
+The constructor keeps a candidate when it **spells the value**: the number it writes, rounded to the float's own width as `round` rounds (§2.9), is the value itself, a zero's sign included. A candidate of 17 digits, or 9 for an `@primitives$F32`, always spells the value, so at least one is kept. The text is the shortest candidate kept. A tie in length goes to the candidate with fewer digits, not counting the zeros before its first nonzero digit, and a remaining tie goes to fixed notation.
 
 ```zane
 @primitives$String(@primitives$F64(1.0))     // "1"
@@ -366,13 +366,13 @@ length @primitives$I64 = word:byteCount();      // 4
 first @primitives$U8 = word:byteAt(@primitives$I64(1));   // 98, the byte of b
 ```
 
-A **byte set** is a set of the 256 byte values, held in the value type `@primitives$ByteSet`. A copy of one is a set of its own. Its layout is the compiler's, and the only way to build one is the method `byteSet`:
+A **byte set** is a set of the 256 byte values, and the value type `@primitives$ByteSet` holds one. A copy of one is a set of its own. Its layout is the compiler's, and the only way to build one is the method `byteSet`:
 
 ```zane
 @primitives$ByteSet byteSet(this @primitives$ArrayRef<T Type, 256>)
 ```
 
-`byteSet` gives the set of the bytes whose flags are true: the flag of the byte `b` is at position `b + 1`. Each flag is one byte, and `T` is `@primitives$Bool`, `@primitives$U8`, or a struct whose only field is one of those types or a struct of the same kind, as `core`'s `Bool` and `U8` are. A flag is true when it is not zero. A `byteSet` call with any other `T` is a compile-time error.
+`byteSet` gives the set of the bytes whose flags are set: the flag of the byte `b` is at position `b + 1`. `T` is `@primitives$Bool`, whose flag is set when it is `true`, `@primitives$U8`, whose flag is set when it is not `0`, or a struct whose only field is one of those types or a struct of the same kind, as `core`'s `Bool` and `U8` are. A `byteSet` call with any other `T` is a compile-time error.
 
 Two methods search a string for the bytes in a set:
 
@@ -885,7 +885,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Reading a number | `parseI64` and `parseF64` on `@primitives$String` read a literal's text with an optional `-`, and `parseF64At` reads part of a string the same way; each aborts with `@primitives$Unit` on any other text or a value that does not fit; they are methods, since a constructor cannot abort |
 | Writing a number | `@primitives$String` has a constructor from each scalar primitive: an integer's decimal digits, and a float's shortest decimal that spells it, in fixed or scientific notation, or `nan`, `inf`, or `-inf` |
 | String bytes | `byteCount` gives a string's length in bytes, `byteAt` the byte at a position counted from 1, and `hashBytes` a hash that is equal for equal strings within one run |
-| Byte set | `@primitives$ByteSet`, a value type built only by `byteSet` from an `@primitives$ArrayRef` of 256 one-byte flags; `findAny` and `findPair` search a string's bytes for the bytes in a set and give the first position found, or `0` |
+| Byte set | `@primitives$ByteSet`, a value type built only by `byteSet` from an `@primitives$ArrayRef` of 256 flags; `findAny` and `findPair` search a string's bytes for the bytes in a set and give the first position found, or `0` |
 | Text escapes | `@primitives$String` keeps a literal's backslash sequences as written; `@primitives$String.escaped` reads `\n`, `\t`, `\r`, `\0`, and `\\` in the literal's fragments, never in an interpolated value |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |

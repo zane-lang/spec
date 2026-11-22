@@ -386,7 +386,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.49 byte set
 
-- **Meaning:** `@primitives$ByteSet`, a value type holding a set of the 256 byte values. `byteSet` builds one from 256 one-byte flags, and `findAny` and `findPair` search a string primitive's bytes for its members. Its layout is the compiler's, so a set comes only from `byteSet`.
+- **Meaning:** `@primitives$ByteSet`, a value type holding a set of the 256 byte values. `byteSet` builds one from 256 flags, and `findAny` and `findPair` search a string primitive's bytes for its members. Its layout is the compiler's, so a set comes only from `byteSet`.
 - **Why this name:** It is a set whose members are bytes, and nothing more: the name leaves out the lookup table the compiler lays it out as.
 - **Canonical home:** [`types.md`](types.md) §2.12
 

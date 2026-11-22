@@ -592,7 +592,7 @@ Two methods reorder a `List`:
 - **`sort`** sorts the elements in ascending order.
 - **`sortBy`** reorders a list whose elements are positions in `keys`, so that the keys they name ascend. Elements whose keys are equal keep their order. An element that is not a position in `keys` stops the program, even in a list of one element ([`control-flow.md`](control-flow.md) §5.2).
 
-`@primitives$text` makes a string primitive from a list of bytes ([`types.md`](types.md) §2.12):
+`text` makes a string primitive from a list of bytes ([`types.md`](types.md) §2.12):
 
 ```zane
 @primitives$String text(this @primitives$List<T Type>)
