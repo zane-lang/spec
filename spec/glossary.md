@@ -64,7 +64,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.8 1-based ordinal counting
 
-- **Meaning:** Counted repetition and positional indexing start at `1`, so an ordered sequence's final valid position is its size.
+- **Meaning:** Counted repetition and positional indexing start at `1`, so an ordered sequence's final valid position is its size. A position outside the sequence stops the program.
 - **Why this name:** The term makes the rule about ordinal positions explicit and distinguishes it from raw numeric arithmetic.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §5
 
@@ -383,6 +383,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** `@primitives$U8`, an unsigned 8-bit integer from 0 to 255. It is built from `@concepts$Int`, converts to the integer scalars exactly and from them by `wrap`, and has `equal` and `lessThan` but no arithmetic. `core` declares the storage type `U8` over it.
 - **Why this name:** A byte is the unit of storage it occupies, and *primitive* places it beside the scalar and string primitives; it is not a scalar primitive, since it has no arithmetic of its own.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
+
+### 3.49 byte set
+
+- **Meaning:** `@primitives$ByteSet`, a value type holding a set of the 256 byte values. `byteSet` builds one from 256 flags, and `findAny` and `findPair` search a string primitive's bytes for its members. Its layout is the compiler's, so a set comes only from `byteSet`.
+- **Why this name:** It is a set whose members are bytes, and nothing more: the name leaves out the lookup table the compiler lays it out as.
+- **Canonical home:** [`types.md`](types.md) §2.12
 
 ---
 

@@ -15,7 +15,7 @@ Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a w
 - **`Five control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` act on blocks and invocations; `@controlflow$work` and `@controlflow$register` run a worker. They are the whole of the control flow the language supplies, and they are stated over storage primitives, function values, and type parameters, so none depends on a package.
 - **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work`, `register`, and `setInterval` and which may be spawned. Many workers that run the same step run in a worker pool.
 - **`No control-flow keywords`.** The exit intrinsic ends its *caller*, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
-- **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`.
+- **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`, and a position outside its sequence stops the program.
 
 ---
 
@@ -358,9 +358,24 @@ The example above selects the last element by using the sequence size directly a
 
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#counting-from-one) — "Counting from one".
 
-### 5.2 Bounds behavior remains separate
+### 5.2 A position outside its sequence stops the program
 
-This document specifies the ordinal base only. The language-level behavior for out-of-range element access remains a separate question from whether indexing starts at `0` or `1`.
+A sequence of `n` elements has the positions `1` through `n`. An intrinsic that takes a position checks it, and a position outside that range **stops** the program ([`packages.md`](packages.md) §6.3). A stop is not an abort, so no handler sees it. The subscripts of the container primitives and the string primitive's `byteAt` check their position this way ([`generics.md`](generics.md) §8.6, [`types.md`](types.md) §2.12).
+
+An intrinsic that takes a **range**, a `count` of positions from a position `start`, checks it the same way. The range lies in a sequence of `n` elements when `count` is at least `0`, `start` is at least `1`, and `start + count - 1` is at most `n`. A range of no positions may therefore start at `n + 1`, just past the last element. Any other range stops the program.
+
+```zane
+list List<Int> = List(Int);
+list!push(10);
+list!push(20);
+last Int = list[2];               // 20
+list!appendOwn(3, 0);             // legal: no elements, starting just past the end
+missing Int = list[3];            // stops the program: list has no position 3
+```
+
+The section that specifies each intrinsic names the position or range it checks, along with any exception it makes: `findAny` and `findPair` give `0` for a `count` below `1` instead of checking their range ([`types.md`](types.md) §2.12).
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#the-list-primitives-operations-are-specified-and-a-position-outside-a-list-stops-the-program) — "The list primitives' operations are specified, and a position outside a list stops the program".
 
 ---
 
@@ -382,3 +397,4 @@ This document specifies the ordinal base only. The language-level behavior for o
 | Bounded repetition | `repeat` takes a count, so one invocation runs its body at most that many times and every loop built on it carries a written bound; recursion and workers are the unbounded forms, and each is recognizable in the source |
 | Exit | `@controlflow$exitFromCall()` ends its caller's invocation, which is what lets `core` declare `guard` as an ordinary verb; the exit carries no value, so the invocation it ends must return `Unit`, and a lambda's body may not contain it |
 | Ordinals | Positions and counted repetition start at `1`; the last valid position is the size |
+| Out of range | A position outside `1` through `n`, or a range of `count` positions from `start` that does not lie in the sequence, stops the program; a range of no positions may start at `n + 1` |

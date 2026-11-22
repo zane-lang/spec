@@ -14,7 +14,7 @@ Zane keeps data layout and construction separate from behavior.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
 - **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
 - **`Name-based field privacy`.** A leading `_` makes a field private to the package that declares its type.
-- **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8).
+- **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8). The string primitive reads and writes numbers (§2.10–§2.11) and reads its own bytes (§2.12).
 - **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `U8`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` are types that the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
 
 ---
@@ -156,7 +156,7 @@ An implementation may erase only the runtime storage of `Unit` values, including
 
 A source literal is a value of a compiler concept type ([`syntax.md`](syntax.md) §2.8). The concept type is the literal's own type, under the name Zane gives it. Six storage primitives take a literal directly: the integer scalars `@primitives$I32` and `@primitives$I64` and the byte primitive `@primitives$U8`, which take `@concepts$Int`; the float scalars `@primitives$F32` and `@primitives$F64`, which take `@concepts$Float`; and `@primitives$String`, the string storage primitive described below. `@primitives$Bool` is a machine-word scalar as well.
 
-Each of the six has a compiler-provided constructor from its literal's concept type, and `@primitives$String` has a second, the named constructor `escaped`, described below. A scalar also converts from each other scalar, and `@primitives$U8` from the integer scalars (§2.9). Packages may declare conversions to primitives under §4:
+Each of the six has a compiler-provided constructor from its literal's concept type, and `@primitives$String` has a second, the named constructor `escaped`, described below, and one from each scalar primitive (§2.11). A scalar also converts from each other scalar, and `@primitives$U8` from the integer scalars (§2.9). Packages may declare conversions to primitives under §4:
 
 ```zane
 @primitives$U8(value @concepts$Int)
@@ -234,7 +234,7 @@ type Label = struct { text String; }  // legal: value-type field
 
 A string literal, interpolated or not, carries `@concepts$String`. It is a concept rather than storage and follows the parameter-only rule of [`syntax.md`](syntax.md) §2.8. It contains an ordered sequence of literal text fragments and interpolated `@primitives$String` values. A literal without interpolation is known at compile time; an interpolated concept may contain runtime values. Its fragments and interpolation sites are fixed at compile time, but its completed text need not be.
 
-At each `\%var`, the compiler resolves `var` as a value symbol in the caller's scope. The site requires `@primitives$String` and is a coercion site (§4.2): a primitive string is accepted directly, or exactly one visible applicable implicit constructor converts the source to that primitive. The ordinary source restriction (§4.4), home-package rule (§4.5), ambiguity check, and no-chaining rule (§4.3) all apply. There is no automatic numeric formatting or special conversion from a reference type.
+At each `\%var`, the compiler resolves `var` as a value symbol in the caller's scope. The site requires `@primitives$String` and is a coercion site (§4.2): a primitive string is accepted directly, or exactly one visible applicable implicit constructor converts the source to that primitive. The ordinary source restriction (§4.4), home-package rule (§4.5), ambiguity check, and no-chaining rule (§4.3) all apply. There is no automatic numeric formatting or special conversion from a reference type; a number becomes text through its conversion to `@primitives$String` (§2.11).
 
 Each interpolation is evaluated once, in written order, when the containing literal is evaluated. The concept captures a copy of the resulting primitive string under [`memory.md`](memory.md) §2.3, not a reference or a deferred lookup of the symbol. Later changes to the source do not change the captured value. Conversions follow the ordinary effect and abort-handling rules. The concept does not require an intermediate concatenated storage string; its consumer may build directly in its eventual destination.
 
@@ -302,7 +302,93 @@ Reading can fail, so neither method is a constructor. A constructor cannot abort
 count @primitives$I64 = text:parseI64() ?? @primitives$I64(1000);
 ```
 
+A third method reads a number from part of a string, without copying that part into a string of its own:
+
+```zane
+@primitives$F64?@primitives$Unit parseF64At(this @primitives$String, start @primitives$I64, count @primitives$I64)
+```
+
+`parseF64At` reads the `count` bytes from byte `start`, counted from 1 as `byteAt` counts them (§2.12), exactly as `parseF64` reads a whole string. A range outside the string stops the program ([`control-flow.md`](control-flow.md) §5.2).
+
 > **Story:** [`stories/types.md`](../stories/types.md#reading-a-number-from-text-is-a-method-because-it-can-fail) — "Reading a number from text is a method, because it can fail".
+
+### 2.11 Writing a scalar primitive as text
+
+The string primitive has one constructor from each scalar primitive, which writes the number as text:
+
+```zane
+@primitives$String(value @primitives$I32)
+@primitives$String(value @primitives$I64)
+@primitives$String(value @primitives$F32)
+@primitives$String(value @primitives$F64)
+```
+
+A number becomes text only where a program calls one of these, directly or inside a package's own conversion. Interpolation does no formatting of its own (§2.8).
+
+An integer's text is its decimal digits, with no leading zeros, preceded by `-` when it is negative: `0`, `42`, `-42`.
+
+A float's text is `nan` for a NaN, and `inf` or `-inf` for an infinity. The constructor writes any other float as the shortest decimal that spells it. It chooses the text from **candidates**, which it makes for each digit count `k` from 1 to 17 for an `@primitives$F64`, and from 1 to 9 for an `@primitives$F32`:
+
+- It rounds the value to the nearest number of `k` significant decimal digits and drops the digits after the last nonzero one.
+- It writes the digits in **scientific notation**: the first digit, then `.` and the remaining digits when any remain, then `e` and the decimal exponent. A `-` precedes a negative exponent, and the exponent has no `+` and no leading zeros, as in `2.5e-7` and `1e22`.
+- When the exponent is at least `-4` and less than `k`, it also writes the digits in **fixed notation**: the digits with a `.` placed by the exponent, and `0.` before them when the exponent is negative. It writes the zeros needed to reach the `.` and omits the `.` when no digit follows it, so the candidates include `0.001`, `100`, and `2.5`.
+- A negative value's candidates begin with `-`, a negative zero's included.
+
+The constructor keeps a candidate when it **spells the value**: the number it writes, rounded to the float's own width as `round` rounds (§2.9), is the value itself, a zero's sign included. A candidate of 17 digits, or 9 for an `@primitives$F32`, always spells the value, so at least one is kept. The text is the shortest candidate kept. A tie in length goes to the candidate with fewer digits, not counting the zeros before its first nonzero digit, and a remaining tie goes to fixed notation.
+
+```zane
+@primitives$String(@primitives$F64(1.0))     // "1"
+@primitives$String(@primitives$F64(100.0))   // "1e2": as short as "100", with fewer digits
+@primitives$String(@primitives$F64(0.001))   // "1e-3": shorter than "0.001"
+@primitives$String(@primitives$F64(0.25))    // "0.25"
+@primitives$String(@primitives$F32(0.1))     // "0.1": the F32 nearest 0.1, though its exact value is not 0.1
+```
+
+Scientific notation is not part of a float literal ([`lexical.md`](lexical.md) §7), so `parseF64` (§2.10) does not read a text in that notation back.
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-string-primitives-bytes-and-numbers-are-specified-and-a-byte-set-becomes-its-own-primitive) — "The string primitive's bytes and numbers are specified, and a byte set becomes its own primitive".
+
+### 2.12 A string primitive's bytes and byte sets
+
+A string primitive is a sequence of bytes, and three methods read them:
+
+```zane
+@primitives$I64 byteCount(this @primitives$String)
+@primitives$U8 byteAt(this @primitives$String, index @primitives$I64)
+@primitives$I64 hashBytes(this @primitives$String)
+```
+
+`byteCount` gives the string's length in bytes. `byteAt` gives the byte at the position `index`, counted from 1 ([`control-flow.md`](control-flow.md) §5.1). A position outside the string stops the program ([`control-flow.md`](control-flow.md) §5.2). `hashBytes` gives a hash of the string's bytes: two strings with the same bytes have the same hash within one run of a program, and the value is not otherwise specified.
+
+```zane
+word @primitives$String("byte");
+length @primitives$I64 = word:byteCount();      // 4
+first @primitives$U8 = word:byteAt(@primitives$I64(1));   // 98, the byte of b
+```
+
+A **byte set** is a set of the 256 byte values, and the value type `@primitives$ByteSet` holds one. A copy of one is a set of its own. Its layout is the compiler's, and the only way to build one is the method `byteSet`:
+
+```zane
+@primitives$ByteSet byteSet(this @primitives$ArrayRef<T Type, 256>)
+```
+
+`byteSet` gives the set of the bytes whose flags are set: the flag of the byte `b` is at position `b + 1`. `T` is `@primitives$Bool`, whose flag is set when it is `true`, `@primitives$U8`, whose flag is set when it is not `0`, or a struct whose only field is one of those types or a struct of the same kind, as `core`'s `Bool` and `U8` are. A `byteSet` call with any other `T` is a compile-time error.
+
+Two methods search a string for the bytes in a set:
+
+```zane
+@primitives$I64 findAny(this @primitives$String, from @primitives$I64, count @primitives$I64, set @primitives$ByteSet)
+@primitives$I64 findPair(this @primitives$String, from @primitives$I64, count @primitives$I64, first @primitives$ByteSet, gap @primitives$I64, second @primitives$ByteSet)
+```
+
+`findAny` gives the first of the `count` positions from `from` whose byte is in `set`, or `0` when none is. `findPair` gives the first of those positions whose byte is in `first` and whose byte `gap` positions later is in `second`, or `0` when none is. Each search reads the bytes it tests, so a call whose `count` is below `1` reads none and gives `0`. Otherwise `findAny`'s `count` positions from `from` lie in the string, `findPair`'s `gap` is at least `0`, and its `count + gap` positions from `from` lie in it; any other call stops the program ([`control-flow.md`](control-flow.md) §5.2).
+
+```zane
+vowels @primitives$ByteSet = flags:byteSet();      // flags marks a, e, i, o and u
+at @primitives$I64 = word:findAny(@primitives$I64(1), word:byteCount(), vowels);   // 4, the e
+```
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-string-primitives-bytes-and-numbers-are-specified-and-a-byte-set-becomes-its-own-primitive) — "The string primitive's bytes and numbers are specified, and a byte set becomes its own primitive".
 
 ---
 
@@ -796,7 +882,10 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Literal storage primitive | `@primitives$U8`, `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, `@primitives$F64`, or `@primitives$String`; each has a compiler-provided constructor, not `implicit`, taking its literal's concept type, and `@primitives$String` also has `escaped`; packages may declare implicit conversions to primitives under §4; a literal the primitive cannot represent is a compile-time error |
 | Scalar conversion | Each scalar primitive converts to each other through a constructor of the target, never `implicit`; an exact one is the anonymous constructor, and a lossy one is named for its loss: `wrap`, `truncate`, or `round`; `@primitives$U8` converts to the integer scalars exactly and from them by `wrap` |
 | String primitive | `@primitives$String`: a value type with owned bytes in the dynamic region and a fixed-size handle; no terminator or stored reference; copies are deep |
-| Reading a number | `parseI64` and `parseF64` on `@primitives$String` read a literal's text with an optional `-`, and abort with `@primitives$Unit` on any other text or a value that does not fit; they are methods, since a constructor cannot abort |
+| Reading a number | `parseI64` and `parseF64` on `@primitives$String` read a literal's text with an optional `-`, and `parseF64At` reads part of a string the same way; each aborts with `@primitives$Unit` on any other text or a value that does not fit; they are methods, since a constructor cannot abort |
+| Writing a number | `@primitives$String` has a constructor from each scalar primitive: an integer's decimal digits, and a float's shortest decimal that spells it, in fixed or scientific notation, or `nan`, `inf`, or `-inf` |
+| String bytes | `byteCount` gives a string's length in bytes, `byteAt` the byte at a position counted from 1, and `hashBytes` a hash that is equal for equal strings within one run |
+| Byte set | `@primitives$ByteSet`, a value type built only by `byteSet` from an `@primitives$ArrayRef` of 256 flags; `findAny` and `findPair` search a string's bytes for the bytes in a set and give the first position found, or `0` |
 | Text escapes | `@primitives$String` keeps a literal's backslash sequences as written; `@primitives$String.escaped` reads `\n`, `\t`, `\r`, `\0`, and `\\` in the literal's fragments, never in an interpolated value |
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
