@@ -559,10 +559,10 @@ A position outside the container stops the program ([`control-flow.md`](control-
 ^T swapRemove(this @primitives$List<T Type>, index @primitives$I64) mut
 ```
 
-- **`push`** adds `value` after the last element. It takes `value` through a `^T` parameter, so an owner of a reference type moves in and a value is copied in ([`memory.md`](memory.md) §2.9).
+- **`push`** adds `value` after the last element. It takes `value` through a `^T` parameter, so an owner of a reference type moves in, and `push` copies a value in ([`memory.md`](memory.md) §2.9).
 - **`size`** gives the number of elements.
 - **`remove`** moves the element at `index` out of the list and returns it. The later elements each move down one position and keep their order.
-- **`swapRemove`** moves the element at `index` out and returns it as `remove` does, then moves the last element into the freed position. Only one element moves, so the order of the elements is not kept.
+- **`swapRemove`** moves the element at `index` out and returns it as `remove` does, then moves the last element into the freed position. Only one element moves, so `swapRemove` does not keep the order of the elements.
 
 A position outside the list stops `remove` and `swapRemove` ([`control-flow.md`](control-flow.md) §5.2). An element that moves out of its place is no longer in the list ([`lifetimes.md`](lifetimes.md) §2.1).
 
@@ -577,7 +577,7 @@ A `List`, whose elements are values, also has methods that work on a **range**: 
 ```
 
 - **`appendRange`** adds copies of the range of `from` after the list's last element, in order.
-- **`appendOwn`** does the same with a range of the list itself. A `mut` call cannot also borrow its own subject ([`memory.md`](memory.md) §2.9), so `appendRange` cannot name the list as `from`. The range is copied as it was before the call.
+- **`appendOwn`** does the same with a range of the list itself. A `mut` call cannot also borrow its own subject ([`memory.md`](memory.md) §2.9), so `appendRange` cannot name the list as `from`. `appendOwn` copies the range as it was before the call.
 - **`copyRange`** overwrites the `count` elements from the position `at` with copies of the range of `from`. Both ranges lie in their lists, and the list's size does not change.
 - **`sameRange`** gives whether the range of the list and the `count` elements of `other` from `otherStart` are equal, element by element.
 - **`hashRange`** gives a hash of the range's elements. Two ranges whose elements are equal have the same hash within one run of a program, and the value is not otherwise specified.
