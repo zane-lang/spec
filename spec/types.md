@@ -186,7 +186,7 @@ A parameter of a primitive type therefore takes a primitive, or a type with an i
 @controlflow$repeat(3, { console!print("hi"); });                    // ILLEGAL: no implicit constructor from @concepts$Int to @primitives$I64
 ```
 
-The numeric arguments are values of leaf concept types, so they are known at compile time, and their constructors embed them in the primitives. A string concept may include runtime interpolation (§2.8); its constructor materializes the text when those values are available. A literal the primitive cannot represent is a compile-time error: an integer literal outside the range of the integer primitive it builds, 0 to 255 for `@primitives$U8`, or a float literal whose magnitude exceeds the largest finite value of the float primitive it builds.
+The numeric arguments are values of leaf concept types, so they are known at compile time, and their constructors embed them in the primitives. A string concept may include runtime interpolation (§2.8); its constructor materializes the text when those values are available. A literal the primitive cannot represent is a compile-time error: an integer literal outside the range of the integer or byte primitive it builds, 0 to 255 for `@primitives$U8`, or a float literal whose magnitude exceeds the largest finite value of the float primitive it builds.
 
 ```zane
 big @primitives$I32(9999999999);   // ILLEGAL: out of range for @primitives$I32
