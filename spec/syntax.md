@@ -281,7 +281,7 @@ An intrinsic operation has one signature, with four exceptions, each an overload
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
 - the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
-- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9).
+- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and, for a scalar primitive, one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 
