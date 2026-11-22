@@ -20,7 +20,7 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type, and reaches it only by passing it on (§3.7).
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
-- **`Four container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type. `@primitives$List<T>` and `@primitives$ListRef<T>` are their dynamically sized counterparts, a value type and a reference type. `core` declares `Array`, `ArrayRef`, `List`, and `ListRef` over them.
+- **`Four container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type. `@primitives$List<T>` and `@primitives$ListRef<T>` are their dynamically sized counterparts, a value type and a reference type. `core` declares `Array`, `ArrayRef`, `List`, and `ListRef` over them. Each has a subscript counted from 1, a list grows and shrinks by `push`, `remove`, and `swapRemove`, and a `List` copies, compares, hashes, and sorts ranges of its elements (§8.6).
 
 ---
 
@@ -537,6 +537,88 @@ squad[Int(1)].hp = Int(5);
 > **Story:** [`stories/memory.md`](../stories/memory.md#no-growable-list-of-references) — "No growable list of references".
 > **Story:** [`stories/generics.md`](../stories/generics.md#list-becomes-a-value-and-listref-takes-the-reference-form) — "`List` becomes a value, and `ListRef` takes the reference form".
 
+### 8.6 Operations on the container primitives
+
+Each container primitive has a subscript that names the element at a position, counted from 1 ([`control-flow.md`](control-flow.md) §5.1):
+
+```zane
+(this @primitives$Array<T Type, n @concepts$Int>)[index @primitives$I64]
+(this @primitives$ArrayRef<T Type, n @concepts$Int>)[index @primitives$I64]
+(this @primitives$List<T Type>)[index @primitives$I64]
+(this @primitives$ListRef<T Type>)[index @primitives$I64]
+```
+
+A position outside the container stops the program ([`control-flow.md`](control-flow.md) §5.2). The element is a place, whose state §8.4 and §8.5 give ([`functions.md`](functions.md) §2.9).
+
+`@primitives$List(T Type)` and `@primitives$ListRef(T Type)` each build an empty list whose elements are of type `T`, as in `@primitives$List(@primitives$I64)`. A list grows and shrinks through four methods. Each has one overload whose subject is a `List` and one whose subject is a `ListRef`, and this section writes only the `List` forms:
+
+```zane
+@primitives$Unit push(this @primitives$List<T Type>, value ^T) mut
+@primitives$I64 size(this @primitives$List<T Type>)
+^T remove(this @primitives$List<T Type>, index @primitives$I64) mut
+^T swapRemove(this @primitives$List<T Type>, index @primitives$I64) mut
+```
+
+- **`push`** adds `value` after the last element. It takes `value` through a `^T` parameter, so an owner of a reference type moves in and a value is copied in ([`memory.md`](memory.md) §2.9).
+- **`size`** gives the number of elements.
+- **`remove`** moves the element at `index` out of the list and returns it. The later elements each move down one position and keep their order.
+- **`swapRemove`** moves the element at `index` out and returns it as `remove` does, then moves the last element into the freed position. Only one element moves, so the order of the elements is not kept.
+
+A position outside the list stops `remove` and `swapRemove` ([`control-flow.md`](control-flow.md) §5.2). An element that moves out of its place is no longer in the list ([`lifetimes.md`](lifetimes.md) §2.1).
+
+A `List`, whose elements are values, also has methods that work on a **range**: `count` elements from the position `start`. Each range lies in its list, or the program stops ([`control-flow.md`](control-flow.md) §5.2). A `ListRef` has none of them.
+
+```zane
+@primitives$Unit appendRange(this @primitives$List<T Type>, from @primitives$List<T>, start @primitives$I64, count @primitives$I64) mut
+@primitives$Unit appendOwn(this @primitives$List<T Type>, start @primitives$I64, count @primitives$I64) mut
+@primitives$Unit copyRange(this @primitives$List<T Type>, at @primitives$I64, from @primitives$List<T>, start @primitives$I64, count @primitives$I64) mut
+@primitives$Bool sameRange(this @primitives$List<T Type>, start @primitives$I64, other @primitives$List<T>, otherStart @primitives$I64, count @primitives$I64)
+@primitives$I64 hashRange(this @primitives$List<T Type>, start @primitives$I64, count @primitives$I64)
+```
+
+- **`appendRange`** adds copies of the range of `from` after the list's last element, in order.
+- **`appendOwn`** does the same with a range of the list itself. A `mut` call cannot also borrow its own subject ([`memory.md`](memory.md) §2.9), so `appendRange` cannot name the list as `from`. The range is copied as it was before the call.
+- **`copyRange`** overwrites the `count` elements from the position `at` with copies of the range of `from`. Both ranges lie in their lists, and the list's size does not change.
+- **`sameRange`** gives whether the range of the list and the `count` elements of `other` from `otherStart` are equal, element by element.
+- **`hashRange`** gives a hash of the range's elements. Two ranges whose elements are equal have the same hash within one run of a program, and the value is not otherwise specified.
+
+Two methods reorder a `List`:
+
+```zane
+@primitives$Unit sort(this @primitives$List<T Type>) mut
+@primitives$Unit sortBy(this @primitives$List<T Type>, keys @primitives$List<K Type>) mut
+```
+
+- **`sort`** sorts the elements in ascending order.
+- **`sortBy`** reorders a list whose elements are positions in `keys`, so that the keys they name ascend. Elements whose keys are equal keep their order. An element that is not a position in `keys` stops the program, even in a list of one element ([`control-flow.md`](control-flow.md) §5.2).
+
+`@primitives$text` makes a string primitive from a list of bytes ([`types.md`](types.md) §2.12):
+
+```zane
+@primitives$String text(this @primitives$List<T Type>)
+```
+
+The string's bytes are the list's elements, in order.
+
+These methods are generic so that they take the lists `core` declares, whose elements are `core`'s own types, but each works on its elements' storage and accepts only some element types. A **wrapper** of a type is a struct whose only field is of that type or is a wrapper of it, as `core`'s `Int` wraps `@primitives$I64`. A call with any other element type is a compile-time error:
+
+| Methods | Element type |
+|---|---|
+| `appendRange`, `appendOwn`, `copyRange` | Any type that owns no block: no `@primitives$String`, list primitive, `@primitives$ByteSet`, or boxed member ([`adt.md`](adt.md) §4) at any depth |
+| `sameRange`, `hashRange` | `@primitives$I32`, `@primitives$I64`, `@primitives$U8`, `@primitives$Bool`, or a wrapper of one of them |
+| `sort` | `@primitives$I32`, `@primitives$I64`, `@primitives$U8`, or a wrapper of one of them, compared as integers |
+| `sortBy` | The list's elements are `@primitives$I32` or a wrapper of it, and the keys `@primitives$I64` or a wrapper of it |
+| `text` | `@primitives$U8` or a wrapper of it |
+
+```zane
+row @primitives$List<@primitives$I64> = @primitives$List(@primitives$I64);
+row!push(@primitives$I64(4));
+row!push(@primitives$I64(1));
+row!appendOwn(@primitives$I64(1), @primitives$I64(2));    // 4, 1, 4, 1
+row!sort();                                               // 1, 1, 4, 4
+same @primitives$Bool = row:sameRange(@primitives$I64(1), row, @primitives$I64(2), @primitives$I64(1));   // true
+```
+
 ---
 
 ## 9. Deferred Features
@@ -544,8 +626,7 @@ squad[Int(1)].hp = Int(5);
 The following are intentionally not specified in this version:
 
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
-- dynamic container operations and map types — `List<T>`, `ListRef<T>`, and their storage primitives are specified (§8.3, §8.5), and so are the array and map **literal forms** ([`syntax.md`](syntax.md) §2.9 and §2.10), but the lists' operations, a map type, whether a map preserves any order, and what a map requires of a key type are all open
-- bounds-checking rules for element access APIs
+- map types — the map **literal form** is specified ([`syntax.md`](syntax.md) §2.10), but a map type, whether a map preserves any order, and what a map requires of a key type are all open
 - named lane access (`.x`, `.y`, `.z`, `.w`)
 - phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
@@ -575,4 +656,6 @@ The following are intentionally not specified in this version:
 | `@primitives$ArrayRef<T, n>` | Fixed-size reference-type storage primitive over any `T`, with `Array`'s layout; built from a literal by `ArrayRef`, which borrows each element and so copies values and `&` values, by `ArrayRef.roaming`, which takes owners, or by `ArrayRef.refs`, which mints or copies references and may mix the two in one literal, or by `fill`, whose lambda takes each position as `@primitives$I64` or a type with an implicit constructor from it; its elements take their root's state, may be referenced under a settled root, and are never moved out; `core` declares `ArrayRef` over it |
 | `@primitives$List<T>` | Dynamically sized value-type storage primitive over a value `T`: elements in the dynamic region behind a fixed-size handle; a copy copies every element; `core` declares `List` over it |
 | `@primitives$ListRef<T>` | Dynamically sized reference-type storage primitive with `List`'s layout; its elements are owners or values, never `&`, and roaming; `core` declares `ListRef` over it |
+| Container operations | Each container primitive has a subscript counted from 1; `@primitives$List(T)` and `@primitives$ListRef(T)` build an empty list, and `push`, `size`, `remove`, and `swapRemove` grow, measure, and shrink it; a position outside stops the program |
+| Range operations | A `List` has `appendRange`, `appendOwn`, `copyRange`, `sameRange`, `hashRange`, `sort`, `sortBy`, and `text`; each is generic but accepts only the element types its storage allows, a struct wrapping one of them included, and a range outside the list stops the program |
 | Size in the type | Required for uniform stride and therefore for cheap indexing, copying, embedding, and calls |

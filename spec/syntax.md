@@ -268,7 +268,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the **byte primitive** `@primitives$U8`, an unsigned 8-bit integer, the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, the worker pool primitive `@primitives$WorkerPool` and its `@primitives$EventSource` ([`concurrency.md`](concurrency.md) §6), opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the **byte primitive** `@primitives$U8`, an unsigned 8-bit integer, the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, the byte set `@primitives$ByteSet` ([`types.md`](types.md) §2.12), the worker pool primitive `@primitives$WorkerPool` and its `@primitives$EventSource` ([`concurrency.md`](concurrency.md) §6), opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
@@ -276,12 +276,13 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 - `@runtime$` holds the **runtime types** `@runtime$Console` and `@runtime$Runtime` and their methods ([`effects.md`](effects.md) §6.6).
 - `@program$` holds the running program's own instances of those types, `@program$console` and `@program$runtime`.
 
-An intrinsic operation has one signature, with four exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
+An intrinsic operation has one signature, with five exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
-- intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
+- intrinsic methods and subscripts that share a name on different types, since a method's or a subscript's subject is one of its parameters ([`generics.md`](generics.md) §8.6);
 - the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
-- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and, for a scalar primitive, one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9).
+- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and, for a scalar primitive, one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9);
+- the anonymous constructor of `@primitives$String`, with one signature from its literal's concept and one from each scalar primitive ([`types.md`](types.md) §2.11).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 

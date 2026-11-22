@@ -24,10 +24,10 @@ Each rule is specified in exactly one document, the rule's canonical home; every
 
 | Document | Purpose |
 |---|---|
-| [`types.md`](types.md) | Fundamental types, value/reference types, fields, constructors, implicit conversions, and `type`/`alias` declarations |
+| [`types.md`](types.md) | Fundamental types, value/reference types, fields, constructors, implicit conversions, `type`/`alias` declarations, and the string primitive's numbers, bytes, and byte sets |
 | [`adt.md`](adt.md) | Enums, variants, the struct/variant symmetry, pattern matching, `match`, and enum maps |
 | [`functions.md`](functions.md) | Methods, free functions, subscripts, overload resolution, function values, and lambdas |
-| [`generics.md`](generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array`, `ArrayRef`, `List`, and `ListRef` container primitives |
+| [`generics.md`](generics.md) | Unified type parameters, `<>` type expressions, constructor calls, and the `Array`, `ArrayRef`, `List`, and `ListRef` container primitives and their operations |
 | [`memory.md`](memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`lifetimes.md`](lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
 | [`effects.md`](effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, capability wiring, and compile-time evaluation, implicit and marked with `comptime` |
