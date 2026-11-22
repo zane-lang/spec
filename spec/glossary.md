@@ -378,6 +378,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It names what the rule forbids: an argument that grows each time the type comes back to itself.
 - **Canonical home:** [`generics.md`](generics.md) §2.4; its relation to boxing in [`adt.md`](adt.md) §4
 
+### 3.48 byte primitive
+
+- **Meaning:** `@primitives$U8`, an unsigned 8-bit integer from 0 to 255. It is built from `@concepts$Int`, converts to the integer scalars exactly and from them by `wrap`, and has `equal` and `lessThan` but no arithmetic. `core` declares the storage type `U8` over it.
+- **Why this name:** A byte is the unit of storage it occupies, and *primitive* places it beside the scalar and string primitives; it is not a scalar primitive, since it has no arithmetic of its own.
+- **Canonical home:** [`syntax.md`](syntax.md) §2.7; conversions in [`types.md`](types.md) §2.9
+
 ---
 
 ## 4. Packages, Operators, and Versioning

@@ -165,7 +165,7 @@ EnumName.property FieldType {
 
 ### 2.1 Fundamental types
 
-`Int`, `Float`, `I32`, `F32`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, `ListRef<T>`
+`Int`, `Float`, `I32`, `F32`, `U8`, `Bool`, `String`, `Unit`, `Array<T, n>`, `ArrayRef<T, n>`, `List<T>`, `ListRef<T>`
 
 These are the types the `core` package declares. They are reached through an import like any other package's members ([`packages.md`](packages.md) §3.3), so `import core` writes them `core$Int` and `import core$` writes them unqualified. See [`types.md`](types.md) §2.6 for their semantics.
 
@@ -268,7 +268,7 @@ A **verb** — a function, method, or constructor — has no `<>` header. It int
 
 An **intrinsic** is anything reached through `@`: a type, operation, or instance the compiler supplies rather than a package declares. The `@` namespaces are the **intrinsic namespaces**, and each holds one kind of intrinsic:
 
-- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, the worker pool primitive `@primitives$WorkerPool` and its `@primitives$EventSource` ([`concurrency.md`](concurrency.md) §6), opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
+- `@primitives$` holds **storage primitives**: the **scalar primitives** `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64` — 32- and 64-bit signed integers and IEEE 754 floats — the **byte primitive** `@primitives$U8`, an unsigned 8-bit integer, the machine-word `@primitives$Bool`, the value-type string primitive `@primitives$String`, the container primitives of §2.6, the worker pool primitive `@primitives$WorkerPool` and its `@primitives$EventSource` ([`concurrency.md`](concurrency.md) §6), opaque runtime primitives used by fundamental types, and the unit type `@primitives$Unit`, whose one value is written `@primitives$Unit()`. An intrinsic that returns nothing, or aborts with nothing, uses `@primitives$Unit`.
 - `@concepts$` holds **compiler concept types**, used for source literals and for source constructs that are not storage (§2.8).
 - `@operators$` holds the **machine operations**: the arithmetic, comparisons, Boolean connectives, and string join on storage primitives that a package writes its operators over ([`operators.md`](operators.md) §2.6).
 - `@math$` holds the **math functions** on scalar primitives: bit operations, square root, rounding, trigonometry, and the rest ([`math.md`](math.md) §2).
@@ -281,7 +281,7 @@ An intrinsic operation has one signature, with four exceptions, each an overload
 - intrinsic methods that share a name on different types, since a method's subject is one of its parameters;
 - the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
-- the constructors of a scalar primitive: the anonymous one, with one signature from its literal's concept and one from each scalar it converts from exactly, and each named one, with one signature per scalar it converts from ([`types.md`](types.md) §2.9).
+- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
 
@@ -305,9 +305,10 @@ These compiler-provided concept types represent source literals before they are 
 
 The **leaf** concept types — `Type`, `@concepts$Int`, and `@concepts$Float` — each represent a single compile-time value wherever they appear, including as an argument to a verb. `@concepts$String` instead carries literal text and optional interpolation ([`types.md`](types.md) §2.8); an interpolation may be a runtime value. The entries of an array or map literal are ordinary expressions and may likewise be runtime values, so `@concepts$Array<T, n>` and `@concepts$Map<K, V>` carry no compile-time guarantee; a block argument (§2.12) is not a value at all.
 
-A number or string literal becomes storage through a storage primitive's constructor from its concept (see [`types.md`](types.md) §2.7). Each primitive has one, and the string primitive a second, `escaped`. An integer literal may become either integer primitive, a float literal either float primitive:
+A number or string literal becomes storage through a storage primitive's constructor from its concept (see [`types.md`](types.md) §2.7). Each primitive has one, and the string primitive a second, `escaped`. An integer literal may become either integer primitive or the byte primitive, a float literal either float primitive:
 
 ```zane
+@primitives$U8(value @concepts$Int)
 @primitives$I32(value @concepts$Int)
 @primitives$I64(value @concepts$Int)
 @primitives$F32(value @concepts$Float)

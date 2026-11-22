@@ -148,6 +148,8 @@ On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact 
 
 On `@primitives$F32` and `@primitives$F64`, each operation is IEEE 754's: `add`, `multiply`, and `divide` are its addition, multiplication, and division, rounded to nearest with ties to even as a conversion is ([`types.md`](types.md) §2.9), and `negate` flips the sign, of a zero and a NaN too. So an operation on infinities gives what IEEE 754 gives, an infinity or a NaN, a division of a nonzero value by zero gives an infinity of the quotient's sign, zero divided by zero gives a NaN, and an operation with a NaN operand gives a NaN. `equal` and `lessThan` are IEEE 754's quiet comparisons: both are false when either operand is a NaN, so a NaN equals nothing, itself included, and `equal` holds of a positive and a negative zero.
 
+The byte primitive `@primitives$U8` has `equal` and `lessThan`, in the signatures above with `S` as `@primitives$U8`, and no arithmetic operation. `lessThan` reads both bytes as unsigned integers.
+
 `@primitives$Bool` and `@primitives$String` have machine operations of their own:
 
 | Operation | Signature |
@@ -316,7 +318,7 @@ An operator token may appear only in operator position; it has no value form. Th
 | Derived operators | `-`, `~=`, `>`, `<=`, and `>=` have fixed desugarings and cannot be implemented independently. |
 | Operand order | The operands of every operator are evaluated left to right, in written order, whatever position the desugaring passes them in. |
 | Operator definitions | An implementation must live in the home package of at least one operand type; operators over the fundamental types alone live in `core`, and a storage primitive has none. |
-| Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `conjoin`, `disjoin`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
+| Machine operations | `@operators$` supplies `add`, `multiply`, `divide`, `negate`, `equal`, and `lessThan` on each scalar primitive, `equal` and `lessThan` on `@primitives$U8`, `conjoin`, `disjoin`, `not`, and `equal` on `@primitives$Bool`, and `concat` and `equal` on `@primitives$String`; each takes operands of one type. |
 | Grouping | Precedence and left associativity are fixed by syntax; parentheses group explicitly. |
 | Intersection and union | `and` returns the part two values have in common and `or` returns everything either value covers, binding below every comparison with `and` tighter; `Bool` reads them as conjunction and disjunction, and the numeric types implement neither. Both operands are evaluated. |
 | Operands | An operand is never converted; an overload accepts a literal by declaring its concept type, and `core` declares one for each side of each operator over a fundamental type. `~` on a numeric literal is the literal of the opposite sign. |
