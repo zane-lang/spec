@@ -619,6 +619,8 @@ row!sort();                                               // 1, 1, 4, 4
 same @primitives$Bool = row:sameRange(@primitives$I64(1), row, @primitives$I64(2), @primitives$I64(1));   // true
 ```
 
+> **Story:** [`stories/generics.md`](../stories/generics.md#the-list-primitives-operations-are-specified-and-a-position-outside-a-list-stops-the-program) — "The list primitives' operations are specified, and a position outside a list stops the program".
+
 ---
 
 ## 9. Deferred Features

@@ -375,6 +375,8 @@ missing Int = list[3];            // stops the program: list has no position 3
 
 Each intrinsic that checks a position or a range names it where it is specified, along with any exception it makes: `findAny` and `findPair` give `0` for a `count` below `1` instead of checking their range ([`types.md`](types.md) §2.12).
 
+> **Story:** [`stories/generics.md`](../stories/generics.md#the-list-primitives-operations-are-specified-and-a-position-outside-a-list-stops-the-program) — "The list primitives' operations are specified, and a position outside a list stops the program".
+
 ---
 
 ## 6. Summary

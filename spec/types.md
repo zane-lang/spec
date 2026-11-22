@@ -346,6 +346,8 @@ A candidate is kept when it **spells the value**: the number it writes, rounded 
 
 Scientific notation is not part of a float literal ([`lexical.md`](lexical.md) §7), so `parseF64` (§2.10) does not read a text in that notation back.
 
+> **Story:** [`stories/types.md`](../stories/types.md#the-string-primitives-bytes-and-numbers-are-specified-and-a-byte-set-becomes-its-own-primitive) — "The string primitive's bytes and numbers are specified, and a byte set becomes its own primitive".
+
 ### 2.12 A string primitive's bytes and byte sets
 
 A string primitive is a sequence of bytes, and three methods read them:
@@ -385,6 +387,8 @@ Two methods search a string for the bytes in a set:
 vowels @primitives$ByteSet = flags:byteSet();      // flags marks a, e, i, o and u
 at @primitives$I64 = word:findAny(@primitives$I64(1), word:byteCount(), vowels);   // 4, the e
 ```
+
+> **Story:** [`stories/types.md`](../stories/types.md#the-string-primitives-bytes-and-numbers-are-specified-and-a-byte-set-becomes-its-own-primitive) — "The string primitive's bytes and numbers are specified, and a byte set becomes its own primitive".
 
 ---
 
