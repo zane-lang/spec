@@ -42,7 +42,7 @@ Per-member associated data is attached externally through an enum map (§6), whi
 
 ### 2.2 Enum constructors
 
-An enum may declare constructors like any other type ([`types.md`](types.md) §3.1). An enum constructor returns one of the enum's members; an enum has no fields, so its constructor uses no `init{ }`.
+An enum may declare constructors like any other type ([`types.md`](types.md) §3.1). An enum constructor returns one of the enum's members; an enum has no fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
 
 ```zane
 type Colors = enum [ red, green, blue ];
@@ -169,7 +169,7 @@ three Countdown = Countdown.more(two);  // legal: `two` is copied, and is still 
 
 ### 3.3 Variant constructors
 
-A variant may declare constructors like any other type ([`types.md`](types.md) §3.1). A variant constructor returns a case of the variant, built by naming it (§3.2); a variant has cases, not fields, so its constructor uses no `init{ }`.
+A variant may declare constructors like any other type ([`types.md`](types.md) §3.1). A variant constructor returns a case of the variant, built by naming it (§3.2); a variant has cases, not fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
 
 ```zane
 type Countdown = variant { done Unit; more Countdown; }

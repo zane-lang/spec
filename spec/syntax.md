@@ -557,6 +557,8 @@ p TypeName.fromParts(arg)
 
 ### 3.4 Field constructors
 
+A field constructor is declared only on a `struct` or `#struct` ([`types.md`](types.md) §3.3).
+
 ```zane
 TypeName{
     fieldA FieldType;

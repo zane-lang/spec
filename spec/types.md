@@ -478,7 +478,7 @@ Vector{x Int; y Int;} {
 }
 ```
 
-This form is the canonical constructor syntax when the constructor parameters map directly to fields. A field-constructor entry of a reference type is a parameter like any other ([`memory.md`](memory.md) §2.9): an entry that fills an owning field is written `^T` and takes the owner, and one that fills an `&` field is written `&T`.
+This form is the canonical constructor syntax when the constructor parameters map directly to fields. Only a type with fields — a `struct` or `#struct` — declares a field constructor; an `enum` or `variant` constructor is positional (§3.2). A field-constructor entry of a reference type is a parameter like any other ([`memory.md`](memory.md) §2.9): an entry that fills an owning field is written `^T` and takes the owner, and one that fills an `&` field is written `&T`.
 
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
@@ -518,7 +518,7 @@ d Vector2.diagonal(Float(3.0)); // d : Vector2
 
 A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and, for a type with fields, `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
 
-- declares positional parameters or the field-header form (§3.2, §3.3) like any constructor;
+- declares positional parameters or, on a `struct`, the field-header form (§3.2, §3.3) like any constructor;
 - overloads by parameter types, alongside the anonymous constructor and the other named ones;
 - is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
 
@@ -918,7 +918,7 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |
 | Constructor | Package-scope verb named after the type, declarable on every mould; the written type name is the return type; no `this`; a `struct` constructor returns an `init{...}`, an `enum` constructor a member, a `variant` constructor a case |
 | Named constructor | `Type.name(...)`; yields the base type; never `implicit`; its name differs from every member and case of its type |
-| Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
+| Field constructor | Declared only on a `struct` or `#struct`; declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, the `init{field = value;}` inside a constructor body, or operator operands; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | `^T` constructor parameter | Takes a roaming owner or a temporary; callee moves it into an owning field |
