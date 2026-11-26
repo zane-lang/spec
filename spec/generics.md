@@ -17,7 +17,8 @@ Zane treats a type as something that is *executed*. A type definition takes para
 - **`Inferring fills in a type's value`.** Every symbol has a value and a type, and a type is itself a symbol — its value is a type, its type is the concept `Type`. An explicit parameter (`T Type`) supplies that type-value directly; an inferred parameter (`x T Type`) leaves it blank, and the compiler reads it off the value argument (§3.1).
 - **`Parameters are concept-typed`.** A parameter is declared `name Type` (a type parameter) or `name @concepts$Int` (a number parameter). `Type` and `@concepts$Int` are compiler concept types; the case of a parameter's identifier follows the parameter's concept — `T` is a type, `n` is a number.
 - **`References are bare`.** Inside a body or a nested type, a parameter is referenced by its bare name (`T`, `n`). There is no sigil: a name is *introduced* once — by a type's header or by a verb's first inline occurrence carrying its concept — and the casing rule keeps the two kinds distinct.
-- **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type, and reaches it only by passing it on (§3.7).
+- **`A subject may be a parameter`.** A method with the subject `this S Type` applies to a subject of any type (§3.7).
+- **`A veiled value is reached through verbs`.** A value whose type is a type parameter is a **veiled value**. A generic body may hold one and call verbs on it, but never reads its fields or otherwise depends on its mould (§3.8).
 - **`<>` describes architecture, `()` constructs values`.** A `<>` type expression is a compile-time description that lives in the type system. A `()` call is a runtime construction that lives in the value system. They are different mechanisms, not two syntaxes for one idea.
 - **`No type arguments at calls`.** A constructor or function is always called by its bare name with `()`. Type and number parameters reach it either inferred from the value arguments (inline-introduced parameters) or passed as ordinary arguments (`Type`/`@concepts$Int` value parameters).
 - **`Four container primitives`.** `@primitives$Array<T, n>` is `n` contiguous elements of type `T` and a value type; `@primitives$ArrayRef<T, n>` has the same layout and is a reference type. `@primitives$List<T>` and `@primitives$ListRef<T>` are their dynamically sized counterparts, a value type and a reference type. `core` declares `Array`, `ArrayRef`, `List`, and `ListRef` over them. Each has a subscript counted from 1, a list grows and shrinks by `push`, `remove`, and `swapRemove`, and a `List` copies, compares, hashes, and sorts ranges of its elements (§8.6).
@@ -259,9 +260,57 @@ machine!work(Bool(this Machine) mut { ... });   // S is Machine
 
 The introduction carries no passing marker, because the subject takes none ([`syntax.md`](syntax.md) §3.2): `this S Type` is a borrow of the caller's value or owner, mutable when the method is `mut` ([`functions.md`](functions.md) §2.4). `S` may be a value type or a reference type, and §3.6 applies to it as to any inferred parameter, with the subject expression as its origin.
 
-The body knows nothing of `S` beyond what the signature states, so it reaches the subject only by passing it on: to a function value whose type names `S`, to an intrinsic generic over its subject ([`control-flow.md`](control-flow.md) §4.1), or to another verb generic over `S`. Such a method has no declaring subject type, so method lookup reaches it through the spelling the file has for its package ([`functions.md`](functions.md) §6.1).
+The subject is a veiled value (§3.8), so the body reaches it only through verbs: a method on it, an operator, a function value whose type names `S`, an intrinsic generic over its subject ([`control-flow.md`](control-flow.md) §4.1), or another verb generic over `S`. Such a method has no declaring subject type, so method lookup reaches it through the spelling the file has for its package ([`functions.md`](functions.md) §6.1).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-methods-subject-may-be-a-type-parameter) — "A method's subject may be a type parameter".
+
+### 3.8 A veiled value is reached only through verbs
+
+A **veiled value** is a value whose type is a type parameter: `x` in `Float read(x T Type)`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
+
+1. **Hold it.** The body may bind it, store it in a slot of type `T`, return it, and pass it on.
+2. **Reach it through a verb or a subscript.** The body may call a method with it as the subject (`x:level()`, `x!reset()`), pass it to a function (`clamp(x)`), apply an operator to it (`x + y`, `x == y`), read a subscript of it (`x[i]`), and construct a value of its type (`T(...)`, `T.name(...)`).
+
+Every other use of a veiled value is a compile-time error, reported where the body writes it, whether or not any call instantiates the body:
+
+- reading or writing a field (`x.value`);
+- reading an enum map property ([`adt.md`](adt.md) §6), `x.colorName`;
+- naming an enum member or a variant case through the parameter, `T.red` or `T.done(Unit())`;
+- a `match` on the value ([`adt.md`](adt.md) §5);
+- calling the value as a function value, `x(1)`.
+
+```zane
+type Knob = struct { value Float; }
+Float level(this Knob) => this.value;
+
+Float read(x T Type) => x:level();   // legal: a method call
+Float peek(x T Type) => x.value;     // error: a field of a veiled value
+T twice(x T Type) => x + x;          // legal: an operator
+```
+
+The error on `peek` holds even when every caller passes a `Knob`: the rule judges a body by what it asks of `T`, never by the types that fill it. A body that needs a field's value calls a method that the type's package declares, such as `level` above. Field visibility stays the type package's decision ([`types.md`](types.md) §2.3), and every mould can meet the body's demands, because every mould has verbs: methods and functions ([`functions.md`](functions.md) §6.3), operators ([`operators.md`](operators.md) §2.2), and constructors ([`types.md`](types.md) §3.1).
+
+The rule covers only values whose whole type is a type parameter. A generic type's own structure is known to its body, so the body keeps full access to it:
+
+- In a method of `Box<T>`, `this.value` reads a field of `Box`. The field's type is `T`, so the result is a veiled value: `this.value:weight()` is legal and `this.value.weight` is an error.
+- A value of type `Pair<T>` or `List<T>` is not veiled; `p.first` and `list[i]` are legal, and only what they yield falls under the rule.
+- A parameter of function type, such as `make` in `ArrayRef.fill(n @concepts$Int, make ^T Type[Int])` (§3.2), is not veiled, so `make(i)` is an ordinary call of a function value.
+- A number parameter resolves to a number value in body positions (§3.5) and is not veiled.
+
+Each kind of verb on a veiled value resolves per instance, against the concrete type that fills the parameter, and each searches its own place:
+
+| Verb | Where the compiler looks | Can the type argument's package supply it? |
+|---|---|---|
+| Method, `x:level()` | the home package of the subject's type first ([`functions.md`](functions.md) §6.1) | yes |
+| Operator, `x + y` | the operands' home packages ([`operators.md`](operators.md) §2.2) | yes |
+| Constructor, `T(...)`, `T.name(...)` | the constructors of the type that fills `T` ([`types.md`](types.md) §3.1) | yes |
+| Function, `clamp(x)`, `util$clamp(x)` | the generic body's own package and the spellings its file has ([`packages.md`](packages.md) §3.6) | no |
+
+A function declared in the type argument's own package is therefore out of the body's reach, and a body that wants the type's own behaviour calls a method: `x:f()` already searches the home package of `x`'s type first. When the concrete type has no verb that matches a call, the instantiation is ill-formed and the error is reported at the type's origin, with the path from there to the call, as §3.6 requires for a wrong-kind type argument.
+
+The rule fixes what a body may ask of its type arguments and leaves open how a compiler checks and compiles it. Under it, a future constraint on a type parameter (§9) is a list of verb signatures, and a generic function value's representation (§9) needs one entry per verb and never a type argument's field layout.
+
+> **Story:** [`stories/generics.md`](../stories/generics.md#only-verbs-reach-a-veiled-value) — "Only verbs reach a veiled value".
 
 ---
 
@@ -650,7 +699,8 @@ The following are intentionally not specified in this version:
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
 | Inferred parameter | Introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type; deduced from the value arguments at the call |
-| Type-parameter subject | `this S Type` introduces `S` as the subject's whole type, so the method applies to a subject of any type; the body only passes the subject on; lookup reaches it through the spelling the file has for its package |
+| Type-parameter subject | `this S Type` introduces `S` as the subject's whole type, so the method applies to a subject of any type; the subject is a veiled value; lookup reaches it through the spelling the file has for its package |
+| Veiled value | A value whose type is a type parameter; a generic body holds it, calls methods, functions, operators and constructors on it, and reads its subscripts; a field read, enum map read, member or case name, `match`, or call as a function value on it is an error where the body writes it; a missing verb is reported at the type's origin |
 | Explicit parameter | Declared as a `Type`/`@concepts$Int` value parameter in `()`; passed positionally (`Vector(Int)`, `Array(Int, 10000)`) |
 | Concept-typed literal | Must be wrapped in its destination type before driving inference |
 | Wrong-kind type argument | A type that cannot fill the slot its parameter reaches, such as a reference type in a value mould's field, is reported at its origin: the explicit argument, or the value argument an inferred type is read from; the diagnostic names the path from there to the rejecting slot |

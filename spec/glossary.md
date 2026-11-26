@@ -390,6 +390,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It is a set whose members are bytes, and nothing more: the name leaves out the lookup table the compiler lays it out as.
 - **Canonical home:** [`types.md`](types.md) §2.12
 
+### 3.50 veiled value
+
+- **Meaning:** A value whose type is a type parameter, inside the generic body that declares the parameter: `x` in `Float read(x T Type)`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors; a field read, an enum map read, naming a member or case, a `match`, or a call as a function value on it is an error.
+- **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
+- **Canonical home:** [`generics.md`](generics.md) §3.8
+
 ---
 
 ## 4. Packages, Operators, and Versioning
