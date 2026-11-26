@@ -182,13 +182,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.15 variant (sum mould)
 
-- **Meaning:** A `variant` is a **sum mould**: a value of the type it declares holds exactly one of its named members at a time. Its body grammar is identical to a `struct` — the product mould — with the keyword flipping product into sum. Reading a member is partial and therefore abortable.
+- **Meaning:** A `variant` is a **sum mould**: a value of the type it declares holds exactly one of its named members at a time. Its body grammar is identical to a `struct` — the product mould — with the keyword flipping product into sum. Reading a member is partial and therefore abortable. A variant value is built by naming a case, or by a constructor the variant declares, which returns a case.
 - **Why this name:** "Variant" is the established name for a tagged sum of alternatives, and it reads as a peer of `struct` since the two share one body grammar.
 - **Canonical home:** [`adt.md`](adt.md) §3
 
 ### 3.16 enum (uniform peers)
 
-- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map.
+- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map. An enum may declare constructors, each returning a member.
 - **Why this name:** "Enum" matches the common meaning of an enumeration of equal-rank constants, and the spec reserves it for that uniform-peer role rather than overloading it with the sum-type role given to `variant`.
 - **Canonical home:** [`adt.md`](adt.md) §2
 
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.22 verb
 
 - **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
-- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
+- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in a `return` of its type's value, an `init{}` for a `struct`) counts and is indistinguishable from a builder helper apart from its name, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 settled owner
@@ -248,7 +248,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.26 capability marker
 
-- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and, for a type with fields, unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 

@@ -13,7 +13,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 - **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
 - **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the subject.
-- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants the subject call (a method); naming the verb after a type grants `init{ }` and an implicit return type (a constructor). See §8.
+- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants the subject call (a method); naming the verb after a type grants an implicit return type and, for a type with fields, `init{ }` (a constructor). See §8.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
@@ -459,7 +459,7 @@ Every callable in Zane is a verb (§1). Whether a declaration is a function, a m
 | Marker | Verb kind | Capability unlocked |
 |---|---|---|
 | First parameter named `this` | Method | `:` / `!` call syntax on a borrowed subject |
-| Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** |
+| Name is a type | Constructor | Return type is the named type (no return annotation); `init{ }` for field **initialization** when the type has fields |
 | Name is an operator token | Operator | Operator-position calls |
 | No name | Lambda | Anonymous function value |
 | Plain identifier, none of the above | Function | No special capability |
@@ -468,7 +468,7 @@ The markers are largely independent — a lambda may still declare a `this` subj
 
 ### 8.2 `init{ }` is to constructors what `this` is to methods
 
-The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and it unlocks `init{ }` (see [`types.md`](types.md) §3). This mirrors methods precisely: naming the first parameter `this` is the only marker that makes a verb a method, and that token alone unlocks the subject call (§2.2).
+The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and, when the type has fields, it unlocks `init{ }` (see [`types.md`](types.md) §3). Every mould may declare constructors; an `enum` or `variant` constructor has no fields to fill and returns a member or a case instead (see [`types.md`](types.md) §3.1). This mirrors methods precisely: naming the first parameter `this` is the only marker that makes a verb a method, and that token alone unlocks the subject call (§2.2).
 
 So `init{ }` is a capability gated by a naming convention, exactly as the subject call is. A plain function cannot use `init{ }` for the same reason it cannot be called on a subject: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
 
@@ -495,7 +495,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 | Concept | Rule |
 |---|---|
 | Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
-| Capability markers | `this` first → method (subject call); name is a type → constructor (`init{ }`, implicit return); operator token as name → operator; no name → lambda |
+| Capability markers | `this` first → method (subject call); name is a type → constructor (implicit return, and `init{ }` for a type with fields); operator token as name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |
 | Read-only method | Called with `:`; may read but not write `this` |

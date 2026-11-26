@@ -534,11 +534,16 @@ TypeName<T>(param T Type, ...) { return init{ field = expr; ... } }
 TypeName<T, n>(param Container<T Type, n @concepts$Int>, ...) { return init{ field = expr; ... } }
 ```
 
-Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
+Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type. A `struct` constructor's body constructs the value with `init{ ... }`; an `enum` constructor's body returns a member, and a `variant` constructor's body returns a case ([`types.md`](types.md) §3.1):
+
+```zane
+EnumName() => EnumName.member
+VariantName() => VariantName.case(payload)
+```
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
 
-A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
+A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type. Its name **MUST** differ from every member and case of the type (see [`types.md`](types.md) §3.4):
 
 ```zane
 TypeName.zeros() => init{ field = expr; ... }
