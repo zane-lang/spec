@@ -18,7 +18,8 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`One spelling per entity`.** The spelling an import gives an entity is the only way the file may write that entity.
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
-- **`Programs and tests start a build`.** A program or test package is the root of its build: it declares `main` and alone reaches the program's console and runtime.
+- **`Programs, plugins and tests start a build`.** A program, plugin, or test package is the root of its build. A program or test package declares `main`; a plugin package declares none and builds a dynamic library that a host loads (§9).
+- **`Exports are entry points`.** A package-scope lambda marked `export "cName"` is a C function a host may call. It has the rights `main` has, and only a root package's code calls it (§9.2, §9.4).
 
 ---
 
@@ -29,7 +30,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 A **project** is the directory that holds a `zane.coda` manifest ([`dependencies.md`](dependencies.md) §2.1). Its packages live in three directories beside the manifest:
 
 - Each directory directly in `lib/` is a **library package**, and a library package may hold subpackages (§2.3).
-- Each directory directly in `bin/` is a **program package**: the entry point of one program (§6).
+- Each directory directly in `bin/` is a **program package**, the entry point of one program (§6), or a **plugin package**, which builds a dynamic library for a host to load (§9). A `bin/` package that declares `main` is a program package; one that declares no `main` is a plugin package.
 - `test/` holds the project's **test packages** (§7).
 
 ```zane
@@ -264,11 +265,11 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 ## 6. The Root Package
 
-### 6.1 Program and test packages are roots
+### 6.1 Program, plugin, and test packages are roots
 
-Every build that produces a program has one **root package**, from which every other package of the build is reached: the program package it builds, or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
+Every build that produces a program or a dynamic library has one **root package**, from which every other package of the build is reached: the program package it builds, the plugin package of a dynamic-library build (§9.1), or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
 
-Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it.
+Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it. An exported lambda is the one exception: wherever it is declared, it has the rights of root-package code (§9.4).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
@@ -278,7 +279,7 @@ A program starts at `main()`, which the root package declares in any of its sour
 
 The program itself calls `main`, so it is the caller that handles an abort of `main` (§6.3). The one abort type `main` may declare is `@primitives$String`, the message the program reports. Any other abort type on `main` is a compile-time error.
 
-Every program package and every test package **MUST** declare `main`. A package without it is a compile-time error.
+Every program package and every test package **MUST** declare `main`. A test package without it is a compile-time error, and a `bin/` package without it is a plugin package (§9.1). A plugin package has no `main`, because its host calls its exports instead.
 
 ```zane
 package viewer;
@@ -301,6 +302,8 @@ A program ends with an **exit status**, a number it hands to whatever started it
 - **`main` returns.** The status is `0`. A program whose printed output could not all be written ends with status `1` instead.
 - **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.
 - **The program stops.** A stop, such as an index out of range or a call that nests too deep ([`memory.md`](memory.md) §3.7), is not an abort, and no handler sees it. The status is not `0`.
+
+A dynamic library runs inside its host's process, so for a dynamic library the program is that process (§9.1). A stop inside a dynamic library ends the host's whole process, as a stop ends a program. An abort never reaches the host, because an exported lambda declares no abort type (§9.2).
 
 ```zane
 Unit?@primitives$String main() {
@@ -338,7 +341,7 @@ Every source file of a test package **MUST** begin with the declaration `package
 
 ### 7.2 Each test package is the root of its own test build
 
-A **test build** compiles one test package with the library packages it reaches and runs the result. The test build passes when the program ends with status `0`, and fails otherwise (§6.3). The test package is its root package (§6.1): it declares `main`, and it alone reaches `@program$`. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
+A **test build** compiles one test package with the library packages it reaches and runs the result. The test build passes when the program ends with status `0`, and fails otherwise (§6.3). The test package is its root package (§6.1): it declares `main`, and apart from exported lambdas (§9.4) it alone reaches `@program$`. A test package may carry `export` lines (§9.3); the test build then gives the exports they name C symbols, so the test package's own C code can play a host and call them. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
 
 A library package under test is a package of its own, distinct from every release of the same project that the build's dependency graph also reaches. When a dependency of the test package itself depends on the project, the two copies coexist in one program as two versions do ([`dependencies.md`](dependencies.md) §11), and a type of one is not a type of the other.
 
