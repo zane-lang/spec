@@ -415,6 +415,7 @@ Countdown() => Countdown.done(Unit());
 Because every mould may declare constructors, a generic body may construct a value of a type parameter (`T()`) whatever mould the type argument has, as long as the argument's type declares a matching constructor ([`generics.md`](generics.md) §5).
 
 > **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-what-it-is-not-how-it-is-built) — "Naming a type by what it is, not how it is built".
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.2 Positional constructors
 
@@ -538,6 +539,7 @@ shade Colors.background();   // shade : Colors, holding the member blue
 A named constructor shares the `Type.member` surface with an enum member (`Colors.red`, [`adt.md`](adt.md) §2) and with a variant case (`Expr.intLit("5")`, [`adt.md`](adt.md) §3.2). A named constructor's name **MUST** therefore differ from every member and every case of its type, so that `Type.member` names exactly one of them: `Colors.background` is legal beside the member `Colors.red`, and a constructor named `Colors.red` is an error. Naming a member or a case stays built-in syntax with no verb behind it; a named constructor is a declared verb that shares its spelling.
 
 > **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.5 Implicit field access in constructor calls
 

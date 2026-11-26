@@ -56,6 +56,8 @@ shade Colors.background();    // shade : Colors, holding blue
 
 A named enum constructor's name **MUST** differ from every member of the enum, so that `Colors.background` names a constructor and `Colors.red` a member, never both ([`types.md`](types.md) §3.4). Naming a member stays built-in syntax with no verb behind it; an enum constructor is a declared verb that returns a member.
 
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
+
 ---
 
 ## 3. Variants
@@ -180,6 +182,8 @@ one Countdown.once();       // one : Countdown, with more live
 ```
 
 A named variant constructor's name **MUST** differ from every case of the variant, so that `Countdown.once()` calls a constructor and `Countdown.more(n)` names a case, never both ([`types.md`](types.md) §3.4). A case form stays built-in syntax; a variant constructor is a declared verb that returns one.
+
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ---
 
