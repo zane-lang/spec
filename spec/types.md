@@ -518,7 +518,7 @@ d Vector2.diagonal(Float(3.0)); // d : Vector2
 
 A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and, for a type with fields, `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
 
-- declares positional parameters or, on a `struct`, the field-header form (§3.2, §3.3) like any constructor;
+- declares positional parameters or, on a `struct` or `#struct`, the field-header form (§3.2, §3.3) like any constructor;
 - overloads by parameter types, alongside the anonymous constructor and the other named ones;
 - is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
 

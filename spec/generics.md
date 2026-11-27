@@ -308,7 +308,7 @@ Each kind of verb on a veiled value resolves per instance, against the concrete 
 | Constructor, `T(...)`, `T.name(...)` | the constructors of the type that fills `T` ([`types.md`](types.md) §3.1) | yes |
 | Function, `clamp(x)`, `util$clamp(x)` | the generic body's own package and the spellings its file has ([`packages.md`](packages.md) §3.6) | no |
 
-A function declared in the type argument's own package is therefore out of the body's reach, and a body that wants the type's own behaviour calls a method: `x:f()` already searches the home package of `x`'s type first. When the concrete type has no verb that matches a call, the instantiation is ill-formed, and the compiler reports the error at the type's origin, with the path from there to the call, as §3.6 requires for a wrong-kind type argument.
+A function is therefore never found through the type argument: one declared in the type argument's own package is out of the body's reach unless the body's file imports that package itself, and a body that wants the type's own behaviour calls a method: `x:f()` already searches the home package of `x`'s type first. When the concrete type has no verb that matches a call, the instantiation is ill-formed, and the compiler reports the error at the type's origin, with the path from there to the call, as §3.6 requires for a wrong-kind type argument.
 
 The rule fixes what a body may ask of its type arguments and leaves open how a compiler checks and compiles it. Under it, a future constraint on a type parameter (§9) is a list of verb signatures, and a generic function value's representation (§9) needs one entry per verb and never a type argument's field layout.
 
@@ -364,7 +364,7 @@ T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing int
                                                // so the bare names are undefined
 ```
 
-So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's or a package's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
+So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`) or in the header of a parameterized package that declares the verb (`App`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's or a package's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
 
 ---
 
@@ -681,7 +681,7 @@ The following are intentionally not specified in this version:
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
 - map types — the map **literal form** is specified ([`syntax.md`](syntax.md) §2.10), but a map type, whether a map preserves any order, and what a map requires of a key type are all open
 - named lane access (`.x`, `.y`, `.z`, `.w`)
-- phantom type parameters — an introduced parameter (a type's or a package's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
+- phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#deferred-what-the-model-promises-but-does-not-yet-deliver) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.

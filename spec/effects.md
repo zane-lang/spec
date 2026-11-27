@@ -188,7 +188,7 @@ An abortable marked call carries its `?` or `??` handler on the marked expressio
 
 ### 6.1 Capabilities must be passed or stored explicitly
 
-There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package: `@program$` (§6.6) and the foreign variables it declares ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
+There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package and by exported lambdas ([`packages.md`](packages.md) §8.4): `@program$` (§6.6) and foreign variables ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
 
 ### 6.2 Constructor injection is ordinary capability wiring
 

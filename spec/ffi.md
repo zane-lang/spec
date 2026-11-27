@@ -495,7 +495,7 @@ The state an outside handle refers to is capability-backed state, and a foreign 
 
 A call also reads and writes whatever the function values it passes read and write (§3.6), as the compiler derives it for any call through a function value ([`effects.md`](effects.md) §5.2, §5.5). So a call that passes no capability, but passes a function value that writes the console, writes the console.
 
-Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package, a foreign variable it declares; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
+Calls then follow the ordinary rules ([`effects.md`](effects.md) §3, §4). A read needs a verb that reaches the capability. A write needs the capability writable: in the root package or an exported lambda, a foreign variable it declares; elsewhere, a capability reached through `this` of a `mut` method, stored from a writable source ([`effects.md`](effects.md) §6.2).
 
 ```zane
 package time;
@@ -696,7 +696,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Writing a handle | A data handle only as the subject of a `mut` foreign method; an outside handle in a `mut` method on a foreign capability; everywhere else C receives a `const` pointer |
 | Null handle results | Abort with `Unit` when the verb declares it, and stop the program otherwise |
 | Foreign capability | A handle type without a free function, referring to a C global; made only by a foreign variable |
-| Foreign variable | `name T foreign "cGlobal"`, declared only in the root package, giving a handle to a global of `T`'s package that is not thread-local |
+| Foreign variable | `name T foreign "cGlobal"`, declared only in the root package or in the body of an exported lambda, giving a handle to a global of `T`'s package that is not thread-local |
 | Outside and data handles | A handle made by a method on a foreign capability is an outside handle, part of capability-backed state; any other is a data handle, program state |
 | Effects | A method on a foreign capability without `mut`: a read; with `mut`: a write; any other foreign verb: nothing outside the program |
 | Making an outside handle | Only a `mut` method on a foreign capability returns one |

@@ -43,7 +43,7 @@ car ^Car{id; seats;}                     // car ^Car = Car{id = id; seats = seat
 
 The two lambda forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
-The last form declares a **foreign variable**, whose value is a handle to a C global: it writes `foreign` and one string literal without interpolation, the global's symbol, in place of an initializer. Only the root package declares one ([`ffi.md`](ffi.md) §5.1).
+The last form declares a **foreign variable**, whose value is a handle to a C global: it writes `foreign` and one string literal without interpolation, the global's symbol, in place of an initializer. Only the root package and the body of an exported lambda declare one ([`ffi.md`](ffi.md) §5.1, [`packages.md`](packages.md) §8.4).
 
 Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
 
