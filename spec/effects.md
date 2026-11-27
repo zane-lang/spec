@@ -273,7 +273,7 @@ Multiple concurrent reads are legal. For external, capability-backed state a rea
 
 ### 8.3 Concurrent mutation is governed by the spawn rules
 
-Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, no two concurrent spawns may mutably borrow the same storage, and the spawning scope may not write an owner it lent a live spawn ([`concurrency.md`](concurrency.md) §4.3). A worker pool's element may be a reference type whose every `&` names a constant ([`concurrency.md`](concurrency.md) §6.4). A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
+Concurrent mutation is not a per-`mut`-call property; it is governed by the spawn rules in [`concurrency.md`](concurrency.md) §4. A spawned mutating call's subject **MUST** be a value type, no two concurrent spawns may mutably borrow the same storage, and the spawning scope may not write an owner it lent a spawn until its block drains ([`concurrency.md`](concurrency.md) §4.3). A worker pool's element may be a reference type whose every `&` names a constant ([`concurrency.md`](concurrency.md) §6.4). A value type's transitive alias-freedom (see [`memory.md`](memory.md) §2.10) is what lets the compiler settle the absence of a data race from the subject's type alone.
 
 ---
 

@@ -34,7 +34,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.3 call exit
 
-- **Meaning:** `@controlflow$exitFromCall()` makes the verb whose frame holds it an exiting verb: a call to that verb ends the current run of the innermost block the call is written in, and is legal only inside a block. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it ends the block of whoever calls it. A lambda's frame may not contain it.
+- **Meaning:** `@controlflow$exitFromCall()` makes the verb whose frame holds it an exiting verb: when it exits, it ends the current run of the innermost block argument around the call, and a call to it is legal only inside a block argument. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it ends the block of whoever calls it. A lambda's frame may not contain it.
 - **Why this name:** What the exit ends is reached from the call to the exiting verb, not from the intrinsic's own frame.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.2
 

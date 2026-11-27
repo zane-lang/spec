@@ -8,13 +8,13 @@ This document specifies how Zane branches and repeats. Neither is a language con
 
 ## 1. Overview
 
-Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run the handed statements conditionally, run them repeatedly, or end the run of the block that a call to the verb is written in, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
+Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run the handed statements conditionally, run them repeatedly, or end the run of the block argument around a call to the verb, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
 - **`Five control-flow intrinsics`.** `@controlflow$branch`, `@controlflow$repeat`, and `@controlflow$exitFromCall` act on blocks; `@controlflow$work` and `@controlflow$register` run a worker. They are the whole of the control flow the language supplies, and they are stated over storage primitives, function values, and type parameters, so none depends on a package.
 - **`A loop is bounded, a worker names its recurrence`.** `repeat` takes a count, so no loop built on it repeats without a written bound. A repetition that runs until a condition holds is a **worker**: a function value run on a subject of its own until it returns `false`, which `core` declares as `work`, `register`, and `setInterval` and which may be spawned. Many workers that run the same step run in a worker pool.
-- **`An exit ends a block's run`.** A call to an exiting verb such as `guard` ends the run of the innermost block it is written in, one pass of a loop or one run of an `if` block, and is legal only inside a block, since a block is the one construct that yields no value.
+- **`An exit ends a block's run`.** When an exiting verb such as `guard` exits, it ends the run of the innermost block argument around its call, one pass of a loop or one run of an `if` block. A call to one is legal only inside a block argument, since a block argument is the one construct that yields no value.
 - **`No control-flow keywords`.** The exit intrinsic makes the verb holding it end its caller's block, which is what lets `core` declare `guard` as an ordinary verb; nothing in the language's control-flow surface names a type.
 - **`1-based ordinals`.** Counted repetition and positional indexing start at `1`, not `0`, and a position outside its sequence stops the program.
 
@@ -70,7 +70,7 @@ Int firstNegative(values IntList) {
 
 Transparency is what keeps `return` and `abort` usable at any depth: a construct that opened a boundary for them would trap every one written inside it.
 
-An **exit** is the one transfer that a block ends. A call to an exiting verb such as `core`'s `guard` (§3.6) ends the current **run** of the innermost block the call is written in. Control leaves that run as though it had reached the block's closing brace, the run's scope drains, and the verb that ran the block carries on:
+An **exit** is the one transfer that a block ends. When an exiting verb such as `core`'s `guard` (§3.6) exits, it ends the current **run** of the innermost block argument around its call. Control leaves that run as though it had reached the block's closing brace, the run's scope drains, and the verb that ran the block carries on:
 
 ```zane
 Unit reportNonNegative(values IntList) {
@@ -95,7 +95,7 @@ i!to(count) {
 }
 ```
 
-A call to an exiting verb **MUST** be written inside a block. A verb's body ends in the `return` that produces the verb's value ([`functions.md`](functions.md) §3.5), and an exit carries no value to put in its place. A block yields nothing (§2.4), so ending its run needs no value, and a block is the one construct an exit can end, whatever the verb around it returns.
+A call to an exiting verb **MUST** be written inside a block argument. A verb's body ends in the `return` that produces the verb's value ([`functions.md`](functions.md) §3.5), and an exit carries no value to put in its place. A block argument yields nothing (§2.4), so ending its run needs no value, and a block argument is the one construct an exit can end, whatever the verb around it returns. A `match` arm's body and an abort handler's block are not block arguments: an exit written in one ends the run of the block argument around the `match` or the handled call, and with no such block argument the call is an error.
 
 ```zane
 Unit configure(settings Settings) {
@@ -107,7 +107,7 @@ Unit configure(settings Settings) {
 
 Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and a `return` or an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
 
-An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). The run it ends is the block written around the call, which the expansion above places in the same frame, so the exit is a jump to the end of that run (§4.2).
+An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). The exiting verb is an ordinary verb with a frame of its own, and the exit ends that one invocation. The block argument it then ends is written around the call, in the caller's frame, so control resumes at the end of that run, one call out and no further (§4.2).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-ends-the-run-of-a-block) — "An exit ends the run of a block".
 
@@ -211,7 +211,7 @@ A repetition with no meaningful bound — one that runs until its own state repo
 
 ### 3.6 `guard` ends the run of its block
 
-`guard(condition)` ends the run of the block its call is written in when the condition is `true`, and does nothing when it is `false` (§2.3). It is a `core` declaration like the rest of this section, not grammar, and its body is the exit intrinsic inside a branch (§4.2).
+`guard(condition)` ends the run of the block argument around its call when the condition is `true`, and does nothing when it is `false` (§2.3). It is a `core` declaration like the rest of this section, not grammar, and its body is the exit intrinsic inside a branch (§4.2).
 
 ```zane
 Unit configureAll(all SettingsList) {
@@ -337,7 +337,7 @@ Unit main() {
 
 The exit ends the run of the `if` block, and `main` goes on to print `reached`.
 
-A call to an exiting verb is legal only inside a block (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one, so its own callers' blocks end, and is never a way for the verb to stop itself. A verb that wants to stop itself `return`s.
+A call to an exiting verb is legal only inside a block argument (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one, so its own callers' blocks end, and is never a way for the verb to stop itself. A verb that wants to stop itself `return`s.
 
 The intrinsic **MUST NOT** appear in a lambda's frame, including a block argument written there. A call through a function value names the value, not a body, and a function type does not record whether the function exits, so a call through one could not be checked against the rule above. A lambda leaves early with `return`. A call to an exiting verb such as `guard`, written in a block inside the lambda, ends that block's run.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
@@ -416,7 +416,7 @@ The section that specifies each intrinsic names the position or range it checks,
 | Block argument | A braced run of statements passed to a call; type `@concepts$Block`; no parameters, no name, never a value |
 | Capture | A block reads and writes its enclosing scope's bindings |
 | Escape | A block may not be stored, returned, bound, placed in storage, or spawned; it may be handed to another verb |
-| Scope | A block is the scope of its own declarations and is transparent to `return` and `abort`; a call to an exiting verb such as `guard` ends the run of the innermost block it is written in, and is legal only in a block |
+| Scope | A block is the scope of its own declarations and is transparent to `return` and `abort`; an exiting verb such as `guard`, when it exits, ends the run of the innermost block argument around its call, and a call to one is legal only in a block argument |
 | Lowering | A verb taking a block parameter is expanded at its call site, transitively, so a block never crosses a call boundary and a `return` or an exit inside one is a jump within one frame |
 | Yielding | A block yields nothing; `resolve` in one finishes the handler around the call, like `return` and `abort` |
 | Branching | `if` returns whether it ran; `ran!elif(...)` continues the chain and writes it; `ran:else()` ends it — all `core` declarations |

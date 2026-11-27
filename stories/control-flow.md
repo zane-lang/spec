@@ -21,7 +21,13 @@ loop i to 1000 {
 
 An exit, on its own, leaves the scope it sits in. But `if` is *itself* a scope, so the exit above leaves the `if` and nothing more — the loop keeps running. This is not a quirk of the example; it is the structural fact any exit-when-condition has to reckon with. To leave the *loop* conditionally, the condition cannot be tested inside a nested block, because the nested block is a scope in its own right and swallows the exit meant for the scope outside it. The test and the exit have to be a single construct that introduces no scope of its own.
 
+> [!NOTE]
+> Superseded: that an exit nested in an `if` cannot reach the loop around it, so a separate construct had to test and exit at once. An exit ends the run of the innermost block argument around its call, the `if` block included. See "[An exit ends the run of a block](#an-exit-ends-the-run-of-a-block)".
+
 That construct is `guard`. `guard condition` tests the condition and, when it holds, exits the *enclosing* scope directly — the loop, the function body, the plain block — without ever opening an intermediate scope for the exit to get trapped in ([`control-flow.md` §3.1](https://github.com/zane-lang/spec/blob/6882e129f144607e300367684d640d1d79bc41f4/spec/control-flow.md#31-guard-exits-when-its-condition-is-true)):
+
+> [!NOTE]
+> Superseded: that `guard` exits the enclosing loop or function body. It ends one run of the block argument around its call, one pass of a loop, and a `guard` directly in a verb's body is an error. See "[An exit ends the run of a block](#an-exit-ends-the-run-of-a-block)".
 
 ```zane
 loop i to 1000 {
@@ -59,6 +65,9 @@ loop forever {
 ```
 
 This is precisely the shape the previous chapter's `guard` was built to express, and that is no coincidence: the in-body exit and the dislike of `while` are two views of one preference. A repetition should show its moving parts in the order they run, not spread them across a header you have to read out of sequence.
+
+> [!NOTE]
+> Superseded: that a `guard` inside a counted loop is how the loop stops. It ends one pass, and a loop stops by `return`ing from the verb. See "[An exit ends the run of a block](#an-exit-ends-the-run-of-a-block)".
 
 But a loop that runs until something inside it decides to leave carries a risk we were not willing to ship as the default: nothing on the page bounds it. A loop whose only brake is a runtime condition can, if that condition never trips, run forever, and there is no written fact a reader — or the compiler — can point to that says otherwise. So Zane's `loop` always carries a written upper bound, and there is no unbounded form ([`control-flow.md` §4.3](https://github.com/zane-lang/spec/blob/6882e129f144607e300367684d640d1d79bc41f4/spec/control-flow.md#43-there-is-no-dedicated-while)). The retry above becomes a counted loop whose `guard` still does the real stopping, with the ceiling now visible in the source:
 
@@ -302,7 +311,7 @@ The name `workEvery` was chosen to pair with `work`, and nothing is left for it 
 
 [Making `guard` an ordinary verb](#guard-stops-being-a-keyword) had the exit end its caller's invocation, and that brought a rule with it: the invocation it ends must return `Unit`, because the exit carries no value. A second rule, written for a different reason, was already standing next to it. Every block-bodied verb returns explicitly on every path, `Unit` included ([`functions.md` §3.5](https://github.com/zane-lang/spec/blob/b158a77b47b03590543750f08ea46d8b04559197/spec/functions.md#35-block-bodied-verbs-return-explicitly)). Taken together, the two meant that an exit could end a body only by skipping the `return` that the body was required to end in, and only in the one return type where that skipped `return` had nothing to say.
 
-The compiler read the exit the other way when it implemented it, and that reading is the one `guard` was meant to have from the start: a `guard` exits a block. A function has to return something, so an exit cannot end one. A block yields nothing ([the chapter on blocks that yield nothing](#a-block-that-yields-nothing)), so ending a run of one needs no value at all. A call to an exiting verb therefore ends the current run of the innermost block it is written in, and the call is legal only inside a block ([`control-flow.md` §2.3](https://github.com/zane-lang/spec/blob/b158a77b47b03590543750f08ea46d8b04559197/spec/control-flow.md#23-a-block-is-transparent-to-return-and-abort-and-an-exit-ends-its-run)). `return` and `abort` stay transparent to blocks, as before; the exit is now the one transfer a block stops.
+The compiler read the exit the other way when it implemented it, and that reading is the one `guard` was meant to have from the start: a `guard` exits a block. A function has to return something, so an exit cannot end one. A block yields nothing ([the chapter on blocks that yield nothing](#a-block-that-yields-nothing)), so ending a run of one needs no value at all. An exiting verb that exits therefore ends the current run of the innermost block argument around its call, and the call is legal only inside a block argument ([`control-flow.md` §2.3](https://github.com/zane-lang/spec/blob/b158a77b47b03590543750f08ea46d8b04559197/spec/control-flow.md#23-a-block-is-transparent-to-return-and-abort-and-an-exit-ends-its-run)). `return` and `abort` stay transparent to blocks, as before; the exit is now the one transfer a block stops.
 
 This is the reading [the chapter on blocks](#a-block-is-not-a-lambda) considered first and turned down, because it turns a `guard` in a repetition into a *continue*, so the counted loop with a `guard` inside it stops being the way to write a conditional stop. We take it now with that cost in view. A conditional stop is written `if(done) { return result; }` inside the loop, which leaves the verb and carries its value out through the blocks, and a `guard` skips the rest of one pass. Zane still has no *break*: nothing ends a repetition and resumes after it.
 

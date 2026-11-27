@@ -1026,7 +1026,7 @@ i!to(count) {
 }
 ```
 
-The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it makes that verb an exiting one ([`control-flow.md`](control-flow.md) §4.2). A call to an exiting verb written directly in a verb's body, outside every block, is a compile-time error ([`control-flow.md`](control-flow.md) §2.3).
+The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it makes that verb an exiting one ([`control-flow.md`](control-flow.md) §4.2). A call to an exiting verb written outside every block argument, such as directly in a verb's body, is a compile-time error ([`control-flow.md`](control-flow.md) §2.3).
 
 ---
 
