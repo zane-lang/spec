@@ -18,6 +18,8 @@ A package may hold C code beside its Zane source. The toolchain compiles that C 
 - **`Foreign verbs`.** A function or method whose body is a C function, named by its C symbol. Its Zane signature is checked against the C declaration in the package's interface headers.
 - **`C never writes Zane memory`.** Zane values cross into C as values or as read-only views for the duration of the call; the only Zane memory C writes is the bytes it allocates for a string it returns. State that C keeps lives in C memory, reached from Zane through a **foreign handle**, which releases it when it is destroyed and replaces it in place when it is overwritten.
 - **`Outside state is a capability`.** A package's C code offers its reach outside the program as a C global, which the root package declares as a **foreign variable** and passes on. A foreign verb that is a method on such a capability reads or writes outside state; any other foreign verb is taken to read and write nothing outside the program, so its calls fold at compile time like any other computation. A call marked `comptime` may also read through a capability at compile time ([`effects.md`](effects.md) §5.6).
+- **`A callback's state is the subject`.** A foreign method's subject, when it is not a handle, reaches C as an opaque `void *` context that C hands back to the call's function values (§3.8).
+- **`C may call back in through exports`.** A dynamic library's host calls exported lambdas, and holds the objects they return as opaque pointers ([`packages.md`](packages.md) §8).
 - **`The declaration is trusted`.** The compiler cannot see what C code touches. A foreign verb declared without a capability that in fact reads outside state is evaluated at compile time, and the value the build machine produced is built into the program (§5.5).
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#a-c-interface-that-keeps-compile-time-evaluation) — "A C interface that keeps compile-time evaluation".
@@ -207,6 +209,7 @@ A foreign verb's parameter and result types are drawn from the table below. Each
 | a C-compatible value type (below) | a `struct` of corresponding fields (below) | a copy of its value, laid out as the `struct` |
 | a foreign handle `H` (§4) | `C *`, `C` the handle's C type; as a parameter, `const C *` where §4.4 says so | the C object it refers to (§4.2, §4.4) |
 | a function type (§3.6) | a pointer to a function of corresponding types | a callable C function (§3.6) |
+| the subject of a foreign method on a type that is not a handle, a **context** (§3.8) | `void *` | an opaque pointer to the subject, valid for the call |
 
 A C type of the first, third, and fourth rows corresponds to its primitive only on a target where it has the primitive's size, 32, 64, or 8 bits, and no padding bits, so that every bit of the primitive is a value bit of the C type: `int` on a target whose `int` is 32 bits, `long long` on one whose `long long` is 64. A C type of the second row corresponds to `@primitives$I32` only on a target where it is at most 32 bits and has no padding bits. On any other target such a type corresponds to no Zane type and is reached through a shim (below). Likewise `float` and `double` correspond to `@primitives$F32` and `@primitives$F64` only on a target where they are IEEE 754 binary32 and binary64. A signed C type corresponds only on a target where it is two's complement, as Zane's integers are. An unsigned C type reads and writes the same bits as the signed primitive. So a `uint32_t` of `4294967295` is the `@primitives$I32` `-1`. A signed 8-bit C type likewise reads and writes the same bits as `@primitives$U8`, which is unsigned, so a `signed char` of `-1` is the `@primitives$U8` `255`. A scalar primitive's or `@primitives$U8`'s **full-width C types** are those of its own size: the four 32-bit types of the first row for `@primitives$I32`, the 64-bit types for `@primitives$I64`, `float`, `double`, and the five 8-bit types for `@primitives$U8`. Only they lay out as the primitive does, so only they appear inside an array, a list, or a `struct`.
 
@@ -259,7 +262,7 @@ A foreign verb returning a handle without an abort type stops the program when t
 
 ### 3.6 Function values cross as C functions
 
-A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are among those below, whose result type is a scalar primitive, `@primitives$U8`, `@primitives$Bool`, a C-compatible value type that holds no list, or `@primitives$Unit`, and which has no subject and no abort type, corresponds to a C function pointer of the corresponding types. C receives a function that calls the Zane function value it was passed.
+A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter types are among those below, whose result type is a scalar primitive, `@primitives$U8`, `@primitives$Bool`, a C-compatible value type that holds no list, or `@primitives$Unit`, and which has no abort type and no subject other than a context (§3.8), corresponds to a C function pointer of the corresponding types. C receives a function that calls the Zane function value it was passed.
 
 | Parameter or result | C type |
 |---|---|
@@ -273,7 +276,7 @@ A parameter of function type ([`syntax.md`](syntax.md) §2.13) whose parameter t
 | a data handle `H` (§4), as a parameter | `C *` or `const C *`, `C` the handle's C type |
 | a roaming owner `^H` of a data handle, as a parameter | `C *` or `const C *` |
 
-A C integer type narrower than its primitive, such as `char` or `int16_t` for `@primitives$I32`, corresponds to no function value's parameter or result, and a string reaches a function value only as a `zane_bytes`.
+A context subject `this T` or `this T mut` corresponds to a first parameter `void *` (§3.8). A C integer type narrower than its primitive, such as `char` or `int16_t` for `@primitives$I32`, corresponds to no function value's parameter or result, and a string reaches a function value only as a `zane_bytes`.
 
 C lends what it passes for the call, as Zane lends C a view (§3.4): the function value receives a string, a list, or an array of its own, copied from the bytes or elements C passed before it runs, so it keeps nothing of C's. A data handle `H` is a borrow of the C object C passes, which the function value never releases. A roaming owner `^H` takes the C object: C gives up the object, and the handle releases it through its free function when it is destroyed, as a handle a foreign verb returns does (§4.2). C passes no null pointer for either; a null one stops the program, as a foreign verb's null handle result does (§3.5).
 
@@ -293,6 +296,28 @@ The compiler checks each foreign verb against the declaration of its symbol in t
 - the C layout of a C-compatible value type's fields in declaration order differs from its C `struct` in a corresponding field's offset or type, or in size or alignment.
 
 The check sees each target's C types, so a declaration that is correct for one target and wrong for another fails in the build for that other target.
+
+### 3.8 A foreign method's subject is the context of its callbacks
+
+A Zane lambda captures nothing ([`concurrency.md`](concurrency.md) §5.2), so a function value that C calls back reaches program state only through what C passes it. C libraries pass that state as a pointer the caller supplies and the callback receives back, often named `userdata`. In Zane that pointer is the subject of a foreign method whose subject's type is not a handle: the **context**. C receives it as a `void *`, and a function value the call is passed may declare the same subject, which C passes back as the callback's first argument.
+
+```zane
+Unit runLoop(this App mut, onResize Unit[this App, @primitives$I32, @primitives$I32] mut)
+    foreign "app_run_loop";
+
+app!runLoop(Unit(this App, w @primitives$I32, h @primitives$I32) mut {
+    this!frame(gui$Size(Px(Float(w)), Px(Float(h))));
+    return Unit();
+});
+```
+
+```c
+void app_run_loop(void *app, void (*on_resize)(void *app, int32_t w, int32_t h));
+```
+
+A function value's subject **MUST** have the context's type. It may be `this T mut` only when the foreign method is `mut`, and then whatever the function value writes counts as the foreign call writing its subject ([`effects.md`](effects.md) §5.2); a non-`mut` foreign method passes a context its function values only read. C never reads or writes through the pointer, and passes back only the pointer the call received, during the call: the context is a borrow of the foreign method's subject, and ends when the call returns. C calls a function value that writes the context one call at a time, as it calls those that touch a capability (§3.6).
+
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#a-callback-reaches-its-state-through-the-subject) — "A callback reaches its state through the subject".
 
 > **Story:** [`stories/ffi.md`](../stories/ffi.md#c-never-writes-zane-memory) — "C never writes Zane memory".
 
@@ -595,7 +620,8 @@ The compiler takes a foreign verb's signature as a description of its C function
 
 - **It touches outside state only as declared** (§5.5).
 - **It writes only what it is given writable**: the C object of its `mut` subject, the outside handles a `mut` method on a foreign capability is passed, C memory that C owns, and the bytes `zane_bytes_alloc` gives it during the call (§3.5). It writes no view (§3.4), and no handle passed as `const`.
-- **It keeps nothing Zane lent it.** A view, a function pointer for a function value (§3.6), and the bytes `zane_bytes_alloc` gives it are used only until the call returns.
+- **It keeps nothing Zane lent it.** A view, a function pointer for a function value (§3.6), a context (§3.8), and the bytes `zane_bytes_alloc` gives it are used only until the call returns. It reads and writes nothing through a context, and passes it back only to the call's own function values.
+- **It holds a C-held object only as a pointer.** C never reads or writes through the pointer to an object an exported lambda returned, passes it back only to exported lambdas that take that object's type, and obeys the host rule ([`packages.md`](packages.md) §8.5, [`concurrency.md`](concurrency.md) §4.7).
 - **It is safe to call from several threads at once** when it touches no capability (§5.6), and when it only reads a handle, alongside other reads of that handle.
 - **It returns.** It leaves by returning to its caller, not by a long jump, an exception, or exiting the process. A C function that stops the program, such as by calling `abort`, stops it as a fault does.
 - **It keeps its C objects consistent with their handles.** A free function is called once per object, as §4.2 states. A C object stays at the address its handle holds until its free function releases it (§4.2), and stays alive while a C object that refers to it does (§4.5). A setter leaves the object at the address it was given, holding the replacement (§4.3), and no C object holds the address of a replacement passed to a setter.
@@ -661,6 +687,7 @@ Zig imports a C header and compiles C with its own toolchain for any target, whi
 | Foreign verb | A function or method whose body is a C function named by its symbol, checked against the package's interface headers |
 | Boundary types | Scalar primitives, `U8`, `Bool`, `Unit`, strings, and arrays and lists of C-compatible elements as read-only views, C-compatible value types, handles, and function values |
 | Function values | Take scalar primitives, `U8`, `Bool`, C-compatible value types, strings, and lists and arrays of C-compatible elements, copied before the function runs, and data handles, borrowed or as a roaming owner `^H`, which takes the C object; give a scalar, `U8`, `Bool`, a C-compatible value type that holds no list, or `Unit` |
+| Context | The subject of a foreign method on a type that is not a handle; C receives it as `void *` and passes it back, only during the call, as the first argument of a function value declaring the same subject; that function value may write it only when the foreign method is `mut` |
 | C-compatible element type | A scalar primitive, `U8`, or a C-compatible value type; an array or a list of one crosses, whatever the element |
 | C-compatible value type | A value `struct` of C-compatible elements and arrays and lists of them; it crosses as a copy laid out as its C `struct`, its fields in declaration order, a list as a `zane_span`; one holding a list crosses only where a list does |
 | Views | Valid for the call only; C never writes or keeps them; a returned `zane_bytes` is copied, unless it starts at the bytes the call's last `zane_bytes_alloc` gave and its `size` is at most what that asked for; a string parameter C declares `const char *` arrives NUL-terminated |
