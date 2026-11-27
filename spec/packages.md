@@ -411,7 +411,7 @@ Each parameter and the result of an exported lambda is one of the types a functi
 
 - a result `^T`, `T` a reference type, hands C an owner of a new C-held object;
 - a parameter `T`, or a subject `this T`, borrows a C-held object, and a subject `this T mut` borrows it mutably;
-- a parameter `^T` takes a C-held object's owner back from C, which gives up its pointer.
+- a parameter `^T` ends a C-held object: C gives up its pointer, and the object dies when the lambda's scope drains.
 
 A result may also be a value whose lists cross as `zane_span` views; an exported lambda returns one only when its subject is `this T mut`, and the views stay valid until the next call that borrows that subject mutably or takes its owner (§8.5).
 
@@ -441,7 +441,7 @@ An object that keeps a capability past the call that made it stores it at constr
 
 ### 8.5 C holds an object in a scope of its own
 
-An owner that an exported lambda returns to C settles in a **top-level scope** of its own, nested in no other scope, because a host creates and destroys objects in any order. C holds the object as an opaque pointer, never reads or writes through it, and passes it back only as an argument of exported lambdas. An exported lambda whose parameter takes the owner as `^T` takes it from C, and the owner is then an ordinary `^T` parameter ([`lifetimes.md`](lifetimes.md) §1.1): it dies when that lambda's scope drains unless the body moves it elsewhere, and once it has left, the top-level scope drains and releases its memory ([`memory.md`](memory.md) §3.1). A host that never gives an object back leaks it.
+An owner that an exported lambda returns to C settles in a **top-level scope** of its own, nested in no other scope, because a host creates and destroys objects in any order. C holds the object as an opaque pointer, never reads or writes through it, and passes it back only as an argument of exported lambdas. The object stays settled while C holds it ([`memory.md`](memory.md) §2.1), because C keeps its address. An exported lambda whose parameter takes it as `^T` ends it: the body may read the object but never moves it, and the object dies when the lambda's scope drains. Its top-level scope then drains and releases its memory in bulk ([`memory.md`](memory.md) §3.1). A host that never gives an object back leaks it.
 
 ```zane
 create ^SynthInstance() {
@@ -489,7 +489,7 @@ A value an exported lambda returns with its subject `this T mut` lives in that s
 | Exported lambda | A package-scope lambda followed by `export "cName"`; a C function in a build that exports it; no type parameters, no abort type; boundary types of a C function value, plus C-held objects; C names unique per build |
 | `export` line | `export lib;` or `export lib<Args>;` in a plugin or test package; gives that library's exported lambdas C symbols in this build |
 | Entry-point rights | An exported lambda has root-package rights in every build; only a root package's code calls one |
-| C-held object | An owner returned to C, in a top-level scope of its own; borrowed by `T` or `this T mut`, taken back by `^T`; no `&` between two of them |
+| C-held object | An owner returned to C, settled in a top-level scope of its own; borrowed by `T` or `this T mut`, ended by a `^T` parameter, which never moves it; no `&` between two of them |
 | Stop in a dynamic library | Ends the host's process |
 | Test package | Each directory of `test/` with `.zn` files; a nested one mirrors a subpackage and imports it, and each is the root of its own test build |
 | Package separator | `$`; distinct from field access and method-call markers |
