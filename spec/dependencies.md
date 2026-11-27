@@ -45,7 +45,7 @@ remaps [
 Top-level fields:
 
 - **`zane-version`** (required): a compiler release. In the project being built, it is the compiler that builds the project together with every package it depends on; in a fetched manifest, it is the oldest compiler that builds that package; see [§14 Toolchain Version](#14-toolchain-version).
-- **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB`. It is `256MiB` when omitted.
+- **`fixed-region`** (optional): how much memory the fixed-size regions of the program's own nested scopes, and of each call a host makes of an exported lambda, may take together ([`memory.md`](memory.md) §3.7), written as a whole number followed by `MiB` or `GiB`, at least `1MiB`. It is `256MiB` when omitted.
 - **`spawned-fixed-region`** (optional): the same bound for each spawned call ([`concurrency.md`](concurrency.md) §3) and each running step of a worker pool ([`concurrency.md`](concurrency.md) §6.4). It is `8MiB` when omitted.
 - **`version-pattern`** (required): the package author's declared ABI-compatibility window for this package's *own* versions. Every package declares one; it is established when the project is created and thereafter fixed, so a package's compatibility rule stays stable across its releases. A manifest that omits `version-pattern` is malformed: the toolchain **MUST** reject it with an error rather than treating the package as unversioned or remappable. It grants no permission by itself, and the toolchain uses it only when a downstream project opts into remapping; see [§15 Compatibility Patterns and Remapping](#15-compatibility-patterns-and-remapping).
 
@@ -59,7 +59,7 @@ The `from` column takes effect only in the manifest of the project being built. 
 
 Neither region field has a language-defined maximum. The toolchain checks that its byte count is representable for the target; whether the range can be reserved depends on the system's per-process address-space limits ([`memory.md`](memory.md) §3.7).
 
-`fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
+`fixed-region` and `spawned-fixed-region` likewise take effect only in the manifest of the project being built, for each program, plugin, and test package it builds. Fields in transitively fetched manifests are ignored, so a library never sets how much memory the program that uses it reserves.
 
 ```zane
 zane-version v0.14
@@ -268,6 +268,8 @@ The first `%` delimits the version, because `%` is reserved as the symbol separa
 
 Distinct packages in one resolved dependency graph **MUST** have distinct identity hashes. The toolchain checks this during dependency resolution and **MUST** abort with an error naming both URLs if two different normalized URLs produce the same identity hash.
 
+An instance of a parameterized package ([`packages.md`](packages.md) §2.6) has no objects in a release archive, because its arguments are known only to the build that names it. The build compiles it from the package's source, and its symbols take the parameterized package's rewritten prefix and path, followed by the instance's argument list. The list spells each type argument by its full symbol prefix and path, version tag and identity hash included, followed by its name and, for an applied type such as `List<Int>`, its own arguments spelled the same way, and each number argument by its decimal value, so two argument types of one name from different packages never collide, and every build that names one instance names the same symbols. Each object file that needs an instance carries its code as a mergeable copy, and the linker keeps one.
+
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files come from the verified release archive and are retained under the cache's `artifacts/<target>/build/` directory; rewritten, version-stamped objects are written under `build/<target>/` (§7). Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
@@ -378,7 +380,7 @@ A dependency **MUST** have at least one public library package. Resolution abort
 
 The package dependency graph **MUST** be a directed acyclic graph (DAG). Cyclic imports across package boundaries are not allowed.
 
-If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages. A package therefore **MUST NOT** import itself, directly or indirectly.
+If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages. A package therefore **MUST NOT** import itself, directly or indirectly. An import of an instance of a parameterized package is an edge to that package ([`packages.md`](packages.md) §2.6), whatever its arguments, so a parameterized package that imports an instance of itself is a cycle, and every chain of instances ends.
 
 The compiler **MUST** detect and reject cyclic package dependencies at build time with an error message that identifies the cycle.
 

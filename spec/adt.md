@@ -40,6 +40,24 @@ Per-member associated data is attached externally through an enum map (§6), whi
 > **Story:** [`stories/adt.md`](../stories/adt.md#separate-enum-and-variant-keywords) — "Separate `enum` and `variant` keywords".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-last-shape-the-peer-mould) — "Naming the last shape: the peer mould".
 
+### 2.2 Enum constructors
+
+An enum may declare constructors like any other type ([`types.md`](types.md) §3.1). An enum constructor returns one of the enum's members; an enum has no fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
+
+```zane
+type Colors = enum [ red, green, blue ];
+
+Colors() => Colors.red;
+Colors.background() => Colors.blue;
+
+base Colors();                // base : Colors, holding red
+shade Colors.background();    // shade : Colors, holding blue
+```
+
+A named enum constructor's name differs from every member of the enum ([`types.md`](types.md) §3.4), so `Colors.background` names a constructor and `Colors.red` a member. Naming a member stays built-in syntax with no verb behind it; an enum constructor is a declared verb that returns a member.
+
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
+
 ---
 
 ## 3. Variants
@@ -94,7 +112,7 @@ A `struct` and a `variant` share one declaration body. The keyword flips four th
 | | `struct { a A; b B; }` (product) | `variant { a A; b B; }` (sum) |
 |---|---|---|
 | Meaning | has `a` **and** `b` | has `a` **or** `b` |
-| Construct | must set **all** members with `init{ }` | names **exactly one** case and supplies its payload (§3.2) |
+| Construct | a constructor sets **all** members with `init{ }` | naming a case supplies **exactly one** payload (§3.2); a constructor returns such a case (§3.3) |
 | Read `e.a` | total — always an `A` | partial — abortable, an `A` only if `a` is live |
 | Layout | room for every member | room for its widest case, plus a record of which case is live |
 
@@ -145,9 +163,27 @@ two Countdown = Countdown.more(Countdown.more(Countdown.done(Unit())));
 three Countdown = Countdown.more(two);  // legal: `two` is copied, and is still a usable `Countdown` afterwards
 ```
 
-**Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** on a product type uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3.0))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb* that builds through `init{ }`; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism.
+**Shared surface, different mechanism.** The `Type.member(args)` form — in both its long (`e Expr = Expr.intLit("5")`) and short (`e Expr.intLit("5")`) declaration — is exactly the surface a **named constructor** uses (see [`types.md`](types.md) §3.4): `v Vector2.diagonal(Float(3.0))` reads and declares just like `e Expr.intLit("5")`. The resemblance is purely **syntactic**. A named constructor is a declared *verb*; naming a variant case is built-in syntax with no verb behind it. They share a spelling, not a mechanism, so a named constructor's name differs from every case of its type (§3.3).
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#naming-a-case-not-calling-a-constructor) — "Naming a case, not calling a constructor".
+
+### 3.3 Variant constructors
+
+A variant may declare constructors like any other type ([`types.md`](types.md) §3.1). A variant constructor returns a case of the variant, which its body builds by naming the case (§3.2); a variant has cases, not fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
+
+```zane
+type Countdown = variant { done Unit; more Countdown; }
+
+Countdown() => Countdown.done(Unit());
+Countdown.once() => Countdown.more(Countdown.done(Unit()));
+
+start Countdown();          // start : Countdown, with done live
+one Countdown.once();       // one : Countdown, with more live
+```
+
+A named variant constructor's name differs from every case of the variant ([`types.md`](types.md) §3.4), so `Countdown.once()` calls a constructor and `Countdown.more(n)` names a case. A case form stays built-in syntax; a variant constructor is a declared verb that returns one.
+
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ---
 
@@ -380,8 +416,9 @@ type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference
 | Concept | Rule |
 |---|---|
 | `enum` | The **peer mould**: a closed set of lowercase, payloadless peer members in a `[ ]` list; accessed as `Type.member`; representations number its members, not a sum mould |
+| Enum constructor | A declared verb that returns a member; a named one's name differs from every member |
 | `variant` | Sum mould; a value holds exactly one named member at a time; `{ }` body with `;`-terminated `member FieldType` entries, identical to a `struct` body |
-| Variant construction | Built-in syntax `Variant.case(payload)` — not a constructor verb — names one case and yields the whole variant; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate; shares its `Type.member(args)` surface with a named constructor ([`types.md`](types.md) §3.4) but not its mechanism |
+| Variant construction | Built-in syntax `Variant.case(payload)` — not a constructor verb — names one case and yields the whole variant; a variant may also declare constructors, each returning a case; an expression legal anywhere; the shorthand `e Variant.case(payload)` is the instantiation form and still declares `e` at the variant type; payloads compose by nesting, never by dotting through a case; a payloadless `enum` member is the argument-less degenerate; shares its `Type.member(args)` surface with a named constructor ([`types.md`](types.md) §3.4) but not its mechanism, so a named constructor's name differs from every case |
 | Variant member read | Partial and therefore abortable; a single-payload case behaves as its payload once bound |
 | struct/variant symmetry | One body grammar; the keyword flips meaning, construction, read totality, and layout; the `#` modifier picks value versus reference |
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, aliasable, moved); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |

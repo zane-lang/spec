@@ -31,7 +31,7 @@ Each rule is specified in exactly one document, the rule's canonical home; every
 | [`memory.md`](memory.md) | Ownership, settled and roaming owners, references, and arena layout |
 | [`lifetimes.md`](lifetimes.md) | Lexical lifetime rules, moves, scope rules, and deterministic destruction |
 | [`effects.md`](effects.md) | The effect model, `mut`, read-only bindings, what each kind of verb may write, capability wiring, and compile-time evaluation, implicit and marked with `comptime` |
-| [`concurrency.md`](concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, and concurrency safety |
+| [`concurrency.md`](concurrency.md) | Implicit parallelism, `spawn`, worker pools, water-tower lifetimes, concurrency safety, and a host's calls into exported lambdas |
 
 ## Programs and program structure
 
@@ -41,9 +41,9 @@ Each rule is specified in exactly one document, the rule's canonical home; every
 | [`operators.md`](operators.md) | Operator set, derived operators, intersection and union, operands passed as written, and precedence |
 | [`math.md`](math.md) | The `@math$` intrinsics — bit operations, square root, rounding, trigonometry — exact and approximate functions, and the `math` package that declares them over `core`'s `Int` and `Float` |
 | [`error-handling.md`](error-handling.md) | Bifurcated return paths, `?` handlers, and abort/resolve semantics |
-| [`packages.md`](packages.md) | The `lib/`, `bin/` and `test/` project layout, library packages and their subpackages, file-scoped imports, explicit member access, package visibility, package-scope state, and the program and test packages that hold `main` |
+| [`packages.md`](packages.md) | The `lib/`, `bin/` and `test/` project layout, library packages and their subpackages, file-scoped imports, explicit member access, package visibility, package-scope state, parameterized packages and their instances, the program and test packages that hold `main`, and the plugin packages and exported lambdas a host loads |
 | [`dependencies.md`](dependencies.md) | Package identity, manifests, test dependencies, package renames, version pinning, fetching, and caching |
-| [`ffi.md`](ffi.md) | Calling C: a package's C code and the toolchain that builds it, foreign verbs and the types that cross into C, foreign handles, foreign capabilities and the foreign variables that give them, and what foreign code is taken to read and write |
+| [`ffi.md`](ffi.md) | Calling C: a package's C code and the toolchain that builds it, foreign verbs and the types that cross into C, the context a callback gets back, foreign handles, foreign capabilities and the foreign variables that give them, and what foreign code is taken to read and write |
 
 ## Reading order
 

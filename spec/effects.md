@@ -14,7 +14,7 @@ Zane uses a structural effect model with a single user-facing effect modifier: `
 - **`Subject-local mutation`.** `mut` grants write access to state reachable through `this`, including through references.
 - **`Read-only everywhere else`.** Every other parameter is read-only, and so is every reference derived from one. A `!` call is a write, exactly as an assignment is.
 - **`Three kinds of verb`.** A `mut` method writes `this`. A method without `mut` and a function write nothing their caller can see. The signature shows whether a verb is a `mut` method, a method without `mut`, or a function.
-- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package, from `@program$` and the foreign variables it declares.
+- **`Capability-based external effects`.** I/O and external state remain explicit because capability objects must be passed or stored. They originate in the root package and in exported lambdas, from `@program$` and the foreign variables those two declare.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -57,7 +57,7 @@ A verb's signature shows what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1).
+The root package is one exception: any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1). An exported lambda is the other: it has the same rights in whatever package declares it, because a host calls it as the system calls `main` ([`packages.md`](packages.md) §8.4).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -188,7 +188,7 @@ An abortable marked call carries its `?` or `??` handler on the marked expressio
 
 ### 6.1 Capabilities must be passed or stored explicitly
 
-There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package: `@program$` (§6.6) and the foreign variables it declares ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
+There is no ambient global I/O capability. Code can reach external state only through capability objects it receives or holds. A capability received as a parameter can be read (§4.1). Writing one takes a `mut` method whose `this` reaches it. Capabilities come from two places, both reached only by the root package and by exported lambdas ([`packages.md`](packages.md) §8.4): `@program$` (§6.6) and foreign variables ([`ffi.md`](ffi.md) §5.1). Everything else receives them from there.
 
 ### 6.2 Constructor injection is ordinary capability wiring
 
@@ -212,7 +212,7 @@ Passing capabilities through constructors and methods is part of the design. It 
 
 The console and the runtime are capabilities the compiler supplies. Their types, `@runtime$Console` and `@runtime$Runtime`, are reference types: a program has one console and one runtime, and every part of it that uses either uses the same one. Neither type can be constructed. The only instances are `@program$console` and `@program$runtime`, created when the program starts.
 
-Only the root package reaches `@program$` ([`packages.md`](packages.md) §6.1). It passes the instances on like any other capability. Passed as an argument, a capability can be read. Stored into an object at construction, it can be written by that object's `mut` methods (§4.4). Either way, a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
+Only the root package and exported lambdas reach `@program$` ([`packages.md`](packages.md) §6.1, §8.4). It passes the instances on like any other capability. Passed as an argument, a capability can be read. Stored into an object at construction, it can be written by that object's `mut` methods (§4.4). Either way, a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
 
 Their methods are stated over storage primitives, like every intrinsic, and are found through the type's home, `@runtime$` ([`functions.md`](functions.md) §6.1). `core` wraps the console in its own `Console`, whose methods take `String`:
 
@@ -235,7 +235,7 @@ The runtime's `arguments` method gives the arguments the program was started wit
 
 It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
 
-Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time under §5.3. Inside a call marked `comptime`, it gives the arguments the build was started with (§5.6).
+Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package and in an exported lambda any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time under §5.3. Inside a call marked `comptime`, it gives the arguments the build was started with (§5.6).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 > **Story:** [`stories/effects.md`](../stories/effects.md#the-console-moves-into-core) — "The console moves into `core`".
@@ -285,9 +285,9 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 | Method without `mut`, function | Write nothing their caller can see |
 | Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
-| Root package | Any verb may write the program's console and runtime and the foreign capabilities its foreign variables give |
+| Root package and exported lambdas | Any verb may write the program's console and runtime and the foreign capabilities their foreign variables give |
 | Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation, what a `comptime` call may do, and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | `comptime` call | Evaluated at compile time or the build fails, to completion; may read capability-backed state, through capabilities standing for the build machine's; writes none and no subject; its result is a value type; its arguments depend only on constants, other marked calls, and computations §5.3 permits |
-| Capabilities | Reachable only as objects passed or stored; they originate in the root package, from `@program$` and its foreign variables |
+| Capabilities | Reachable only as objects passed or stored; they originate in the root package and in exported lambdas, from `@program$` and their foreign variables |
 | Program arguments | Read through the runtime's `arguments`; nothing that depends on them is evaluated at compile time under §5.3; inside a `comptime` call they are the build's arguments |

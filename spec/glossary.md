@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.7 capability wiring
 
-- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in the root package, from `@program$` and the foreign variables it declares.
+- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in the root package and in exported lambdas, from `@program$` and the foreign variables they declare.
 - **Why this name:** The design treats capabilities like explicit wiring between components rather than ambient globals.
 - **Canonical home:** [`effects.md`](effects.md) §6
 
@@ -110,8 +110,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.3 unified type parameters
 
-- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
-- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type or a package, inline on a verb.
+- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types and packages, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
@@ -176,19 +176,19 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.14 `Type` and `@concepts$Int` parameter concepts
 
-- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's or a package's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the concept that an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
 ### 3.15 variant (sum mould)
 
-- **Meaning:** A `variant` is a **sum mould**: a value of the type it declares holds exactly one of its named members at a time. Its body grammar is identical to a `struct` — the product mould — with the keyword flipping product into sum. Reading a member is partial and therefore abortable.
+- **Meaning:** A `variant` is a **sum mould**: a value of the type it declares holds exactly one of its named members at a time. Its body grammar is identical to a `struct` — the product mould — with the keyword flipping product into sum. Reading a member is partial and therefore abortable. A variant value is built by naming a case, or by a constructor the variant declares, which returns a case.
 - **Why this name:** "Variant" is the established name for a tagged sum of alternatives, and it reads as a peer of `struct` since the two share one body grammar.
 - **Canonical home:** [`adt.md`](adt.md) §3
 
 ### 3.16 enum (uniform peers)
 
-- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map.
+- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map. An enum may declare constructors, each returning a member.
 - **Why this name:** "Enum" matches the common meaning of an enumeration of equal-rank constants, and the spec reserves it for that uniform-peer role rather than overloading it with the sum-type role given to `variant`.
 - **Canonical home:** [`adt.md`](adt.md) §2
 
@@ -225,7 +225,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.22 verb
 
 - **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
-- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in `return init{}`) counts and is indistinguishable from a builder helper apart from its `init{}` sugar, while a place-projecting subscript does not.
+- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in a `return` of its type's value, an `init{}` for a `struct`) counts and is indistinguishable from a builder helper apart from its name, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 settled owner
@@ -248,7 +248,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.26 capability marker
 
-- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and, for a type with fields, unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 
@@ -390,6 +390,12 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Why this name:** It is a set whose members are bytes, and nothing more: the name leaves out the lookup table the compiler lays it out as.
 - **Canonical home:** [`types.md`](types.md) §2.12
 
+### 3.50 veiled value
+
+- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type, Params Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors, and `T.name(...)` is always a named-constructor call; a field read or write, an enum map read, naming an enum member, a `match`, or a call as a function value on it is an error.
+- **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
+- **Canonical home:** [`generics.md`](generics.md) §3.8
+
 ---
 
 ## 4. Packages, Operators, and Versioning
@@ -402,7 +408,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.2 placeholder-prefix rewriting
 
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the name the symbol carries is the library package's own path within its project.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the name the symbol carries is the library package's own path within its project, followed for a package instance by its argument list.
 - **Why this name:** The shipped `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
@@ -462,7 +468,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$` and declares foreign variables, and it holds `main`; a library package is never one.
+- **Meaning:** The package a build starts from — the program package being built, the plugin package of a dynamic-library build, or the test package of a test build. Apart from exported lambdas, only it reaches `@program$` and declares foreign variables; a program or test package holds `main`; a library package is never one.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 
@@ -480,7 +486,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.15 library package / program package
 
-- **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports.
+- **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports. A directory of `bin/` without `main` is a **plugin package** (§4.25).
 - **Why this name:** The directory names already show it: `lib/` holds the packages that other packages link against, and `bin/` holds the packages that become programs.
 - **Canonical home:** [`packages.md`](packages.md) §2.1
 
@@ -522,7 +528,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.22 foreign variable
 
-- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package declares one, and passes it on.
+- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package and exported lambdas declare one, and pass it on.
 - **Why this name:** It is the variable counterpart of a foreign verb: declared like any symbol, with its value supplied by C.
 - **Canonical home:** [`ffi.md`](ffi.md) §5.1
 
@@ -537,3 +543,45 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities that stand for the build machine's own; it writes no capability-backed state, and its result is a value type built into the program.
 - **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig understands it correctly, and it names a stage rather than a property of the verb.
 - **Canonical home:** [`effects.md`](effects.md) §5.6
+
+### 4.25 plugin package / dynamic library
+
+- **Meaning:** A **plugin package** is a directory of `bin/` that declares no `main` and carries `export` lines or exported lambdas. The toolchain builds it as a **dynamic library** (`.so`, `.dylib`, `.dll`) that another program loads into its own process and calls through the exported lambdas.
+- **Why this name:** "Plugin" is the common word for code that a program loads to extend itself, whatever the program is: an audio workstation, a Python interpreter, a game engine. "Dynamic library" is the platforms' own name for the file it builds.
+- **Canonical home:** [`packages.md`](packages.md) §8.1
+
+### 4.26 exported lambda / export line
+
+- **Meaning:** An **exported lambda** is a package-scope lambda followed by `export "cName"`; in a build that exports it, it becomes a C function of that name, with the rights of root-package code. An **export line**, `export lib;` or `export lib<Args>;`, sits in a plugin or test package and names the library whose exported lambdas this build turns into C symbols.
+- **Why this name:** "Export" is the word C toolchains already use for a symbol a dynamic library offers, and it is the mirror of `foreign`, which brings a C symbol in.
+- **Canonical home:** [`packages.md`](packages.md) §8.2, §8.3
+
+### 4.27 C-held object
+
+- **Meaning:** An object an exported lambda returned to C as `^T`. It is settled in a top-level scope of its own, C keeps it only as an opaque pointer, exported lambdas borrow it, and an exported lambda that takes it as `^T` ends it. No `&` connects two C-held objects.
+- **Why this name:** It names who holds the owner. The object is an ordinary Zane object; only the holder differs.
+- **Canonical home:** [`packages.md`](packages.md) §8.5
+
+### 4.28 context
+
+- **Meaning:** The subject of a foreign method whose type is a reference type and not a handle. C receives the context as an opaque `void *` and passes it back, during the call, as the first argument of the call's function values that declare the same subject; they may write it only when the foreign method is `mut`. A subject of a C-compatible value type crosses as a copy instead, and a subject of any other value type is an error.
+- **Why this name:** C APIs call the pointer a callback receives back its context or user data; the Zane term keeps the first word.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.8
+
+### 4.29 C-compatible element type
+
+- **Meaning:** A scalar primitive, `@primitives$U8`, or a C-compatible value type. An array or a list of one crosses into C as a view, so only the element type decides whether a container crosses.
+- **Why this name:** It names the element, because the element, not the container, decides whether C can read the memory.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.3
+
+### 4.30 host / host rule
+
+- **Meaning:** A **host** is the program that loads a dynamic library into its own process and calls its exported lambdas, such as an audio workstation loading a CLAP plugin. The **host rule** is what every host obeys: it never runs two calls that borrow one C-held object mutably at once, and never runs a call that takes a C-held object's owner beside any other call on it.
+- **Why this name:** "Host" is the word every plugin format already uses for the loading program. The spec once used it for an owner in the memory model; that meaning is retired, and the word now has only this one.
+- **Canonical home:** [`packages.md`](packages.md) §8.1; host rule [`concurrency.md`](concurrency.md) §4.7
+
+### 4.31 parameterized package / package instance
+
+- **Meaning:** A **parameterized package** is a library package whose declaration carries a `<>` header of type and number parameters, `package clap<App Type, Dsp Type, Info Type, Params Type>;`. A **package instance** is the package with one argument list applied, `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>`: a package of its own, imported by that full name, with types distinct from every other instance's.
+- **Why this name:** The terms follow the ones a parameterized type already has. A package is parameterized as a type is, and *instance* is the word the compiler already uses for one concrete copy of a generic.
+- **Canonical home:** [`packages.md`](packages.md) §2.6, §3.10

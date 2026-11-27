@@ -43,7 +43,7 @@ car ^Car{id; seats;}                     // car ^Car = Car{id = id; seats = seat
 
 The two lambda forms declare a lambda-valued symbol. They mirror the constructor-call instantiation form `name VarType(args, ...)`: just as `text String("hello")` instantiates a value of type `String`, `callback Float(x Int) { body }` instantiates a function value. The full set of lambda-variable forms — including `this`, `mut`, and abort types — lives in §3.8.
 
-The last form declares a **foreign variable**, whose value is a handle to a C global: it writes `foreign` and one string literal without interpolation, the global's symbol, in place of an initializer. Only the root package declares one ([`ffi.md`](ffi.md) §5.1).
+The last form declares a **foreign variable**, whose value is a handle to a C global: it writes `foreign` and one string literal without interpolation, the global's symbol, in place of an initializer. Only the root package and the body of an exported lambda declare one ([`ffi.md`](ffi.md) §5.1, [`packages.md`](packages.md) §8.4).
 
 Every symbol declaration is directly initialized. Bare forms such as `name VarType` and `name &VarType` are not declaration forms.
 
@@ -96,9 +96,15 @@ import packageName$member
 import packageName$member as alias
 import packageName$[memberA, memberB]
 import packageName$
+import packageName<Argument, ...>
+import packageName<Argument, ...> as alias
+import packageName<Argument, ...>$member
+import packageName<Argument, ...>$member as alias
+import packageName<Argument, ...>$[memberA, memberB]
+import packageName<Argument, ...>$
 ```
 
-The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
+An import of a parameterized package writes its argument list in every form; each `Argument` is a type or a compile-time integer ([`packages.md`](packages.md) §3.10). The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
 
 ```zane
 import math$[sqrt, pow] as m;  // ILLEGAL: a list has no single name to rename
@@ -534,11 +540,16 @@ TypeName<T>(param T Type, ...) { return init{ field = expr; ... } }
 TypeName<T, n>(param Container<T Type, n @concepts$Int>, ...) { return init{ field = expr; ... } }
 ```
 
-Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type and the body constructs the value with `init{ ... }`.
+Constructors use the same package-scope declaration shapes as other functions, except that the written type name is the return type. A `struct` constructor's body constructs the value with `init{ ... }`; an `enum` constructor's body returns a member, and a `variant` constructor's body returns a case ([`types.md`](types.md) §3.1):
+
+```zane
+EnumName() => EnumName.member
+VariantName(payload PayloadType) => VariantName.case(payload)
+```
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
 
-A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type:
+A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type. Its name **MUST** differ from every member and case of the type (see [`types.md`](types.md) §3.4):
 
 ```zane
 TypeName.zeros() => init{ field = expr; ... }
@@ -551,6 +562,8 @@ p TypeName.fromParts(arg)
 ```
 
 ### 3.4 Field constructors
+
+A field constructor is declared only on a `struct` or `#struct` ([`types.md`](types.md) §3.3).
 
 ```zane
 TypeName{
@@ -692,6 +705,14 @@ callback Unit(this Player) mut {        // shorthand for the line above
 ```
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+
+A package-scope lambda-variable may end in an `export` suffix, after its body, naming the C symbol it becomes ([`packages.md`](packages.md) §8.2):
+
+```zane
+name ReturnType(param ParamType, ...) { body } export "cName"
+name ReturnType(this SubjectType, param ParamType, ...) mut { body } export "cName"
+name ReturnType(param ParamType, ...) => expr export "cName"
+```
 
 ### 3.9 Operator definitions
 
@@ -1059,4 +1080,16 @@ packageName$member
 
 ```zane
 package packageName
+package packageName<Param Type, n @concepts$Int, ...>
+```
+
+The second form declares a parameterized library package, and every source file of the package repeats the same list ([`packages.md`](packages.md) §2.4, §2.6).
+
+### 8.3 Export lines
+
+A plugin or test package may carry `export` lines beside its imports, each naming a library package whose exported lambdas the build gives C symbols ([`packages.md`](packages.md) §8.3):
+
+```zane
+export packageName
+export packageName<TypeArgument, ...>
 ```

@@ -12,7 +12,7 @@ Zane keeps data layout and construction separate from behavior.
 
 - **`Fields-only type bodies`.** A type body declares storage only — no methods or constructors live inside the body.
 - **`One kind axis`.** A type is a **value type** unless its mould is marked `#`, which makes it a **reference type** — identity-bearing, aliasable through `&`, able to hold reference-type and `&` fields, and moved rather than copied. `struct` is a value mould; `#struct` a reference mould. Either kind may recurse (see [`adt.md`](adt.md) §4).
-- **`Package-scope constructors`.** A constructor is a verb at package scope; the body builds the value with `init{ }`.
+- **`Package-scope constructors`.** A constructor is a verb at package scope, and every mould may declare one. A `struct` constructor builds the value with `init{ }`; an `enum` constructor returns a member, and a `variant` constructor returns a case.
 - **`Name-based field privacy`.** A leading `_` makes a field private to the package that declares its type.
 - **`Strings are values`.** `String` and its storage primitive own their bytes and copy deeply. Interpolated literals remain string concepts (§2.7–§2.8). The string primitive reads and writes numbers (§2.10–§2.11) and reads its own bytes (§2.12).
 - **`Fundamental and declared types`.** `Int`, `Float`, `I32`, `F32`, `U8`, `Bool`, `String`, `Unit`, `Array`, `ArrayRef`, `List`, and `ListRef` are types that the `core` package declares over storage primitives; `type` introduces a new distinct named type and `alias` an interchangeable name.
@@ -398,13 +398,28 @@ at @primitives$I64 = word:findAny(@primitives$I64(1), word:byteCount(), vowels);
 
 A constructor is a package-scope verb named after the type. It has no `this` parameter because no object exists yet.
 
-Constructors use the same block-bodied or expression-bodied surface forms as other package-scope verbs, except that the written type name is the return type and the body constructs the result with `init{ ... }`.
+Constructors use the same block-bodied or expression-bodied surface forms as other package-scope verbs, except that the written type name is the return type. The body produces a value of that type, and the type's mould determines how:
+
+- a `struct` or `#struct` constructor builds the result with `init{ ... }`, which assigns every field (§3.7);
+- an `enum` or `#enum` constructor returns one of the enum's members ([`adt.md`](adt.md) §2.2);
+- a `variant` or `#variant` constructor returns a case, which its body builds by naming the case ([`adt.md`](adt.md) §3.3).
+
+```zane
+type Colors = enum [ red, green, blue ];
+type Countdown = variant { done Unit; more Countdown; }
+
+Colors() => Colors.red;
+Countdown() => Countdown.done(Unit());
+```
+
+Because every mould may declare constructors, a generic body may construct a value of a type parameter (`T()`) whatever mould the type argument has, as long as the argument's type declares a matching constructor ([`generics.md`](generics.md) §5).
 
 > **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-what-it-is-not-how-it-is-built) — "Naming a type by what it is, not how it is built".
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.2 Positional constructors
 
-Positional constructors declare ordinary parameters and return `init{ ... }`.
+Positional constructors declare ordinary parameters. A `struct` or `#struct` positional constructor returns `init{ ... }`; an `enum` or `variant` one returns a member or a case (§3.1).
 
 ```zane
 package Graph;
@@ -430,7 +445,7 @@ Positional constructors **MAY** be overloaded by arity or parameter types.
 
 Constructor parameters do not need to repeat private-field underscores. It is normal to map a public-facing parameter such as `id` into a private field such as `_id` explicitly inside `init{ }`.
 
-A constructor body is an ordinary verb body: a sequence of statements that ends by returning an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns `init{ }` — it is indistinguishable from a builder helper that ends in a constructor call, apart from its name.
+A constructor body is an ordinary verb body: a sequence of statements that ends by returning a value of the constructor's type, which for a `struct` is an `init{ }`. It may run any computation before that return, exactly like a function. A constructor is nothing more than a verb that is named after its type and returns a value of that type — it is indistinguishable from a builder helper that ends in a constructor call, apart from its name.
 
 ```zane
 package Graph;
@@ -463,7 +478,7 @@ Vector{x Int; y Int;} {
 }
 ```
 
-This form is the canonical constructor syntax when the constructor parameters map directly to fields. A field-constructor entry of a reference type is a parameter like any other ([`memory.md`](memory.md) §2.9): an entry that fills an owning field is written `^T` and takes the owner, and one that fills an `&` field is written `&T`.
+This form is the canonical constructor syntax when the constructor parameters map directly to fields. Only a type with fields — a `struct` or `#struct` — declares a field constructor; an `enum` or `variant` constructor is positional (§3.2). A field-constructor entry of a reference type is a parameter like any other ([`memory.md`](memory.md) §2.9): an entry that fills an owning field is written `^T` and takes the owner, and one that fills an `&` field is written `&T`.
 
 Field-constructor entries may also declare default values. They use the same initialized declaration forms as ordinary storage declarations. A call may omit any field whose constructor entry provides one:
 
@@ -501,9 +516,9 @@ o Vector2.zeros();           // o : Vector2
 d Vector2.diagonal(Float(3.0)); // d : Vector2
 ```
 
-A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
+A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and, for a type with fields, `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
 
-- declares positional parameters or the field-header form (§3.2, §3.3) like any constructor;
+- declares positional parameters or, on a `struct` or `#struct`, the field-header form (§3.2, §3.3) like any constructor;
 - overloads by parameter types, alongside the anonymous constructor and the other named ones;
 - is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
 
@@ -511,9 +526,20 @@ The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous:
 
 A named constructor **MUST NOT** be marked `implicit`: an implicit constructor is an anonymous single-argument conversion the compiler inserts at a coercion site (§4), and a named constructor is only ever called by its written name, so the compiler has nothing to insert.
 
-Because a named constructor builds through `init{ }`, a package declares one on a type that has fields — a `struct`, in either its value or `#` reference form (§3). A storage primitive's named constructors are the compiler's own, such as the lossy conversions of §2.9. A `variant` has cases, not fields, and is built by naming a case (see [`adt.md`](adt.md) §3.2), which is built-in syntax rather than a constructor verb; the two share the `Type.member(args)` surface but not the mechanism.
+Every mould may declare named constructors, as it may declare anonymous ones (§3.1). A storage primitive's named constructors are the compiler's own, such as the lossy conversions of §2.9.
+
+```zane
+type Colors = enum [ red, green, blue ];
+
+Colors.background() => Colors.blue;
+
+shade Colors.background();   // shade : Colors, holding the member blue
+```
+
+A named constructor shares the `Type.member` surface with an enum member (`Colors.red`, [`adt.md`](adt.md) §2) and with a variant case (`Expr.intLit("5")`, [`adt.md`](adt.md) §3.2). A named constructor's name **MUST** therefore differ from every member and every case of its type, so that `Type.member` names exactly one of them: `Colors.background` is legal beside the member `Colors.red`, and a constructor named `Colors.red` is an error. Naming a member or a case stays built-in syntax with no verb behind it; a named constructor is a declared verb that shares its spelling.
 
 > **Story:** [`stories/types.md`](../stories/types.md#named-constructors-and-the-syntax-variants-already-had) — "Named constructors, and the syntax variants already had".
+> **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.5 Implicit field access in constructor calls
 
@@ -550,7 +576,7 @@ Vector{x Int; y Int;} {
 
 ### 3.7 `init{ }` is a constructor-only expression
 
-`init{ }` is valid only inside a constructor body, but within that body it is an ordinary expression of the enclosing constructor's type. It may be returned directly or assigned to a local before being returned.
+`init{ }` is valid only inside the body of a constructor for a type with fields — a `struct` or `#struct` — but within that body it is an ordinary expression of the enclosing constructor's type. An `enum` or `variant` constructor has no fields to assign and returns a member or a case instead (§3.1). The constructor may return it directly or assign it to a local before returning it.
 
 ```zane
 Vector{x Int; y Int;} {
@@ -855,7 +881,7 @@ A named type is therefore always declared this way: `type Name = struct { ... }`
 
 A foreign handle, `#handle{ ... }`, is the one other right-hand side that declares a new type. It is no mould: it has no body and no value form, and it appears only after `type` ([`ffi.md`](ffi.md) §4.1).
 
-These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every constructible type therefore has a name, and that name is what its constructor is called by (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
+These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a name, and a program calls the type's constructors by that name (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
@@ -890,8 +916,9 @@ Intent lives entirely in the keyword — `type` versus `alias` — not in the pu
 | String interpolation | `\%var` captures a copied `@primitives$String`, accepting a direct primitive or one ordinary implicit conversion; the result remains a string concept and may carry runtime values |
 | `Unit` | Empty `core` value type; `Unit()` constructs its sole value, which may be stored or used as a generic argument |
 | Field visibility | Names starting with `_` are private to the package that declares the type; all other names are public |
-| Constructor | Package-scope verb named after the type; the written type name is the return type; no `this`; may use block or `=> init{...}` form |
-| Field constructor | Declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
+| Constructor | Package-scope verb named after the type, declarable on every mould; the written type name is the return type; no `this`; a `struct` constructor returns an `init{...}`, an `enum` constructor a member, a `variant` constructor a case |
+| Named constructor | `Type.name(...)`; yields the base type; never `implicit`; its name differs from every member and case of its type |
+| Field constructor | Declared only on a `struct` or `#struct`; declares field parameters directly, may assign default values, and may use `init{field;}` shorthand |
 | Implicit constructor | Single-parameter constructor marked `implicit`; inserted at callable arguments, named field-constructor entries, enum-map entries, and string interpolation sites — never at declarations, assignments, stores, `return`, the `init{field = value;}` inside a constructor body, or operator operands; no field-constructor form; source type must be a value type or compiler concept; destination may be a value type, a reference type, or a storage primitive; orphan rule applies |
 | `&` constructor parameter | Caller must supply an allowed `&` source; callee may store into `&` fields |
 | `^T` constructor parameter | Takes a roaming owner or a temporary; callee moves it into an owning field |

@@ -65,7 +65,7 @@ type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is
 }
 ```
 
-A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time integer. A parameter is introduced by a type's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
+A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time integer. A parameter is introduced by a type's or a package's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
 
@@ -320,8 +320,8 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | Type names | Uppercase-initial; a lowercase name in a type position is a compile-time error |
 | Value names | Lowercase-initial; bindings, parameters, and fields |
 | Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, after the `as` of a whole-package import alias, or as the left operand of `$` |
-| Number parameter | A lowercase name (`n`) declared `n @concepts$Int` (in a type's `<>` header or inline in a verb); a compile-time integer, not a type |
-| Type parameter | An uppercase name (`T`) declared `T Type` (in a type's `<>` header or inline in a verb); referenced bare |
+| Number parameter | A lowercase name (`n`) declared `n @concepts$Int` (in a type's or a package's `<>` header, or inline in a verb); a compile-time integer, not a type |
+| Type parameter | An uppercase name (`T`) declared `T Type` (in a type's or a package's `<>` header, or inline in a verb); referenced bare |
 | Digits | Legal in a name except as the first character; carry no special meaning |
 | Leading `_` | A field is private to its type's package; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a reference type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
