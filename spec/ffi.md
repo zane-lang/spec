@@ -345,7 +345,7 @@ type Deflater = #handle{ cType = "zane_deflater_t"; set = "zane_deflater_set"; f
 - **`free`** is the **free function**: a C function of the package's interface headers that takes one non-`const` pointer to the C type and returns `void` or an integer type, such as the status SQLite's `sqlite3_close` returns, which Zane ignores. It releases an object when its handle is destroyed (§4.2).
 - **`set`** is the **setter**: a C function of the package's interface headers that takes two non-`const` pointers to the C type and returns `void` or an integer type, which Zane ignores. It replaces an object in place when a settled handle is overwritten (§4.3). A handle type with a setter has a free function.
 
-A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to the verb that makes it (§4.2):
+A handle type without a free function is a **foreign capability**. Its values refer to C globals, are made only by foreign variables (§5.1), and stand for state outside the program. A handle type with a free function owns its C object, and is one of two kinds according to how it is made (§4.2):
 
 - an **outside handle**, made by a method on a foreign capability, whose C object is part of the state outside the program that the capability reaches, such as an open file or a database connection;
 - a **data handle**, made by any other foreign verb or by C passing its object to a function value (§3.6), whose C object holds state of the program's own, such as a compression stream or a parsed document. A handle type no foreign verb returns is a data handle.

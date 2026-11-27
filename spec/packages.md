@@ -278,7 +278,7 @@ What a package may import depends on where it lies in its project:
 | Importing package | May import |
 |---|---|
 | Top-level library package | the project's other top-level library packages, its own subpackages, and the public library packages of the project's dependencies |
-| Subpackage | its own subpackages, the project's top-level library packages other than the package it lies within, and the public library packages of the project's dependencies |
+| Subpackage | its own subpackages, the project's top-level library packages other than the top-level library package it lies within, and the public library packages of the project's dependencies |
 | Program package or plugin package | the project's top-level library packages and the public library packages of its dependencies |
 | Test package | as §7.3 states |
 

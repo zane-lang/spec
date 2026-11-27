@@ -377,7 +377,7 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 ```sh
 git clone https://github.com/zane-lang/prose-lint /tmp/prose-lint
-git -C /tmp/prose-lint checkout <commit pinned in prose.yml>
+git -C /tmp/prose-lint checkout "$(sed -n 's/^ *ref: //p' .github/workflows/prose.yml)"
 uv run --frozen --project /tmp/prose-lint prose-lint .
 ```
 
