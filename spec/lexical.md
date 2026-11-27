@@ -139,7 +139,7 @@ A comparison never has a type on its immediate left, and a type expression never
 
 ## 6. Delimiters and Brackets
 
-The **bracket picks the separator**. A `{ }` body terminates each entry with `;`; a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule depends only on the bracket, not on the meaning of the construct, so a separator character never has two meanings in one context.
+The **bracket picks the separator**. A `{ }` body terminates each entry with `;`, except a `match` arm whose body is a block, which its brace ends (§6.1); a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule depends only on the bracket, not on the meaning of the construct, so a separator character never has two meanings in one context.
 
 ### 6.1 `;` terminates an entry inside `{ }`
 
