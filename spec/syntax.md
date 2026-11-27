@@ -700,6 +700,14 @@ callback Unit(this Player) mut {        // shorthand for the line above
 
 > **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
 
+A package-scope lambda-variable may end in an `export` suffix, after its body, naming the C symbol it becomes ([`packages.md`](packages.md) §8.2):
+
+```zane
+name ReturnType(param ParamType, ...) { body } export "cName"
+name ReturnType(this SubjectType, param ParamType, ...) mut { body } export "cName"
+name ReturnType(param ParamType, ...) => expr export "cName"
+```
+
 ### 3.9 Operator definitions
 
 ```zane
@@ -1066,4 +1074,13 @@ packageName$member
 
 ```zane
 package packageName
+```
+
+### 8.3 Export lines
+
+A plugin or test package may carry `export` lines beside its imports, each naming a library package whose exported lambdas the build gives C symbols ([`packages.md`](packages.md) §8.3):
+
+```zane
+export packageName
+export packageName<TypeArgument, ...>
 ```

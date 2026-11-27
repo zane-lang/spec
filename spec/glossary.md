@@ -58,7 +58,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.7 capability wiring
 
-- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in the root package, from `@program$` and the foreign variables it declares.
+- **Meaning:** Capability objects must be passed or stored explicitly so access to external state remains visible in the object graph and call graph. They originate in the root package and in exported lambdas, from `@program$` and the foreign variables they declare.
 - **Why this name:** The design treats capabilities like explicit wiring between components rather than ambient globals.
 - **Canonical home:** [`effects.md`](effects.md) §6
 
@@ -468,7 +468,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.12 root package
 
-- **Meaning:** The package a program's build starts from — the program package being built, or the test package of a test build. Only it reaches `@program$` and declares foreign variables, and it holds `main`; a library package is never one.
+- **Meaning:** The package a build starts from — the program package being built, the plugin package of a dynamic-library build, or the test package of a test build. Apart from exported lambdas, only it reaches `@program$` and declares foreign variables; a program or test package holds `main`; a library package is never one.
 - **Why this name:** Every other package in the build is reached from it through the dependency graph, whose root it is; whether a package is the root depends on the build, not on the package.
 - **Canonical home:** [`packages.md`](packages.md) §6.1
 
@@ -486,7 +486,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.15 library package / program package
 
-- **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports.
+- **Meaning:** A **library package** is a directory of a project's `lib/`, importable by the project's other packages and, unless its name begins with `_`, by other projects. A **program package** is a directory of `bin/`, holding `main`, which nothing imports. A directory of `bin/` without `main` is a **plugin package** (§4.25).
 - **Why this name:** The directory names already show it: `lib/` holds the packages that other packages link against, and `bin/` holds the packages that become programs.
 - **Canonical home:** [`packages.md`](packages.md) §2.1
 
@@ -528,7 +528,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.22 foreign variable
 
-- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package declares one, and passes it on.
+- **Meaning:** A symbol declared with `foreign` and a C global's symbol in place of an initializer, whose value is a foreign capability referring to that global. Only the root package and exported lambdas declare one, and pass it on.
 - **Why this name:** It is the variable counterpart of a foreign verb: declared like any symbol, with its value supplied by C.
 - **Canonical home:** [`ffi.md`](ffi.md) §5.1
 
@@ -543,3 +543,33 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A function or `:` method call marked `comptime`, evaluated at compile time or the build fails. Unlike ordinary compile-time evaluation it may read capability-backed state, through capabilities that stand for the build machine's own; it writes no capability-backed state, and its result is a value type built into the program.
 - **Why this name:** The keyword marks the stage in which the call runs. It is Zig's word for compile-time evaluation, so a reader who knows Zig understands it correctly, and it names a stage rather than a property of the verb.
 - **Canonical home:** [`effects.md`](effects.md) §5.6
+
+### 4.25 plugin package / dynamic library
+
+- **Meaning:** A **plugin package** is a directory of `bin/` that declares no `main` and carries `export` lines or exported lambdas. The toolchain builds it as a **dynamic library** (`.so`, `.dylib`, `.dll`) that another program loads into its own process and calls through the exported lambdas.
+- **Why this name:** "Plugin" is the common word for code that a program loads to extend itself, whatever the program is: an audio workstation, a Python interpreter, a game engine. "Dynamic library" is the platforms' own name for the file it builds.
+- **Canonical home:** [`packages.md`](packages.md) §8.1
+
+### 4.26 exported lambda / export line
+
+- **Meaning:** An **exported lambda** is a package-scope lambda followed by `export "cName"`; in a build that exports it, it becomes a C function of that name, with the rights of root-package code. An **export line**, `export lib;`, sits in a plugin or test package and names the library whose exported lambdas this build turns into C symbols.
+- **Why this name:** "Export" is the word C toolchains already use for a symbol a dynamic library offers, and it is the mirror of `foreign`, which brings a C symbol in.
+- **Canonical home:** [`packages.md`](packages.md) §8.2, §8.3
+
+### 4.27 C-held object
+
+- **Meaning:** An object an exported lambda returned to C as `^T`. It is settled in a top-level scope of its own, C keeps it only as an opaque pointer, exported lambdas borrow it, and an exported lambda that takes it as `^T` ends it. No `&` connects two C-held objects.
+- **Why this name:** It names who holds the owner. The object is an ordinary Zane object; only the holder differs.
+- **Canonical home:** [`packages.md`](packages.md) §8.5
+
+### 4.28 context
+
+- **Meaning:** The subject of a foreign method whose type is not a handle. C receives it as an opaque `void *` and passes it back, during the call, as the first argument of the call's function values that declare the same subject; they may write it only when the foreign method is `mut`.
+- **Why this name:** C APIs call the pointer a callback receives back its context or user data; the Zane term keeps the first word.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.8
+
+### 4.29 C-compatible element type
+
+- **Meaning:** A scalar primitive, `@primitives$U8`, or a C-compatible value type. An array or a list of one crosses into C as a view, so only the element type decides whether a container crosses.
+- **Why this name:** It names the element, because the element, not the container, decides whether C can read the memory.
+- **Canonical home:** [`ffi.md`](ffi.md) §3.3

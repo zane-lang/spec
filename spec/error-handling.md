@@ -145,7 +145,7 @@ result Int = match token {
 
 ### 3.6 The program handles `main`'s abort
 
-No call site calls `main`: the program calls it, and is its handler. An abort of `main` ends the program with status `1` after reporting the abort's string ([`packages.md`](packages.md) §6.3). This is why `main`'s one abort type is the string the program writes, `@primitives$String` ([`packages.md`](packages.md) §6.2).
+No call site calls `main`: the program calls it, and is its handler. An abort of `main` ends the program with status `1` after reporting the abort's string ([`packages.md`](packages.md) §6.3). This is why `main`'s one abort type is the string the program writes, `@primitives$String` ([`packages.md`](packages.md) §6.2). An exported lambda, which a host calls, declares no abort type at all ([`packages.md`](packages.md) §8.2): no handler waits on the host's side, so the lambda handles every abort inside itself.
 
 ---
 
