@@ -278,6 +278,7 @@ power Int = match (slot) {
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-group-is-sugar-not-a-widening) — "The group is sugar, not a widening".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
 
 ### 5.2 Exhaustive, with no default arm
@@ -341,6 +342,7 @@ newState State = match (state, event) {
 - **Cross-product exhaustiveness.** Every combination of cases **MUST** be covered, with no default. Because there is no wildcard, a "regardless of `state`" arm names every state in a `[ ]` group; adding a case to either variant is a compile-time error until the new combinations are placed.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#variants-deserve-a-central-place) — "Variants deserve a central place".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 
 ---
 

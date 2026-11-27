@@ -109,6 +109,8 @@ check(q == Int(7));         // settled already: the handler does not run again
 
 A block left before it ends, by a `return`, an exit, or an `abort`, still waits for the call as it drains (§4.1), but runs no handler, and the call's outcome is discarded with the block.
 
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-spawns-handler-and-its-loans-end-where-its-block-does) — "A spawn's handler and its loans end where its block does".
+
 ### 3.4 A wait holds back only its caller
 
 The language has two calls that wait. A read of the symbol that holds a spawned call's result waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
@@ -338,6 +340,7 @@ An event source is an `@primitives$EventSource`. The named constructor `@primiti
 A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does wait, in a `register` call or on a spawned call's result, holds back only its own worker (§3.4).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#the-runtime-wakes-a-worker-when-its-event-sources-are-ready) — "The runtime wakes a worker when its event sources are ready".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-publish-goes-to-the-running-pool-and-missed-ticks-merge) — "A publish goes to the running pool, and missed ticks merge".
 
 ### 6.4 An element may reference constants
 
@@ -364,6 +367,7 @@ Events from one worker are applied in the order that worker published them. Even
 A publish is a write of the pool's state, made when the funnel applies the event. The compiler never reorders a publish against the step's other writes or leaves it out, and never evaluates one at compile time under [`effects.md`](effects.md) §5.3. A pool created inside a `comptime` call runs at compile time with that call, like every other call it makes ([`effects.md`](effects.md) §5.6).
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#workers-send-events-to-one-owner-workerpool) — "Workers send events to one owner: `WorkerPool`".
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-publish-goes-to-the-running-pool-and-missed-ticks-merge) — "A publish goes to the running pool, and missed ticks merge".
 
 ### 6.6 Reading a pool
 

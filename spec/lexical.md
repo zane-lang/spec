@@ -158,6 +158,8 @@ name String = match (color) {
 }
 ```
 
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
+
 ```zane
 type Node = #struct {
     _id Int;
@@ -301,6 +303,7 @@ Because the spelling determines the concept type, `3` and `3.0` are different ar
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" tells how the concepts took their names.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#digit-groups-take-the-swiss-apostrophe) — "Digit groups take the Swiss apostrophe".
 
 ### 7.1 String literals and structural escapes
 

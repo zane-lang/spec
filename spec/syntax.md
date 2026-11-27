@@ -883,6 +883,7 @@ newState State = match (state, event) {
 ```
 
 > **See also:** [`adt.md`](adt.md) §5 for `match` semantics.
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 
 ### 4.8 Block arguments and trailing arguments
 
@@ -957,6 +958,8 @@ worker Thread(name) {           // legal: the block trails a constructor call
 worker Thread(name, { poll(); });   // the same call, written in full
 pool Threads({ poll(); });          // a constructor call whose only argument is a block
 ```
+
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#a-constructor-call-with-an-empty-list-keeps-its-block-inside) — "A constructor call with an empty list keeps its block inside".
 
 ### 4.9 Continuing a value that closes on a `}`
 
