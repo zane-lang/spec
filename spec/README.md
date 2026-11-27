@@ -1,6 +1,6 @@
 # The Zane Language Specification
 
-What every construct of the Zane language means, what programs are legal, and how memory, effects and packages work.
+The meaning of every construct of the Zane language, the set of legal programs, and how memory, effects and packages work.
 
 The specification is a reference, not a tutorial: to learn the language, start with the [Learn pages](https://github.com/zane-lang/docs/blob/main/docs/README.md). The [design stories](../stories/README.md) record the history of each design decision.
 

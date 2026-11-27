@@ -111,7 +111,7 @@ import math$[sqrt, pow] as m;  // ILLEGAL: a list has no single name to rename
 import math$ as m;             // ILLEGAL: nothing is qualified to rename
 ```
 
-> **See also:** [`packages.md`](packages.md) §3 for what each form makes available.
+> **See also:** [`packages.md`](packages.md) §3 for the declarations each form makes available.
 
 ### 1.6 Type and alias declarations
 
@@ -284,10 +284,10 @@ An **intrinsic** is anything reached through `@`: a type, operation, or instance
 
 An intrinsic operation has one signature, with five exceptions, each an overload set told apart by its argument types like any other ([`functions.md`](functions.md) §4.1):
 
-- intrinsic methods and subscripts that share a name on different types, since a method's or a subscript's subject is one of its parameters ([`generics.md`](generics.md) §8.6);
+- intrinsic methods and subscripts that share a method name on different types, since a method's or a subscript's subject is one of its parameters ([`generics.md`](generics.md) §8.6);
 - the constructors of `@primitives$WorkerPool` and its `start` method, each with a form for a pool with shared state and one without, and `start` with and without event sources ([`concurrency.md`](concurrency.md) §6);
 - each machine operation of `@operators$` and each math function of `@math$`, which have one signature per operand type they take ([`operators.md`](operators.md) §2.6, [`math.md`](math.md) §2.1);
-- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous one, with one signature from its literal's concept and, for a scalar primitive, one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9);
+- the constructors of a scalar primitive and of `@primitives$U8`: the anonymous constructor, with one signature from its literal's concept and, for a scalar primitive, one from each primitive it converts from exactly, and each named one, with one signature per primitive it converts from ([`types.md`](types.md) §2.9);
 - the anonymous constructor of `@primitives$String`, with one signature from its literal's concept and one from each scalar primitive ([`types.md`](types.md) §2.11).
 
 An intrinsic is never an operator, and no operator is declared over storage primitives alone ([`operators.md`](operators.md) §2.2).
@@ -351,7 +351,7 @@ A **map literal** is a `{ }` body whose entries are `;`-terminated (§6.1 of [`l
 }
 ```
 
-Entries are evaluated in written order. A key is an ordinary expression rather than an identifier, so two entries may resolve to the same key; the later entry then **replaces** the earlier one. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
+Entries are evaluated in written order. A key is an ordinary expression rather than an identifier, so two entries may resolve to the same key; the later entry then **replaces** the earlier entry. Equality is generally not decidable before run time, so a duplicate is never a compile-time error.
 
 ```zane
 first String("y");
@@ -366,7 +366,7 @@ first String("y");
 
 It could not carry a useful count in any case. Entries with equal keys collapse, and a key is an expression, so the number of entries written is only an upper bound on the number stored — where an array literal's `n` is exact.
 
-An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.8), so the two never compete for the same text. A `{ }` that an introducing token has already claimed — an `init{ }`, a mould body — is governed by that form, not by this rule.
+An empty `{ }` written in a value position with no introducing token is always a code block, never a map literal (§4.8), so the two never compete for the same text. A `{ }` that follows an introducing token — an `init{ }`, a mould body — is governed by that form, not by this rule.
 
 A map literal is one of the two `{ }` arguments that may **trail** a call, the other being a block (§4.8). A literal large enough to want the position gets it for the same reason a block does.
 
@@ -384,7 +384,7 @@ The concept type `Type` declares a type parameter, and `@concepts$Int` — the c
 @concepts$Block
 ```
 
-> **See also:** [`control-flow.md`](control-flow.md) §2 for what a block argument does.
+> **See also:** [`control-flow.md`](control-flow.md) §2 for the behaviour of a block argument.
 
 ### 2.13 Function types
 
@@ -549,7 +549,7 @@ VariantName(payload PayloadType) => VariantName.case(payload)
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
 
-A constructor may carry a **name** — a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type. Its name **MUST** differ from every member and case of the type (see [`types.md`](types.md) §3.4):
+A constructor may be **named** — carry a `.name` suffix on the type — in either the positional or the field form (§3.4), giving a type several named construction paths (see [`types.md`](types.md) §3.4). It is declared and called by that qualified name and yields the base type. Its name **MUST** differ from every member and case of the type (see [`types.md`](types.md) §3.4):
 
 ```zane
 TypeName.zeros() => init{ field = expr; ... }
@@ -854,7 +854,7 @@ return match (scrutinee) { arm arm ... }
 functionName(match (scrutinee) { arm arm ... })
 ```
 
-The parentheses delimit the list and build no value from it: the scrutinees are independent values matched jointly on their tags ([`adt.md`](adt.md) §5.6). They also end the last scrutinee before the arms' `{`, which an expression ending in a brace of its own would otherwise claim.
+The parentheses delimit the list and build no value from it: the scrutinees are independent values matched jointly on their tags ([`adt.md`](adt.md) §5.6). They also end the last scrutinee before the arms' `{`, which an expression ending in a brace of its own would otherwise absorb.
 
 An arm is `[binder] selector`, with one `[binder] selector` per scrutinee position, `,`-separated in order, followed by its body. A selector is a single case name or a `[ ]` list of `,`-separated case names, written bare (rooted at that scrutinee's type). The body is either `=> expr`, which a `;` terminates, or a `{ }` block, whose closing brace ends the arm with no `;` — the rule a statement follows ([`lexical.md`](lexical.md) §6.3). An `=> expr` arm whose expression itself ends in a `}` still takes its `;`.
 
@@ -905,9 +905,9 @@ ran Bool = if(ready) {
 }
 ```
 
-A trailing argument **MUST** be the last element of its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, which is what the elided `)` would otherwise have to do in two marks.
+A trailing argument **MUST** be the last element of its statement: the `}` that closes it ends the statement, so neither a `;` nor anything that would continue the call may come after it (§6.3 of [`lexical.md`](lexical.md)). The brace ends the call and the statement together, a job the elided `)` and a `;` would otherwise do in two marks.
 
-A call that supplies more than one block writes the earlier ones as ordinary arguments and may still trail the last. Given a verb declaring two `@concepts$Block` parameters:
+A call that supplies more than one block writes the earlier blocks as ordinary arguments and may still trail the last. Given a verb declaring two `@concepts$Block` parameters:
 
 ```zane
 attempt({ prepare(); }) {

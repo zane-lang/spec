@@ -8,7 +8,7 @@ This document specifies how Zane branches and repeats. Neither is a language con
 
 ## 1. Overview
 
-Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a way to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run the handed statements conditionally, run them repeatedly, or end the run of the block argument around a call to the verb, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
+Zane has no `if` statement, no `loop` statement, and no exit keyword. It has a mechanism to hand a run of statements to a verb, three control-flow intrinsics that a verb can use to run the handed statements conditionally, run them repeatedly, or end the run of the block argument around a call to the verb, and two that run a function value on a subject until it reports that its work is done. Everything a reader recognizes as control flow is built from those.
 
 - **`Block arguments`.** A braced run of statements may be passed to a call. It captures its surroundings, cannot escape, and runs during the call.
 - **`Branching, repetition, and exits are calls`.** `if`, `elif`, `else`, `guard`, and counted repetition are `core` declarations, resolved and overloaded like any other verb.
@@ -44,7 +44,7 @@ A block reads and writes the bindings of the scope it is written in, exactly as 
 
 A block **MUST NOT** escape the call it is written at. It may not be stored, returned, bound to a symbol, placed in a field or element, or spawned. It may be handed on to another verb, because that call is still inside the original call's dynamic extent.
 
-This non-escape is what makes capture safe here while it stays forbidden for lambdas ([`functions.md`](functions.md) §7.4, [`concurrency.md`](concurrency.md) §5.2). A lambda may be stored and run later, possibly in parallel, so captured state could be reached from somewhere the compiler cannot see. A block runs during the call that receives it, in the frame that wrote it.
+This non-escape makes capture safe here while it stays forbidden for lambdas ([`functions.md`](functions.md) §7.4, [`concurrency.md`](concurrency.md) §5.2). A lambda may be stored and run later, possibly in parallel, so captured state could be reached from code the compiler cannot see. A block runs during the call that receives it, in the frame that wrote it.
 
 A verb that declares a `@concepts$Block` parameter **MUST NOT** be spawned ([`concurrency.md`](concurrency.md) §3.1), and a call to one **MUST NOT** be marked `comptime` ([`effects.md`](effects.md) §5.6).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#a-verb-with-a-block-parameter-cannot-be-spawned) — "A verb with a block parameter cannot be spawned".
@@ -95,7 +95,7 @@ i!to(count) {
 }
 ```
 
-A call to an exiting verb **MUST** be written inside a block argument. A verb's body ends in the `return` that produces the verb's value ([`functions.md`](functions.md) §3.5), and an exit carries no value to put in its place. A block argument yields nothing (§2.4), so ending its run needs no value, and a block argument is the one construct an exit can end, whatever the verb around it returns. A `match` arm's body and an abort handler's block are not block arguments: an exit written in one ends the run of the block argument around the `match` or the handled call, and with no such block argument the call is an error.
+A call to an exiting verb **MUST** be written inside a block argument. A verb's body ends in the `return` that produces the verb's value ([`functions.md`](functions.md) §3.5), and an exit carries no value to put in its place. A block argument yields nothing (§2.4), so ending its run needs no value, and a block argument is the only construct an exit can end, whatever the verb around it returns. A `match` arm's body and an abort handler's block are not block arguments: an exit written in one ends the run of the block argument around the `match` or the handled call, and with no such block argument the call is an error.
 
 ```zane
 Unit configure(settings Settings) {
@@ -105,7 +105,7 @@ Unit configure(settings Settings) {
 }
 ```
 
-Transparency is a property of the lowering, not a way to leave a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and a `return` or an exit written inside one is a jump within a single frame. This follows from what a block already is — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
+Transparency is a property of the lowering, not a means of leaving a frame. A verb that declares a `@concepts$Block` parameter is **expanded at its call site**, and so is every call it passes the block on to. A block therefore never crosses a call boundary at run time, and a `return` or an exit written inside one is a jump within a single frame. This follows from the block's existing properties — no written type (§2.1), never a value, unable to escape or be spawned (§2.2) — so no frame other than the writing one can ever hold it.
 
 An exit therefore names no scope and unwinds to none, which Zane does not do ([`error-handling.md`](error-handling.md) §4). The exiting verb is an ordinary verb with a frame of its own, and the exit ends that one invocation. The block argument it then ends is written around the call, in the caller's frame, so control resumes at the end of that run, one call out and no further (§4.2).
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
@@ -226,7 +226,7 @@ Unit configureAll(all SettingsList) {
 
 Its condition is an ordinary argument, so the condition has `core`'s `Bool` as its type and reaches that type through the same coercion as any other argument. A type usable in an `if` is usable in a `guard` on identical terms; the language itself names no type for either.
 
-`guard` takes no block. The statements after it in its block are the ones it skips, and work that should run only when the condition holds is an `if` block of its own.
+`guard` takes no block. The statements after it in its block are the statements it skips, and work that should run only when the condition holds is an `if` block of its own.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#an-exit-ends-the-run-of-a-block) — "An exit ends the run of a block".
 
@@ -295,7 +295,7 @@ The language provides exactly five control-flow operations:
 
 `branch` executes `body` when `condition` is true and does nothing otherwise; there is no fallback parameter, because the fallback case is `branch` on the complement. `repeat` executes `body` exactly `count` times; a `count` below `1` executes it zero times. `exitFromCall` ends the run of the block that a call to the verb containing it is written in (§4.2). `work` calls `step` on its subject, and calls it again each time it returns `true`, until it returns `false`. `register` does the same, but calls `step` again only once `source` is ready, and waits for it in between ([`concurrency.md`](concurrency.md) §3.4, §6.3). The worker pair introduce `S` at the subject and `R` at the step's result, as a verb introduces a parameter at its first marked occurrence ([`generics.md`](generics.md) §3.2), and the compiler reads both off the arguments. `R` is `@primitives$Bool` or a type with an implicit constructor to it, and each result reaches `@primitives$Bool` through that constructor, as a condition reaches `branch`; the compiler therefore accepts a step that returns `core`'s `Bool` as written.
 
-The worker pair are `mut` methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7). A program calls them with their intrinsic namespace as the qualifier of a qualified method call ([`functions.md`](functions.md) §6.2): `this!@controlflow$work(step)`. The subject is the one thing a control-flow intrinsic writes. The call borrows the subject mutably, as every `!` call borrows its subject, whether the subject is a writable place or a temporary, and every `step` runs on that one borrow ([`functions.md`](functions.md) §2.4). The call settles the subject once, before the first step, so each step writes the place the call named. A caller therefore calls the pair on a place it may write, most often its own `this` under `mut`.
+The worker pair are `mut` methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7). A program calls them with their intrinsic namespace as the qualifier of a qualified method call ([`functions.md`](functions.md) §6.2): `this!@controlflow$work(step)`. The subject is the only value a control-flow intrinsic writes. The call borrows the subject mutably, as every `!` call borrows its subject, whether the subject is a writable place or a temporary, and every `step` runs on that one borrow ([`functions.md`](functions.md) §2.4). The call settles the subject once, before the first step, so each step writes the place the call named. A caller therefore calls the pair on a place it may write, most often its own `this` under `mut`.
 
 None takes a fundamental type. The block-taking three take **storage primitives** or nothing at all, and the worker pair take a subject of any type, a function value over it, and, for `register`, a primitive event source. That is what separates control flow from the language: an intrinsic depends on no declaration in any package, so `core` is an ordinary consumer of them rather than a privileged part of the compiler.
 
@@ -309,7 +309,7 @@ Every argument of a control-flow intrinsic is a coercion site ([`types.md`](type
 
 It reaches that block and stops. In `outer` → `helper` → `guard`, the call to `guard` is written in a block inside `helper`: the exit ends that block's run, `helper` goes on after it, and `outer` is unaffected.
 
-This is what makes an exit declarable. A verb whose body holds the intrinsic ends the block of whoever calls it, so `core` declares the exit every program uses (§3.6) rather than the language spelling one as grammar:
+Ending only the caller's block makes an exit declarable. A verb whose body holds the intrinsic ends the block of whoever calls it, so `core` declares the exit every program uses (§3.6) rather than the language spelling one as grammar:
 
 ```zane
 package core;
@@ -337,7 +337,7 @@ Unit main() {
 
 The exit ends the run of the `if` block, and `main` goes on to print `reached`.
 
-A call to an exiting verb is legal only inside a block argument (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one, so a call to it ends its caller's block when the intrinsic runs, and is never a way for the verb to stop itself. A verb that wants to stop itself `return`s.
+A call to an exiting verb is legal only inside a block argument (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one, so a call to it ends its caller's block when the intrinsic runs, and never stops the verb itself. A verb stops itself with `return`.
 
 The intrinsic **MUST NOT** appear in a lambda's frame, including a block argument written there. A call through a function value names the value, not a body, and a function type does not record whether the function exits, so a call through one could not be checked against the rule above. A lambda leaves early with `return`. A call to an exiting verb such as `guard`, written in a block inside the lambda, ends that block's run.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".
@@ -369,7 +369,7 @@ twice() {
 
 The intrinsic namespaces are reachable from every package without an import ([`syntax.md`](syntax.md) §2.7), and the coercion of §4.1 supplies the primitive, so no package is closer to the intrinsics than any other. `core`'s declarations in §3 have no standing the example above lacks. Being the fundamental types' home package gives `core` first place in unqualified method lookup, not exclusive rights: any package may declare methods on them, reached by a qualifier where lookup does not find them ([`functions.md`](functions.md) §6.1 and §6.3).
 
-Exits are declarable on the same footing, and need no block parameter. An `@controlflow$exitFromCall()` in any verb's body makes a call to that verb end the run of the block it is written in whenever the intrinsic runs (§4.2), so a package may declare an exiting verb of its own exactly as `core` declares `guard`. That is what an exit spelled as grammar could never be: a keyword can only exit where it is written, so it cannot be handed to anyone.
+Exits are declarable on the same footing, and need no block parameter. An `@controlflow$exitFromCall()` in any verb's body makes a call to that verb end the run of the block it is written in whenever the intrinsic runs (§4.2), so a package may declare an exiting verb of its own exactly as `core` declares `guard`. An exit spelled as grammar could never be declared that way: a keyword can only exit where it is written, so it cannot be handed to anyone.
 
 ---
 

@@ -52,7 +52,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.6 structural effect model
 
-- **Meaning:** What a verb may write follows from its kind — a `mut` method writes `this`, a method without `mut` or a function writes nothing its caller can see — and capability access follows from call structure, with no effect annotations.
+- **Meaning:** What a verb may write follows from the kind of verb it is — a `mut` method writes `this`, a method without `mut` or a function writes nothing its caller can see — and capability access follows from call structure, with no effect annotations.
 - **Why this name:** The model is "structural" because effects follow from program structure and reachable state, not from separate effect declarations.
 - **Canonical home:** [`effects.md`](effects.md) §1, §3, and §5
 
@@ -89,7 +89,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 2.12 event source
 
 - **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and a timer is ready at most once per call of the step, so missed intervals merge. While the worker waits, every other spawned call and pool worker keeps running.
-- **Why this name:** It is the standard term in event loops for something that becomes ready; the qualifier keeps it apart from a reference source.
+- **Why this name:** It is the standard term in event loops for an event source that becomes ready; the qualifier keeps it apart from a reference source.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.3
 
 ---
@@ -110,7 +110,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.3 unified type parameters
 
-- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type or a package, inline on a verb.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing separating types from numbers — and differ only in where they are introduced: a `<>` header on a type or a package, inline on a verb.
 - **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types and packages, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
@@ -129,7 +129,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.6 package privacy
 
 - **Meaning:** A `_` field is private to the package that declares its type: any declaration in that package may name it, and none in another package may, including methods on the type.
-- **Why this name:** The package is the boundary, the same one a leading `_` draws on a package-scope declaration.
+- **Why this name:** The package is the boundary, the same boundary a leading `_` draws on a package-scope declaration.
 - **Canonical home:** [`types.md`](types.md) §2.3
 
 ### 3.7 direct initialization
@@ -176,7 +176,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.14 `Type` and `@concepts$Int` parameter concepts
 
-- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's or a package's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two concept types a type's or a package's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the concept that an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
@@ -188,7 +188,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.16 enum (uniform peers)
 
-- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members that mean one uniform thing (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map. An enum may declare constructors, each returning a member.
+- **Meaning:** An `enum` is a closed set of interchangeable, payloadless peer members of one uniform category (colors, weekdays). It is not a sum mould; per-member data is attached externally by an enum map. An enum may declare constructors, each returning a member.
 - **Why this name:** "Enum" matches the common meaning of an enumeration of equal-rank constants, and the spec reserves it for that uniform-peer role rather than overloading it with the sum-type role given to `variant`.
 - **Canonical home:** [`adt.md`](adt.md) §2
 
@@ -219,13 +219,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.21 bracket-picked separator
 
 - **Meaning:** The bracket determines how its contents are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement or a `match` arm a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
-- **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states that the bracket does the picking.
+- **Why this name:** The rule turns on the bracket alone rather than on the construct's meaning, so the name states that the bracket does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
 ### 3.22 verb
 
 - **Meaning:** A callable whose body is a sequence of statements that executes to do work. The verbs are functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb, the only verb that also has a value form). A subscript is **not** a verb: its body must be a place expression that projects existing storage rather than running computation, so it designates a place instead of executing.
-- **Why this name:** The unifying trait is the executing statement body — a verb *does* something — which is why a constructor (statements ending in a `return` of its type's value, an `init{}` for a `struct`) counts and is indistinguishable from a builder helper apart from its name, while a place-projecting subscript does not.
+- **Why this name:** The unifying trait is the executing statement body — a verb *does* work — which is why a constructor (statements ending in a `return` of its type's value, an `init{}` for a `struct`) counts and is indistinguishable from a builder helper apart from its name, while a place-projecting subscript does not.
 - **Canonical home:** [`functions.md`](functions.md) §1
 
 ### 3.23 settled owner
@@ -248,7 +248,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.26 capability marker
 
-- **Meaning:** A surface marker on a verb that selects its kind and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and, for a type with fields, unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
+- **Meaning:** A surface marker on a verb that selects whether it is a method, a constructor, an operator or a lambda, and unlocks one capability: naming the first parameter `this` makes a method and grants the subject call; naming the verb after a type makes a constructor, implying its return type and, for a type with fields, unlocking `init{ }`; naming the verb with an operator token makes an operator; no name makes a lambda. The parameter system, body grammar, overload resolution, and effect model are shared across all verbs.
 - **Why this name:** The marker is a small piece of surface form that, by its presence, grants a *capability* to an otherwise-ordinary verb — so a constructor is a verb with one marker, not a separate mechanism.
 - **Canonical home:** [`functions.md`](functions.md) §8
 
@@ -261,13 +261,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.28 coercion site
 
 - **Meaning:** A position where the compiler inserts an applicable implicit conversion automatically: a callable argument, including an argument of an intrinsic, a named field entry of a field-constructor call, or an entry of an enum-map declaration. It is *not* inserted where a value is written to a locally-fixed destination — a symbol declaration, an assignment or store, a `return`, or an `init{ }` — where the conversion is written explicitly, nor at an operator's operand, which is passed as written.
-- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site says where one may be inserted, not that arbitrary conversion is built in.
+- **Why this name:** "Coercion" is the standard term for an implicit, compiler-inserted type conversion, as opposed to an explicit cast; a *coercion site* names a position where that conversion is permitted. A coercion is backed by an `implicit` constructor, including the literal constructors `core` supplies — the site marks where the compiler may insert one, not that arbitrary conversion is built in.
 - **Canonical home:** [`types.md`](types.md) §4.2
 
 ### 3.29 mould
 
 - **Meaning:** One of the three constructs that give a type its shape: `struct`, `variant`, and `enum`. Each has a value form and a `#` reference form, and a mould appears only as the right-hand side of a `type` or `alias` declaration, so every constructible type is named.
-- **Why this name:** A mould gives shapeless material a fixed form, which is what these three do to a type; the word also carries that a mould is the form a type is cast from.
+- **Why this name:** A mould gives shapeless material a fixed form, and these three give a type its form; the word also carries that a mould is the form a type is cast from.
 - **Canonical home:** [`types.md`](types.md) §5.3
 
 ### 3.30 value mould / reference mould
@@ -291,7 +291,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.33 reference
 
 - **Meaning:** The source-facing `&T`: access to a settled owner (§3.23) without storing that object or controlling its lifetime. A reference may be repointed, copied when assigned or passed, stored in an `&` field or element, or returned as `&T`, but it cannot outlive its owner. It is represented as its owner's 32-bit offset from the program's image.
-- **Why this name:** Readers already know a reference as something that reaches an object it does not own and must not outlive it, which is the rule. A **reference type** is exactly the kind of type a reference may name.
+- **Why this name:** Readers already know a reference as a handle that reaches an object it does not own and must not outlive it, which is the rule. A **reference type** is exactly the kind of type a reference may name.
 - **Canonical home:** [`memory.md`](memory.md) §2.4; representation in [`memory.md`](memory.md) §4.1
 
 ### 3.34 taken parameter
@@ -338,14 +338,14 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.41 move-source
 
-- **Meaning:** An expression denoting a roaming value that the expression is entitled to consume, and therefore the only thing that may be moved into an owning position: a roaming symbol, a field of a roaming root, a `^T` result, or a `#variant` case form. A settled owner is never one.
+- **Meaning:** An expression denoting a roaming value that the expression is entitled to consume, and therefore the only expression that may be moved into an owning position: a roaming symbol, a field of a roaming root, a `^T` result, or a `#variant` case form. A settled owner is never one.
 - **Why this name:** It names the *source* end of a move, which is where the restriction lives: the rule is about what an expression is entitled to give up, not about where the value lands.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.2
 
 ### 3.42 carried reference
 
 - **Meaning:** An `&` reachable from a value's **declared** type by following zero or more **owning** edges — members, payloads, and the elements of arrays and lists (§3.39). A type's own `&` field is the zero-edge case. The walk stops at each `&` rather than continuing through it into what it names, since that object is owned elsewhere and travels separately. A value's carried references are what the store rule compares alongside the value's owner.
-- **Why this name:** The value *carries* the reference the way luggage carries its contents — the reference travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value is the one that has to look inside.
+- **Why this name:** The value *carries* the reference the way luggage carries its contents — the reference travels with it and is not part of what the value is used for, which is exactly why the store that relocates the value has to look inside.
 - **Canonical home:** [`lifetimes.md`](lifetimes.md) §1.10
 
 ### 3.43 scope
@@ -393,7 +393,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.50 veiled value
 
 - **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type, Params Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors, and `T.name(...)` is always a named-constructor call; a field read or write, an enum map read, naming an enum member, a `match`, or a call as a function value on it is an error.
-- **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
+- **Why this name:** A veiled object is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
 - **Canonical home:** [`generics.md`](generics.md) §3.8
 
 ---
@@ -421,13 +421,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.4 import spelling rule
 
 - **Meaning:** An import states how its members are written in that file — qualified, aliased, or bare — and that is the only spelling available there.
-- **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import chooses how it is written.
+- **Why this name:** The rule is about surface spelling rather than availability: every form reaches the same declaration, and the import determines its spelling.
 - **Canonical home:** [`packages.md`](packages.md) §3.3 and §3.4
 
 ### 4.5 intersection and union
 
 - **Meaning:** The meaning of the operators `and` and `or`: what two values share and what either covers. On `Bool` they are conjunction and disjunction; on a set, its intersection and union. Both bind below every comparison.
-- **Why this name:** The set-theoretic names hold for every type that implements the pair, where *conjunction* and *disjunction* fit `Bool` alone; the words `and` and `or` read as the same thing in prose.
+- **Why this name:** The set-theoretic names hold for every type that implements the pair, where *conjunction* and *disjunction* fit `Bool` alone; the words `and` and `or` read as the same operations in prose.
 - **Canonical home:** [`operators.md`](operators.md) §2.4
 
 ### 4.6 block argument
@@ -445,7 +445,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.8 intrinsic
 
 - **Meaning:** Anything reached through `@` — a type, operation, or instance supplied by the compiler rather than declared by a package. Each `@` namespace is an intrinsic namespace holding one kind of intrinsic.
-- **Why this name:** The everyday word already means "built into the thing itself", which is what sets these apart from every package declaration; since it covers the whole `@` space, no single namespace is named for it.
+- **Why this name:** The everyday word already carries the sense "built into the thing itself", and that sense sets these apart from every package declaration; since it covers the whole `@` space, no single namespace is named for it.
 - **Canonical home:** [`syntax.md`](syntax.md) §2.7
 
 ### 4.9 control-flow intrinsic
@@ -457,7 +457,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.10 ordinary `core`
 
 - **Meaning:** `core` declares the fundamental types but holds no standing in the language: it is fetched, versioned, pinned, imported, and remapped like any other dependency, and two of its versions may coexist in one program.
-- **Why this name:** The label records the whole rule — what is notable about `core` is precisely that nothing about it is special.
+- **Why this name:** The label records the whole rule — the notable fact about `core` is precisely that nothing about it is special.
 - **Canonical home:** [`types.md`](types.md) §2.6 and [`dependencies.md`](dependencies.md) §14
 
 ### 4.11 spawn target
@@ -535,7 +535,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.23 package rename / dropped package
 
 - **Meaning:** A `renames` row of a project's manifest gives a dependency's public library package another name in that project, the only name its files import it by. A **dropped package**, renamed to `_`, is importable by none of them and claims no name. Neither changes a compiled symbol.
-- **Why this name:** It renames the package for a whole project, where an `as` alias respells it in one file; `_` is the name that already means hidden.
+- **Why this name:** It renames the package for a whole project, where an `as` alias respells it in one file; the spelling `_` already marks hidden declarations elsewhere in the language.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §2.1 and §8
 
 ### 4.24 `comptime` call
@@ -570,8 +570,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.29 C-compatible element type
 
-- **Meaning:** A scalar primitive, `@primitives$U8`, or a C-compatible value type. An array or a list of one crosses into C as a view, so only the element type decides whether a container crosses.
-- **Why this name:** It names the element, because the element, not the container, decides whether C can read the memory.
+- **Meaning:** A scalar primitive, `@primitives$U8`, or a C-compatible value type. An array or a list of one crosses into C as a view, so only the element type determines whether a container crosses.
+- **Why this name:** It names the element, because the element, not the container, determines whether C can read the memory.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.3
 
 ### 4.30 host / host rule
@@ -583,5 +583,5 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 4.31 parameterized package / package instance
 
 - **Meaning:** A **parameterized package** is a library package whose declaration carries a `<>` header of type and number parameters, `package clap<App Type, Dsp Type, Info Type, Params Type>;`. A **package instance** is the package with one argument list applied, `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>`: a package of its own, imported by that full name, with types distinct from every other instance's.
-- **Why this name:** The terms follow the ones a parameterized type already has. A package is parameterized as a type is, and *instance* is the word the compiler already uses for one concrete copy of a generic.
+- **Why this name:** The terms follow the terms a parameterized type already has. A package is parameterized as a type is, and *instance* is the word the compiler already uses for one concrete copy of a generic.
 - **Canonical home:** [`packages.md`](packages.md) §2.6, §3.10

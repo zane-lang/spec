@@ -29,7 +29,7 @@ A **store** is legal only when every owner the stored value names — directly, 
 
 Two clauses complete it. A **block** outlives every block nested within it, and a symbol's scope is fixed at that symbol's declaration, so nothing later can falsify it. And the owners **inside** a stored value travel with it, taking the destination's scope.
 
-A block is one lifetime, not a sequence of them. Everything scoped to it dies when it drains (§2.1), with no Zane code interleaved and no order among them to observe, so two things in one scope can never see each other's death. The free functions of foreign handles are C, and they run in an order of their own ([`ffi.md`](ffi.md) §4.2). That is why the comparison is between scopes rather than between declaration positions.
+A block is one lifetime, not a sequence of them. Everything scoped to it dies when it drains (§2.1), with no Zane code interleaved and no order among them to observe, so two objects in one scope can never see each other's death. The free functions of foreign handles are C, and they run in an order of their own ([`ffi.md`](ffi.md) §4.2). That is why the comparison is between scopes rather than between declaration positions.
 
 ```zane
 node Node();
@@ -45,7 +45,7 @@ do() {
 
 When a store must **mint** a new reference, its source must also be a settled reference source ([`memory.md`](memory.md) §2.8). That condition is independent of the scope comparison. A store whose source value is already `&T` copies that existing reference instead and does not reapply the minting restriction.
 
-A field is **not** confined to its own tree. It inherits its root symbol's scope, so an object and what its `&` field names may be siblings in one block:
+A field is **not** confined to its own tree. It inherits its root symbol's scope, so an object and the target of its `&` field may be siblings in one block:
 
 ```zane
 io IO();
@@ -151,7 +151,7 @@ Unit enterMatch(player ^Player) {
 }
 ```
 
-`startMatch` takes `player` into the local `island`, and `island` drains at the return, taking `player` with it. A body that means to keep the player alive hands it back through its result (§1.8), or moves it into an object the caller supplied.
+`startMatch` takes `player` into the local `island`, and `island` drains at the return, taking `player` with it. A body that has to keep the player alive hands it back through its result (§1.8), or moves it into an object the caller supplied.
 
 For `&` fields specifically, the callee must declare the corresponding parameter as `&T`. A `^T` parameter is roaming and is never a reference source ([`memory.md`](memory.md) §2.8), and a borrow is never stored.
 
@@ -229,7 +229,7 @@ Int?&Node passed(node &Node) {
 }
 ```
 
-The handler's binder is then what the call's result would have been: it names what the call's argument paths name, and every store of it is compared against those (§1.11).
+The handler's binder then stands in for the call's result: it names the owners the call's argument paths name, and every store of it is compared against those (§1.11).
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#returning-a-ref-without-a-lifetime-to-name-it) — "Returning a ref without a lifetime to name it".
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#where-a-guest-may-be-rooted) — "Where a guest may be rooted".
@@ -298,7 +298,7 @@ The caller keeps the owner by binding the result. A relayed owner that is not bo
 
 A value **carries a reference** when an `&` is reachable from its type by following **owning** edges (see [`adt.md`](adt.md) §4). The walk finds an `&` member and stops at it: a type's own `&` field is the shortest case, reached after no edges at all, and an `&` nested inside an owning field or container element is reached by following those edges to it. The walk does not continue *through* an `&` into what it names, because that object is owned elsewhere.
 
-The owners a value's carried references name are what §1.1 compares alongside the value's owner. A roaming value's carried references name settled owners outside it, since nothing inside a roaming owner is referenceable ([`memory.md`](memory.md) §2.8.1). Each keeps the scope it has, and every store of the value asks again whether that scope outlives the new destination:
+The owners a value's carried references name are what §1.1 compares alongside the value's owner. A roaming value's carried references name settled owners outside it, since nothing inside a roaming owner is referenceable ([`memory.md`](memory.md) §2.8.1). Each keeps the scope it has, and every store of the value checks again whether that scope outlives the new destination:
 
 ```zane
 outerHolder Holder(Engine(Int(1)));
@@ -310,7 +310,7 @@ do() {
 }                                  //   block, and parked is scoped above it
 ```
 
-The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because which case is live is the flow-sensitive fact §1.3 exists to refuse. The declared type determines only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
+The walk reads the **declared type**, not the value's current contents. For a `#variant` that means every case, because the live case is a flow-sensitive fact, and §1.3 exists to keep the check from depending on one. The declared type determines only whether a value *may* carry a reference. What a carried reference **names** is read from the value's construction, which §1.3 keeps in the same block as any move of it — so a case form that supplies no `&` names no owner, nothing is compared, and the store passes. No valid program is rejected for holding a case the walk had to consider.
 
 A value with **no source owner** — a verb result or a `#variant` case form (§1.2) — is asked the same question, against the owner it is bound into:
 
@@ -327,9 +327,9 @@ do() {
 }                                       //   this block, and result is scoped above it
 ```
 
-`innerTree.root` is a field of a settled root, which is a reference source ([`memory.md`](memory.md) §2.8) and so is what an `&` payload asks for. It would **not** do for an owning payload, which takes a move-source ([`adt.md`](adt.md) §3.2) — the two payload kinds ask for different things, and only the `&` kind produces a carried reference here.
+`innerTree.root` is a field of a settled root, which is a reference source ([`memory.md`](memory.md) §2.8) and so is the source an `&` payload requires. It would **not** do for an owning payload, which takes a move-source ([`adt.md`](adt.md) §3.2) — owning and `&` payloads require different sources, and only the `&` payload produces a carried reference here.
 
-A settled value may hold references into its own fields, wired after it settles ([`memory.md`](memory.md) §2.8.1). It never moves, so those references are compared once, where they are stored. What none of this reaches is an owner destroyed while its tree lives on, which §2.1 answers.
+A settled value may hold references into its own fields, wired after it settles ([`memory.md`](memory.md) §2.8.1). It never moves, so those references are compared once, where they are stored. None of this covers an owner destroyed while its tree lives on; §2.1 answers that case.
 
 > **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#an--store-compares-root-symbols) — "An `&` store compares root symbols".
 

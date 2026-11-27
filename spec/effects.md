@@ -55,7 +55,7 @@ A verb's signature shows what it may write. There are three kinds:
 | Method without `mut` | `:` | nothing its caller can see |
 | Function | a plain call | nothing its caller can see |
 
-Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
+Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on a place the caller may itself write (§4). So the kind of verb bounds everything the call can write, however deep the calls go.
 
 The root package is one exception: any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1). An exported lambda is the other: it has the same rights in whatever package declares it, because a host calls it as the system calls `main` ([`packages.md`](packages.md) §8.4).
 
@@ -140,11 +140,11 @@ answer Int = loud(21); // may be evaluated at compile time; "computing" is still
 
 ### 5.4 Reading through a reference is a read
 
-Reading through an `&` is a read like any other. What a verb may write follows from its kind (§3), not from whether it reaches an object through an owner or a reference.
+Reading through an `&` is a read like any other. What a verb may write follows from the kind of verb it is (§3), not from whether it reaches an object through an owner or a reference.
 
 ### 5.5 Unknown callees are assumed to touch capabilities
 
-When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, it assumes the call reads and writes capability-backed state. A foreign verb is the exception: what it reads and writes is what its signature states ([`ffi.md`](ffi.md) §5.2), whatever of its C body the compiler sees.
+When the compiler cannot see a callee's body, as with a call through a function value it cannot resolve, the compiler treats the call as reading and writing capability-backed state. A foreign verb is the exception: what it reads and writes is what its signature states ([`ffi.md`](ffi.md) §5.2), whatever of its C body the compiler sees.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#inferring-effects-instead-of-naming-them) — "Inferring effects instead of naming them".
 
@@ -196,7 +196,7 @@ Capabilities may be stored into objects at construction time. This does not crea
 
 ### 6.3 `&` fields can also expose read access paths
 
-Storing an `&` field is another explicit way to make state reachable. This does not create a distinct use-site effect rule; what a verb may write through it still follows from the verb's kind (§3).
+Storing an `&` field is another explicit means of making state reachable. This does not create a distinct use-site effect rule; what a verb may write through it still follows from the kind of verb it is (§3).
 
 ### 6.4 Context objects are explicit, not magical
 
@@ -210,7 +210,7 @@ Passing capabilities through constructors and methods is part of the design. It 
 
 ### 6.6 The program's console and runtime
 
-The console and the runtime are capabilities the compiler supplies. Their types, `@runtime$Console` and `@runtime$Runtime`, are reference types: a program has one console and one runtime, and every part of it that uses either uses the same one. Neither type can be constructed. The only instances are `@program$console` and `@program$runtime`, created when the program starts.
+The console and the runtime are capabilities the compiler supplies. Their types, `@runtime$Console` and `@runtime$Runtime`, are reference types: a program has one console and one runtime, and every part of it that uses either uses that single instance. Neither type can be constructed. The only instances are `@program$console` and `@program$runtime`, created when the program starts.
 
 Only the root package and exported lambdas reach `@program$` ([`packages.md`](packages.md) §6.1, §8.4). It passes the instances on like any other capability. Passed as an argument, a capability can be read. Stored into an object at construction, it can be written by that object's `mut` methods (§4.4). Either way, a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
 
@@ -255,7 +255,7 @@ Heap allocation and destruction are runtime implementation events, not writes in
 
 ### 7.3 Abortability is orthogonal
 
-A verb's abort type and its kind (§3) are independent: a verb of any kind may be abortable.
+A verb's abort type and the kind of verb it is (§3) are independent: a verb of any kind may be abortable.
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#what-deliberately-is-not-an-effect) — "What deliberately is not an effect".
 
@@ -283,10 +283,10 @@ Concurrent mutation is not a per-`mut`-call property; it is governed by the spaw
 |---|---|
 | `mut` method | Called with `!`; writes `this` and everything reached through it |
 | Method without `mut`, function | Write nothing their caller can see |
-| Read-only binding | Every parameter other than a `mut` method's `this`; admits neither an assignment nor a `!` call |
+| Read-only binding | Every parameter other than a `mut` method's `this`; accepts neither an assignment nor a `!` call |
 | Derived reference | A reference derived from a read-only binding stays read-only wherever it goes; a `!` call whose subject reaches one is an error |
 | Root package and exported lambdas | Any verb may write the program's console and runtime and the foreign capabilities their foreign variables give |
-| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation, what a `comptime` call may do, and parallelism |
+| Derived facts | Capability reads and capability writes come from the body and its callees, or for a foreign verb from its signature and the function values it is passed, and govern only compile-time evaluation, the permitted behaviour of a `comptime` call, and parallelism |
 | Compile-time evaluation | A computation that depends on no parameter and no read of capability-backed state may be evaluated at compile time, which changes none of the program's side effects and nothing it computes |
 | `comptime` call | Evaluated at compile time or the build fails, to completion; may read capability-backed state, through capabilities standing for the build machine's; writes none and no subject; its result is a value type; its arguments depend only on constants, other marked calls, and computations §5.3 permits |
 | Capabilities | Reachable only as objects passed or stored; they originate in the root package and in exported lambdas, from `@program$` and their foreign variables |
