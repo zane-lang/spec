@@ -573,3 +573,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A scalar primitive, `@primitives$U8`, or a C-compatible value type. An array or a list of one crosses into C as a view, so only the element type decides whether a container crosses.
 - **Why this name:** It names the element, because the element, not the container, decides whether C can read the memory.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.3
+
+### 4.30 host / host rule
+
+- **Meaning:** A **host** is the program that loads a dynamic library into its own process and calls its exported lambdas, such as an audio workstation loading a CLAP plugin. The **host rule** is what every host obeys: it never runs two calls that borrow one C-held object mutably at once, and never runs a call that takes a C-held object's owner beside any other call on it.
+- **Why this name:** "Host" is the word every plugin format already uses for the loading program. The spec once used it for an owner in the memory model; that meaning is retired, and the word now has only this one.
+- **Canonical home:** [`packages.md`](packages.md) §8.1; host rule [`concurrency.md`](concurrency.md) §4.7

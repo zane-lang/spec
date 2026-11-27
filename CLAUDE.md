@@ -107,13 +107,16 @@ Use `subject` in new prose on both sides; merged stories keep `receiver`.
 §6.6); each comes back empty:
 
 ```sh
-grep -RIn -i -E "guest|\bhost" spec/ | grep -vF '> **Story:**' | grep -v "^spec/dependencies.md"
+grep -RIn -i -E "guest|hosting|\bhosts? (an? |the |its )?(owner|object|reference|place|scope|symbol)|(settled|roaming|owning|-type) hosts?\b|takes the host\b|\bhost('s)? (scope|arena|lifetime|field)" spec/ | grep -vF '> **Story:**'
+grep -RIn -E "\bhosts (an? )?[a-z]+[A-Z]|\bhosts an? [A-Z]" spec/
 grep -RIn -E "(block|scope)s? owns?\b|owned by (the |its |that |this |an? )?(declaring |enclosing |body )?(block|scope)|owner comparison" spec/
 grep -RIn -i -E "\breference (field|element|parameter|member|slot)s?\b" spec/
 ```
 
-The first skips `> **Story:**` pointers (quoted old headings) and
-`dependencies.md` (a host is a download server).
+The first two hunt the retired memory sense of `host` (an owner; glossary
+§4.30 records the change). `host` itself is legal: it names the program that
+loads a dynamic library (`spec/packages.md` §8.1), and in `dependencies.md` a
+download server. The first skips `> **Story:**` pointers (quoted old headings).
 
 **The separator** (`spec/lexical.md` §6; `,` is what every other C-family
 language does, so it is the likely slip). Both come back empty today:
