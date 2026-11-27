@@ -96,6 +96,19 @@ fallback Int = spawn listen(8081) ?? Int(404);
 
 The bound symbol has the handled primary type, and reading it still blocks until the spawned call finishes.
 
+The call **settles** once, on the thread that made the spawn: at the first read of the bound symbol, or, when nothing has read it by then, where the block the spawn is written in ends. Settling waits for the call to finish. When the call aborts, its handler runs there, and when the spawned verb is an exiting one and exits, the run of the block the spawn is written in ends there ([`control-flow.md`](control-flow.md) §2.3). A later read sees the settled value and runs no handler.
+
+```zane
+q Int = spawn divide(Int(9), Int(0)) ? e {
+    runs = runs + Int(1);   // runs here, at the first read below
+    resolve Int(7);
+}
+check(q == Int(7));
+check(q == Int(7));         // settled already: the handler does not run again
+```
+
+A block left before it ends, by a `return`, an exit, or an `abort`, still waits for the call as it drains (§4.1), but runs no handler, and the call's outcome is discarded with the block.
+
 ### 3.4 A wait holds back only its caller
 
 The language has two calls that wait. A read of the symbol that holds a spawned call's result waits until that call returns (§3.2). A call to `register` waits for its event source between one call of its step and the next ([`control-flow.md`](control-flow.md) §3.7).
@@ -147,6 +160,20 @@ A direct consequence is that spawned work never mutates a reference-typed object
 ### 4.3 Single writer per storage location
 
 For any one storage location, at most one live spawned call may hold a **mutable borrow** — the `!` subject of a spawned `mut` call. By §4.2 that subject is always value-typed, so every borrow this rule counts is a value borrow ([`memory.md`](memory.md) §2.9). Two spawned calls that mutably borrow the same location are a compile-time error. Because value types carry no `&`, a location's identity is unambiguous — there is no hidden alias to obscure that two subjects denote the same slot — so this disjointness is checked at the spawn site by inspecting the subjects, not by tracing the program. The spawning scope may not access a location while a live spawn holds its mutable borrow; the borrow is released when that spawn completes (§4.1).
+
+A spawn is also **lent** every owner passed to it, directly or through a reference, and the spawned call may read that owner until the scope the spawn is written in drains (§4.1). The spawning scope keeps running meanwhile, so while the loan lasts that scope and the blocks inside it **MUST NOT** write a lent owner: not by assignment, not as the subject of a `!` call, and not by moving it out. A write reached through a reference is a write of the owner the reference names. A spawned `mut` call on a value-typed part of a lent owner is not such a write: it is a spawned mutation, which the reading spawn observes as a coherent snapshot (§4.4).
+
+```zane
+// Int glance(d &Dial) => d.reading.level;
+view &Dial = dial;
+seen Int = spawn glance(view);   // lent `dial`, through `view`
+dial.reading = Gauge(Int(3));    // ILLEGAL: `glance` may be reading `dial`
+spawn dial.reading!nudge();      // legal: a spawned mutation of part of `dial`
+```
+
+With this rule, every concurrent read of a lent owner is safe whoever writes: no spawned call writes a reference-typed object (§4.2), the spawning scope writes no lent owner, and a spawned mutation is read as a snapshot.
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#a-spawns-handler-and-its-loans-end-where-its-block-does) — "A spawn's handler and its loans end where its block does".
 
 A spawn site inside a loop body holds one live borrow at a time. Each pass of the body is a scope, and it drains only once that pass's spawned calls have completed (§4.1), so the passes run one after another and a spawn of one pass never overlaps a spawn of the next. Many workers that should run the same step at once run in a worker pool instead (§6).
 
@@ -306,7 +333,7 @@ The runtime never runs two calls of one element's step at once. Steps of differe
 
 A worker started without event sources has its step called again as soon as it returns `true`. A worker started with **event sources** has its step called again when one of them is ready, or when the funnel has changed the shared state since the step's last call. Between calls, such a worker waits without occupying a thread. With or without event sources, the step's first call comes right after `start`.
 
-An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them. A worker outside a pool waits on an event source through the `register` method ([`control-flow.md`](control-flow.md) §3.7).
+An event source is an `@primitives$EventSource`. The named constructor `@primitives$EventSource.every` makes a timer from an interval in nanoseconds, an `@primitives$I64`, which is ready each time that interval has passed since it was last ready. An interval below `1` makes it always ready. A timer is ready at most once per call of the step it wakes: when a call runs with the timer ready, the timer's next deadline is the first one on its schedule after the call, so a step that ran past several intervals is called once more, not once for each interval it missed. A `register` on a timer ([`control-flow.md`](control-flow.md) §3.7) counts its timer the same way. `core`'s `EventSource.every` takes a `Duration` instead. Other event sources come from the intrinsics that provide them. A worker outside a pool waits on an event source through the `register` method ([`control-flow.md`](control-flow.md) §3.7).
 
 A step is designed never to wait: it reads only values that already exist, and then it returns. A step that does wait, in a `register` call or on a spawned call's result, holds back only its own worker (§3.4).
 
@@ -330,7 +357,7 @@ An element is stored by the pool, as a `ListRef` element is stored by its list (
 
 ### 6.5 The funnel is the one writer of the shared state
 
-A step publishes an event by calling the function value it receives with the event, which copies the event into the funnel's queue. The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. The funnel is the only writer of the shared state, and it never touches an element.
+A step publishes an event by calling the function value it receives with the event, which copies the event into the funnel's queue. The function value is the same for every pool whose event type is `E`, and it captures nothing (§5.2), so it publishes to the pool whose work is running the call: a step or funnel call of that pool, or a call spawned from one. A program may store the function value like any other value, and a call to it publishes to the pool running that call, whichever pool the value came from. A call made where no pool of event type `E` is running it stops the program ([`packages.md`](packages.md) §6.3). The funnel applies each published event by being called with the shared state as `this` and the event, one call at a time. The funnel is the only writer of the shared state, and it never touches an element.
 
 Events from one worker are applied in the order that worker published them. Events from different workers are applied in the order they arrive, which depends on scheduling (§3.7). The queue holding published events has no limit, so publishing never aborts and never waits.
 
@@ -359,12 +386,12 @@ A worker pool holds up the scope that owns it like a spawned call does (§4.1). 
 |---|---|
 | Implicit parallelism | Compiler may parallelize only when results are unchanged |
 | `spawn` | Starts a concurrent function or method call; blocks only when results are read; illegal on a verb taking a block argument |
-| Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression |
+| Abortable `spawn` | Must attach `?` or `??` directly to the spawn expression; the call settles once on the spawning thread, at the first read of its symbol or where its block ends, and the handler runs there |
 | Water tower | A scope exits only after all spawned work completes, and every worker of a pool it owns has finished |
-| Mutation | A spawned mutating call requires a value-typed subject, which is the only path by which a call writes caller-visible state, except that a root-package verb may write the program's console and runtime; at most one mutable borrow per storage location; a spawn in a loop body completes before the next pass; concurrent reads take a coherent snapshot |
+| Mutation | A spawned mutating call requires a value-typed subject, which is the only path by which a call writes caller-visible state, except that a root-package verb may write the program's console and runtime; at most one mutable borrow per storage location; the spawning scope writes no owner it lent a live spawn; a spawn in a loop body completes before the next pass; concurrent reads take a coherent snapshot |
 | Snapshot of a boxed value | A value owning boxed members is snapshotted by a walk bounded at the scope's live block count — a depth no correct walk can reach, so exhaustion always means recycled bytes and stays retryable — that validates structure-directing metadata before typed interpretation and validates each handle's complete payload span — address, size, and alignment, inside a live region; the copy allocates in its destination binding's scope, rejected attempts return all provisional blocks before retrying, and a retry costs O(structure) |
-| Worker pool | `@primitives$WorkerPool<T, S, E>` runs bulk work; `start` moves an element in and runs its step concurrently, again right away or when an event source is ready or the shared state changed, never twice at once for one element |
+| Worker pool | `@primitives$WorkerPool<T, S, E>` runs bulk work; `start` moves an element in and runs its step concurrently, again right away or when an event source is ready or the shared state changed, never twice at once for one element; a timer is ready at most once per step call, so missed intervals merge |
 | Pool element | A value type, or a reference type whose every `&` names a package constant or a capability; a value is copied in and a reference-typed element moved in; a step call uses a fixed-size region from its start until it returns |
-| Funnel | The one writer of a pool's value-typed shared state; applies published value-typed events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write |
+| Funnel | The one writer of a pool's value-typed shared state; applies published value-typed events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write; a publish function publishes to the pool of its event type running the call, and stops the program where none is |
 | Calls from a host | A host may call exported lambdas at once under the host rule: no two calls borrowing one C-held object mutably, and no call taking its owner beside another; an export writes only its subject and capability-backed state, reads every C-held object it borrows read-only as a snapshot, and has no second path to its subject |
 | Conflicts on capability-backed state | Two accesses conflict only when they reach the same state: the console, the runtime, a foreign capability's own state, or one outside handle's |

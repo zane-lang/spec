@@ -34,8 +34,8 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.3 call exit
 
-- **Meaning:** `@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, reaching one level and no further. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it exits whoever calls it. A lambda's body may not contain it.
-- **Why this name:** What the exit ends is the call it was reached from, not its own frame.
+- **Meaning:** `@controlflow$exitFromCall()` makes the verb whose frame holds it an exiting verb: a call to that verb ends the current run of the innermost block the call is written in, and is legal only inside a block. That is what lets an exit be a declared verb — `core`'s `guard` — rather than grammar, since a verb built on it ends the block of whoever calls it. A lambda's frame may not contain it.
+- **Why this name:** What the exit ends is reached from the call to the exiting verb, not from the intrinsic's own frame.
 - **Canonical home:** [`control-flow.md`](control-flow.md) §4.2
 
 ### 2.4 value-typed mutation rule
@@ -82,13 +82,13 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 2.11 funnel
 
-- **Meaning:** A worker pool's one writer of its shared state. It applies the value-typed events the pool's steps publish, each copied into its queue, one at a time, in order per worker, and never touches an element.
+- **Meaning:** A worker pool's one writer of its shared state. It applies the value-typed events the pool's steps publish, each copied into its queue, one at a time, in order per worker, and never touches an element. A step publishes through a function value that publishes to the pool of its event type whose work is running the call; called where none is, it stops the program.
 - **Why this name:** Many workers pour events in and one outlet applies them, the shape of a funnel; "handler" already names the `?` abort handler.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.5
 
 ### 2.12 event source
 
-- **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and while the worker waits, every other spawned call and pool worker keeps running.
+- **Meaning:** An `@primitives$EventSource`, such as a timer, that a worker waits on between calls of its step: a worker pool's worker is started with event sources, and `register` runs a worker on one. The step runs again when a source is ready, and a timer is ready at most once per call of the step, so missed intervals merge. While the worker waits, every other spawned call and pool worker keeps running.
 - **Why this name:** It is the standard term in event loops for something that becomes ready; the qualifier keeps it apart from a reference source.
 - **Canonical home:** [`concurrency.md`](concurrency.md) §6.3
 
@@ -206,7 +206,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.19 `match`
 
-- **Meaning:** An expression, legal anywhere an expression is accepted, that names a scrutinee and a `{ }` block of `;`-terminated arms; each arm has an optional binder, a case (or `[ ]` group of cases) selector, and a body. It dispatches on the live tag, is exhaustive with no default arm, all arms share one return type, and abort flows through.
+- **Meaning:** An expression, legal anywhere an expression is accepted, that names its scrutinees in `( )` and is followed by a `{ }` block of arms; each arm has an optional binder, a case (or `[ ]` group of cases) selector, and a body, either `=> expr;` or a `{ }` block whose brace ends the arm. It dispatches on the live tag, is exhaustive with no default arm, all arms share one return type, and abort flows through.
 - **Why this name:** "Match" is the familiar name for tag-directed selection, here surfaced as a single central block over a variant's cases.
 - **Canonical home:** [`adt.md`](adt.md) §5
 
@@ -218,7 +218,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.21 bracket-picked separator
 
-- **Meaning:** The bracket determines how its contents are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
+- **Meaning:** The bracket determines how its contents are separated: a `{ }` terminates each with `;` — entries of a body, always trailing, and statements of a code block alike, save a statement or a `match` arm a `}` already ends, a rule package-scope declarations follow too; a `[ ]`, `( )`, or `< >` list separates its entries with `,`, never trailing.
 - **Why this name:** The rule turns on the bracket alone rather than on what the construct means, so the name states that the bracket does the picking.
 - **Canonical home:** [`lexical.md`](lexical.md) §6
 
@@ -438,7 +438,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.7 trailing argument
 
-- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last item in its statement.
+- **Meaning:** A call's last argument written after the closing `)` instead of inside it, with the `)` elided. Only a `{ }` argument may trail — a block or a map literal — at most one per call, and it must be the last item in its statement. A constructor call whose `( )` would be left empty writes its argument inside them, since `TypeName() { ... }` is a lambda literal.
 - **Why this name:** It trails the argument list rather than sitting in it.
 - **Canonical home:** [`syntax.md`](syntax.md) §4.8
 

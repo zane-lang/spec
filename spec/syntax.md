@@ -843,29 +843,39 @@ number Int = (3 + 2) * 2;
 
 ### 4.7 `match` expressions
 
-A `match` expression names one or more scrutinees — a bare `,`-separated list, never parenthesised — then a `{ }` block of `;`-terminated arms. Each arm is an optional binder, a case selector, `=>`, and a body. A `match` may appear anywhere an expression is legal and may carry a trailing `?` (or `??`) handler when its arms are abortable.
+A `match` expression names one or more scrutinees — a `,`-separated list in `( )` — then a `{ }` block of arms. Each arm is an optional binder, a case selector, and a body. A `match` may appear anywhere an expression is legal and may carry a trailing `?` (or `??`) handler when its arms are abortable.
 
 ```zane
-match scrutinee { arm; arm; ... }
-match scrutinee, scrutinee { arm; arm; ... }
-name VarType = match scrutinee { arm; arm; ... }
-name VarType = match scrutinee { arm; arm; ... } ? binder { ... }
-return match scrutinee { arm; arm; ... }
-functionName(match scrutinee { arm; arm; ... })
+match (scrutinee) { arm arm ... }
+match (scrutinee, scrutinee) { arm arm ... }
+name VarType = match (scrutinee) { arm arm ... }
+name VarType = match (scrutinee) { arm arm ... } ? binder { ... }
+return match (scrutinee) { arm arm ... }
+functionName(match (scrutinee) { arm arm ... })
 ```
 
-An arm is `[binder] selector => body`, with one `[binder] selector` per scrutinee position, `,`-separated in order. A selector is a single case name or a `[ ]` list of `,`-separated case names, written bare (rooted at that scrutinee's type). The body is an expression (`=> expr`) or a `{ }` block.
+The parentheses delimit the list and build no value from it: the scrutinees are independent values matched jointly on their tags ([`adt.md`](adt.md) §5.6). They also end the last scrutinee before the arms' `{`, which an expression ending in a brace of its own would otherwise claim.
+
+An arm is `[binder] selector`, with one `[binder] selector` per scrutinee position, `,`-separated in order, followed by its body. A selector is a single case name or a `[ ]` list of `,`-separated case names, written bare (rooted at that scrutinee's type). The body is either `=> expr`, which a `;` terminates, or a `{ }` block, whose closing brace ends the arm with no `;` — the rule a statement follows ([`lexical.md`](lexical.md) §6.3). An `=> expr` arm whose expression itself ends in a `}` still takes its `;`.
 
 ```zane
-result String = match e {
+result String = match (e) {
     x strLit            => x;
     [intLit, floatLit]  => "number";
     b op                => render(b);
     // every case must be covered — see adt.md §5
 }
 
+cost Int = match (mode) {
+    fast => Int(1);
+    slow {
+        console!print("taking the slow path");
+        return Int(10);
+    }
+}
+
 // several scrutinees: one selector per position
-newState State = match state, event {
+newState State = match (state, event) {
     [idle, running], keyPress => State.running;
     running,         timeout  => State.idle;
     // every combination must be covered — see adt.md §5.6
@@ -938,6 +948,16 @@ do() {
 }
 ```
 
+A constructor call whose `( )` would be left empty is the exception: its block argument stays inside the parentheses. `TypeName() { body }` is a lambda literal returning `TypeName` (§3.8), and in statement position also a positional constructor declaration with a block body (§3.3), so a call to a constructor whose only argument is a block writes it in full. A constructor call with anything else inside its `( )` trails its last argument like any other call. A lower-case callee names no type, so `do() { ... }` has no second reading.
+
+```zane
+worker Thread(name) {           // legal: the block trails a constructor call
+    poll();
+}
+worker Thread(name, { poll(); });   // the same call, written in full
+pool Threads({ poll(); });          // a constructor call whose only argument is a block
+```
+
 ### 4.9 Continuing a value that closes on a `}`
 
 A field-constructor call (§3.4), an `init{ }` (§3.7), a map literal (§2.10), and a `match` expression (§4.7) each close on a `}`. Such a value takes a `?` or `??` handler and an operator written directly after its brace, and each of them but the map literal takes a field access `.` and a method call `:` or `!` there too. A call `( )` or a subscript `[ ]` is written on the parenthesized value (§4.6), because both of those brackets can open a statement ([`lexical.md`](lexical.md) §6.3). A map literal's field access and method calls are written on the parenthesized literal as well: a value they continue may stand first in its statement, and a map literal there would open the statement with a `{` ([`lexical.md`](lexical.md) §6.3.1).
@@ -946,8 +966,8 @@ A field-constructor call (§3.4), an `init{ }` (§3.7), a map literal (§2.10), 
 x Int = Vector2{x = 0; y = 0;}.x;
 area Int = Rect{w = 2; h = 3;}:area();
 wide Bool = Rect{w = 2; h = 3;}.w > 1;
-run Int = (match mode { fast => quick; slow => careful; })(input);
-run Int = match mode { fast => quick; slow => careful; }(input);   // ILLEGAL: a call needs the match parenthesized
+run Int = (match (mode) { fast => quick; slow => careful; })(input);
+run Int = match (mode) { fast => quick; slow => careful; }(input);   // ILLEGAL: a call needs the whole match parenthesized
 n Int = ({ "a", 1; "b", 2; }):size();
 n Int = { "a", 1; "b", 2; }:size();   // ILLEGAL: a method call needs the map literal parenthesized
 ```
@@ -994,13 +1014,16 @@ The first two take storage primitives rather than fundamental types, and the thi
 
 ### 5.2 Writing an exit
 
-`@controlflow$exitFromCall()` ends the invocation that called the verb whose body contains it, so an exit is written by *calling* a verb built on it — `core` supplies `guard`:
+`@controlflow$exitFromCall()` ends the run of the block that a call to the verb holding it is written in, so an exit is written by *calling* a verb built on it — `core` supplies `guard` — inside a block:
 
 ```zane
-guard(shouldStop);
+i!to(count) {
+    guard(shouldSkip);
+    work();
+}
 ```
 
-The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it would end that verb's caller ([`control-flow.md`](control-flow.md) §4.2).
+The intrinsic itself appears in the body of such a verb, not at the point an exit is wanted; written in a verb's own body it makes that verb an exiting one ([`control-flow.md`](control-flow.md) §4.2). A call to an exiting verb written directly in a verb's body, outside every block, is a compile-time error ([`control-flow.md`](control-flow.md) §2.3).
 
 ---
 
