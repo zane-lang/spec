@@ -110,7 +110,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.3 unified type parameters
 
-- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type, inline on a verb.
+- **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type or a package, inline on a verb.
 - **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
@@ -176,7 +176,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.14 `Type` and `@concepts$Int` parameter concepts
 
-- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
+- **Meaning:** `Type` and `@concepts$Int` are compiler concept types used to declare type and number parameters (`T Type`, `n @concepts$Int`) — the only two kinds a type's or a package's `<>` header holds. Like other concept types they are legal only in parameter positions, never as storage. As `()` value parameters they are passed explicitly; introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type, they are inferred; listed in a type's `<>` header they are applied positionally at use sites.
 - **Why this name:** A type or size handed to a declaration is a compile-time value, so its parameter has a concept type like any other — for a size, the concept that an integer literal already carries — rather than a bespoke parameter-kind keyword.
 - **Canonical home:** [`generics.md`](generics.md) §3.3
 
@@ -392,7 +392,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.50 veiled value
 
-- **Meaning:** A value whose type is a type parameter, inside the generic body that declares the parameter: `x` in `Float read(x T Type)`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors; a field read, an enum map read, naming a member or case, a `match`, or a call as a function value on it is an error.
+- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors; a field read, an enum map read, naming a member or case, a `match`, or a call as a function value on it is an error.
 - **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
 - **Canonical home:** [`generics.md`](generics.md) §3.8
 
@@ -408,7 +408,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.2 placeholder-prefix rewriting
 
-- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the name the symbol carries is the library package's own path within its project.
+- **Meaning:** During fetch, a library's `!`-prefixed export symbols are rewritten with the resolved version tag and the package's identity hash (§4.13) before caching and linking. Only the prefix changes; the name the symbol carries is the library package's own path within its project, followed for a package instance by its argument list.
 - **Why this name:** The shipped `!` prefix is only a placeholder marker; the toolchain rewrites that prefix into the real versioned symbol prefix.
 - **Canonical home:** [`dependencies.md`](dependencies.md) §6.1
 
@@ -552,7 +552,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.26 exported lambda / export line
 
-- **Meaning:** An **exported lambda** is a package-scope lambda followed by `export "cName"`; in a build that exports it, it becomes a C function of that name, with the rights of root-package code. An **export line**, `export lib;`, sits in a plugin or test package and names the library whose exported lambdas this build turns into C symbols.
+- **Meaning:** An **exported lambda** is a package-scope lambda followed by `export "cName"`; in a build that exports it, it becomes a C function of that name, with the rights of root-package code. An **export line**, `export lib;` or `export lib<Args>;`, sits in a plugin or test package and names the library whose exported lambdas this build turns into C symbols.
 - **Why this name:** "Export" is the word C toolchains already use for a symbol a dynamic library offers, and it is the mirror of `foreign`, which brings a C symbol in.
 - **Canonical home:** [`packages.md`](packages.md) §8.2, §8.3
 

@@ -69,7 +69,7 @@ So a C floating-point computation gives the same result each time it is evaluate
 
 The toolchain runs no program the package supplies to build its C: no build script, configure step, or other build system. What a package's C build needs is stated as data in its `c.coda` (§2.3).
 
-The C code of a package is compiled once per build, with the settings of that package alone. Two packages' C code never share a compilation, so a definition in one package's settings has no effect on another's.
+The C code of a package is compiled once per build, with the settings of that package alone, and a parameterized package's C code once for the package, never per instance ([`packages.md`](packages.md) §2.6). Two packages' C code never share a compilation, so a definition in one package's settings has no effect on another's.
 
 A warning the C compiler gives refuses nothing. The toolchain shows the warnings of the C sources directly in the directory of a package of the project being built, each once per command. A source in a subdirectory, such as a vendored library's, and a dependency's C are shown only when they fail to compile.
 

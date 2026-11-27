@@ -85,7 +85,7 @@ A parameterized library package's declaration also carries its parameter list (�
 
 ### 2.5 A package is one order-independent compilation unit
 
-All source files of one package form a single compilation unit. Declaration order within a file and file order within the package's directory are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
+All source files of one package form a single compilation unit; a parameterized package forms one for each instance (§2.6). Declaration order within a file and file order within the package's directory are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#the-directory-is-the-package) — "The directory is the package".
 
@@ -158,7 +158,7 @@ The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2
 
 For a dependency's package, `pkg` is the name the project's manifest reaches it under: its own name, or the name a `renames` row gives it ([`dependencies.md`](dependencies.md) §8).
 
-An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
+An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name, followed for an instance by its argument list (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
 
 Every import form works unchanged on an instance's full name (§3.10): `import clap<synth$Synth, synth$Dsp, synth$SynthInfo> as synthclap;` lets a file write `synthclap$Instance`.
 
@@ -454,7 +454,7 @@ setVolume Unit(this Synth, volume @primitives$F64) mut {
 } export "synth_set_volume"
 ```
 
-Only a lambda is exported, never a verb, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not keep a lambda from being exported. An exported lambda introduces no type or number parameter, since C passes no type, and declares no abort type, since no Zane caller handles its abort.
+Only a lambda is exported, never a verb, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not keep a lambda from being exported. An exported lambda introduces no type or number parameter, since C passes no type; in a parameterized package it may use the package's parameters, which are concrete in each instance (§2.6), and declares no abort type, since no Zane caller handles its abort.
 
 Each parameter and the result of an exported lambda is one of the types a function value passed to C may take ([`ffi.md`](ffi.md) §3.6), or a **C-held object** (§8.5):
 

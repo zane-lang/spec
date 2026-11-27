@@ -134,7 +134,7 @@ A number parameter is the one asymmetry. A type can be the type of a value, so a
 
 ### 3.2 Where parameters are introduced
 
-A type and a verb introduce their parameters in different places, for one concrete reason: a type is applied positionally, a verb is not.
+A type and a verb introduce their parameters in different places, for one concrete reason: a type is applied positionally, a verb is not. A parameterized package declares its parameters in a header as a type does, because an import applies them positionally too ([`packages.md`](packages.md) §2.6); inside the package a verb references them bare, as it references any parameter already introduced.
 
 A **type definition** declares its parameters in a `<>` header placed immediately after the name. The header is the type's signature — it fixes the parameters and their order, which is exactly what a use site fills positionally (`Vector<Int>`, `Buffer<Int, 64>`).
 
@@ -266,7 +266,7 @@ The subject is a veiled value (§3.8), so the body reaches it only through verbs
 
 ### 3.8 A veiled value is reached only through verbs
 
-A **veiled value** is a value whose type is a type parameter: `x` in `Float read(x T Type)`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
+A **veiled value** is a value whose type is a type parameter, a parameterized package's own included ([`packages.md`](packages.md) §2.6): `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
 
 1. **Hold it.** The body may bind it, store it in a slot of type `T`, return it, and pass it on.
 2. **Reach it through a verb or a subscript.** The body may call a method with it as the subject (`x:level()`, `x!reset()`), pass it to a function (`clamp(x)`), apply an operator to it (`x + y`, `x == y`), read a subscript of it (`x[i]`), and construct a value of its type (`T(...)`, `T.name(...)`).
@@ -362,7 +362,7 @@ T first(arr Array<T, n>) { ... }               // ILLEGAL in a verb: nothing int
                                                // so the bare names are undefined
 ```
 
-So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
+So a `<>` list in a verb may mix three kinds of entry: an *introduction* (`T Type`), a *reference* to a parameter already introduced in the same signature (`T`), and a *concrete argument* (`Int`). An introduction there is bare, except as the element of a parameter's own `@concepts$Array`, where it may carry the mode each element is passed in (§3.2). A type definition's or a package's header holds only introductions; a type expression outside any verb — a field, a return type of a non-generic verb, an alias — holds only references and concrete arguments.
 
 ---
 
@@ -679,7 +679,7 @@ The following are intentionally not specified in this version:
 - arithmetic on number parameters in type positions (for example `Array<T, rows * cols>`), pending a type-level equality rule for such expressions
 - map types — the map **literal form** is specified ([`syntax.md`](syntax.md) §2.10), but a map type, whether a map preserves any order, and what a map requires of a key type are all open
 - named lane access (`.x`, `.y`, `.z`, `.w`)
-- phantom type parameters — an introduced parameter (a type's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
+- phantom type parameters — an introduced parameter (a type's or a package's header parameter, or a verb's inline parameter) with no path from any value argument, subject, or literal that fixes it
 - generic function values — a function *value* that is itself polymorphic over type or number parameters; the open question is runtime representation (monomorphization versus dictionary passing), not overload resolution or type checking, since a generic function type is a unique parameter shape (see [`functions.md`](functions.md) §7.6)
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#deferred-what-the-model-promises-but-does-not-yet-deliver) — "Deferred: what the model promises but does not yet deliver" records why each item is open, including the constraints/bounds gap and the type-level equality problem.
@@ -695,7 +695,7 @@ The following are intentionally not specified in this version:
 | Type parameter | Declared `name Type` with an uppercase name (`T`); ranges over types |
 | Number parameter | Declared `name @concepts$Int` with a lowercase name (`n`); ranges over compile-time integers and resolves to a number value in body positions |
 | `Type` / `@concepts$Int` | Compiler concept types; legal only in parameter positions, never as storage; the only two kinds a type's or a package's `<>` header holds |
-| Reference | A parameter is referenced by bare name; casing carries the kind. A type's header or a verb's inline concept marks a name as a parameter |
+| Reference | A parameter is referenced by bare name; casing carries the kind. A type's or a package's header, or a verb's inline concept, marks a name as a parameter |
 | Type expression | `Type<arg, ...>`; a compile-time structural description; used in fields, signatures, returns, aliases, and nested arguments |
 | Call | `Type(arg, ...)`; a runtime construction or function call; always by bare name; never takes a `<>` list |
 | Inferred parameter | Introduced inline on a verb parameter's type, in a nested type, or in a slot of a verb parameter's function type; deduced from the value arguments at the call |
