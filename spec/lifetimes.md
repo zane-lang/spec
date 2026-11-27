@@ -15,6 +15,7 @@ Every place has a **scope**: the block whose lifetime bounds it.
 - a **symbol** — a local binding — has the block that declares it as its scope
 - a **field or element** reached from its root by **owning** steps takes that root symbol's scope, never one of its own. Every element of a container shares the container's scope, so the choice of element does not enter the comparison.
 - a **`^T` parameter** is an owner of the body, scoped to the body's top block ([`memory.md`](memory.md) §2.9).
+- an object a host holds, which an exported lambda returned to C, has a **top-level scope** of its own that nests in no other scope ([`packages.md`](packages.md) §8.5). A top-level scope outlives every block of a call that receives its object, and neither of two top-level scopes outlives the other.
 - `this` and an **`&T` parameter**, and a constructor's `init{ }`, have no scope in the body. Each stands for a path in the caller's frame. A store through `this` or `init{ }` is settled at the call site (§1.11). Every other parameter, an `&T` parameter included, is read-only ([`effects.md`](effects.md) §4.1) and is never a destination.
 
 A path that steps *through* an `&` leaves the tree its root names. What lies beyond belongs to a different tree whose root the path does not mention, so no scope can be computed for it and it is not a place this rule can govern. Such a path may be **read** freely; it may not be the destination of a store:
