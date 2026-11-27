@@ -292,7 +292,7 @@ Two methods of the string primitive read the number its text spells:
 @primitives$F64?@primitives$Unit parseF64(this @primitives$String)
 ```
 
-`parseI64` accepts the text of an integer literal ([`lexical.md`](lexical.md) §7), optionally preceded by `-`. `parseF64` accepts the text of an integer or a float literal, optionally preceded by `-`. Nothing else is accepted: no whitespace, no `+`, and no other characters. Each gives the value the text spells. `parseF64` gives the `@primitives$F64` nearest to it, rounding half to even as `round` does (§2.9).
+`parseI64` accepts the text of an integer literal written without digit separators ([`lexical.md`](lexical.md) §7), optionally preceded by `-`. `parseF64` accepts the text of an integer or a float literal written without digit separators, optionally preceded by `-`. Nothing else is accepted: no whitespace, no `+`, and no other characters. Each gives the value the text spells. `parseF64` gives the `@primitives$F64` nearest to it, rounding half to even as `round` does (§2.9).
 
 A call aborts with `@primitives$Unit` when the text is not in its accepted form, and when its value does not fit: for `parseI64`, a value outside the range of `@primitives$I64`, and for `parseF64`, one too large in magnitude to round to a finite `@primitives$F64`.
 

@@ -130,7 +130,7 @@ When such a call is abortable, the handler attaches to the call expression exact
 A `match` expression passes the output of its selected arm straight up. If the arms are abortable, the whole `match` is abortable and takes a `?` (or `??`) handler exactly like any other abortable expression. Abortability is not introduced or swallowed by `match`; it simply flows through.
 
 ```zane
-result Int = match token {
+result Int = match (token) {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {

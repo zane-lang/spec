@@ -206,6 +206,9 @@ It does not fit, because every one of those conversions has a result and reading
 
 So reading a number is a method of the string primitive, `parseI64` and `parseF64`, each aborting with `@primitives$Unit` when the text is not a number or the number does not fit ([`types.md` §2.10](https://github.com/zane-lang/spec/blob/8a276540abd56445316ff43aff47b01c39b642d6/spec/types.md#210-reading-a-number-from-a-string-primitive)). The text they accept is the text of a literal, with an optional `-` in front, and nothing more: no whitespace, no `+`. That makes the rule one a reader already knows, since what parses is what could be written in source, and it leaves trimming and other forms to the program that wants them.
 
+> [!NOTE]
+> Superseded: that the text `parseI64` and `parseF64` accept is the text of a literal. A literal may group its digits with `'`, but the two accept the text only without digit separators, and they abort on text that contains one. See "[Digit groups take the Swiss apostrophe](lexical.md#digit-groups-take-the-swiss-apostrophe)".
+
 The cost is that converting is no longer spelled one way. A conversion that cannot fail is a constructor of the target, and one that can is a method named for its target, so a reader learns two forms where the scalar chapter had promised one. We accepted that because the line between them is the line a caller has to care about: the method form is the one that needs a handler. The strict form costs too. `" 42"` aborts, and a program reading untidy input trims it first.
 
 ## `@primitives$String.escaped` reads text escapes when a consumer asks

@@ -228,7 +228,7 @@ Boxing carries costs, all of them the price of the child actually being owned. R
 A `variant` is consumed by a **`match` block**: one central place that lays out every case and dispatches on the live tag. It is Zane's single construct for consuming a variant. A `match` produces the selected arm's value and may appear anywhere an expression is legal, including an initializer, return expression, or call argument.
 
 ```zane
-result String = match e {
+result String = match (e) {
     x strLit                   => x;
     [intLit, floatLit]         => "number";
     x [ident, qualifiedIdent]  => nameOf(x);
@@ -236,7 +236,7 @@ result String = match e {
     [boolLit, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
 }
 
-console!print(match e {
+console!print(match (e) {
     x strLit                   => x;
     [intLit, floatLit]         => "number";
     [boolLit, ident, qualifiedIdent, op, flip, parenthesized, funcCall, funcLambda, methLambda] => "other";
@@ -247,16 +247,17 @@ console!print(match e {
 
 ### 5.1 The block and its arms
 
-The scrutinee is followed by a `{ }` block of `;`-terminated **arms**, the same terminator a `struct`/`variant` body uses. An arm is an optional binder, a case selector, `=>`, and a body:
+The parenthesized scrutinee is followed by a `{ }` block of **arms**. An arm is an optional binder, a case selector, and a body, which is either `=> expr` followed by a `;` or a `{ }` block, whose closing brace ends the arm as it ends a statement ([`lexical.md`](lexical.md) §6.3):
 
 ```zane
-[binder] selector => body ;
+[binder] selector => expr ;
+[binder] selector { statements }
 ```
 
 - **Optional binder.** `x strLit => body` binds the payload as `x`; a bare `strLit => body` handles the case without binding. An arm head reads exactly like a declaration `x VarType`, with the `Expr.` supplied by the scrutinee — the casing rule (see [`lexical.md`](lexical.md) §3) carries it with no new syntax.
 - **Selector.** A single case name (`strLit`) or a `[ ]` group of `,`-separated case names (`[intLit, floatLit]`), written bare like an enum member.
 - **Binder type.** A single-case binder behaves as that case's payload (§3). A `[ ]` group is **shorthand for one arm per listed case**: `x [ident, qualifiedIdent] => body` expands to `x ident => body;` and `x qualifiedIdent => body;`, each binding `x` at *its own* case's payload. A single case and a group are therefore the same mechanism — a group is just the arm written once. The bracket is a **case selector, not a type**: no anonymous sub-variant is formed, so every type stays named (see [`types.md`](types.md) §1). Because the binder is always a case's payload, it never stands for the whole variant; when an arm needs the variant itself, it names the scrutinee, which stays in scope.
-- **Body.** `=> expr` is shorthand for `{ return expr }`; a larger arm uses a `{ }` block body.
+- **Body.** `=> expr;` is shorthand for `{ return expr; }`; a larger arm uses a `{ }` block body, which takes no `;` after its brace. An arm's body is a body, as a verb's is, not a block argument, so a `return` in it gives the arm's value rather than leaving the verb around the `match`, and an `abort` in it aborts the `match` (§5.4).
 - **One result type.** All arms share one return type, which is the type of the `match`.
 
 Because a group is just its arms written once, its cases need not share a payload type. Each expanded arm is checked independently against its own case's payload, so an operation on the binder — `nameOf(x)` above — must resolve for every grouped payload, ordinarily by being overloaded across them. A grouped arm that only ever wants the whole variant simply omits the binder and reads the scrutinee. Zane has no interfaces or constraints over arbitrary types, so a binder shared across *differing* payloads is useful exactly where such an overload family exists, and a heterogeneous "everything else" group is normally left unbound.
@@ -264,12 +265,12 @@ Because a group is just its arms written once, its cases need not share a payloa
 A binder names its payload for the whole arm, so an arm with a binder **MUST NOT** write a place that overlaps its scrutinee ([`memory.md`](memory.md) §2.9.1), other than through the binder itself. It neither assigns to the scrutinee nor makes it the subject of a `!` call: either may change the case and destroy the payload the binder still names. A write through the binder changes the payload in place and leaves the case alone.
 
 ```zane
-power Int = match slot {
-    e full => {
+power Int = match (slot) {
+    e full {
         e!tune();                     // legal: writes the payload in place
         slot = Slot.empty(Unit());    // ILLEGAL: destroys the payload e names
         return e.power;
-    };
+    }
     empty => Int(0);
 }
 ```
@@ -277,6 +278,7 @@ power Int = match slot {
 A scrutinee may also be an `enum` rather than a `variant`. Its members are payloadless, so each arm is a bare member (or `[ ]` group) with no binder; this is the enum's exhaustive-matching consumer (§2.1).
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#the-group-is-sugar-not-a-widening) — "The group is sugar, not a widening".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-call-may-not-write-what-it-borrows) — "A call may not write what it borrows".
 
 ### 5.2 Exhaustive, with no default arm
@@ -298,7 +300,7 @@ A `match` dispatches on a variant's **tag**, not on the **shape** of its payload
 If a chosen arm's body is abortable, the whole `match` is abortable and takes a `?` (or `??`) handler like any abortable expression. Abortability is not introduced or swallowed by `match`; it flows through.
 
 ```zane
-result Int = match token {
+result Int = match (token) {
     x number => parse(x);
     x symbol => lookup(x);
 } ? msg {
@@ -314,20 +316,20 @@ result Int = match token {
 A variant's cases are fixed at its definition, but operations over it are open. Because every case is visible, any package may write its own function that matches an imported variant:
 
 ```zane
-String render(e Expr) => match e { ... }
+String render(e Expr) => match (e) { ... }
 ```
 
 The type is closed; the operations are open.
 
 ### 5.6 Matching several scrutinees
 
-A `match` may take **several scrutinees**, written as a bare comma-separated list — never parenthesised. Each arm then gives one selector per scrutinee position, in order and comma-separated, and the block dispatches on all the tags jointly.
+A `match` may take **several scrutinees**, written as a comma-separated list inside its `( )`. Each arm then gives one selector per scrutinee position, in order and comma-separated, and the block dispatches on all the tags jointly.
 
 ```zane
 type State = enum [ idle, running, paused ];
 type Event = enum [ keyPress, timeout, reset ];
 
-newState State = match state, event {
+newState State = match (state, event) {
     [idle, running, paused], keyPress => State.running;
     running,                 timeout  => State.paused;
     [idle, paused],          timeout  => State.idle;
@@ -335,11 +337,12 @@ newState State = match state, event {
 }
 ```
 
-- **Bare list, not a tuple.** The scrutinees are independent values matched together, not a product value taken apart. Parenthesising them as `(state, event)` would imply a tuple to destructure — the pattern-matching road (§5.3) — so the list stays bare.
+- **A list, not a tuple.** The scrutinees are independent values matched together, not a product value taken apart. The `( )` delimits the list, as it delimits an argument list, and builds no value: Zane has no tuple for `(state, event)` to form, so the arms select tags and never destructure a shape (§5.3).
 - **Per-position selectors.** Each arm carries one `[binder] selector` per scrutinee, in order. A `[ ]` group's commas sit inside its brackets and the position commas sit outside them, so the two never collide.
 - **Cross-product exhaustiveness.** Every combination of cases **MUST** be covered, with no default. Because there is no wildcard, a "regardless of `state`" arm names every state in a `[ ]` group; adding a case to either variant is a compile-time error until the new combinations are placed.
 
 > **Story:** [`stories/adt.md`](../stories/adt.md#variants-deserve-a-central-place) — "Variants deserve a central place".
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 
 ---
 
@@ -380,9 +383,9 @@ A value entry sits at a **coercion site** (see [`types.md`](types.md) §4.2): th
 | Payloadless constants | a degenerate case of the sum type | a first-class `enum`, kept uniform and tabulatable |
 | Per-member data | attached by writing a payload on a case | attached externally by an enum map, keeping members interchangeable |
 | Matching model | **pattern matching**: an arm dispatches on the tag *and* destructures shape — nested patterns, tuple/record/literal patterns, guards | **variant matching**: an arm dispatches on the tag only and binds the payload whole; `match` again to go deeper (§5.3) |
-| Match arms | dedicated pattern-match arm syntax | a central `match` block of `;`-terminated tag arms; a `[ ]` group shares one arm across several cases |
+| Match arms | dedicated pattern-match arm syntax | a central `match` block of tag arms, each `=> expr;` or a `{ }` block; a `[ ]` group shares one arm across several cases |
 | Default arm | `_` wildcard absorbs unlisted cases | no default; every case is named, so adding a case is a compile error until placed (§5.2) |
-| Multiple scrutinees | matched as a tuple pattern | a bare comma list of scrutinees, matched jointly on tags — no tuple, so no shape destructuring (§5.6) |
+| Multiple scrutinees | matched as a tuple pattern | a parenthesized comma list of scrutinees, matched jointly on tags — no tuple, so no shape destructuring (§5.6) |
 
 ### 7.2 Zane vs. Rust
 
@@ -424,10 +427,10 @@ type Expr = #variant { intLit String; flip Expr; }   // recursive sum: reference
 | `#variant` / `#enum` | `#variant` is the sum mould's reference form (identity, aliasable, moved); `#enum` is a reference cell holding a tag; the `#` modifier applies uniformly |
 | Recursion | A recursive member is a member the compiler boxes — a fixed-size handle inline, payload in the dynamic region — so a recursive type owns its children; boxing is written nowhere and is available to **both** kinds: a `#variant`/`#struct` owns its children and is moved, a `variant`/`struct` owns its children and deep-copies them; a generic type may not lead back to itself with a parameter inside a larger argument ([`generics.md`](generics.md) §2.4) |
 | Variant storage | `variant` is the sum mould's value form, laid out inline apart from any boxed member; `#variant` is its reference form, carrying a tag, and is placed by the reference-type rules |
-| `match` block | Expression legal in any expression position; `match scrutinee { [binder] selector => body; ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
-| Match arm | `[binder] selector => body`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |
+| `match` block | Expression legal in any expression position; `match (scrutinee) { [binder] selector => expr; [binder] selector { ... } ... }`; one result type; runtime tag jump; static narrowing chooses statically; abort flows through with `?` |
+| Match arm | `[binder] selector => expr;` or `[binder] selector { ... }`, whose brace ends the arm with no `;`; binder optional; selector is a case or a `[ ]` group of cases; a `[ ]` group is shorthand for one arm per case, each binding its own case's payload; the bracket is a selector, not a type; for the whole variant an arm reads the scrutinee |
 | Exhaustiveness, no default | Every case covered by exactly one arm, singly or in a `[ ]` group; no wildcard, so adding a case is a compile error until placed |
 | Variant matching, not pattern matching | `match` dispatches on the tag and binds the payload whole; no nested destructuring, guards, or shape tests |
-| Multiple scrutinees | `match a, b { sel, sel => body; ... }`; bare comma list, never a tuple; one selector per position; cross-product exhaustiveness, no default |
+| Multiple scrutinees | `match (a, b) { sel, sel => expr; ... }`; a comma list in `( )`, never a tuple; one selector per position; cross-product exhaustiveness, no default |
 | Open operations | The variant is closed; any package may match it in its own function |
 | Enum map | Package-scope, exhaustive, access-only `<Enum>.<property> <VarType> { member = value; ... }`; read field-style; not a passable value |

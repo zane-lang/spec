@@ -14,10 +14,10 @@ Zane is case-sensitive. The first letter of an identifier selects its lexical cl
 - **`Casing determines kind`.** An uppercase-initial name is a type, including a type parameter such as `T`; a lowercase-initial name is a value, binding, field, or any other parameter. Using a lowercase name as a type, or giving a binding, a field, or a parameter other than a type parameter an uppercase name, is a compile-time error.
 - **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
-- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing); a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
-- **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement or declaration ending in `}`, that brace — so line breaks are free everywhere.
+- **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing), except a `match` arm whose body is a block, which its brace ends; a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
+- **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement, a declaration or a block-bodied `match` arm ending in `}`, that brace — so line breaks are free everywhere.
 - **`String structure is language-defined`.** Double quotes delimit a string; quote and backslash escapes and interpolation are recognized by the compiler. Other backslash sequences remain text for the consumer (§7.1).
-- **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a float literal. The two carry different concept types.
+- **`The spelling picks the numeric concept`.** A numeric literal written without a `.` is an integer literal; one written with a `.` is a float literal. The two carry different concept types. A `'` groups the digits before the `.` and changes neither (§7).
 
 ---
 
@@ -139,11 +139,26 @@ A comparison never has a type on its immediate left, and a type expression never
 
 ## 6. Delimiters and Brackets
 
-The **bracket picks the separator**. A `{ }` body terminates each entry with `;`; a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule depends only on the bracket, not on the meaning of the construct, so a separator character never has two meanings in one context.
+The **bracket picks the separator**. A `{ }` body terminates each entry with `;`, except a `match` arm whose body is a block, which its brace ends (§6.1); a `[ ]`, `( )`, or `< >` list separates its entries with `,`. The rule depends only on the bracket, not on the meaning of the construct, so a separator character never has two meanings in one context.
 
 ### 6.1 `;` terminates an entry inside `{ }`
 
-A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the arms of a `match` block; the fields of an `init{ }`; the entries of a field-constructor header or call site; the entries of an enum-map declaration ([`adt.md`](adt.md) §6); and the entries of a map literal (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
+A `;` **terminates** every entry of a `{ }` body: the members of a `struct` or `variant` type-definition body, marked or unmarked with `#`; the `=> expr` arms of a `match` block; the fields of an `init{ }`; the entries of a field-constructor header or call site; the entries of an enum-map declaration ([`adt.md`](adt.md) §6); and the entries of a map literal (§6.4). It is **always trailing**: every entry ends with a `;`, inline or multiline, single-entry or many, because newlines are **insignificant inside these bodies**. The last entry carries a `;` exactly like every other, so the form is uniform.
+
+A `match` arm whose body is a `{ }` block is the one entry that takes no `;`: its closing brace ends the arm, as the brace that closes a statement ends the statement (§6.3). An `=> expr` arm keeps its `;`, including one whose expression ends in a `}`.
+
+```zane
+name String = match (color) {
+    red => "Red";
+    green {
+        console!print("green");
+        return "Green";
+    }
+    blue => "Blue";
+}
+```
+
+> **Story:** [`stories/adt.md`](../stories/adt.md#a-match-parenthesizes-its-scrutinees-and-a-block-arm-ends-on-its-brace) — "A `match` parenthesizes its scrutinees, and a block arm ends on its brace".
 
 ```zane
 type Node = #struct {
@@ -161,7 +176,7 @@ A `,` may still appear *inside* an entry, where it separates a nested list under
 
 ### 6.2 `,` separates an entry inside `[ ]`, `( )`, and `< >`
 
-A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match`'s scrutinees ([`syntax.md`](syntax.md) §4.7), and the `key, value` pair of a map entry (§2.10 there).
+A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match` arm's per-scrutinee selectors ([`syntax.md`](syntax.md) §4.7), and the `key, value` pair of a map entry (§2.10 there).
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)]);
@@ -192,7 +207,7 @@ Unit main() {
 }
 ```
 
-This applies only to **statements**. An entry of a `{ }` body carries its `;` unconditionally (§6.1), including an entry whose value ends in a `}` — that uniformity is what makes newlines insignificant inside a body, and it does not bend for the last entry or for any particular value shape.
+This applies to **statements** and to a `match` arm whose body is a block (§6.1). Every other entry of a `{ }` body carries its `;` unconditionally, including an entry whose value ends in a `}`, and that does not bend for the last entry or for any particular value shape.
 
 ```zane
 init{
@@ -235,7 +250,7 @@ Each bracket takes exactly one separator, so the bracket predicts both the mark 
 
 | Bracket | Encloses | Separator |
 |---|---|---|
-| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; an enum-map declaration; a map literal | `;`, always trailing |
+| `{ }` | a body of entries: `struct`, `variant`, and their `#` forms; a `match` block of arms; an `init{ }`; a field-constructor header or call site; an enum-map declaration; a map literal | `;`, always trailing, except after a block-bodied `match` arm (§6.1) |
 | `{ }` | a code block: a function body, a lambda body, or a block argument | `;`, terminating each statement (§6.3) |
 | `[ ]` | a flat list: an array, an `enum` body, a `match` case group, a function-type parameter list | `,`, never trailing |
 | `( )` | a parameter list or an argument list | `,`, never trailing |
@@ -248,7 +263,7 @@ f({ key, value; });  // a map literal: ',' follows the first expression
 f({ doWork(); });    // a block argument: ';' follows the first expression
 ```
 
-Only a `match` writes a bare `,`-separated list outside a bracket (§6.2), and those commas belong to the `match` expression itself, so they are consumed before the entry's own mark is read.
+A `match` written as that first expression keeps its own commas inside its brackets: its scrutinees sit in its `( )` and its arms' selectors in its `{ }`, so neither is read as the `,` that opens a map entry's value.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#declarations-end-the-way-statements-do) — "Declarations end the way statements do" tells why package-scope declarations took the statement rule.
@@ -267,14 +282,19 @@ A numeric literal is written in decimal digits, in one of two forms, and the for
 - An **integer literal** is one or more digits. It carries `@concepts$Int`.
 - A **float literal** is one or more digits, a `.`, and one or more digits. It carries `@concepts$Float`.
 
-A numeric literal consists of digits and at most one `.`, which has at least one digit on each side.
+A numeric literal consists of digits, at most one `.`, which has at least one digit on each side, and any number of `'` **digit separators**. A separator stands between two digits before the `.`, and it only groups them: it changes neither the literal's value nor its concept type. The digits after a float literal's `.` take no separator.
 
 ```zane
-3      // integer literal: @concepts$Int
-3.1    // float literal: @concepts$Float
-3.0    // float literal: the `.` makes it a float literal, whatever the value
-3.     // ILLEGAL: a digit must follow the `.`
-.5     // ILLEGAL: a digit must precede the `.`
+3          // integer literal: @concepts$Int
+3.1        // float literal: @concepts$Float
+3.0        // float literal: the `.` makes it a float literal, whatever the value
+1'000'000  // integer literal: the same value as 1000000
+1'000.25   // float literal: the same value as 1000.25
+3.         // ILLEGAL: a digit must follow the `.`
+.5         // ILLEGAL: a digit must precede the `.`
+1.000'001  // ILLEGAL: a separator after the `.`
+1''000     // ILLEGAL: a separator stands between two digits
+1'000'     // ILLEGAL: a separator stands between two digits
 ```
 
 A numeric literal is written without a sign. `~` before one gives the literal of the opposite sign ([`operators.md`](operators.md) §2.7), so `~3` is a negative integer literal.
@@ -283,6 +303,7 @@ Because the spelling determines the concept type, `3` and `3.0` are different ar
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
 > **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" tells how the concepts took their names.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#digit-groups-take-the-swiss-apostrophe) — "Digit groups take the Swiss apostrophe".
 
 ### 7.1 String literals and structural escapes
 
@@ -326,11 +347,11 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | Leading `_` | A field is private to its type's package; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a reference type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
 | `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
-| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; newlines are insignificant there |
+| Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `=> expr` `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; a block-bodied `match` arm is ended by its brace instead; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement and declaration terminator | `;` terminates every statement in a code block and every package-scope declaration, except one ending in `}` — that brace ends it, so a `(` or `[` after it opens the next statement; newlines are insignificant |
 | Brackets | The bracket picks the separator: `{ }` takes `;` as a body and as a code block, `[ ]`/`( )`/`< >` take `,` |
-| Integer literal | One or more digits; carries `@concepts$Int` |
-| Float literal | Digits, a `.`, and digits, with at least one digit on each side; carries `@concepts$Float`, whatever its value |
+| Integer literal | One or more digits, which a `'` may group; carries `@concepts$Int` |
+| Float literal | Digits, a `.`, and digits, with at least one digit on each side; a `'` may group the digits before the `.`; carries `@concepts$Float`, whatever its value |
 | String literal | Double-quoted; `\"` inserts a quote, `\\` inserts a backslash, `\%name` interpolates; other backslash sequences remain consumer-interpreted text |
 | Statement blocks | A `{ }` may not open a statement; a scoped run of work is a call taking a block argument (`do(block)`) |
