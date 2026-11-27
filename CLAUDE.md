@@ -113,10 +113,9 @@ grep -RIn -E "(block|scope)s? owns?\b|owned by (the |its |that |this |an? )?(dec
 grep -RIn -i -E "\breference (field|element|parameter|member|slot)s?\b" spec/
 ```
 
-The first two hunt the retired memory sense of `host` (an owner; glossary
-§4.30 records the change). `host` itself is legal: it names the program that
-loads a dynamic library (`spec/packages.md` §8.1), and in `dependencies.md` a
-download server. The first skips `> **Story:**` pointers (quoted old headings).
+The first two hunt the retired memory sense of `host`; its current senses are
+legal (glossary §4.30). The first skips `> **Story:**` pointers (quoted old
+headings).
 
 **The separator** (`spec/lexical.md` §6; `,` is what every other C-family
 language does, so it is the likely slip). Both come back empty today:

@@ -108,7 +108,7 @@ The rules for the parameters are those of a type's header:
 
 - **Header kinds.** The header holds `Type` and `@concepts$Int` entries, as a type's header does ([`generics.md`](generics.md) §3.3).
 - **Package-wide names.** A parameter's name is in scope in every file of the package, and no declaration of the package introduces a parameter or symbol of the same name. A parameter therefore takes a name that describes its role, such as `App` or `Sample`.
-- **Veiled values.** A value whose type is a package parameter is a veiled value, reached only through verbs ([`generics.md`](generics.md) §3.8).
+- **Veiled values.** A value whose type is a package parameter is a veiled value, reached only through verbs and subscripts ([`generics.md`](generics.md) §3.8).
 
 Every instance is a package of its own: two instances with different arguments declare distinct types, and the compiler makes one copy of the package's declarations for each instance a build reaches. An import or an `export` line whose arguments are all concrete creates its instance; an import that passes the importing package's own parameters creates its instance whenever the compiler creates an instance of the importing package (§3.10). The imports among a project's library packages form no cycle (§4.3), so every chain of instances ends in finitely many steps.
 
@@ -249,7 +249,7 @@ import plugingui<App>;   // passes one of clap's own parameters
 
 Inside the instance `clap<synth$Synth, synth$Dsp, synth$SynthInfo>`, this import names `plugingui<synth$Synth>`. An import may pass some of the importing package's parameters and leave others out.
 
-The members of an instance are written as the import form gives them (§3.3), with the instance's full name in place of `pkg`: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>$Instance` after a plain import, or `synthclap$Instance` after one with an `as` alias. Two instances imported into one file follow the ordinary collision rule (§3.8): the qualified forms `pkg<Int>$f()` and `pkg<Float>$f()` keep them apart, and two `pkg<...>$` imports collide wherever their bare names do.
+A file writes the members of an instance as the import form gives them (§3.3), with the instance's full name in place of `pkg`: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>$Instance` after a plain import, or `synthclap$Instance` after one with an `as` alias. Two instances imported into one file follow the ordinary collision rule (§3.8): the qualified forms `pkg<Int>$f()` and `pkg<Float>$f()` keep them apart, and two `pkg<...>$` imports collide wherever their bare names do.
 
 An `export` line names an instance the same way (§8.3) but gives the file no spelling, so a plugin package that also writes the instance's members imports it as well.
 
@@ -279,10 +279,10 @@ What a package may import depends on where it lies in its project:
 |---|---|
 | Top-level library package | the project's other top-level library packages, its own subpackages, and the public library packages of the project's dependencies |
 | Subpackage | its own subpackages, the project's top-level library packages other than the one it lies within, and the public library packages of the project's dependencies |
-| Program package | the project's top-level library packages and the public library packages of its dependencies |
+| Program package or plugin package | the project's top-level library packages and the public library packages of its dependencies |
 | Test package | as §7.3 states |
 
-A package's **own subpackages** are those whose parent it is; a subpackage of one of them is not among them. A subpackage never imports its parent or a sibling. No package imports a program package or a test package, and the imports among a project's library packages form no cycle ([`dependencies.md`](dependencies.md) §10). An import of an instance counts as an import of its parameterized package, so `package a<T Type>; import a<List<T>>;` is a cycle.
+A package's **own subpackages** are those whose parent it is; a subpackage of one of them is not among them. A subpackage never imports its parent or a sibling. No package imports a program, plugin, or test package, and the imports among a project's library packages form no cycle ([`dependencies.md`](dependencies.md) §10). An import of an instance counts as an import of its parameterized package, so `package a<T Type>; import a<List<T>>;` is a cycle.
 
 The **public library packages** of a project are its top-level library packages whose names do not begin with `_`. They are the only packages another project reaches.
 
@@ -454,9 +454,9 @@ setVolume Unit(this Synth, volume @primitives$F64) mut {
 } export "synth_set_volume"
 ```
 
-Only a lambda is exported, never a verb, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not keep a lambda from being exported. An exported lambda introduces no type or number parameter, since C passes no type; in a parameterized package it may use the package's parameters, which are concrete in each instance (§2.6), and declares no abort type, since no Zane caller handles its abort.
+A build exports only lambdas, never verbs, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not stop a build from exporting a lambda. An exported lambda introduces no type or number parameter, since C passes no type; in a parameterized package it may use the package's parameters, which are concrete in each instance (§2.6), and declares no abort type, since no Zane caller handles its abort.
 
-Each parameter and the result of an exported lambda is one of the types a function value passed to C may take ([`ffi.md`](ffi.md) §3.6), or a **C-held object** (§8.5):
+Each parameter of an exported lambda has a type that a parameter of a function value passed to C may have, and its result a type that such a function value's result may have ([`ffi.md`](ffi.md) §3.6); either may also be a **C-held object** (§8.5):
 
 - a result `^T`, `T` a reference type, hands C an owner of a new C-held object;
 - a parameter `T`, or a subject `this T`, borrows a C-held object, and a subject `this T mut` borrows it mutably;

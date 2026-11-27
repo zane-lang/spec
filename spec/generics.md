@@ -260,11 +260,11 @@ machine!work(Bool(this Machine) mut { ... });   // S is Machine
 
 The introduction carries no passing marker, because the subject takes none ([`syntax.md`](syntax.md) §3.2): `this S Type` is a borrow of the caller's value or owner, mutable when the method is `mut` ([`functions.md`](functions.md) §2.4). `S` may be a value type or a reference type, and §3.6 applies to it as to any inferred parameter, with the subject expression as its origin.
 
-The subject is a veiled value (§3.8), so the body reaches it only through verbs: a method on it, an operator, a function value whose type names `S`, an intrinsic generic over its subject ([`control-flow.md`](control-flow.md) §4.1), or another verb generic over `S`. Such a method has no declaring subject type, so method lookup reaches it through the spelling the file has for its package ([`functions.md`](functions.md) §6.1).
+The subject is a veiled value (§3.8), so the body reaches it only through verbs and subscripts: a method on it, an operator, a subscript of it, a function value whose type names `S`, an intrinsic generic over its subject ([`control-flow.md`](control-flow.md) §4.1), or another verb generic over `S`. Such a method has no declaring subject type, so method lookup reaches it through the spelling the file has for its package ([`functions.md`](functions.md) §6.1).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#a-methods-subject-may-be-a-type-parameter) — "A method's subject may be a type parameter".
 
-### 3.8 A veiled value is reached only through verbs
+### 3.8 A veiled value is reached only through verbs and subscripts
 
 A **veiled value** is a value whose type is a type parameter, a parameterized package's own included ([`packages.md`](packages.md) §2.6): `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
 
@@ -275,9 +275,11 @@ Every other use of a veiled value is a compile-time error, reported where the bo
 
 - reading or writing a field (`x.value`);
 - reading an enum map property ([`adt.md`](adt.md) §6), `x.colorName`;
-- naming an enum member or a variant case through the parameter, `T.red` or `T.done(Unit())`;
+- naming an enum member through the parameter, `T.red`;
 - a `match` on the value ([`adt.md`](adt.md) §5);
 - calling the value as a function value, `x(1)`.
+
+A call written `T.name(...)` is always a named-constructor call, resolved per instance like every other verb below. A named constructor's name differs from every case of its type ([`types.md`](types.md) §3.4), so `T.done(Unit())` never names a case: when the type that fills `T` declares no constructor `T.done`, the instantiation is ill-formed, and the compiler reports the error at the type's origin.
 
 ```zane
 type Knob = struct { value Float; }
@@ -288,9 +290,9 @@ Float peek(x T Type) => x.value;     // error: a field of a veiled value
 T twice(x T Type) => x + x;          // legal: an operator
 ```
 
-The error on `peek` holds even when every caller passes a `Knob`: the rule judges a body by what it asks of `T`, never by the types that fill it. A body that needs a field's value calls a method that the type's package declares, such as `level` above. Field visibility stays the type package's decision ([`types.md`](types.md) §2.3), and every mould can meet the body's demands, because every mould has verbs: methods and functions ([`functions.md`](functions.md) §6.3), operators ([`operators.md`](operators.md) §2.2), and constructors ([`types.md`](types.md) §3.1).
+The error on `peek` holds even when every caller passes a `Knob`: the rule judges a body by what it asks of `T`, never by the types that fill it. A body that needs a field's value calls a method that the type's package declares, such as `level` above. Field visibility stays the type package's decision ([`types.md`](types.md) §2.3), and every mould can meet the body's demands, because every mould can declare verbs: methods and functions ([`functions.md`](functions.md) §6.3), operators ([`operators.md`](operators.md) §2.2), and constructors ([`types.md`](types.md) §3.1).
 
-The rule covers only values whose whole type is a type parameter. A generic type's own structure is known to its body, so the body keeps full access to it:
+The rule covers only values whose whole type is a type parameter. A generic body knows its type's own structure, so it keeps full access to it:
 
 - In a method of `Box<T>`, `this.value` reads a field of `Box`. The field's type is `T`, so the result is a veiled value: `this.value:weight()` is legal and `this.value.weight` is an error.
 - A value of type `Pair<T>` or `List<T>` is not veiled; `p.first` and `list[i]` are legal, and only what they yield falls under the rule.
@@ -306,7 +308,7 @@ Each kind of verb on a veiled value resolves per instance, against the concrete 
 | Constructor, `T(...)`, `T.name(...)` | the constructors of the type that fills `T` ([`types.md`](types.md) §3.1) | yes |
 | Function, `clamp(x)`, `util$clamp(x)` | the generic body's own package and the spellings its file has ([`packages.md`](packages.md) §3.6) | no |
 
-A function declared in the type argument's own package is therefore out of the body's reach, and a body that wants the type's own behaviour calls a method: `x:f()` already searches the home package of `x`'s type first. When the concrete type has no verb that matches a call, the instantiation is ill-formed and the error is reported at the type's origin, with the path from there to the call, as §3.6 requires for a wrong-kind type argument.
+A function declared in the type argument's own package is therefore out of the body's reach, and a body that wants the type's own behaviour calls a method: `x:f()` already searches the home package of `x`'s type first. When the concrete type has no verb that matches a call, the instantiation is ill-formed, and the compiler reports the error at the type's origin, with the path from there to the call, as §3.6 requires for a wrong-kind type argument.
 
 The rule fixes what a body may ask of its type arguments and leaves open how a compiler checks and compiles it. Under it, a future constraint on a type parameter (§9) is a list of verb signatures, and a generic function value's representation (§9) needs one entry per verb and never a type argument's field layout.
 

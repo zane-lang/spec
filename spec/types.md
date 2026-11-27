@@ -402,7 +402,7 @@ Constructors use the same block-bodied or expression-bodied surface forms as oth
 
 - a `struct` or `#struct` constructor builds the result with `init{ ... }`, which assigns every field (§3.7);
 - an `enum` or `#enum` constructor returns one of the enum's members ([`adt.md`](adt.md) §2.2);
-- a `variant` or `#variant` constructor returns a case, built by naming it ([`adt.md`](adt.md) §3.3).
+- a `variant` or `#variant` constructor returns a case, which its body builds by naming the case ([`adt.md`](adt.md) §3.3).
 
 ```zane
 type Colors = enum [ red, green, blue ];
@@ -419,7 +419,7 @@ Because every mould may declare constructors, a generic body may construct a val
 
 ### 3.2 Positional constructors
 
-Positional constructors declare ordinary parameters and return `init{ ... }`.
+Positional constructors declare ordinary parameters. A `struct` or `#struct` positional constructor returns `init{ ... }`; an `enum` or `variant` one returns a member or a case (§3.1).
 
 ```zane
 package Graph;
@@ -576,7 +576,7 @@ Vector{x Int; y Int;} {
 
 ### 3.7 `init{ }` is a constructor-only expression
 
-`init{ }` is valid only inside the body of a constructor for a type with fields — a `struct` or `#struct` — but within that body it is an ordinary expression of the enclosing constructor's type. An `enum` or `variant` constructor has no fields to assign and returns a member or a case instead (§3.1). It may be returned directly or assigned to a local before being returned.
+`init{ }` is valid only inside the body of a constructor for a type with fields — a `struct` or `#struct` — but within that body it is an ordinary expression of the enclosing constructor's type. An `enum` or `variant` constructor has no fields to assign and returns a member or a case instead (§3.1). The constructor may return it directly or assign it to a local before returning it.
 
 ```zane
 Vector{x Int; y Int;} {
@@ -881,7 +881,7 @@ A named type is therefore always declared this way: `type Name = struct { ... }`
 
 A foreign handle, `#handle{ ... }`, is the one other right-hand side that declares a new type. It is no mould: it has no body and no value form, and it appears only after `type` ([`ffi.md`](ffi.md) §4.1).
 
-These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a name, and that name is what its constructors are called by (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
+These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a name, and a program calls the type's constructors by that name (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".

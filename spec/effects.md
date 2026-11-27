@@ -57,7 +57,7 @@ A verb's signature shows what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1). An exported lambda has the same rights in whatever package declares it, because a host calls it as the system calls `main` ([`packages.md`](packages.md) §8.4).
+The root package is one exception: any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1). An exported lambda is the other: it has the same rights in whatever package declares it, because a host calls it as the system calls `main` ([`packages.md`](packages.md) §8.4).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 

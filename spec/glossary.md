@@ -111,7 +111,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 ### 3.3 unified type parameters
 
 - **Meaning:** A **type parameter** (`name Type`, uppercase, ranging over types) or a **number parameter** (`name @concepts$Int`, lowercase, ranging over compile-time integers). Both share one reference system — bare names, with casing carrying the kind — and differ only in where they are introduced: a `<>` header on a type or a package, inline on a verb.
-- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types, which are applied positionally, and inline for verbs, whose parameters are always inferred.
+- **Why this name:** Type and number parameters share one concept-and-reference system (the `Type`/`@concepts$Int` concepts, bare references, and the casing rule) across types and verbs; only the introduction site differs — a header for types and packages, which are applied positionally, and inline for verbs, whose parameters are always inferred.
 - **Canonical home:** [`generics.md`](generics.md) §3
 
 ### 3.4 compiler concept types
@@ -392,7 +392,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.50 veiled value
 
-- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors; a field read, an enum map read, naming a member or case, a `match`, or a call as a function value on it is an error.
+- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors, and `T.name(...)` is always a named-constructor call; a field read or write, an enum map read, naming an enum member, a `match`, or a call as a function value on it is an error.
 - **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
 - **Canonical home:** [`generics.md`](generics.md) §3.8
 

@@ -54,7 +54,7 @@ base Colors();                // base : Colors, holding red
 shade Colors.background();    // shade : Colors, holding blue
 ```
 
-A named enum constructor's name **MUST** differ from every member of the enum, so that `Colors.background` names a constructor and `Colors.red` a member, never both ([`types.md`](types.md) §3.4). Naming a member stays built-in syntax with no verb behind it; an enum constructor is a declared verb that returns a member.
+A named enum constructor's name differs from every member of the enum ([`types.md`](types.md) §3.4), so `Colors.background` names a constructor and `Colors.red` a member. Naming a member stays built-in syntax with no verb behind it; an enum constructor is a declared verb that returns a member.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
@@ -169,7 +169,7 @@ three Countdown = Countdown.more(two);  // legal: `two` is copied, and is still 
 
 ### 3.3 Variant constructors
 
-A variant may declare constructors like any other type ([`types.md`](types.md) §3.1). A variant constructor returns a case of the variant, built by naming it (§3.2); a variant has cases, not fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
+A variant may declare constructors like any other type ([`types.md`](types.md) §3.1). A variant constructor returns a case of the variant, which its body builds by naming the case (§3.2); a variant has cases, not fields, so its constructor uses no `init{ }` and is always positional, never a field constructor ([`types.md`](types.md) §3.3).
 
 ```zane
 type Countdown = variant { done Unit; more Countdown; }
@@ -181,7 +181,7 @@ start Countdown();          // start : Countdown, with done live
 one Countdown.once();       // one : Countdown, with more live
 ```
 
-A named variant constructor's name **MUST** differ from every case of the variant, so that `Countdown.once()` calls a constructor and `Countdown.more(n)` names a case, never both ([`types.md`](types.md) §3.4). A case form stays built-in syntax; a variant constructor is a declared verb that returns one.
+A named variant constructor's name differs from every case of the variant ([`types.md`](types.md) §3.4), so `Countdown.once()` calls a constructor and `Countdown.more(n)` names a case. A case form stays built-in syntax; a variant constructor is a declared verb that returns one.
 
 > **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 

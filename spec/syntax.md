@@ -96,13 +96,15 @@ import packageName$member
 import packageName$member as alias
 import packageName$[memberA, memberB]
 import packageName$
-import packageName<TypeArgument, ...>
-import packageName<TypeArgument, ...> as alias
-import packageName<TypeArgument, ...>$member
-import packageName<TypeArgument, ...>$
+import packageName<Argument, ...>
+import packageName<Argument, ...> as alias
+import packageName<Argument, ...>$member
+import packageName<Argument, ...>$member as alias
+import packageName<Argument, ...>$[memberA, memberB]
+import packageName<Argument, ...>$
 ```
 
-An import of a parameterized package writes its argument list in every form ([`packages.md`](packages.md) §3.10). The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
+An import of a parameterized package writes its argument list in every form; each `Argument` is a type or a compile-time integer ([`packages.md`](packages.md) §3.10). The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
 
 ```zane
 import math$[sqrt, pow] as m;  // ILLEGAL: a list has no single name to rename
@@ -542,7 +544,7 @@ Constructors use the same package-scope declaration shapes as other functions, e
 
 ```zane
 EnumName() => EnumName.member
-VariantName() => VariantName.case(payload)
+VariantName(payload PayloadType) => VariantName.case(payload)
 ```
 
 A constructor for a parameterized type has no `<>` header; its name carries the **applied** return type (`TypeName<T>`, `TypeName<T, n>`), whose `<...>` holds bare references to the parameters. It introduces those type and number parameters inline within its value parameters — directly (`param T Type`) or inside a parameter's nested type (`param Container<T Type, n @concepts$Int>`) — in which case they are inferred from the value arguments; or it accepts a type or compile-time integer as an ordinary value parameter of concept type `Type` or `@concepts$Int` (passed explicitly). A constructor is always called by its bare name and **MUST NOT** carry a `<>` list at the call. See [`types.md`](types.md) §3.10 and [`generics.md`](generics.md) §5.
