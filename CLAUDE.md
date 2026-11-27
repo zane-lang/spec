@@ -146,6 +146,9 @@ devbox run lint
 
 Intel macOS fallback and the rule itself: `contributing/markdown-formatting.md`.
 
+**Prose** is machine-checked too, over every `.md` and code comment, merged
+stories included: `contributing/writing-spec-docs.md` §6.7.
+
 ## Writing a design story
 
 Coverage is **complete**: every spec doc has a story except `glossary.md`

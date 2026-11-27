@@ -371,6 +371,18 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 ---
 
+### 6.7 Prose lint
+
+[prose-lint](https://github.com/zane-lang/prose-lint) checks the prose of every Markdown file and code comment in the repository, `stories/` included. It reports personified verbs, placeholder nouns, sentences that end on a pronoun for their own subject, and filler endings. Run it from the repository root before committing, at the prose-lint commit that [`.github/workflows/prose.yml`](../.github/workflows/prose.yml) pins:
+
+```sh
+git clone https://github.com/zane-lang/prose-lint /tmp/prose-lint
+git -C /tmp/prose-lint checkout <commit pinned in prose.yml>
+uv run --frozen --project /tmp/prose-lint prose-lint .
+```
+
+The workflow runs the same command on every pull request. Rewrite a flagged sentence instead of suppressing the finding: prose-lint's README pairs each rule with example rewrites. A `prose-lint: ignore` comment is reserved for a genuine false positive that no natural rewrite avoids.
+
 ## 7. Adding a New Spec Document
 
 1. Create `spec/<topic>.md` (kebab-case file name, no `_model` or `_handling` suffixes; the file name should match the term readers will look for).
