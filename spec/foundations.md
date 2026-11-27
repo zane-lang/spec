@@ -1,10 +1,10 @@
 # Zane Foundations
 
-This document states the few ideas the rest of the specification rests on. Every topic document assumes these ideas; this document names them in a single place and points to the document that specifies each one in full. This document introduces no rules of its own — another document specifies each foundation canonically, and this document is the map that shows how the foundations fit together.
+This document states the few ideas the rest of the specification rests on. Every topic document builds on these ideas; this document names them in a single place and points to the document that specifies each one in full. This document introduces no rules of its own — another document specifies each foundation canonically, and this document is the map that shows how the foundations fit together.
 
 > **See also:** [`lexical.md`](lexical.md) §3 for the casing rule. [`generics.md`](generics.md) §2 and §7 for types-as-functions and uniform stride. [`memory.md`](memory.md) §3 for layout. [`effects.md`](effects.md) for how the strictness is enforced.
 
-> **Story:** [`stories/foundations.md`](../stories/foundations.md) tells the story behind these commitments — the bets they represent and the costs they accept.
+> **Story:** [`stories/foundations.md`](../stories/foundations.md) explains the story behind these commitments — the bets they represent and the costs they accept.
 
 ---
 
@@ -36,7 +36,7 @@ A type in Zane is an ordinary compile-time value. The compiler runs in stages: a
 
 Three consequences that other documents depend on:
 
-- **Parameterization is not a separate feature.** It is what you get once a type is an executable value. A parameterized type lists its parameters and produces a result; applying arguments evaluates it. See [`generics.md`](generics.md) §2.
+- **Parameterization is not a separate feature.** It follows directly once a type is an executable value. A parameterized type lists its parameters and produces a result; applying arguments evaluates it. See [`generics.md`](generics.md) §2.
 - **`<>` and `()` are different mechanisms, not two call syntaxes.** `<>` is a type expression, resolved in the earlier (type) stage; `()` is a construction or call, resolved in the later (value) stage. They live in different stages, which is why a call never carries a `<>` list. See [`generics.md`](generics.md) §4–§5.
 - **A value passed at compile time is just an argument.** A type or compile-time integer handed to a constructor is an ordinary value the body can use, because the stage that runs the type has those values in hand. See [`generics.md`](generics.md) §5.3.
 
@@ -48,7 +48,7 @@ Three consequences that other documents depend on:
 
 The surface grammar uses enforced identifier casing to simplify parsing and distinguish type names from value names. The initial-case rule and the ambiguities it resolves are specified by [`lexical.md`](lexical.md) §3 and §5. The casing rule supports the syntax; it does not define the staging, ownership, or layout model described here.
 
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 
@@ -58,7 +58,7 @@ Every value of a given type occupies the same number of bytes. Size is part of t
 
 The uniform-stride invariant is the foundation of a large part of the runtime model:
 
-- Indexing is `base + i * stride` with a compile-time `stride`; copying, struct embedding, and calling conventions all assume a fixed size. The full argument is in [`generics.md`](generics.md) §7.
+- Indexing is `base + i * stride` with a compile-time `stride`; copying, struct embedding, and calling conventions all depend on a fixed size. The full argument is in [`generics.md`](generics.md) §7.
 - A type whose size could vary would propagate that variability into everything that contains it, so the invariant has to be global to be worth anything.
 - Consequences elsewhere are derivations of this rule, not separate decisions: an array bakes its length into its type ([`generics.md`](generics.md) §8), and a directly inline self-reference is impossible because it would have infinite size, which is why a recursive member is boxed rather than laid out inline — on either side of the `#` axis ([`adt.md`](adt.md) §4, [`memory.md`](memory.md) §3.3).
 
@@ -78,7 +78,7 @@ The rules are therefore not a usability tax levied next to the performance. They
 
 ## 7. Identity Is Opt-In
 
-Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and everything that separates a plain value from a shared object follows from which side of the axis a type is on. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; their kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$U8`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$ByteSet` ([`types.md`](types.md) §2.12), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
+Every type defined in Zane is a **value type** unless it is marked with `#`, which makes it a **reference type**. This one axis is orthogonal to a type's *shape* — such as a product `struct` or a sum `variant` — and everything that separates a plain value from a shared object follows from which side of the axis a type is on. The mark attaches only to a mould — `#struct`, `#variant`, `#enum` — or to a foreign handle — `#handle` ([`ffi.md`](ffi.md) §4.1) — declared and named; each such reference type is a distinct type with identity that can be pointed at. The compiler's intrinsic types are defined nowhere in Zane and carry no mark; the compiler instead fixes whether each is a value type or a reference type: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$U8`, `@primitives$Bool`, `@primitives$String` ([`types.md`](types.md) §2.7), `@primitives$ByteSet` ([`types.md`](types.md) §2.12), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, while `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime's `@runtime$Console` and `@runtime$Runtime` ([`effects.md`](effects.md) §6.6) are reference types.
 
 A value type is copied on assignment, has no identity, and — the load-bearing restriction — is *transitively* a value: it may contain only other value types, never a reference-type or `&` field. Nothing reachable from a value can be aliased, which is why a value can be copied and shared by snapshot with no bookkeeping. A reference type is the opposite in each respect: it has stable identity, may be aliased through `&`, may hold reference-type and `&` fields, and reaches a new place by being moved rather than duplicated.
 

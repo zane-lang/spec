@@ -126,7 +126,7 @@ An `import` declaration makes members of another package available in the source
 
 The package must be one the importing package may import (§4.3), named by its package name, or for a dependency's package by the name its project's manifest gives it. A package from another project reaches the importing project through the dependency rules of [`dependencies.md`](dependencies.md) §8.
 
-No other package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported package. `core` is not an exception: a file that writes `Int` imports it like any other dependency (see [`types.md`](types.md) §2.6), most often with the whole-package form `import core$` (§3.3).
+No other package is available without an import. A file's own package is established by its `package` declaration, and its members remain available unqualified (§3.2). There is no ambient or automatically-imported package. `core` is not an exception: a file that writes `Int` imports `core` as it imports any other dependency (see [`types.md`](types.md) §2.6), most often with the whole-package form `import core$` (§3.3).
 
 ### 3.2 Current-package members are unqualified
 
@@ -181,7 +181,7 @@ Two imports that would give one entity two spellings in the same file are a comp
 
 ### 3.5 An imported name carries every declaration that shares it
 
-A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb that means the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name it means the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed. A method is a declaration an import brings only when its subject is a type parameter (§3.6).
+A `pkg$member` import brings every accessible package-scope declaration in `pkg` named `member`. For a verb the import brings the whole overload set: an overloaded name is a set of candidates that only a call site collapses ([`functions.md`](functions.md) §7.1), so importing one member of the set is not expressible. For a type name the import brings the type together with its constructors ([`types.md`](types.md) §3.1) and its named constructors (§3.4), so an imported type can be constructed. A method is a declaration an import brings only when its subject is a type parameter (§3.6).
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
@@ -198,7 +198,7 @@ import math$+;       // ILLEGAL: operators resolve by operand home package
 
 A cross-package method call is written with the qualifier at the call site instead ([`functions.md`](functions.md) §6.2).
 
-A method whose subject is a type parameter ([`generics.md`](generics.md) §3.7) is the exception, because no subject type's home reaches it: its plain name reaches it, so an import brings it as it brings a function, and the spelling the import gives is the one method lookup searches ([`functions.md`](functions.md) §6.1, step 3). A name a package declares both for a subject of any type and for a subject type of its own is importable, and the import brings only the methods for a subject of any type; the others stay reached through their subject type's home, as before.
+A method whose subject is a type parameter ([`generics.md`](generics.md) §3.7) is the exception, because no subject type's home reaches it: its plain name reaches it, so an import brings it as it brings a function, and the spelling the import gives is the one method lookup searches ([`functions.md`](functions.md) §6.1, step 3). A method name a package declares both for a subject of any type and for a subject type of its own is importable, and the import brings only the methods for a subject of any type; the others stay reached through their subject type's home.
 
 ```zane
 import core$work;    // legal: `work` is declared for a subject of any type
@@ -221,7 +221,7 @@ import math$sqrt as Root;     // ILLEGAL: a value renamed to a type-shaped name
 
 ### 3.8 Colliding bare names are an error at the import
 
-Two imports may bring one bare name into a file only when the result is a legal overload set: every declaration sharing the name must be a verb, and they must differ in the ordered parameter types that decide overload identity ([`functions.md`](functions.md) §4.1). Dispatch is then an ordinary call-site choice.
+Two imports may bring one bare name into a file only when the result is a legal overload set: every declaration sharing the name must be a verb, and they must differ in the ordered parameter types that determine overload identity ([`functions.md`](functions.md) §4.1). Dispatch is then an ordinary call-site choice.
 
 Any other collision is a compile-time error reported at the import declaration rather than at the use site, so the conflict shows in the file's own import list. A lambda-variable is a symbol rather than a verb and can never accumulate an overload set ([`functions.md`](functions.md) §7.3), so a collision involving one is always an error. A bare name that collides with a member of the file's own package (§3.2) is an error on the same terms; an import never shadows.
 
@@ -278,7 +278,7 @@ What a package may import depends on where it lies in its project:
 | Importing package | May import |
 |---|---|
 | Top-level library package | the project's other top-level library packages, its own subpackages, and the public library packages of the project's dependencies |
-| Subpackage | its own subpackages, the project's top-level library packages other than the one it lies within, and the public library packages of the project's dependencies |
+| Subpackage | its own subpackages, the project's top-level library packages other than the top-level library package it lies within, and the public library packages of the project's dependencies |
 | Program package or plugin package | the project's top-level library packages and the public library packages of its dependencies |
 | Test package | as §7.3 states |
 
@@ -454,7 +454,7 @@ setVolume Unit(this Synth, volume @primitives$F64) mut {
 } export "synth_set_volume"
 ```
 
-A build exports only lambdas, never verbs, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not stop a build from exporting a lambda. An exported lambda introduces no type or number parameter, since C passes no type; in a parameterized package it may use the package's parameters, which are concrete in each instance (§2.6), and declares no abort type, since no Zane caller handles its abort.
+A build exports only lambdas, never verbs, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not determine exports, and a leading `_` does not stop a build from exporting a lambda. An exported lambda introduces no type or number parameter, since C passes no type; in a parameterized package it may use the package's parameters, which are concrete in each instance (§2.6), and declares no abort type, since no Zane caller handles its abort.
 
 Each parameter of an exported lambda has a type that a parameter of a function value passed to C may have, and its result a type that such a function value's result may have ([`ffi.md`](ffi.md) §3.6); either may also be a **C-held object** (§8.5):
 
@@ -468,7 +468,7 @@ Every C name is unique in a dynamic library or test build. Two exports of one na
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#a-dynamic-library-is-a-package-without-main) — "A dynamic library is a package without `main`".
 
-### 8.3 `export` lines choose a build's exports
+### 8.3 `export` lines select a build's exports
 
 An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it (§2.6), `export clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>;`. Its arguments are concrete. Each C name occurs once in a build (§8.2), so a build exports at most one instance of a parameterized library, and a plugin package that names one provides one plugin. Only a plugin package or a test package (§7.2) carries `export` lines.
 

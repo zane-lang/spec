@@ -2,7 +2,7 @@
 
 This guide describes the conventions for writing and maintaining spec documents in this repository. Follow it when adding a new document, extending an existing one, or editing any section.
 
-Spec documents state *what the language does*. The *why* — the reasoning, the alternatives, the accepted costs — lives in a separate place: see [`writing-stories-docs.md`](writing-stories-docs.md) for the stories folder and its conventions. Keeping the two apart is deliberate; this guide governs only the normative spec.
+Spec documents state *the language's behaviour*. The *why* — the reasoning, the alternatives, the accepted costs — lives in a separate place: see [`writing-stories-docs.md`](writing-stories-docs.md) for the stories folder and its conventions. Keeping the two apart is deliberate; this guide governs only the normative spec.
 
 ---
 
@@ -12,7 +12,7 @@ Every spec document lives in [`spec/`](../spec/), and each file covers one topic
 
 If you need to mention a concept that is canonically specified elsewhere, keep the mention brief and add a cross-reference rather than duplicating rules.
 
-When in doubt about where a piece of content belongs, ask: does it describe *what the language does* (topic doc in `spec/`), *how to write a construct* (`syntax.md`), *which term the spec uses for a concept* (`glossary.md`), or *how a decision came to be made that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
+When in doubt about where a piece of content belongs, ask: does it describe *the language's behaviour* (topic doc in `spec/`), *how to write a construct* (`syntax.md`), *which term the spec uses for a concept* (`glossary.md`), or *how a decision came to be made that way* (`stories/`)? If a reader needs it to write correct Zane, it is normative and belongs in `spec/`. If it only helps them understand a choice, it belongs in `stories/`.
 
 See [`spec/README.md`](../spec/README.md) for the canonical index of every spec document and its purpose.
 
@@ -100,7 +100,7 @@ Never put `---` between subsections (`### N.M`).
 
 ### 2.5 Section numbering
 
-Top-level sections are numbered `## 1.`, `## 2.`, etc. Subsections are `### 1.1`, `### 1.2`, etc.
+Top-level sections are numbered `## 1.`, `## 2.` and onward. Subsections are `### 1.1`, `### 1.2` and onward.
 
 Rules:
 - Do not skip numbers.
@@ -115,13 +115,13 @@ Rules:
 
 - the preferred term
 - a short meaning
-- why that name was chosen
+- the reason for choosing that term
 - the canonical home document for the full rule
 
-Keep an entry short — near the file's median of roughly 50 words. `Meaning` is a summary, not the rule, and length is the mechanism of drift: an entry that reproduces its rule's structure — the enumeration, the exceptions, the cross-cutting conditions — is the kind that silently stops matching once the rule moves. If you find yourself restating the rule, cut back to what distinguishes the term and let the canonical home carry the rest.
+Keep an entry short — near the file's median of roughly 50 words. `Meaning` is a summary, not the rule, and length is the mechanism of drift: an entry that reproduces its rule's structure — the enumeration, the exceptions, the cross-cutting conditions — is the entry that silently stops matching once the rule moves. If you find yourself restating the rule, cut back to what distinguishes the term and let the canonical home carry the rest.
 
-For how a coined term is chosen in the first place — what makes a good name and
-how to weigh candidates — see [`naming-terms.md`](naming-terms.md).
+For choosing a coined term in the first place — the qualities of a good term and
+the weighing of candidates — see [`naming-terms.md`](naming-terms.md).
 
 ### 2.7 Blank lines around headings
 
@@ -135,7 +135,7 @@ Leave a blank line above and below every heading, at every level — including a
 
 Every topic document begins with `## 1. Overview`. It contains:
 
-- A short paragraph explaining what the feature is.
+- A short paragraph explaining the feature.
 - A bullet list of 2–5 core ideas, each formatted as **`keyword`** with a brief explanation.
 
 ```markdown
@@ -151,7 +151,7 @@ The Overview is orientation, not rationale: it describes the feature, and leaves
 
 ### 3.2 Core topic sections
 
-Numbered `## 2.` onward. Write prose that explains *what the language does*, grounded in the rules, with enough *why* that the rule reads as sensible rather than arbitrary. The *developed* why — the forks, the rejected designs, the costs — does not go here; it goes in the stories doc (§3.4). Include code examples in every subsection that has a non-obvious behaviour.
+Numbered `## 2.` onward. Write prose that explains *the language's behaviour*, grounded in the rules, with enough *why* that the rule reads as sensible rather than arbitrary. The *developed* why — the forks, the rejected designs, the costs — does not go here; it goes in the stories doc (§3.4). Include code examples in every subsection that has a non-obvious behaviour.
 
 Do not include syntax grammar forms in topic docs. Those go in `syntax.md`. Cross-reference with:
 
@@ -198,9 +198,9 @@ Format as a two-column table: left column is the concept name, right column is t
 
 ### 3.6 Compiler behaviour a rule enables
 
-The spec is about the language, not about a compiler. Some language rules exist to make compiler behaviour possible, though, and a few of those behaviours are distinctive enough to be part of what the language is: implicit parallelism ([`concurrency.md`](../spec/concurrency.md) §2) and compile-time evaluation ([`effects.md`](../spec/effects.md) §5.3) are the examples.
+The spec is about the language, not about a compiler. Some language rules exist to make compiler behaviour possible, though, and a few of those behaviours are distinctive enough to be part of the language's identity: implicit parallelism ([`concurrency.md`](../spec/concurrency.md) §2) and compile-time evaluation ([`effects.md`](../spec/effects.md) §5.3) are the examples.
 
-Such a behaviour is stated next to the rule that enables it: in the subsection directly after that rule, when one subsection holds it, as compile-time evaluation follows capability access. The statement covers what the compiler may do and what that guarantees a program, such as that a program cannot observe the behaviour. It never covers how the compiler does it: the algorithm, its bounds, and its heuristics belong in the compiler's own documentation.
+Such a behaviour is stated next to the rule that enables it: in the subsection directly after that rule, when one subsection holds it, as compile-time evaluation follows capability access. The statement covers the compiler's permitted behaviour and the guarantee it gives a program, such as that a program cannot observe the behaviour. It never covers how the compiler does it: the algorithm, its bounds, and its heuristics belong in the compiler's own documentation.
 
 Not every compiler behaviour needs a mention. Write a behaviour down only when it makes visible the benefit of the rule that enables it.
 
@@ -267,7 +267,7 @@ The table header is always one of:
 - Grammar production rules written as annotated code blocks.
 - Legal and ILLEGAL examples of every syntactic form.
 - Positional grammar: where keywords appear relative to each other.
-- Nothing about what a construct *does* — that belongs in the topic docs.
+- Nothing about a construct's *behaviour* — that belongs in the topic docs.
 
 ### 5.2 What does not belong in `syntax.md`
 
@@ -370,6 +370,18 @@ Do not frame a rule in terms of backward compatibility or migrating existing cod
 Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` element**, or an **`&T` parameter**. Do not call it a "reference field" or "reference parameter". A *reference-type* field or parameter is one whose type is a reference type, and it owns or borrows its object, so a single hyphen would be all that separates owning from not owning.
 
 ---
+
+### 6.7 Prose lint
+
+[prose-lint](https://github.com/zane-lang/prose-lint) checks the prose of every Markdown file in the repository, `stories/` included, and the comments of every source file in a language its README lists. It reads no Go, Rust, Zig or D source, so the comments of those `langbench/` ports go unchecked. It reports personified verbs, placeholder nouns, sentences that end on a pronoun for their own subject, and filler endings. Run it from the repository root before committing, at the prose-lint commit that [`.github/workflows/prose.yml`](../.github/workflows/prose.yml) pins:
+
+```sh
+git clone https://github.com/zane-lang/prose-lint /tmp/prose-lint
+git -C /tmp/prose-lint checkout "$(sed -n 's/^ *ref: //p' .github/workflows/prose.yml)"
+uv run --frozen --project /tmp/prose-lint prose-lint .
+```
+
+The workflow runs the same command on every pull request. Rewrite a flagged sentence instead of suppressing the finding: prose-lint's README pairs each rule with example rewrites. A `prose-lint: ignore` comment is reserved for a genuine false positive that no natural rewrite avoids.
 
 ## 7. Adding a New Spec Document
 

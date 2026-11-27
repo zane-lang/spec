@@ -24,7 +24,7 @@ Zane's arithmetic operators cover addition, multiplication, division, negation, 
 
 ### 2.1 Operands of one type, one overload per type
 
-Every function of `@math$` takes operands of one scalar primitive, and its result is that primitive unless its table says otherwise. Each has one overload per scalar primitive it takes. In the tables below, `I` is `@primitives$I32` or `@primitives$I64`, and `F` is `@primitives$F32` or `@primitives$F64`. No function takes operands of two types; an operand is converted first ([`types.md`](types.md) §2.9).
+Every function of `@math$` takes operands of one scalar primitive, and its result is that primitive unless its table gives another type. Each has one overload per scalar primitive it takes. In the tables below, `I` is `@primitives$I32` or `@primitives$I64`, and `F` is `@primitives$F32` or `@primitives$F64`. No function takes operands of two types; an operand is converted first ([`types.md`](types.md) §2.9).
 
 A function of `@math$` is called like any function. It is not an operator, so it has no infix form ([`syntax.md`](syntax.md) §2.7).
 
@@ -32,7 +32,7 @@ A function of `@math$` is called like any function. It is not an operator, so it
 
 Each function is **exact** or **approximate**.
 
-An exact function's result is the one this document specifies for its operands. It is the same on every platform, and the same whether the function runs at compile time or at run time.
+An exact function's result is the value this document specifies for its operands. It is the same on every platform, and the same whether the function runs at compile time or at run time.
 
 An approximate function's result is close to the exact mathematical value of the function at its operands, and need not be the representable value nearest to it. It may differ between platforms. Within one program it is a function of its operands: the same operands give the same result each time.
 
@@ -87,7 +87,7 @@ All three are exact. `abs` of the most negative value of the type gives that val
 | `floor` | `F @math$floor(value F)` | The greatest integer not above the operand |
 | `ceil` | `F @math$ceil(value F)` | The least integer not below the operand |
 | `trunc` | `F @math$trunc(value F)` | The operand rounded toward zero to an integer |
-| `roundEven` | `F @math$roundEven(value F)` | The nearest integer, a tie going to the even one |
+| `roundEven` | `F @math$roundEven(value F)` | The nearest integer, a tie going to the even integer |
 | `fma` | `F @math$fma(left F, right F, addend F)` | `left * right + addend`, rounded once |
 | `copySign` | `F @math$copySign(magnitude F, sign F)` | `magnitude` with the sign of `sign` |
 | `min` | `F @math$min(left F, right F)` | The lesser operand |
@@ -130,7 +130,7 @@ Compile-time evaluation ([`effects.md`](effects.md) §5.3) changes nothing a pro
 
 ### 3.1 A package beside `core`
 
-The project that holds `core` holds a second public library package, `math` ([`packages.md`](packages.md) §2.1). It imports `core` and declares a function over each `@math$` function `core`'s fundamental types can use: the integer ones over `Int`, which holds an `@primitives$I64`, and `I32`, which holds an `@primitives$I32`, and the float ones over `Float`, which holds an `@primitives$F64`, and `F32`, which holds an `@primitives$F32`. Each has the name and the parameters of the intrinsic it calls, and passes its operands to the intrinsic through `core`'s implicit conversions to the storage primitives ([`types.md`](types.md) §2.6).
+The project that holds `core` holds a second public library package, `math` ([`packages.md`](packages.md) §2.1). It imports `core` and declares a function over each `@math$` function `core`'s fundamental types can use: the integer functions over `Int`, which holds an `@primitives$I64`, and `I32`, which holds an `@primitives$I32`, and the float functions over `Float`, which holds an `@primitives$F64`, and `F32`, which holds an `@primitives$F32`. Each has the name and the parameters of the intrinsic it calls, and passes its operands to the intrinsic through `core`'s implicit conversions to the storage primitives ([`types.md`](types.md) §2.6).
 
 ```zane
 package math;

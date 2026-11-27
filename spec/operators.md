@@ -90,7 +90,7 @@ The operands of every operator are evaluated left to right, in written order, an
 | a set | the elements in both | the elements in either |
 | a set of flags | the flags both hold | the flags held by either |
 
-A number has no parts of that kind, so `Int`, `Float`, `I32` and `F32` implement neither.
+A number has no such parts, so `Int`, `Float`, `I32` and `F32` implement neither.
 
 An implementation's operand and result types follow §2.2 like those of any other operator. A package may declare `or` over two members of its own enum and return a set of them:
 
@@ -102,7 +102,7 @@ Permissions or(left Permission, right Permission) { ... }
 access Permissions = Permission.read or Permission.write;
 ```
 
-`Bool` implements `and`, `or`, `~` as complement, and `==`, and declares nothing beyond them. `a ~= b` follows from §2.3 and is exclusive or on `Bool`. `Bool` declares no `*`, `/`, `+`, or `<`, so those operators and the ones §2.3 derives from them are no-match errors on two `Bool` operands.
+`Bool` implements `and`, `or`, `~` as complement, and `==`, and declares nothing beyond them. `a ~= b` follows from §2.3 and is exclusive or on `Bool`. `Bool` declares no `*`, `/`, `+`, or `<`, so those operators and the operators §2.3 derives from them are no-match errors on two `Bool` operands.
 
 Both operands are evaluated. `and` and `or` are ordinary operator calls (§2.2), so neither skips its right operand. An operand that must run only when the result depends on it is written inside a branch on the other operand: the right operand of a conjunction inside an `if` on the left, and the right operand of a disjunction inside the `else` of one. The conditional evaluation is then visible at the call site.
 
@@ -144,7 +144,7 @@ The **machine operations** on storage primitives are the functions of `@operator
 | `equal` | `@primitives$Bool @operators$equal(left S, right S)` |
 | `lessThan` | `@primitives$Bool @operators$lessThan(left S, right S)` |
 
-On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact one reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero, and a division by zero gives zero, so every integer operation has a result.
+On `@primitives$I32` and `@primitives$I64`, an arithmetic operation whose exact result the type cannot hold wraps: the result is the exact result reduced to the type's width in two's complement, so `negate` and `divide` of the most negative value by `-1` both give that value back. `divide` rounds its quotient toward zero, and a division by zero gives zero, so every integer operation has a result.
 
 On `@primitives$F32` and `@primitives$F64`, each operation is IEEE 754's: `add`, `multiply`, and `divide` are its addition, multiplication, and division, rounded to nearest with ties to even as a conversion is ([`types.md`](types.md) §2.9), and `negate` flips the sign, of a zero and a NaN too. So an operation on infinities gives what IEEE 754 gives, an infinity or a NaN, a division of a nonzero value by zero gives an infinity of the quotient's sign, zero divided by zero gives a NaN, and an operation with a NaN operand gives a NaN. `equal` and `lessThan` are IEEE 754's quiet comparisons: both are false when either operand is a NaN, so a NaN equals nothing, itself included, and `equal` holds of a positive and a negative zero.
 

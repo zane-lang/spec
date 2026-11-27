@@ -5,13 +5,13 @@ code. Two doc trees with opposite update rules: `spec/` (rewritten to the
 present) and `stories/` (append-only).
 
 This file holds only what an **agent** needs that the human docs don't cover.
-The guides and `spec/` win over anything here; **read the relevant one in full
+The guides and `spec/` win over anything here; **read the relevant guide in full
 before editing**:
 
 - `contributing/writing-spec-docs.md` — spec prose, document shape, cross-references.
 - `contributing/writing-stories-docs.md` — story prose, append-only rule (§5), spec↔story linking (§4).
 - `contributing/naming-terms.md` — coining a term of art.
-- `spec/README.md` and `stories/README.md` — the topic indexes (spec docs are **not** alphabetical); read the right one first to locate anything. They are also the website's indexes (<https://github.com/zane-lang/website/blob/main/PUBLISHING.md>).
+- `spec/README.md` and `stories/README.md` — the topic indexes (spec docs are **not** alphabetical); read the right index first to locate any rule or chapter. They are also the website's indexes (<https://github.com/zane-lang/website/blob/main/PUBLISHING.md>).
 
 If this file *explains* a rule instead of pointing at its home, that is a
 defect: delete the explanation and cite the home.
@@ -68,9 +68,9 @@ test the compiler does not fold is reported as not folded.
 ## Validate before committing (spec edits)
 
 Each grep hunts a *form* the spec has retired; the rule it guards lives in the
-spec, not here — read the home before deciding what a hit means. Merged stories
-are **exempt from every grep below** (append-only; "fixing" a merged chapter
-violates it); chapters your own branch adds are not (Before you edit §3).
+spec, not here — read the home before deciding whether a hit is a defect.
+Merged stories are **exempt from every grep below** (append-only; "fixing" a
+merged chapter violates it); chapters your own branch adds are not (Before you edit §3).
 
 **Retired generics forms** (`spec/generics.md`, casing `spec/lexical.md`); no hits:
 
@@ -117,8 +117,9 @@ The first two hunt the retired memory sense of `host`; its current senses are
 legal (glossary §4.30). The first skips `> **Story:**` pointers (quoted old
 headings).
 
-**The separator** (`spec/lexical.md` §6; `,` is what every other C-family
-language does, so it is the likely slip). Both come back empty today:
+**The separator** (`spec/lexical.md` §6; every other C-family language
+separates entries with `,`, so `,` is the likely slip). Both come back empty
+today:
 
 ```sh
 grep -RIn "init{[^}]*," spec/
@@ -137,7 +138,7 @@ design call — no footnote papering.
 
 **Markdown formatting** is machine-checked over every `.md`, `stories/`
 included (whitespace-only fixes don't touch merged claims). Run before
-committing any Markdown change; CI runs the same:
+committing any Markdown change; CI runs the same command:
 
 ```sh
 devbox run lint
@@ -145,14 +146,18 @@ devbox run lint
 
 Intel macOS fallback and the rule itself: `contributing/markdown-formatting.md`.
 
+**Prose** is machine-checked too, over every `.md` (merged stories included) and
+the comments of the source languages prose-lint reads:
+`contributing/writing-spec-docs.md` §6.7.
+
 ## Writing a design story
 
 Coverage is **complete**: every spec doc has a story except `glossary.md`
 (spec guide §7). Write new ones for wholly new topics only. Read both guides
 and **`stories/generics.md`** as the quality bar. A story is two halves —
 narrative, then integration into the spec (story guide §8; pointer format §4.4;
-for a chapter appended to an existing story, spec guide §8). The second half is
-the one sessions forget. One session per story.
+for a chapter appended to an existing story, spec guide §8). Sessions often
+leave out the second half. One session per story.
 
 **Append-only** — story guide §5 owns the rule and the
 `git diff --word-diff origin/main -- stories/<topic>.md` review to run before

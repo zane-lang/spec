@@ -14,7 +14,7 @@ measures what a released Zane compiler actually produces.
 | `bin/<test>/main.zn` | each test's Zane program |
 | `lib/bench/` | code the Zane programs share: reading the size from the arguments, and the random numbers |
 | `c/`, `cpp/`, `rust/`, `go/`, `d/`, `zig/`, `ocaml/` | the other languages, one file per program |
-| `tests.py` | each test's size, expected output and fold profile, and each language's build command |
+| `tests.py` | each test's size, reference output and fold profile, and each language's build command |
 | `langbench.py` | builds, checks, times and renders |
 | `template.html` | the page skeleton |
 | `explanations.txt` | notes on the pinned results, one block per test |
@@ -44,7 +44,8 @@ in `explanations.txt` can describe, and update those notes in the same change.
 ## What is measured
 
 - **Output.** Every program prints its result, and each must print exactly
-  what `tests.py` expects at the test's size before it is timed.
+  the reference output that `tests.py` records for the test's size before it is
+  timed.
 - **Run time.** One untimed run, then five timed runs of the whole process;
   the page shows the median and the spread.
 - **Net run time.** `startup` prints one fixed number and exits, so its run
@@ -71,8 +72,8 @@ Every language builds at its level-2 optimization, keeps the safety checks it
 has by default, and is written the way that language is usually written.
 OCaml's level-2 optimization needs flambda, and nixpkgs builds `ocamlopt`
 without it, so OCaml builds at its one level.
-`primes` also has a variant that asks the compiler to evaluate the sieve, in
-the languages that can ask. That variant is the only test whose whole result is fixed
+`primes` also has a variant that has the compiler evaluate the sieve, in
+the languages whose compilers support that request. That variant is the only test whose whole result is fixed
 when the program is built. The fixed setup in `trialdiv` and `nbody` could be
 marked the same way, but code in these languages rarely marks setup for
 compile-time evaluation, so those tests have no such variant. `gameloop`
@@ -86,7 +87,8 @@ handed is the leak-checking debug allocator.
 same linear congruential generator in every language, so all of them make
 the same choices and print the same result. `nbody` and `spectralnorm` print
 floating-point results in billionths, truncated to an integer, and do the
-same operations in the same order in every language, so the digits agree.
+same operations in the same order in every language, so every language prints
+the same digits.
 
 `binarytrees` uses reference-type nodes with owning child fields. Building a
 parent transfers both children into it, matching the owning pointers in C++

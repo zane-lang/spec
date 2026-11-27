@@ -13,7 +13,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 - **`Verb`.** A **verb** is a callable whose body is a sequence of statements that executes to do work: functions, methods, operators, constructors, and lambdas (a lambda being an anonymous verb). The spec uses "verb" whenever a rule applies to all of these as a group, and reserves "function" for the narrow form — an ordinary identifier-named verb with no `this`. A subscript is not a verb — its body must be a place expression that projects a place rather than running computation (§2.9).
 - **`Package-scope behavior`.** All methods, functions, and constructors are declared at package scope; type bodies never contain behavior.
 - **`Methods as verbs`.** A method is a verb whose first parameter is `this`, so methods and functions share one model and differ only by the subject.
-- **`Capability markers`.** A verb's kind is selected by surface markers, and each marker unlocks a capability: naming the first parameter `this` grants the subject call (a method); naming the verb after a type grants an implicit return type and, for a type with fields, `init{ }` (a constructor). See §8.
+- **`Capability markers`.** Surface markers select whether a verb is a method, a constructor, an operator or a lambda, and each marker unlocks a capability: naming the first parameter `this` grants the subject call (a method); naming the verb after a type grants an implicit return type and, for a type with fields, `init{ }` (a constructor). See §8.
 - **`Explicit mutation at the call site`.** `:` calls are read-only; `!` calls invoke `mut` methods.
 - **`Overload identity is parameter types only`.** Names, return type, and `mut` do not distinguish overloads.
 
@@ -27,7 +27,7 @@ Zane unifies methods, functions, and lambdas under one model: a callable is a pa
 
 A method is any package-scope verb whose first parameter is named `this`. `this` **MUST** be the first parameter and **MUST NOT** appear in any other parameter position.
 
-The **subject** is the object a method is called on. Two things are named after it and are not interchangeable: `this` is the **subject parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **subject expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the subject" means the object itself.
+The **subject** is the object a method is called on. Two constructs are named after it and are not interchangeable: `this` is the **subject parameter** — the declaration's first parameter, whose surface form fixes how the object reaches the body ([`memory.md`](memory.md) §2.9) — and the expression to the left of `:` or `!` at a call site is the **subject expression**, which supplies the object and must satisfy whatever that form requires. Unqualified, "the subject" means the object itself.
 
 ```zane
 Int scaledId(this Node, factor Int) {
@@ -204,7 +204,7 @@ lead &Player = squad[1];     // legal: the projection ends at an ArrayRef elemen
 > **Story:** [`stories/memory.md`](../stories/memory.md#arrayref-a-fixed-reference-container-whose-elements-can-be-guested) — "`ArrayRef`: a fixed reference container whose elements can be guested".
 
 > **Story:** [`stories/functions.md`](../stories/functions.md#pulling-methods-out-of-the-type-body) — "Pulling methods out of the type body".
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" tells why a subscript is not an ordinary method returning a borrow.
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#callback-lists-stay-inside-the-parentheses) — "Callback lists stay inside the parentheses" explains why a subscript is not an ordinary method returning a borrow.
 
 ---
 
@@ -240,7 +240,7 @@ Int scaledId(this Node, factor Int) => this._id * factor;
 Unit noOperation() => Unit();
 ```
 
-`=> expr` is **purely a surface shorthand**: it means exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x; y;}` is shorthand for `{ return init{x; y;} }`.
+`=> expr` is **purely a surface shorthand**: it stands for exactly `{ return expr }` and adds no other behavior. A constructor's `=> init{...}` is the same rewrite — `Vec2(x Float, y Float) => init{x; y;}` is shorthand for `{ return init{x; y;} }`.
 
 ### 3.5 Block-bodied verbs return explicitly
 
@@ -290,7 +290,7 @@ Unit fleet(engines @concepts$Array<^T Type, n @concepts$Int>)
 Unit fleet(engines @concepts$Array<T Type, n @concepts$Int>)  // ERROR: the same, on each element
 ```
 
-The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would make `consume(e)` mean two different things about `e`'s ownership with nothing at the call site to tell them apart, and `fleet([e])` the same about each element.
+The mode changes what the caller must supply and what state the call leaves the caller in — not the shape of the call. Overloading on it would give `consume(e)` two different effects on `e`'s ownership with nothing at the call site to tell them apart, and `fleet([e])` two such effects on each element.
 
 Two overloads **MUST NOT** differ only by the `mut` of a function-type parameter at the same parameter position either. A function value that does not declare `mut` may be passed where a `mut` function type is expected (§7.2), so it would match both.
 
@@ -344,7 +344,7 @@ For `subject:methodName(...)` or `subject!methodName(...)`, the compiler resolve
 2. the current package, apart from its methods whose subject is a type parameter, which step 3 searches
 3. the methods whose subject is a type parameter ([`generics.md`](generics.md) §3.7) that the file writes unqualified: those of the current package, and those an import spells bare (`import core$`, `import core$work`)
 
-A method whose subject is a type parameter has no declaring subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. The compiler searches step 3 only when the first two leave no candidate, so it prefers a method declared for the subject's own type to one declared for every type.
+A method whose subject is a type parameter has no declaring subject type, so step 1 never reaches it. A file whose import qualifies its package names it with that qualifier, as a qualified method call (§6.2): `machine!core$work(...)` under `import core`. The compiler searches step 3 only when the first two leave no candidate, so a method declared for the subject's own type wins over a method declared for every type.
 
 If no candidate matches, the call is a compile-time error. If multiple candidates remain after overload resolution, the call is a compile-time error and must be written with an explicit package qualifier. Because the subject type's defining declarations are searched first, an unqualified call resolved by step 1 or 2 resolves the same way in every file of the calling package, independent of which packages that file imports. Only a call that neither reaches depends on the file's imports, through step 3.
 
@@ -424,7 +424,7 @@ Float callback(x Int) { ... }   // function declaration
 callback Float(x Int) { ... }   // lambda-variable declaration
 ```
 
-A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This is what makes `callee(callback)` well-defined where referencing an overloaded callable would not be.
+A lambda-variable is an ordinary symbol with a single function type. Because a symbol cannot be redeclared with a different type, a lambda-variable name can never accumulate an overload set, so it is always unambiguous in value position. This single type makes `callee(callback)` well-defined where referencing an overloaded callable would not be.
 
 > **See also:** [`syntax.md`](syntax.md) §2.13 for function types and §3.8 for lambda literals and lambda-variable declarations.
 
@@ -452,7 +452,7 @@ A function value that is itself **generic** — polymorphic over its own type or
 
 ## 8. The Verb Model and Capability Markers
 
-Every callable in Zane is a verb (§1). Whether a declaration is a function, a method, a constructor, an operator, or a lambda is determined entirely by a small set of surface **markers**, and each marker unlocks a specific capability. There is no separate mechanism per callable kind; there is one verb, and markers select what it may do.
+Every callable in Zane is a verb (§1). Whether a declaration is a function, a method, a constructor, an operator, or a lambda is determined entirely by a small set of surface **markers**, and each marker unlocks a specific capability. There is no separate mechanism per callable kind; there is one verb, and markers select its capabilities.
 
 ### 8.1 One model, selected by markers
 
@@ -464,17 +464,17 @@ Every callable in Zane is a verb (§1). Whether a declaration is a function, a m
 | No name | Lambda | Anonymous function value |
 | Plain identifier, none of the above | Function | No special capability |
 
-The markers are largely independent — a lambda may still declare a `this` subject (§7.2), for example — but the kinds above are distinguished by which markers are present. A constructor body and a method body are otherwise ordinary verb bodies (§2, §3).
+The markers are largely independent — a lambda may still declare a `this` subject (§7.2), for example — but the markers present distinguish the kinds of verb above. A constructor body and a method body are otherwise ordinary verb bodies (§2, §3).
 
-### 8.2 `init{ }` is to constructors what `this` is to methods
+### 8.2 `init{ }` parallels `this`
 
-The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type does two things and nothing else — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and, when the type has fields, it unlocks `init{ }` (see [`types.md`](types.md) §3). Every mould may declare constructors ([`types.md`](types.md) §3.1). This mirrors methods precisely: naming the first parameter `this` is the only marker that makes a verb a method, and that token alone unlocks the subject call (§2.2).
+The marker model makes the constructor/function relationship exact: **a constructor is a verb whose name is a type**, optionally with a `.name` suffix that distinguishes a *named* constructor (see [`types.md`](types.md) §3.4). Naming a verb after a type has two effects and no others — it makes the return type implicit (the verb produces the type it names, the suffix notwithstanding) and, when the type has fields, it unlocks `init{ }` (see [`types.md`](types.md) §3). Every mould may declare constructors ([`types.md`](types.md) §3.1). This mirrors methods precisely: naming the first parameter `this` is the only marker that makes a verb a method, and that token alone unlocks the subject call (§2.2).
 
 So `init{ }` is a capability gated by a naming convention, exactly as the subject call is. A plain function cannot use `init{ }` for the same reason it cannot be called on a subject: it lacks the marker that grants the capability. A function that needs to build a value calls the constructor instead (see [`types.md`](types.md) §3).
 
 ### 8.3 What is shared, and what the markers change
 
-All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two things: whether a return type is written, and which capability is granted — the subject call for `this`, `init{ }` initialization for a type name with fields. (The operator and lambda markers likewise change call syntax and value representation; see the §8.1 table.) Functions and constructors share the same verb model, separated only by the name-is-a-type marker.
+All verbs share one parameter system (see [`generics.md`](generics.md) §3), one body grammar, one overload-resolution procedure (§5), and one effect model (§9). The markers do not touch any of these. Comparing functions, methods, and constructors, the markers change only two properties: whether a return type is written, and which capability is granted — the subject call for `this`, `init{ }` initialization for a type name with fields. (The operator and lambda markers likewise change call syntax and value representation; see the §8.1 table.) Functions and constructors share the same verb model, separated only by the name-is-a-type marker.
 
 > **See also:** [`syntax.md`](syntax.md) §3 for the declaration forms of each verb kind. [`types.md`](types.md) §3 for constructors and the `init{ }` expression. [`operators.md`](operators.md) §2.2 for operator declarations.
 
@@ -494,7 +494,7 @@ All verbs share one parameter system (see [`generics.md`](generics.md) §3), one
 
 | Concept | Rule |
 |---|---|
-| Verb | A callable; its kind is selected by markers, and each marker unlocks a capability |
+| Verb | A callable; markers select the kind of verb it is, and each marker unlocks a capability |
 | Capability markers | `this` first → method (subject call); name is a type → constructor (implicit return, and `init{ }` for a type with fields); operator token as name → operator; no name → lambda |
 | Method | Package-scope verb whose first parameter is `this` |
 | `mut` method | Called with `!`; may mutate state reachable through `this`, which is a mutable borrow of the caller's value or owner |

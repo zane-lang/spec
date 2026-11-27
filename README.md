@@ -3,7 +3,7 @@
 
 # The Zane Language Specification
 
-This repository defines the [Zane](https://github.com/zane-lang/zane) programming language: what every construct means, what programs are legal, and how memory, effects and packages work. Next to the specification sit the **design stories**, which tell how and why each part came to be.
+This repository defines the [Zane](https://github.com/zane-lang/zane) programming language: the meaning of every construct, the set of legal programs, and how memory, effects and packages work. Next to the specification sit the **design stories**, which record how and why each part came to be.
 
 The specification is a reference, not a tutorial. To learn the language first, start at <https://zane-lang.org/docs>.
 

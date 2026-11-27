@@ -23,7 +23,7 @@ Zane keeps data layout and construction separate from behavior.
 
 ### 2.1 The value/reference axis and the `#` modifier
 
-Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. An intrinsic type's kind is fixed by the compiler instead: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$U8`, `@primitives$Bool`, `@primitives$String` (§2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, and `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — or to a foreign handle, `#handle`, which has no value form ([`ffi.md`](ffi.md) §4.1), and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
+Every mould is a **value mould** unless it is marked with `#`, which makes it a **reference mould**; these are its **value form** and its **reference form**. A type declared with a value mould is a **value type**; one declared with a reference mould is a **reference type**. The compiler instead fixes whether an intrinsic type is a value type or a reference type: the scalar primitives `@primitives$I32`, `@primitives$I64`, `@primitives$F32`, and `@primitives$F64`, `@primitives$U8`, `@primitives$Bool`, `@primitives$String` (§2.7), `@primitives$Array<T, n>`, and `@primitives$List<T>` are value types, and `@primitives$ArrayRef<T, n>`, `@primitives$ListRef<T>` ([`generics.md`](generics.md) §8), and the runtime types ([`effects.md`](effects.md) §6.6) are reference types. This value/reference axis is orthogonal to the *shape* of the mould (such as a product `struct` or a sum `variant`, see §2.5). For the product shape, `struct` is the value mould and `#struct` the reference mould. The `#` mark applies only to a **mould** — `#struct`, `#variant`, or `#enum` (see [`adt.md`](adt.md) §2 and §3 for `#enum` and `#variant`) — or to a foreign handle, `#handle`, which has no value form ([`ffi.md`](ffi.md) §4.1), and only where a type is declared (§5.3). A reference type is a **distinct type** from any value type; it reuses only the field layout of its mould and otherwise has its own identity, its own constructors, and its own methods (see [`memory.md`](memory.md) §2).
 
 A **value type** is copied on assignment, has no identity, and is *transitively* a value: it may contain only other value types, never a reference-type or `&` field (§2.2, [`memory.md`](memory.md) §2.10). A **reference type** has single ownership and stable identity, follows the rules in [`memory.md`](memory.md) §2, may be aliased through `&`, may hold reference-type and `&` fields, and is moved rather than copied. Either kind may **recurse**, through a member the compiler boxes (see [`adt.md`](adt.md) §4). Placement — stack or heap — is an unobservable implementation choice for both kinds (see [`memory.md`](memory.md) §3.5).
 
@@ -42,7 +42,7 @@ type Node = #struct {      // reference type: identity, may hold `&`, moved not 
 
 ### 2.2 Value types are transitive and mutable in place
 
-A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction is what makes a value copyable and shareable-by-snapshot with no ownership bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
+A value-type body contains only field declarations, stored inline apart from any member the compiler boxes (see [`memory.md`](memory.md) §3.3). A value type **MUST NOT** contain a reference-type or `&` field, and this holds transitively: a value type reachable through a value type must itself be a value type (see [`memory.md`](memory.md) §2.10). The restriction makes a value copyable and shareable-by-snapshot with no ownership bookkeeping. It does not stop a value type from containing *itself* (see [`adt.md`](adt.md) §4).
 
 A value is **mutable in place**: a `mut` method may write its fields, because the subject is a *borrow* of the caller's storage rather than a copy (see [`effects.md`](effects.md) §2.3 and [`functions.md`](functions.md) §2.4). A value's storage slot may also be overwritten wholesale.
 
@@ -214,7 +214,7 @@ raw @primitives$String("a\nb");     // four bytes: a, backslash, n, b
 @primitives$String.escaped("\%raw") // raw's four bytes, unread
 ```
 
-A package constructor accepting the concept chooses between the two, or interprets the literal fragments by its own rules, for example as regex syntax. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
+A package constructor accepting the concept selects between the two, or interprets the literal fragments by its own rules, for example as regex syntax. Interpolated values remain distinct from those fragments and are not rescanned as source escapes or interpolation. `@runtime$Console` borrows the resulting primitive and writes its bytes as they are ([`effects.md`](effects.md) §6.6).
 
 ```zane
 a String("hello");
@@ -271,7 +271,7 @@ Every other conversion can lose a value, and is a named constructor (§3.4), nam
 | `@primitives$F32.round` | `@primitives$I32`, `@primitives$I64`, `@primitives$F64` | The `@primitives$F32` nearest the source |
 | `@primitives$F64.round` | `@primitives$I64` | The `@primitives$F64` nearest the source |
 
-`round` rounds once, from the source straight to the target, and a source exactly halfway between two values the target holds rounds to the one whose lowest significand bit is zero, IEEE 754's round half to even. `@primitives$F32.round` of an `@primitives$F64` is IEEE 754's conversion between the two formats: a NaN gives a NaN, an infinity the infinity of its sign, and a finite source too large for rounding to nearest to give a finite `@primitives$F32` the infinity of its sign as well. When the source rounded toward zero lies outside the target's range, an infinity included, `truncate` gives the target's least or greatest value, whichever is nearer, and a NaN truncates to zero, so every conversion has a result.
+`round` rounds once, from the source straight to the target, and a source exactly halfway between two values the target holds rounds to the value whose lowest significand bit is zero, IEEE 754's round half to even. `@primitives$F32.round` of an `@primitives$F64` is IEEE 754's conversion between the two formats: a NaN gives a NaN, an infinity the infinity of its sign, and a finite source too large for rounding to nearest to give a finite `@primitives$F32` the infinity of its sign as well. When the source rounded toward zero lies outside the target's range, an infinity included, `truncate` gives the target's least or greatest value, whichever is nearer, and a NaN truncates to zero, so every conversion has a result.
 
 ```zane
 wide @primitives$I64 = @primitives$I64(small);           // exact: small is an I32
@@ -327,7 +327,7 @@ A number becomes text only where a program calls one of these, directly or insid
 
 An integer's text is its decimal digits, with no leading zeros, preceded by `-` when it is negative: `0`, `42`, `-42`.
 
-A float's text is `nan` for a NaN, and `inf` or `-inf` for an infinity. The constructor writes any other float as the shortest decimal that spells it. It chooses the text from **candidates**, which it makes for each digit count `k` from 1 to 17 for an `@primitives$F64`, and from 1 to 9 for an `@primitives$F32`:
+A float's text is `nan` for a NaN, and `inf` or `-inf` for an infinity. The constructor writes any other float as the shortest decimal that spells it. The constructor selects the text from **candidates**, which it makes for each digit count `k` from 1 to 17 for an `@primitives$F64`, and from 1 to 9 for an `@primitives$F32`:
 
 - It rounds the value to the nearest number of `k` significant decimal digits and drops the digits after the last nonzero one.
 - It writes the digits in **scientific notation**: the first digit, then `.` and the remaining digits when any remain, then `e` and the decimal exponent. A `-` precedes a negative exponent, and the exponent has no `+` and no leading zeros, as in `2.5e-7` and `1e22`.
@@ -372,7 +372,7 @@ A **byte set** is a set of the 256 byte values, and the value type `@primitives$
 @primitives$ByteSet byteSet(this @primitives$ArrayRef<T Type, 256>)
 ```
 
-`byteSet` gives the set of the bytes whose flags are set: the flag of the byte `b` is at position `b + 1`. `T` is `@primitives$Bool`, whose flag is set when it is `true`, `@primitives$U8`, whose flag is set when it is not `0`, or a struct whose only field is one of those types or a struct of the same kind, as `core`'s `Bool` and `U8` are. A `byteSet` call with any other `T` is a compile-time error.
+`byteSet` gives the set of the bytes whose flags are set: the flag of the byte `b` is at position `b + 1`. `T` is `@primitives$Bool`, whose flag is set when it is `true`, `@primitives$U8`, whose flag is set when it is not `0`, or a struct whose only field is one of those types or another such struct, as `core`'s `Bool` and `U8` are. A `byteSet` call with any other `T` is a compile-time error.
 
 Two methods search a string for the bytes in a set:
 
@@ -414,7 +414,7 @@ Countdown() => Countdown.done(Unit());
 
 Because every mould may declare constructors, a generic body may construct a value of a type parameter (`T()`) whatever mould the type argument has, as long as the argument's type declares a matching constructor ([`generics.md`](generics.md) §5).
 
-> **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-what-it-is-not-how-it-is-built) — "Naming a type by what it is, not how it is built".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-its-meaning-not-by-its-construction) — "Naming a type by its meaning, not by its construction".
 > **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.2 Positional constructors
@@ -433,7 +433,7 @@ Node(id Int, scale Float, label String) {
 }
 ```
 
-Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below means exactly `{ return init{x; y;} }`:
+Expression-bodied constructors are equivalent. As for any verb, `=> expr` is pure shorthand for `{ return expr }`, so the form below is exactly `{ return init{x; y;} }`:
 
 ```zane
 package Math;
@@ -502,7 +502,7 @@ starter Weapon{fireRate = Float(2.0);}
 
 ### 3.4 Named constructors
 
-The by-type-name constructor (§3.2, §3.3) is the **anonymous** one. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths that a bare `Type(...)` cannot distinguish.
+The by-type-name constructor (§3.2, §3.3) is the **anonymous** constructor. A type may also declare **named** constructors, each a verb whose name is the type followed by a `.name` suffix, giving one type several construction paths that a bare `Type(...)` cannot distinguish.
 
 ```zane
 package Math;
@@ -519,7 +519,7 @@ d Vector2.diagonal(Float(3.0)); // d : Vector2
 A named constructor is an ordinary constructor in every other respect. Naming a verb after a type — with or without the `.name` suffix — is the capability marker that makes it a constructor (see [`functions.md`](functions.md) §8.2): the return type is implicit (the type named, `Vector2`) and, for a type with fields, `init{ }` is unlocked. The suffix only distinguishes the named constructor from the other constructors of the type; it does not change the type the constructor returns. So a named constructor:
 
 - declares positional parameters or, on a `struct` or `#struct`, the field-header form (§3.2, §3.3) like any constructor;
-- overloads by parameter types, alongside the anonymous constructor and the other named ones;
+- overloads by parameter types, alongside the anonymous constructor and the other named constructors;
 - is called by its qualified name and yields the **base type** — `Vector2.zeros()` is a `Vector2`, never a `Vector2.zeros` type.
 
 The casing rule (see [`lexical.md`](lexical.md) §3) keeps the call unambiguous: `Vector2.zeros()` has an uppercase subject, so `.zeros` is a member of the *type* — a constructor — while `v.zeros` has a lowercase subject, so `.zeros` is a field or method of a *value*. The two never collide.
@@ -633,7 +633,7 @@ car Car(engine);    // legal: a bare settled symbol is a reference source
 car Car(Engine());  // ILLEGAL: a temporary cannot initialize an `&` field
 ```
 
-What still constrains such a field is lifetime, not source: the object it points at must have an owner whose scope outlives the scope of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's scope, so that comparison does not stop at construction — every later store of the containing value asks it again, over the references that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no scope until the caller says where the object goes; it records which parameters land in `&` fields and each call settles the comparison ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no reference source (see [`adt.md`](adt.md) §4).
+What still constrains such a field is lifetime, not source: the object it points at must have an owner whose scope outlives the scope of the place holding the `&` ([`lifetimes.md`](lifetimes.md) §1.1). A field takes its root symbol's scope, so that comparison does not stop at construction — every later store of the containing value repeats it, over the references that value carries ([`lifetimes.md`](lifetimes.md) §1.10). A constructor cannot make the comparison itself, because `init{ }` has no scope until the caller says where the object goes; it records which parameters land in `&` fields and each call settles the comparison ([`lifetimes.md`](lifetimes.md) §1.11). Recursion is not one of these cases at all: a recursive member is an ordinary owning field the compiler boxes, so it needs no `&` and no reference source (see [`adt.md`](adt.md) §4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#bare-symbols-become-guest-sources-again) — "Bare symbols become guest sources again".
 
@@ -762,7 +762,7 @@ At one coercion site requiring destination type `T`, given an argument with stat
 4. If multiple applicable implicit constructors exist, the site is an ambiguity error.
 5. If none exist, the site is a normal type error.
 
-Candidate collection follows the home-package rule of §4.5 and needs no import: an implicit constructor is declared in the home package of one of its endpoints, and that is what makes it visible at a site whose destination is that type. `core`'s conversions from the compiler concept types are found this way like any other package's, so literal coercion is the same algorithm rather than a separate compiler-only lowering rule.
+Candidate collection follows the home-package rule of §4.5 and needs no import: an implicit constructor is declared in the home package of one of its endpoints, and that declaration makes it visible at a site whose destination is that type. `core`'s conversions from the compiler concept types are found this way like any other package's, so literal coercion is the same algorithm rather than a separate compiler-only lowering rule.
 
 ### 4.3 No chaining
 
@@ -881,9 +881,9 @@ A named type is therefore always declared this way: `type Name = struct { ... }`
 
 A foreign handle, `#handle{ ... }`, is the one other right-hand side that declares a new type. It is no mould: it has no body and no value form, and it appears only after `type` ([`ffi.md`](ffi.md) §4.1).
 
-These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a name, and a program calls the type's constructors by that name (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
+These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a type name, and a program calls the type's constructors by that name (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
 
-> **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
+> **Story:** [`stories/types.md`](../stories/types.md#every-type-is-named-because-construction-calls-it-by-name) — "Every type is named, because construction calls it by name".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
 
 ### 5.4 The keyword carries the distinction

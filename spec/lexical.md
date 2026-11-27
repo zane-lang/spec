@@ -12,7 +12,7 @@ Zane is case-sensitive. The first letter of an identifier selects its lexical cl
 
 - **`Case-sensitive`.** `Vector` and `vector` are distinct identifiers. Casing is never normalised.
 - **`Casing determines kind`.** An uppercase-initial name is a type, including a type parameter such as `T`; a lowercase-initial name is a value, binding, field, or any other parameter. Using a lowercase name as a type, or giving a binding, a field, or a parameter other than a type parameter an uppercase name, is a compile-time error.
-- **`Digits are ordinary identifier characters`.** A digit may appear in a name except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
+- **`Digits are ordinary identifier characters`.** A digit may appear in an identifier except as its first character, so names such as `Vec2` and `Tensor3` are ordinary names.
 - **`Casing keeps the grammar unambiguous`.** Because only a type may precede `<` in a type expression, the parser distinguishes `Vector<Int>` from `a < b` by casing alone.
 - **`The bracket picks the separator`.** A `{ }` body terminates each entry with `;` (always trailing), except a `match` arm whose body is a block, which its brace ends; a `[ ]`, `( )`, or `< >` list separates its entries with `,` (never trailing). A `{ }` holding statements is a code block, where a `;` terminates each statement too — except a statement ending in `}`, which takes none. A package-scope declaration ends the same way.
 - **`Newlines are never structural`.** Every entry, statement, and declaration has its own end mark — a `;`, or for a statement, a declaration or a block-bodied `match` arm ending in `}`, that brace — so line breaks are free everywhere.
@@ -30,7 +30,7 @@ Vector   // a type
 vector   // a value-level name
 ```
 
-The compiler never folds case. There is no implicit conversion between a name and its differently-cased spelling.
+The compiler never folds case. There is no implicit conversion between an identifier and its differently-cased spelling.
 
 ---
 
@@ -67,7 +67,7 @@ type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is
 
 A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time integer. A parameter is introduced by a type's or a package's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 
@@ -83,7 +83,7 @@ Tensor3    // legal
 2Vec       // ILLEGAL: an identifier cannot start with a digit
 ```
 
-Digits carry no special meaning inside a name; `Vec2` is an ordinary type name, not a parameterised form. Parameters are supplied only through `<>` (see [`generics.md`](generics.md) §4).
+Digits carry no special meaning inside an identifier; `Vec2` is an ordinary type name, not a parameterised form. Parameters are supplied only through `<>` (see [`generics.md`](generics.md) §4).
 
 ### 4.2 Leading underscore
 
@@ -133,7 +133,7 @@ ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison o
 A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single identifier token. A value on the left that is not an identifier, such as the literal `1` in `1 < count`, has no first letter, and the `<` after it is the comparison operator.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 
@@ -176,7 +176,7 @@ A `,` may still appear *inside* an entry, where it separates a nested list under
 
 ### 6.2 `,` separates an entry inside `[ ]`, `( )`, and `< >`
 
-A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last one. A list written with no bracket at all separates with `,` on the same terms: a `match` arm's per-scrutinee selectors ([`syntax.md`](syntax.md) §4.7), and the `key, value` pair of a map entry (§2.10 there).
+A `,` separates the entries of a `[ ]`, `( )`, or `< >` list: array literals, an `enum` body, a `match` case group, a function-type parameter list, call and constructor arguments, parameter lists, and generic arguments and headers. It is **never trailing**: a `,` appears only *between* entries, never after the last entry. A list written with no bracket at all separates with `,` on the same terms: a `match` arm's per-scrutinee selectors ([`syntax.md`](syntax.md) §4.7), and the `key, value` pair of a map entry (§2.10 there).
 
 ```zane
 arr Array([Int(1), Int(2), Int(3)]);
@@ -235,7 +235,7 @@ Int triple(value Int) {
 
 ### 6.3.1 A `{ }` may not open a statement
 
-A code block is never written on its own. A `{ }` in statement position is a compile-time error, so the only braces a reader meets at the start of a statement are the ones belonging to a declaration. Scoping a run of work is an ordinary call taking a block argument — `core`'s `do(block @concepts$Block)` — which reads the same and needs no rule of its own.
+A code block is never written on its own. A `{ }` in statement position is a compile-time error, so the only braces a reader meets at the start of a statement are braces belonging to a declaration. Scoping a run of work is an ordinary call taking a block argument — `core`'s `do(block @concepts$Block)` — which reads the same and needs no rule of its own.
 
 ```zane
 do() {
@@ -266,12 +266,12 @@ f({ doWork(); });    // a block argument: ';' follows the first expression
 A `match` written as that first expression keeps its own commas inside its brackets: its scrutinees sit in its `( )` and its arms' selectors in its `{ }`, so neither is read as the `,` that opens a map entry's value.
 
 > **See also:** [`syntax.md`](syntax.md) §1 for declaration forms and [`adt.md`](adt.md) for how these delimiters apply across `enum`, `variant`, and `match`.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#declarations-end-the-way-statements-do) — "Declarations end the way statements do" tells why package-scope declarations took the statement rule.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#statements-end-in--so-a-trailing-brace-can-end-one) — "Statements end in `;` so a trailing brace can end one" tells why statements gained a `;` and what it bought.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-enum-map-takes-braces) — "The enum map takes braces" tells why the enum map changed brackets to match.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#telling-a-body-brace-from-a-code-block-by-its-content) — "Telling a body brace from a code block by its content" tells why a map literal carries no leading token and why no literal may be empty.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#declarations-end-the-way-statements-do) — "Declarations end the way statements do" explains why package-scope declarations took the statement rule.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#statements-end-in--so-a-trailing-brace-can-end-one) — "Statements end in `;` so a trailing brace can end one" explains why statements gained a `;` and what it bought.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#the-enum-map-takes-braces) — "The enum map takes braces" explains why the enum map changed brackets to match.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#telling-a-body-brace-from-a-code-block-by-its-content) — "Telling a body brace from a code block by its content" explains why a map literal carries no leading token and why no literal may be empty.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing" tells where the two marks and the trailing asymmetry came from.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-construct) — "A delimiter for each separated construct" explains where the two marks and the trailing asymmetry came from.
 
 ---
 
@@ -302,7 +302,7 @@ A numeric literal is written without a sign. `~` before one gives the literal of
 Because the spelling determines the concept type, `3` and `3.0` are different arguments: a destination that accepts only integers accepts the first and rejects the second ([`types.md`](types.md) §2.6).
 
 > **Story:** [`stories/generics.md`](../stories/generics.md#splitting-integer-and-float-literals) — "Splitting integer and float literals".
-> **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" tells how the concepts took their names.
+> **Story:** [`stories/types.md`](../stories/types.md#how-a-literal-lowers-into-primitive-storage) — "How a literal lowers into primitive storage" explains how the concepts took their names.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#digit-groups-take-the-swiss-apostrophe) — "Digit groups take the Swiss apostrophe".
 
 ### 7.1 String literals and structural escapes
@@ -343,10 +343,10 @@ Structural escapes are recognized once. Neither a backslash produced by `\\` nor
 | Package names | camelCase (lowercase-initial); appear only after `package`, after `import`, after the `as` of a whole-package import alias, or as the left operand of `$` |
 | Number parameter | A lowercase name (`n`) declared `n @concepts$Int` (in a type's or a package's `<>` header, or inline in a verb); a compile-time integer, not a type |
 | Type parameter | An uppercase name (`T`) declared `T Type` (in a type's or a package's `<>` header, or inline in a verb); referenced bare |
-| Digits | Legal in a name except as the first character; carry no special meaning |
+| Digits | Legal in an identifier except as the first character; carry no special meaning |
 | Leading `_` | A field is private to its type's package; a named package-scope declaration is private to its package |
 | Leading `&` | `&Node` is a reference type, legal in storage, parameter, and return positions; it is the only marker a type may carry, and it is never written on `this` |
-| `<>` disambiguation | A type (uppercase) on the left means a type argument list; a value (lowercase) means comparison |
+| `<>` disambiguation | A type (uppercase) on the left marks a type argument list; a value (lowercase) marks comparison |
 | Entry terminator | `;` terminates every entry of a `{ }` body (`struct`/`variant` members marked or unmarked with `#`, `=> expr` `match` arms, `init{ }` fields, field-constructor entries, enum-map entries); always trailing, inline or multiline; a block-bodied `match` arm is ended by its brace instead; newlines are insignificant there |
 | Entry separator | `,` separates the entries of a `[ ]`, `( )`, or `< >` list (arrays, `enum`, `match` case groups, function-type parameter lists, call/constructor args, parameter lists, generic args and headers); never trailing |
 | Statement and declaration terminator | `;` terminates every statement in a code block and every package-scope declaration, except one ending in `}` — that brace ends it, so a `(` or `[` after it opens the next statement; newlines are insignificant |
