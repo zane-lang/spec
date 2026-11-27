@@ -337,7 +337,7 @@ Unit main() {
 
 The exit ends the run of the `if` block, and `main` goes on to print `reached`.
 
-A call to an exiting verb is legal only inside a block argument (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one, so a call to it ends its caller's block when the intrinsic runs, and never stops the verb itself. A verb stops itself with `return`.
+A call to an exiting verb is legal only inside a block argument (§2.3). A verb's body ends in the `return` that produces its value, and the exit carries none, so it cannot end a body; a block yields nothing, so the exit can end its run in any verb, whatever that verb returns. Writing the intrinsic in a verb makes the verb an exiting one: when the intrinsic runs, a call to the verb ends its caller's block as well, so the intrinsic never stops the verb alone. To stop only itself, a verb uses `return`.
 
 The intrinsic **MUST NOT** appear in a lambda's frame, including a block argument written there. A call through a function value names the value, not a body, and a function type does not record whether the function exits, so a call through one could not be checked against the rule above. A lambda leaves early with `return`. A call to an exiting verb such as `guard`, written in a block inside the lambda, ends that block's run.
 > **Story:** [`stories/control-flow.md`](../stories/control-flow.md#guard-stops-being-a-keyword) — "`guard` stops being a keyword".

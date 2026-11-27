@@ -373,7 +373,7 @@ Call a field, element, or parameter declared `&T` an **`&` field**, an **`&` ele
 
 ### 6.7 Prose lint
 
-[prose-lint](https://github.com/zane-lang/prose-lint) checks the prose of every Markdown file and code comment in the repository, `stories/` included. It reports personified verbs, placeholder nouns, sentences that end on a pronoun for their own subject, and filler endings. Run it from the repository root before committing, at the prose-lint commit that [`.github/workflows/prose.yml`](../.github/workflows/prose.yml) pins:
+[prose-lint](https://github.com/zane-lang/prose-lint) checks the prose of every Markdown file in the repository, `stories/` included, and the comments of every source file in a language its README lists. It reads no Go, Rust, Zig or D source, so the comments of those `langbench/` ports go unchecked. It reports personified verbs, placeholder nouns, sentences that end on a pronoun for their own subject, and filler endings. Run it from the repository root before committing, at the prose-lint commit that [`.github/workflows/prose.yml`](../.github/workflows/prose.yml) pins:
 
 ```sh
 git clone https://github.com/zane-lang/prose-lint /tmp/prose-lint
