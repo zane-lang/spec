@@ -564,7 +564,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.28 context
 
-- **Meaning:** The subject of a foreign method whose type is not a handle. C receives it as an opaque `void *` and passes it back, during the call, as the first argument of the call's function values that declare the same subject; they may write it only when the foreign method is `mut`.
+- **Meaning:** The subject of a foreign method whose type is a reference type and not a handle. A subject of a C-compatible value type crosses as a copy instead, and a subject of any other value type is an error. C receives it as an opaque `void *` and passes it back, during the call, as the first argument of the call's function values that declare the same subject; they may write it only when the foreign method is `mut`.
 - **Why this name:** C APIs call the pointer a callback receives back its context or user data; the Zane term keeps the first word.
 - **Canonical home:** [`ffi.md`](ffi.md) §3.8
 
