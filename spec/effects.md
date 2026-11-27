@@ -57,7 +57,7 @@ A verb's signature shows what it may write. There are three kinds:
 
 Every verb may also write storage it owns itself, which its caller never sees. Whatever a verb calls stays within the same bound: a callee writes only through its own `this`, and the caller supplies that `this` with a `!` call on something the caller may itself write (§4). So a verb's kind bounds everything the call can write, however deep the calls go.
 
-The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1).
+The root package is the one exception. Any verb there may write the program's console and runtime (§6.6) and the foreign capabilities its foreign variables give ([`ffi.md`](ffi.md) §5.1). An exported lambda has the same rights in whatever package declares it, because a host calls it as the system calls `main` ([`packages.md`](packages.md) §8.4).
 
 Any verb may read capability-backed state through a `:` call on a capability it reaches. A read is not a write, so it does not change what the verb may write. It matters only for ordering against concurrent writes ([`concurrency.md`](concurrency.md) §4.5) and for what the compiler may evaluate ahead of time (§5.3).
 
@@ -212,7 +212,7 @@ Passing capabilities through constructors and methods is part of the design. It 
 
 The console and the runtime are capabilities the compiler supplies. Their types, `@runtime$Console` and `@runtime$Runtime`, are reference types: a program has one console and one runtime, and every part of it that uses either uses the same one. Neither type can be constructed. The only instances are `@program$console` and `@program$runtime`, created when the program starts.
 
-Only the root package reaches `@program$` ([`packages.md`](packages.md) §6.1). It passes the instances on like any other capability. Passed as an argument, a capability can be read. Stored into an object at construction, it can be written by that object's `mut` methods (§4.4). Either way, a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
+Only the root package and exported lambdas reach `@program$` ([`packages.md`](packages.md) §6.1, §8.4). It passes the instances on like any other capability. Passed as an argument, a capability can be read. Stored into an object at construction, it can be written by that object's `mut` methods (§4.4). Either way, a package that prints or configures the runtime shows it in what it receives (§6.1, §6.5). Every package can name the types, which is what lets a verb declare a parameter or field of either.
 
 Their methods are stated over storage primitives, like every intrinsic, and are found through the type's home, `@runtime$` ([`functions.md`](functions.md) §6.1). `core` wraps the console in its own `Console`, whose methods take `String`:
 
@@ -235,7 +235,7 @@ The runtime's `arguments` method gives the arguments the program was started wit
 
 It returns a new list holding one string per argument, in the order they were given, without the program's own name. Where the system passes arguments as bytes, each string holds those bytes unchanged. Where it passes them as UTF-16, each string holds their UTF-8 encoding. A program started with no arguments gets an empty list.
 
-Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time under §5.3. Inside a call marked `comptime`, it gives the arguments the build was started with (§5.6).
+Writing to the console and changing the runtime's configuration are writes to capability-backed state. In the root package and in an exported lambda any verb may make them (§3). Elsewhere only a `mut` method whose `this` reaches the console or runtime can. Calling `arguments` is a read of capability-backed state, so any verb that reaches the runtime may make it, and no computation that depends on what it returns is evaluated at compile time under §5.3. Inside a call marked `comptime`, it gives the arguments the build was started with (§5.6).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 > **Story:** [`stories/effects.md`](../stories/effects.md#the-console-moves-into-core) — "The console moves into `core`".

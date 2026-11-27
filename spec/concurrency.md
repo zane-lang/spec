@@ -136,7 +136,7 @@ Each time one spawned call finishes, one plate is removed. The water level drops
 
 ### 4.2 Concurrent mutation requires a value-typed subject
 
-A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every reference derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
+A spawned call may **mutate** state only through a value-typed subject. A `mut` call whose subject is a reference type is a compile-time error at the spawn site. Outside the root package's and exported lambdas' writes to the program's console and runtime ([`effects.md`](effects.md) §6.6), the subject is the only path by which any call writes state its caller can see, because every other parameter, and every reference derived from one, is read-only ([`effects.md`](effects.md) §4.1, §4.4). The rule is sound because a value type is transitively alias-free — it contains no reference-type or `&` field anywhere downstream (see [`memory.md`](memory.md) §2.10) — so no two names can reach the same mutated object by different paths. A value that owns **boxed members** is no exception: a box holds an instance of the member's own type, and a value copy is deep (see [`memory.md`](memory.md) §2.3), so two values never reach one payload. The compiler therefore rules out an aliased data race from the subject's *type* alone, with no whole-program alias analysis.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#closing-gaps-in-the-two-signature-safety-rules) — "Closing gaps in the two signature-safety rules".
 
@@ -184,6 +184,40 @@ The compiler enforces this from effect signatures; the programmer does not add l
 When a reference is passed to a spawned call, the callee receives its own reference to the same owner. Rebinding the caller's `&` symbol later changes only the caller's storage; it does not retarget the reference already held by spawned work.
 
 > **Story:** [`stories/concurrency.md`](../stories/concurrency.md#safety-the-compiler-proves-from-signatures-not-locks) — "Safety the compiler proves from signatures, not locks".
+
+### 4.7 A host may call exports at once
+
+A host may call the exported lambdas of a dynamic library ([`packages.md`](packages.md) §8) from several threads at once; a CLAP host, for one, calls `process` on its audio thread while its main thread makes the GUI calls. Exports carry no thread annotation. Every host obeys one rule, the **host rule**: it never runs two calls that borrow the same C-held object mutably at the same time, and never runs a call that takes a C-held object's owner as `^T` alongside any other call on that object. The compiler then checks three things on every exported lambda:
+
+- **It writes only its subject.** An exported lambda writes the C-held object of its `this T mut` subject, as any `mut` method writes its subject ([`effects.md`](effects.md) §3), and capability-backed state, which §4.5 orders. The host rule keeps every other writer of that object away during the call.
+- **It reads every other C-held object as a snapshot.** A C-held object passed as a borrow may have a writer running, so the lambda reads it as a coherent snapshot (§4.4): tear-free and never blocking. A snapshot of a flat value-typed field is one fixed-size read; a value with lists is walked and copied, so a lambda on a hot path reads flat fields.
+- **No second path reaches its subject.** An exported lambda whose subject is `this T mut` takes no other parameter through which a `T` is reachable: no second `T`, no `&T`, and no C-held type with a `T` or `&T` inside, since C might pass the same pointer twice. Two read-only borrows of one object stay allowed, because reads do not conflict.
+
+```zane
+type SynthInstance = #struct {
+    gui synth$Synth;
+    request synth$Params;   // written by GUI calls, read by process
+}
+
+type AudioState = #struct {
+    dsp synth$Dsp;
+    shown synth$Params;     // written by process, read by GUI calls
+}
+
+process clap$Output(this AudioState, ui SynthInstance, block clap$Block) mut {
+    out clap$Output(block);
+    out!add(this.dsp!follow(ui.request));   // a snapshot of one flat field
+    out!audio(this.dsp!render(block));
+    this.shown = this.dsp:params();
+    return out!finish();
+} export "synth_process"
+```
+
+This is the one place a call that runs at once with others writes a reference-typed object, which §4.2 forbids a spawned call. The difference lies in where the object lives. A spawned call's subject lives in a scope that other code shares, and a reference-typed subject may be reached through `&` values the compiler cannot see. A C-held object lives in a top-level scope that no other object reaches ([`packages.md`](packages.md) §8.5), so the argument C passes is its only path, and the store rule proves that no alias exists. The host, not the compiler, orders the writers. The closest precedent is a worker pool's element (§6.4), which the pool alone owns.
+
+Each C-held object has one writer at a time, so its top-level scope needs no shared allocator lock (§4.4). The compiler trusts the host on two points, as it trusts a foreign signature ([`ffi.md`](ffi.md) §6): a pointer C passes names a live object of the right type, and the host obeys the host rule.
+
+> **Story:** [`stories/concurrency.md`](../stories/concurrency.md#why-exports-may-do-what-spawns-may-not) — "Why exports may do what spawns may not".
 
 ---
 
@@ -332,4 +366,5 @@ A worker pool holds up the scope that owns it like a spawned call does (§4.1). 
 | Worker pool | `@primitives$WorkerPool<T, S, E>` runs bulk work; `start` moves an element in and runs its step concurrently, again right away or when an event source is ready or the shared state changed, never twice at once for one element |
 | Pool element | A value type, or a reference type whose every `&` names a package constant or a capability; a value is copied in and a reference-typed element moved in; a step call uses a fixed-size region from its start until it returns |
 | Funnel | The one writer of a pool's value-typed shared state; applies published value-typed events one at a time, in order per worker; the queue has no limit, and a publish is an ordered write |
+| Calls from a host | A host may call exported lambdas at once under the host rule: no two calls borrowing one C-held object mutably, and no call taking its owner beside another; an export writes only its subject, reads other C-held objects as snapshots, and has no second path to its subject |
 | Conflicts on capability-backed state | Two accesses conflict only when they reach the same state: the console, the runtime, a foreign capability's own state, or one outside handle's |

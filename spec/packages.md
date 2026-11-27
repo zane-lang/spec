@@ -18,8 +18,8 @@ Zane packages are directory-defined namespaces and compilation units that contai
 - **`One spelling per entity`.** The spelling an import gives an entity is the only way the file may write that entity.
 - **`No implicit packages`.** A file's own package is established by its `package` declaration and its members remain unqualified. Every other package, `core` included, requires an import.
 - **`No hidden ambient state`.** Packages expose immutable constants and verbs; time-varying state lives in values.
-- **`Programs, plugins and tests start a build`.** A program, plugin, or test package is the root of its build. A program or test package declares `main`; a plugin package declares none and builds a dynamic library that a host loads (§9).
-- **`Exports are entry points`.** A package-scope lambda marked `export "cName"` is a C function a host may call. It has the rights `main` has, and only a root package's code calls it (§9.2, §9.4).
+- **`Programs, plugins and tests start a build`.** A program, plugin, or test package is the root of its build. A program or test package declares `main`; a plugin package declares none and builds a dynamic library that a host loads (§8).
+- **`Exports are entry points`.** A package-scope lambda marked `export "cName"` is a C function a host may call. It has the rights `main` has, and only a root package's code calls it (§8.2, §8.4).
 
 ---
 
@@ -30,7 +30,7 @@ Zane packages are directory-defined namespaces and compilation units that contai
 A **project** is the directory that holds a `zane.coda` manifest ([`dependencies.md`](dependencies.md) §2.1). Its packages live in three directories beside the manifest:
 
 - Each directory directly in `lib/` is a **library package**, and a library package may hold subpackages (§2.3).
-- Each directory directly in `bin/` is a **program package**, the entry point of one program (§6), or a **plugin package**, which builds a dynamic library for a host to load (§9). A `bin/` package that declares `main` is a program package; one that declares no `main` is a plugin package.
+- Each directory directly in `bin/` is a **program package**, the entry point of one program (§6), or a **plugin package**, which builds a dynamic library for a host to load (§8). A `bin/` package that declares `main` is a program package; one that declares no `main` is a plugin package.
 - `test/` holds the project's **test packages** (§7).
 
 ```zane
@@ -267,9 +267,9 @@ State that changes over time must live in a value, such as a `struct` or referen
 
 ### 6.1 Program, plugin, and test packages are roots
 
-Every build that produces a program or a dynamic library has one **root package**, from which every other package of the build is reached: the program package it builds, the plugin package of a dynamic-library build (§9.1), or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
+Every build that produces a program or a dynamic library has one **root package**, from which every other package of the build is reached: the program package it builds, the plugin package of a dynamic-library build (§8.1), or the test package of a test build (§7.2). A build that compiles only library packages, such as checking or releasing them, has no root package.
 
-Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it. An exported lambda is the one exception: wherever it is declared, it has the rights of root-package code (§9.4).
+Only the root package reaches the `@program$` intrinsic namespace ([`syntax.md`](syntax.md) §2.7), which holds the program's console and runtime ([`effects.md`](effects.md) §6.6), and only it declares foreign variables, which give the program's foreign capabilities ([`ffi.md`](ffi.md) §5.1). A library package is never a root, so it reaches them only through an instance passed to it. An exported lambda is the one exception: wherever it is declared, it has the rights of root-package code (§8.4).
 
 > **Story:** [`stories/effects.md`](../stories/effects.md#where-the-first-capability-comes-from) — "Where the first capability comes from".
 
@@ -279,7 +279,7 @@ A program starts at `main()`, which the root package declares in any of its sour
 
 The program itself calls `main`, so it is the caller that handles an abort of `main` (§6.3). The one abort type `main` may declare is `@primitives$String`, the message the program reports. Any other abort type on `main` is a compile-time error.
 
-Every program package and every test package **MUST** declare `main`. A test package without it is a compile-time error, and a `bin/` package without it is a plugin package (§9.1). A plugin package has no `main`, because its host calls its exports instead.
+Every program package and every test package **MUST** declare `main`. A test package without it is a compile-time error, and a `bin/` package without it is a plugin package (§8.1). A plugin package has no `main`, because its host calls its exports instead.
 
 ```zane
 package viewer;
@@ -303,7 +303,7 @@ A program ends with an **exit status**, a number it hands to whatever started it
 - **`main` aborts.** The program writes what it printed before the abort, then writes the abort's string, followed by a line feed, to its standard error stream. The status is `1`, whether or not those writes succeed.
 - **The program stops.** A stop, such as an index out of range or a call that nests too deep ([`memory.md`](memory.md) §3.7), is not an abort, and no handler sees it. The status is not `0`.
 
-A dynamic library runs inside its host's process, so for a dynamic library the program is that process (§9.1). A stop inside a dynamic library ends the host's whole process, as a stop ends a program. An abort never reaches the host, because an exported lambda declares no abort type (§9.2).
+A dynamic library runs inside its host's process, so for a dynamic library the program is that process (§8.1). A stop inside a dynamic library ends the host's whole process, as a stop ends a program. An abort never reaches the host, because an exported lambda declares no abort type (§8.2).
 
 ```zane
 Unit?@primitives$String main() {
@@ -341,7 +341,7 @@ Every source file of a test package **MUST** begin with the declaration `package
 
 ### 7.2 Each test package is the root of its own test build
 
-A **test build** compiles one test package with the library packages it reaches and runs the result. The test build passes when the program ends with status `0`, and fails otherwise (§6.3). The test package is its root package (§6.1): it declares `main`, and apart from exported lambdas (§9.4) it alone reaches `@program$`. A test package may carry `export` lines (§9.3); the test build then gives the exports they name C symbols, so the test package's own C code can play a host and call them. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
+A **test build** compiles one test package with the library packages it reaches and runs the result. The test build passes when the program ends with status `0`, and fails otherwise (§6.3). The test package is its root package (§6.1): it declares `main`, and apart from exported lambdas (§8.4) it alone reaches `@program$`. A test package may carry `export` lines (§8.3); the test build then gives the exports they name C symbols, so the test package's own C code can play a host and call them. The library packages are compiled from the project's `lib/` in every test build, and reach the program's console and runtime only through an instance the test package passes to them.
 
 A library package under test is a package of its own, distinct from every release of the same project that the build's dependency graph also reaches. When a dependency of the test package itself depends on the project, the two copies coexist in one program as two versions do ([`dependencies.md`](dependencies.md) §11), and a type of one is not a type of the other.
 
@@ -370,14 +370,103 @@ A test package has the same access as a package that imports the package under t
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#subpackages-nest-inside-a-library-package) — "Subpackages nest inside a library package".
 
+## 8. Plugin Packages and Exports
+
+### 8.1 A plugin package builds a dynamic library
+
+A **plugin package** is a package in `bin/` that declares no `main` (§2.1). The toolchain builds it as a **dynamic library** — a `.so`, `.dylib`, or `.dll` — for a **host** to load into its own process and call, instead of as an executable. A plugin package holds `export` lines (§8.3), and may also declare exported lambdas (§8.2) and hold C code of its own ([`ffi.md`](ffi.md) §2.1). A `bin/` package with neither `main` nor any `export` line or exported lambda is a compile-time error, and so is one that declares `main` and an `export` line.
+
+```zane
+package synthclap;
+
+import synth;
+
+export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;
+```
+
+The dynamic library's C symbols are the plugin package's own exported lambdas, the exports of every library its `export` lines name, and the symbols of the C code in the packages it reaches ([`ffi.md`](ffi.md) §2.5). A symbol a host looks up by a fixed name, such as CLAP's `clap_entry`, comes from C code, which calls the exported lambdas.
+
+When a host loads the dynamic library, the toolchain's start-up code creates `@program$console` and `@program$runtime` ([`effects.md`](effects.md) §6.6), once for each loaded file, so two Zane dynamic libraries in one host have two runtimes. `@program$runtime:arguments()` gives an empty list, because a host passes no command line.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-dynamic-library-is-a-package-without-main) — "A dynamic library is a package without `main`".
+
+### 8.2 An exported lambda is a C function
+
+A package-scope lambda-variable ([`syntax.md`](syntax.md) §3.8) followed by `export "cName"` is an **exported lambda**, in any package. In a build that exports it (§8.3) it becomes a C function named `cName`, which calls the lambda:
+
+```zane
+create ^Synth(rate @primitives$F64) {
+    return Synth(rate);
+} export "synth_create"
+
+setVolume Unit(this Synth, volume @primitives$F64) mut {
+    this.volume = Float(volume);
+    return Unit();
+} export "synth_set_volume"
+```
+
+Only a lambda is exported, never a verb, because a lambda is the one callable that is a value ([`functions.md`](functions.md) §7.1): an exported lambda hands a Zane function value to C as a foreign variable hands a C global to Zane ([`ffi.md`](ffi.md) §5.1). Visibility does not decide exports, and a leading `_` does not keep a lambda from being exported. An exported lambda introduces no type or number parameter, since C passes no type, and declares no abort type, since no Zane caller handles its abort.
+
+Each parameter and the result of an exported lambda is one of the types a function value passed to C may take ([`ffi.md`](ffi.md) §3.6), or a **C-held object** (§8.5):
+
+- a result `^T`, `T` a reference type, hands C an owner of a new C-held object;
+- a parameter `T`, or a subject `this T`, borrows a C-held object, and a subject `this T mut` borrows it mutably;
+- a parameter `^T` takes a C-held object's owner back from C, which gives up its pointer.
+
+A result may also be a value whose lists cross as `zane_span` views; an exported lambda returns one only when its subject is `this T mut`, and the views stay valid until the next call that borrows that subject mutably or takes its owner (§8.5).
+
+Every C name is unique in a dynamic library or test build. Two exports of one name in one build are a compile-time error.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-dynamic-library-is-a-package-without-main) — "A dynamic library is a package without `main`".
+
+### 8.3 `export` lines choose a build's exports
+
+An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it, `export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. Only a plugin package or a test package (§7.2) carries `export` lines.
+
+An exported lambda becomes a C symbol only in two kinds of build:
+
+- a dynamic-library build, when the lambda lies in the plugin package or in a library one of its `export` lines names;
+- a test build, when the lambda lies in the test package or in a library one of the test package's `export` lines names.
+
+In any other build an exported lambda stays an ordinary lambda constant. The `export` lines live in the root package and not in the library, because which exports go into one file is a decision about one build: one library may be exported into a CLAP plugin by one plugin package and into a Python module by another.
+
+### 8.4 Exports have entry-point rights
+
+An exported lambda is an entry point, as `main` is: the operating system calls `main`, and a host calls exported lambdas. In every build, an exported lambda therefore has the rights of root-package code (§6.1): its body may reach `@program$` and declare foreign variables ([`ffi.md`](ffi.md) §5.1), and it may write the program's console, runtime, and foreign capabilities ([`effects.md`](effects.md) §3). Two rules keep the capability model intact:
+
+- Only a root package's code may call an exported lambda. A root already holds every capability, so calling an entry point gives it nothing it lacked.
+- A library package's code calls no exported lambda, its own included, so a library gains no outside access that no caller handed it.
+
+An object that keeps a capability past the call that made it stores it at construction, as any object does ([`effects.md`](effects.md) §6.2).
+
+### 8.5 C holds an object in a scope of its own
+
+An owner that an exported lambda returns to C settles in a **top-level scope** of its own, nested in no other scope, because a host creates and destroys objects in any order. C holds the object as an opaque pointer, never reads or writes through it, and passes it back only as an argument of exported lambdas. An exported lambda whose parameter takes the owner as `^T` takes it from C, and the owner is then an ordinary `^T` parameter ([`lifetimes.md`](lifetimes.md) §1.1): it dies when that lambda's scope drains unless the body moves it elsewhere, and once it has left, the top-level scope drains and releases its memory ([`memory.md`](memory.md) §3.1). A host that never gives an object back leaks it.
+
+```zane
+create ^SynthInstance() {
+    return SynthInstance(synth$Synth(), synth$Params());
+} export "synth_create"
+
+destroy Unit(instance ^SynthInstance) {
+    return Unit();
+} export "synth_destroy"
+```
+
+Neither of two top-level scopes outlives the other, so the store rule ([`lifetimes.md`](lifetimes.md) §1.1) rejects an `&` from one C-held object into another. A C-held object may still reference package constants, capabilities, and its own parts. The only path to a C-held object is therefore the argument C passes, which is what lets a host call exported lambdas from several threads at once under the rules of [`concurrency.md`](concurrency.md) §4.7.
+
+A value an exported lambda returns with its subject `this T mut` lives in that subject's top-level scope, so the `zane_span` views of its lists stay valid after the lambda returns, until the next call that borrows the subject mutably or takes its owner.
+
+> **Story:** [`stories/ffi.md`](../stories/ffi.md#c-holds-a-zane-object-in-a-scope-of-its-own) — "C holds a Zane object in a scope of its own".
+
 ---
 
-## 8. Summary
+## 9. Summary
 
 | Concept | Rule |
 |---|---|
-| Project layout | Library packages in `lib/`, program packages in `bin/`, test packages in `test/`; no `.zn` file directly in any of the three |
-| Package identity | A library or program package is named by its directory; every test package is named `test` |
+| Project layout | Library packages in `lib/`, program and plugin packages in `bin/`, test packages in `test/`; no `.zn` file directly in any of the three |
+| Package identity | A library, program, or plugin package is named by its directory; every test package is named `test` |
 | Package source | The `.zn` files directly in the package's directory, beside any C code ([`ffi.md`](ffi.md) §2.1) |
 | Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project; its name differs from every name its project reaches a dependency's package under |
 | Package declaration | Required in every source file; it matches the package's name |
@@ -392,10 +481,16 @@ A test package has the same access as a package that imports the package under t
 | Import reach | Plain-name resolution only; never operator candidates, method lookup beyond a method declared for a subject of any type, which its plain name reaches, or implicit-constructor applicability |
 | Alias casing | An `as` alias keeps the initial case of the name it renames |
 | Bare-name collision | Legal only as an overload set of verbs differing in parameter types; otherwise a compile-time error at the import, never shadowing |
-| Root package | The program package being built, or the test package of a test build; the only package that reaches `@program$` |
-| Entry point | `main()`, declared in any source file of the root package, with no parameters, and either no abort type or `@primitives$String`; any return type, whose value is discarded; required in every program and test package |
+| Root package | The program package being built, the plugin package of a dynamic-library build, or the test package of a test build; the only package that reaches `@program$`, apart from exported lambdas |
+| Entry point | `main()`, declared in any source file of the root package, with no parameters, and either no abort type or `@primitives$String`; any return type, whose value is discarded; required in every program and test package; a `bin/` package without it is a plugin package |
 | Exit status | `0` when `main` returns and its output was written; `1` when `main` aborts, after an attempt to write its message and a line feed to standard error, whether or not the write succeeds; not `0` when the program stops |
 | Test result | Passed when the program ends with status `0` |
+| Plugin package | A `bin/` package with no `main` and with `export` lines or exported lambdas; built as a dynamic library a host loads; its console and runtime are created once per loaded file |
+| Exported lambda | A package-scope lambda followed by `export "cName"`; a C function in a build that exports it; no type parameters, no abort type; boundary types of a C function value, plus C-held objects; C names unique per build |
+| `export` line | `export lib;` or `export lib<Args>;` in a plugin or test package; gives that library's exported lambdas C symbols in this build |
+| Entry-point rights | An exported lambda has root-package rights in every build; only a root package's code calls one |
+| C-held object | An owner returned to C, in a top-level scope of its own; borrowed by `T` or `this T mut`, taken back by `^T`; no `&` between two of them |
+| Stop in a dynamic library | Ends the host's process |
 | Test package | Each directory of `test/` with `.zn` files; a nested one mirrors a subpackage and imports it, and each is the root of its own test build |
 | Package separator | `$`; distinct from field access and method-call markers |
 | Package-private member | Any named package-scope declaration beginning with `_` |
