@@ -81,11 +81,40 @@ package opengl;
 
 The directory determines package membership; the declaration asserts that the file is in the package its author intended.
 
+A parameterized library package's declaration also carries its parameter list (§2.6), and every source file of the package repeats it: `package clap<App Type, Dsp Type, Info Type>;`. A file whose list differs from the others' in names, kinds, or order is a compile-time error, because each file's imports may use the parameters.
+
 ### 2.5 A package is one order-independent compilation unit
 
 All source files of one package form a single compilation unit. Declaration order within a file and file order within the package's directory are semantically irrelevant. A declaration in one file may refer to a declaration in another file of the same package without an import or forward declaration.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#the-directory-is-the-package) — "The directory is the package".
+
+### 2.6 A library package may take type and number parameters
+
+A library package may declare type and number parameters in its package declaration, in the `<>` form a type's header uses ([`generics.md`](generics.md) §2.1). It is then a **parameterized package**, and each distinct argument list applied to it names a **package instance**: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>` is the full name of a package, as `List<Int>` is the full name of a type. A program, plugin, or test package takes no parameters.
+
+```zane
+package clap<App Type, Dsp Type, Info Type>;
+
+import clapinfo;
+
+type Instance = #struct { app App; }
+type Audio = #struct { dsp Dsp; }
+
+clapinfo$Descriptor describe() => Info():descriptor();
+```
+
+The rules for the parameters are those of a type's header:
+
+- **Header kinds.** The header holds `Type` and `@concepts$Int` entries, as a type's header does ([`generics.md`](generics.md) §3.3).
+- **Package-wide names.** A parameter's name is in scope in every file of the package, and no declaration of the package introduces a parameter or symbol of the same name. A parameter therefore takes a name that describes its role, such as `App` or `Sample`.
+- **Veiled values.** A value whose type is a package parameter is a veiled value, reached only through verbs ([`generics.md`](generics.md) §3.8).
+
+Every instance is a package of its own: two instances with different arguments declare distinct types, and the compiler makes one copy of the package's declarations for each instance a build reaches. An import or an `export` line whose arguments are all concrete creates its instance; an import that passes the importing package's own parameters creates its instance whenever the compiler creates an instance of the importing package (§3.10). The imports among a project's library packages form no cycle (§4.3), so every chain of instances ends in finitely many steps.
+
+An instance belongs to its home package, the parameterized package, whichever package imports it, and its compiled symbols carry the home package's name together with the argument list ([`dependencies.md`](dependencies.md) §6.1). A build links one copy of each instance, however many of its packages import it.
+
+> **Story:** [`stories/packages.md`](../stories/packages.md#a-library-takes-its-users-types-as-parameters) — "A library takes its user's types as parameters".
 
 ---
 
@@ -130,6 +159,8 @@ The bracket form is an ordinary flat list under [`lexical.md`](lexical.md) §6.2
 For a dependency's package, `pkg` is the name the project's manifest reaches it under: its own name, or the name a `renames` row gives it ([`dependencies.md`](dependencies.md) §8).
 
 An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
+
+Every import form works unchanged on an instance's full name (§3.10): `import clap<synth$Synth, synth$Dsp, synth$SynthInfo> as synthclap;` lets a file write `synthclap$Instance`.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
@@ -206,6 +237,24 @@ The parser treats the left operand of `$` as a package namespace and the right o
 
 ---
 
+### 3.10 An import of a parameterized package names an instance
+
+A file reaches an instance only through an import (§3.1), and every import of a parameterized package writes its argument list in full: `import clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. An import without arguments, such as `import clap$;`, is a compile-time error. An argument may name a concrete type, a compile-time integer, or a parameter of the importing package, and nothing else; a verb's own type parameter never names an instance, because a file's imports are fixed before any verb introduces a parameter.
+
+```zane
+package clap<App Type, Dsp Type, Info Type>;
+
+import plugingui<App>;   // passes one of clap's own parameters
+```
+
+Inside the instance `clap<synth$Synth, synth$Dsp, synth$SynthInfo>`, this import names `plugingui<synth$Synth>`. An import may pass some of the importing package's parameters and leave others out.
+
+The members of an instance are written as the import form gives them (§3.3), with the instance's full name in place of `pkg`: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>$Instance` after a plain import, or `synthclap$Instance` after one with an `as` alias. Two instances imported into one file follow the ordinary collision rule (§3.8): the qualified forms `pkg<Int>$f()` and `pkg<Float>$f()` keep them apart, and two `pkg<...>$` imports collide wherever their bare names do.
+
+An `export` line names an instance the same way (§8.3) but gives the file no spelling, so a plugin package that also writes the instance's members imports it as well.
+
+---
+
 ## 4. Package Visibility
 
 ### 4.1 Leading `_` makes a named declaration package-private
@@ -233,7 +282,7 @@ What a package may import depends on where it lies in its project:
 | Program package | the project's top-level library packages and the public library packages of its dependencies |
 | Test package | as §7.3 states |
 
-A package's **own subpackages** are those whose parent it is; a subpackage of one of them is not among them. A subpackage never imports its parent or a sibling. No package imports a program package or a test package, and the imports among a project's library packages form no cycle ([`dependencies.md`](dependencies.md) §10).
+A package's **own subpackages** are those whose parent it is; a subpackage of one of them is not among them. A subpackage never imports its parent or a sibling. No package imports a program package or a test package, and the imports among a project's library packages form no cycle ([`dependencies.md`](dependencies.md) §10). An import of an instance counts as an import of its parameterized package, so `package a<T Type>; import a<List<T>>;` is a cycle.
 
 The **public library packages** of a project are its top-level library packages whose names do not begin with `_`. They are the only packages another project reaches.
 
@@ -421,7 +470,7 @@ Every C name is unique in a dynamic library or test build. Two exports of one na
 
 ### 8.3 `export` lines choose a build's exports
 
-An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it, `export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. Only a plugin package or a test package (§7.2) carries `export` lines.
+An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it (§2.6), `export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. Its arguments are concrete. Each C name occurs once in a build (§8.2), so a build exports at most one instance of a parameterized library, and a plugin package that names one provides one plugin. Only a plugin package or a test package (§7.2) carries `export` lines.
 
 An exported lambda becomes a C symbol only in two kinds of build:
 
@@ -469,7 +518,9 @@ A value an exported lambda returns with its subject `this T mut` lives in that s
 | Package identity | A library, program, or plugin package is named by its directory; every test package is named `test` |
 | Package source | The `.zn` files directly in the package's directory, beside any C code ([`ffi.md`](ffi.md) §2.1) |
 | Subpackage | A directory with `.zn` files inside a library package; imported only by its parent, never by another project; its name differs from every name its project reaches a dependency's package under |
-| Package declaration | Required in every source file; it matches the package's name |
+| Package declaration | Required in every source file; it matches the package's name; a parameterized package's files all repeat its parameter list |
+| Parameterized package | A library package with a `<>` header of `Type` and `@concepts$Int` entries; each argument list names a distinct instance, a package of its own, compiled once per build in its home package; parameter names are package-wide |
+| Instance import | Every import of a parameterized package writes its full argument list, of concrete types, integers, and the importing package's own parameters; every import form works on the instance's full name |
 | Compilation unit | All files in one package compile together; file and declaration order are irrelevant |
 | Same-package access | Members are available unqualified across all files in the package |
 | Import scope | One source file only |

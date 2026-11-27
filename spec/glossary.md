@@ -579,3 +579,9 @@ This file gives short, reusable names to concepts that appear across multiple sp
 - **Meaning:** A **host** is the program that loads a dynamic library into its own process and calls its exported lambdas, such as an audio workstation loading a CLAP plugin. The **host rule** is what every host obeys: it never runs two calls that borrow one C-held object mutably at once, and never runs a call that takes a C-held object's owner beside any other call on it.
 - **Why this name:** "Host" is the word every plugin format already uses for the loading program. The spec once used it for an owner in the memory model; that meaning is retired, and the word now has only this one.
 - **Canonical home:** [`packages.md`](packages.md) §8.1; host rule [`concurrency.md`](concurrency.md) §4.7
+
+### 4.31 parameterized package / package instance
+
+- **Meaning:** A **parameterized package** is a library package whose declaration carries a `<>` header of type and number parameters, `package clap<App Type, Dsp Type, Info Type>;`. A **package instance** is the package with one argument list applied, `clap<synth$Synth, synth$Dsp, synth$SynthInfo>`: a package of its own, imported by that full name, with types distinct from every other instance's.
+- **Why this name:** The terms follow the ones a parameterized type already has. A package is parameterized as a type is, and *instance* is the word the compiler already uses for one concrete copy of a generic.
+- **Canonical home:** [`packages.md`](packages.md) §2.6, §3.10

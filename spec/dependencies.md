@@ -268,6 +268,8 @@ The first `%` delimits the version, because `%` is reserved as the symbol separa
 
 Distinct packages in one resolved dependency graph **MUST** have distinct identity hashes. The toolchain checks this during dependency resolution and **MUST** abort with an error naming both URLs if two different normalized URLs produce the same identity hash.
 
+An instance of a parameterized package ([`packages.md`](packages.md) §2.6) has no objects in a release archive, because its arguments are known only to the build that names it. The build compiles it from the package's source, and its symbols take the parameterized package's rewritten prefix and path, followed by the instance's argument list written out in full in the compiler's fixed spelling, so every build that names one instance names the same symbols. Each object file that needs an instance carries its code as a mergeable copy, and the linker keeps one.
+
 The `!` prefix is reserved for this toolchain placeholder role and is not a valid user-defined identifier prefix. The original `!`-prefixed object files come from the verified release archive and are retained under the cache's `artifacts/<target>/build/` directory; rewritten, version-stamped objects are written under `build/<target>/` (§7). Only the fetched library's own placeholder-prefixed exports are rewritten; already-versioned transitive references remain unchanged.
 
 ### 6.2 Why rewrite symbols
@@ -378,7 +380,7 @@ A dependency **MUST** have at least one public library package. Resolution abort
 
 The package dependency graph **MUST** be a directed acyclic graph (DAG). Cyclic imports across package boundaries are not allowed.
 
-If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages. A package therefore **MUST NOT** import itself, directly or indirectly.
+If package `A` imports package `B`, then package `B` **MUST NOT** import package `A`, either directly or transitively through any chain of intermediate packages. A package therefore **MUST NOT** import itself, directly or indirectly. An import of an instance of a parameterized package is an edge to that package ([`packages.md`](packages.md) §2.6), whatever its arguments, so a parameterized package that imports an instance of itself is a cycle, and every chain of instances ends.
 
 The compiler **MUST** detect and reject cyclic package dependencies at build time with an error message that identifies the cycle.
 

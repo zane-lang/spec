@@ -96,9 +96,13 @@ import packageName$member
 import packageName$member as alias
 import packageName$[memberA, memberB]
 import packageName$
+import packageName<TypeArgument, ...>
+import packageName<TypeArgument, ...> as alias
+import packageName<TypeArgument, ...>$member
+import packageName<TypeArgument, ...>$
 ```
 
-The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
+An import of a parameterized package writes its argument list in every form ([`packages.md`](packages.md) §3.10). The trailing `$` form carries no member list and no `*`. An `as` clause is legal on the whole-package form and on a single-member form, never on the bracket list or the trailing-`$` form.
 
 ```zane
 import math$[sqrt, pow] as m;  // ILLEGAL: a list has no single name to rename
@@ -1074,7 +1078,10 @@ packageName$member
 
 ```zane
 package packageName
+package packageName<Param Type, n @concepts$Int, ...>
 ```
+
+The second form declares a parameterized library package, and every source file of the package repeats the same list ([`packages.md`](packages.md) §2.4, §2.6).
 
 ### 8.3 Export lines
 
