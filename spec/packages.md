@@ -81,7 +81,7 @@ package opengl;
 
 The directory determines package membership; the declaration asserts that the file is in the package its author intended.
 
-A parameterized library package's declaration also carries its parameter list (§2.6), and every source file of the package repeats it: `package clap<App Type, Dsp Type, Info Type>;`. A file whose list differs from the others' in names, kinds, or order is a compile-time error, because each file's imports may use the parameters.
+A parameterized library package's declaration also carries its parameter list (§2.6), and every source file of the package repeats it: `package clap<App Type, Dsp Type, Info Type, Params Type>;`. A file whose list differs from the others' in names, kinds, or order is a compile-time error, because each file's imports may use the parameters.
 
 ### 2.5 A package is one order-independent compilation unit
 
@@ -91,15 +91,15 @@ All source files of one package form a single compilation unit; a parameterized 
 
 ### 2.6 A library package may take type and number parameters
 
-A library package may declare type and number parameters in its package declaration, in the `<>` form a type's header uses ([`generics.md`](generics.md) §2.1). It is then a **parameterized package**, and each distinct argument list applied to it names a **package instance**: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>` is the full name of a package, as `List<Int>` is the full name of a type. A program, plugin, or test package takes no parameters.
+A library package may declare type and number parameters in its package declaration, in the `<>` form a type's header uses ([`generics.md`](generics.md) §2.1). It is then a **parameterized package**, and each distinct argument list applied to it names a **package instance**: `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>` is the full name of a package, as `List<Int>` is the full name of a type. A program, plugin, or test package takes no parameters.
 
 ```zane
-package clap<App Type, Dsp Type, Info Type>;
+package clap<App Type, Dsp Type, Info Type, Params Type>;
 
 import clapinfo;
 
-type Instance = #struct { app App; }
-type Audio = #struct { dsp Dsp; }
+type Instance = #struct { app App; request Params; }
+type Audio = #struct { dsp Dsp; shown Params; }
 
 clapinfo$Descriptor describe() => Info():descriptor();
 ```
@@ -160,7 +160,7 @@ For a dependency's package, `pkg` is the name the project's manifest reaches it 
 
 An import is a **spelling**, not a linkage. Every imported name resolves to its fully qualified declaration before any later stage, and the package name a compiled symbol carries is always the defining package's own name, followed for an instance by its argument list (see [`dependencies.md`](dependencies.md) §6.1), whatever spelling the importing file chose.
 
-Every import form works unchanged on an instance's full name (§3.10): `import clap<synth$Synth, synth$Dsp, synth$SynthInfo> as synthclap;` lets a file write `synthclap$Instance`.
+Every import form works unchanged on an instance's full name (§3.10): `import clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params> as synthclap;` lets a file write `synthclap$Instance`.
 
 > **Story:** [`stories/packages.md`](../stories/packages.md#what-an-import-writes-is-what-the-file-writes) — "What an import writes is what the file writes".
 
@@ -239,17 +239,17 @@ The parser treats the left operand of `$` as a package namespace and the right o
 
 ### 3.10 An import of a parameterized package names an instance
 
-A file reaches an instance only through an import (§3.1), and every import of a parameterized package writes its argument list in full: `import clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. An import without arguments, such as `import clap$;`, is a compile-time error. An argument may name a concrete type, a compile-time integer, or a parameter of the importing package, and nothing else; a verb's own type parameter never names an instance, because a file's imports are fixed before any verb introduces a parameter.
+A file reaches an instance only through an import (§3.1), and every import of a parameterized package writes its argument list in full: `import clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>;`. An import without arguments, such as `import clap$;`, is a compile-time error. An argument may name a concrete type, a compile-time integer, or a parameter of the importing package, and nothing else; a verb's own type parameter never names an instance, because a file's imports are fixed before any verb introduces a parameter.
 
 ```zane
-package clap<App Type, Dsp Type, Info Type>;
+package clap<App Type, Dsp Type, Info Type, Params Type>;
 
 import plugingui<App>;   // passes one of clap's own parameters
 ```
 
-Inside the instance `clap<synth$Synth, synth$Dsp, synth$SynthInfo>`, this import names `plugingui<synth$Synth>`. An import may pass some of the importing package's parameters and leave others out.
+Inside the instance `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>`, this import names `plugingui<synth$Synth>`. An import may pass some of the importing package's parameters and leave others out.
 
-A file writes the members of an instance as the import form gives them (§3.3), with the instance's full name in place of `pkg`: `clap<synth$Synth, synth$Dsp, synth$SynthInfo>$Instance` after a plain import, or `synthclap$Instance` after one with an `as` alias. Two instances imported into one file follow the ordinary collision rule (§3.8): the qualified forms `pkg<Int>$f()` and `pkg<Float>$f()` keep them apart, and two `pkg<...>$` imports collide wherever their bare names do.
+A file writes the members of an instance as the import form gives them (§3.3), with the instance's full name in place of `pkg`: `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>$Instance` after a plain import, or `synthclap$Instance` after one with an `as` alias. Two instances imported into one file follow the ordinary collision rule (§3.8): the qualified forms `pkg<Int>$f()` and `pkg<Float>$f()` keep them apart, and two `pkg<...>$` imports collide wherever their bare names do.
 
 An `export` line names an instance the same way (§8.3) but gives the file no spelling, so a plugin package that also writes the instance's members imports it as well.
 
@@ -430,7 +430,7 @@ package synthclap;
 
 import synth;
 
-export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;
+export clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>;
 ```
 
 The dynamic library's C symbols are the plugin package's own exported lambdas, the exports of every library its `export` lines name, and the symbols of the C code in the packages it reaches ([`ffi.md`](ffi.md) §2.5). A symbol a host looks up by a fixed name, such as CLAP's `clap_entry`, comes from C code, which calls the exported lambdas.
@@ -470,7 +470,7 @@ Every C name is unique in a dynamic library or test build. Two exports of one na
 
 ### 8.3 `export` lines choose a build's exports
 
-An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it (§2.6), `export clap<synth$Synth, synth$Dsp, synth$SynthInfo>;`. Its arguments are concrete. Each C name occurs once in a build (§8.2), so a build exports at most one instance of a parameterized library, and a plugin package that names one provides one plugin. Only a plugin package or a test package (§7.2) carries `export` lines.
+An `export` line names a library package whose exported lambdas the build gives C symbols: `export somelib;`, or, for a parameterized library, an instance of it (§2.6), `export clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>;`. Its arguments are concrete. Each C name occurs once in a build (§8.2), so a build exports at most one instance of a parameterized library, and a plugin package that names one provides one plugin. Only a plugin package or a test package (§7.2) carries `export` lines.
 
 An exported lambda becomes a C symbol only in two kinds of build:
 

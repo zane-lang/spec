@@ -266,7 +266,7 @@ The subject is a veiled value (§3.8), so the body reaches it only through verbs
 
 ### 3.8 A veiled value is reached only through verbs and subscripts
 
-A **veiled value** is a value whose type is a type parameter, a parameterized package's own included ([`packages.md`](packages.md) §2.6): `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
+A **veiled value** is a value whose type is a type parameter, a parameterized package's own included ([`packages.md`](packages.md) §2.6): `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type, Params Type>`, the subject of `this S Type` (§3.7), a local of type `T`, or the result of a call or field read that yields a `T`. A generic body may do two things with a veiled value:
 
 1. **Hold it.** The body may bind it, store it in a slot of type `T`, return it, and pass it on.
 2. **Reach it through a verb or a subscript.** The body may call a method with it as the subject (`x:level()`, `x!reset()`), pass it to a function (`clamp(x)`), apply an operator to it (`x + y`, `x == y`), read a subscript of it (`x[i]`), and construct a value of its type (`T(...)`, `T.name(...)`).

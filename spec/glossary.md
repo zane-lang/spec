@@ -392,7 +392,7 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 3.50 veiled value
 
-- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors, and `T.name(...)` is always a named-constructor call; a field read or write, an enum map read, naming an enum member, a `match`, or a call as a function value on it is an error.
+- **Meaning:** A value whose type is a type parameter, inside the generic body or parameterized package that declares the parameter: `x` in `Float read(x T Type)`, a value of type `App` inside `package clap<App Type, Dsp Type, Info Type, Params Type>`, a `this S Type` subject, or a `T` read from a field of `Box<T>`. The body may hold it and reach it through methods, functions, operators, subscripts and constructors, and `T.name(...)` is always a named-constructor call; a field read or write, an enum map read, naming an enum member, a `match`, or a call as a function value on it is an error.
 - **Why this name:** A veiled thing is present and whole but its face is hidden; the generic body handles the value without seeing its type, and the caller, who supplies the type, always sees it. The name names the restriction itself, and it borrows no meaning from "opaque", which the spec already uses for a foreign handle's C object.
 - **Canonical home:** [`generics.md`](generics.md) §3.8
 
@@ -582,6 +582,6 @@ This file gives short, reusable names to concepts that appear across multiple sp
 
 ### 4.31 parameterized package / package instance
 
-- **Meaning:** A **parameterized package** is a library package whose declaration carries a `<>` header of type and number parameters, `package clap<App Type, Dsp Type, Info Type>;`. A **package instance** is the package with one argument list applied, `clap<synth$Synth, synth$Dsp, synth$SynthInfo>`: a package of its own, imported by that full name, with types distinct from every other instance's.
+- **Meaning:** A **parameterized package** is a library package whose declaration carries a `<>` header of type and number parameters, `package clap<App Type, Dsp Type, Info Type, Params Type>;`. A **package instance** is the package with one argument list applied, `clap<synth$Synth, synth$Dsp, synth$SynthInfo, synth$Params>`: a package of its own, imported by that full name, with types distinct from every other instance's.
 - **Why this name:** The terms follow the ones a parameterized type already has. A package is parameterized as a type is, and *instance* is the word the compiler already uses for one concrete copy of a generic.
 - **Canonical home:** [`packages.md`](packages.md) §2.6, §3.10
