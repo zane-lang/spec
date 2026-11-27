@@ -1,13 +1,13 @@
 # Naming Zane Terminology
 
-This guide describes how the spec chooses the coined terms it reuses — the named
+This guide describes how spec authors choose the coined terms it reuses — the named
 concepts recorded in [`glossary.md`](../spec/glossary.md), such as `verb`,
 `subject`, `mould`, `borrow`, `settled`, and `roaming`. It governs the *terms of art* the
 documentation leans on, not the surface keywords of the language itself.
 
 Terminology is worth naming deliberately because a good term is used on nearly
 every page: it is the handle a reader carries the concept around by. A term that
-fights its reader — one that already means something else, or that implies more,
+fights its reader — one that already has another meaning, or that implies more,
 or less, than the concept holds — taxes every sentence it appears in.
 
 ---
@@ -38,7 +38,7 @@ reinforces the semantics instead of merely labelling them.
 
 ---
 
-## 2. What Makes a Term Good
+## 2. Qualities of a Good Term
 
 Weigh a candidate against all of these, not just the first.
 
@@ -66,7 +66,7 @@ reader has to sound out, is a poor handle no matter how precise.
 ### 2.4 An oblique connection is fine
 
 The link between the word and the concept may be one hop away; it need not
-encapsulate the definition. A name is not a summary. `settled` does not spell out
+encapsulate the definition. A term is not a summary. `settled` does not spell out
 "may be referenced, and never moved again" — it just points, and the meaning
 settles onto it with use. Aim for *connected but not descriptive*.
 
@@ -74,7 +74,7 @@ settles onto it with use. Aim for *connected but not descriptive*.
 
 Do not expect the name to carry the whole concept on day one. A good term is a
 little empty at first and fills up as the spec uses it. The best connections are
-the ones a reader discovers *after* the word already feels natural — the buried
+the connections a reader discovers *after* the word has become familiar — the buried
 resonance that rewards a second look rather than announcing itself.
 
 ### 2.6 It takes every form the prose needs
@@ -91,7 +91,7 @@ guested") or into a generic word that drifts from the term.
 A term whose concept carries an obligation should be a word whose everyday sense
 already carries it. A reader brings the weight of a familiar word along: one who
 meets a *reference* already expects that it can dangle and must not outlive what
-it names, while a *link* reads as something you may follow or ignore. A word
+it names, while a *link* reads as a pointer you may follow or ignore. A word
 lighter than its rule teaches the reader to take the rule lightly.
 
 ---
@@ -111,7 +111,7 @@ analogy.
 
 ## 4. Two Registers: Projects vs. Terms
 
-The instinct to name things after Greek or Roman figures, places, or other
+The instinct to name concepts after Greek or Roman figures, places, or other
 evocative-but-arbitrary words belongs to **project names**, not terminology. A
 project name (a tool, a repository) can afford to be opaque and mythic — it is
 seen rarely and gains its meaning slowly, so an oblique reference like *Ariadne*
@@ -120,7 +120,7 @@ seen rarely and gains its meaning slowly, so an oblique reference like *Ariadne*
 A **term** is the opposite case: read constantly, and needed to teach on contact.
 Terms therefore lean plain and everyday — `verb`, `subject`, `mould`, `borrow`, `settled`,
 `roaming` — even when the underlying instinct (name by metaphor, keep the link
-oblique) is the same. When in doubt for a term, choose the ordinary word over the exotic one.
+oblique) is shared. When in doubt for a term, choose the ordinary word over the exotic word.
 
 ---
 
@@ -132,11 +132,11 @@ The concept: the three constructs that give a type its shape — `struct`,
 
 - **`origin form`** — accurate (every type originates in one of the four) but
   flat and descriptive; it *states* the definition rather than lending an image.
-  Fails §2.4: a name, not a summary.
+  Fails §2.4: a term is a pointer, not a summary.
 - **`matrix`** — the buried gem: in typography a *matrix* is the mould a piece of
   metal *type* is cast in, so it ties straight to the word "type" the language
   already uses. But it fails §2.2 hard — in programming `matrix` already means a
-  math object, a DI container, and more. It would fight its old meaning on every
+  math object, a DI container and several other constructs. It would fight its old meaning on every
   line.
 - **`arche`** (Greek "origin/first principle") — strong on meaning and quietly
   the root of *arche*type and *arch*itecture, but it fails §2.3: too exotic to
@@ -160,7 +160,7 @@ home document for the full rule (see
 this name" to the short version — a one-line pointer, not the argument.
 
 The developed reasoning — the candidates weighed and rejected, the argument for
-the winner — is design history, so it **must be told in the matching `stories/`
+the winner — is design history, so it **belongs in the matching `stories/`
 doc**, in the chapter that introduces the concept the term names, and never in
 the spec (see [`writing-stories-docs.md`](writing-stories-docs.md) §3.1). This is
 a requirement, not a nicety: a coined term whose name was a real choice is not

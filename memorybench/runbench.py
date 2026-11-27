@@ -253,7 +253,7 @@ def build_tests_json(doc, explanations, notes_pinned=True):
 
     The notes in explanations.txt quote the pinned run's figures. When the
     measurements being rendered are not that run, each note is flagged so the
-    page says whose numbers it is describing rather than implying these.
+    page names the source of its numbers rather than implying these.
     """
     js_tests = []
     for test in doc["tests"]:

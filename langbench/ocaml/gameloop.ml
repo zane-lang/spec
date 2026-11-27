@@ -16,7 +16,7 @@ let below bound =
   state := ((!state * 1103515245) + 12345) land 2147483647;
   !state mod bound
 
-(* Removes the element at [k], shifting the later ones down. *)
+(* Removes the element at [k], shifting the later elements down. *)
 let remove_at a k =
   Dynarray.blit ~src:a ~src_pos:(k + 1) ~dst:a ~dst_pos:k ~len:(Dynarray.length a - k - 1);
   Dynarray.remove_last a

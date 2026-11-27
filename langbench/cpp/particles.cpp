@@ -1,7 +1,7 @@
 // A particle system over F frames: each frame spawns a burst of 60
 // particles with 10 to 30 frames to live, then moves the living and
 // expires the rest. Order does not matter, so an expired particle's slot
-// takes the last one. F is the program's first argument.
+// takes the last particle. F is the program's first argument.
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
