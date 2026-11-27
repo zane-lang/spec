@@ -127,7 +127,7 @@ This restriction prevents conditional moves and flow-dependent owner changes. If
 
 The restriction applies only to symbol move-sources. A verb result or `#variant` case form (§1.2) is an unnamed temporary with no declaration block, so it is simply consumed at the point where it appears.
 
-> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-refuses) — "The declaration-block rule, and the flow analysis it refuses".
+> **Story:** [`stories/lifetimes.md`](../stories/lifetimes.md#the-declaration-block-rule-and-the-flow-analysis-it-rules-out) — "The declaration-block rule, and the flow analysis it rules out".
 
 ### 1.4 A move needs no scope comparison of its own
 

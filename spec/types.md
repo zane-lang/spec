@@ -414,7 +414,7 @@ Countdown() => Countdown.done(Unit());
 
 Because every mould may declare constructors, a generic body may construct a value of a type parameter (`T()`) whatever mould the type argument has, as long as the argument's type declares a matching constructor ([`generics.md`](generics.md) §5).
 
-> **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-what-it-is-not-how-it-is-built) — "Naming a type by what it is, not how it is built".
+> **Story:** [`stories/types.md`](../stories/types.md#naming-a-type-by-its-meaning-not-by-its-construction) — "Naming a type by its meaning, not by its construction".
 > **Story:** [`stories/types.md`](../stories/types.md#every-mould-gets-constructors) — "Every mould gets constructors".
 
 ### 3.2 Positional constructors
@@ -883,7 +883,7 @@ A foreign handle, `#handle{ ... }`, is the one other right-hand side that declar
 
 These three forms — `struct`, `variant`, and `enum` — are the **moulds**: the constructs that give a type its shape. Each has a value form and a `#` reference form (§2.1), and a mould **MUST** appear only as the right-hand side of a `type` or `alias` declaration. Every other type position — a field, a parameter, a return type — names a declared type or an instantiation of one (`Weapon`, `Vector<Int>`, `Array<Int, 10000>`, `&Node`). Every type therefore has a type name, and a program calls the type's constructors by that name (§3.1). The fundamental types follow the same declaration model inside `core`; see §2.6.
 
-> **Story:** [`stories/types.md`](../stories/types.md#every-type-has-a-name-because-construction-needs-one) — "Every type has a name, because construction needs one".
+> **Story:** [`stories/types.md`](../stories/types.md#every-type-is-named-because-construction-calls-it-by-name) — "Every type is named, because construction calls it by name".
 > **Story:** [`stories/types.md`](../stories/types.md#naming-the-moulds-and-marking-every-one) — "Naming the moulds, and marking every one".
 
 ### 5.4 The keyword carries the distinction

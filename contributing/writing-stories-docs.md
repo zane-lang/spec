@@ -57,7 +57,7 @@ A chapter is **not pinned to a spec section.** It is free to range across whatev
 
 ### 2.3 A heading names the event
 
-A chapter heading names the chapter's subject and the decision taken in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing carries the kind") both do this.
+A chapter heading names the chapter's subject and the decision taken in it. It is read out of context more often than in it: in the file's outline and as the quoted text of every `> **Story:**` pointer (§4.4), where a reader decides from the heading alone whether to follow the link. So it names the construct by the word the spec uses for it — `spawn`, the anchor, a value sum, `@` — and states the outcome: what was adopted, dropped, split, merged, or renamed. A short noun phrase ("URL identity and the two-file manifest") and a plain clause ("Casing separates types from values") both do this.
 
 The test is to read the heading without the chapter. A reader who knows the spec should be able to say which rule it explains and roughly which way the decision went. A heading that only makes sense once the chapter has been read is a teaser, and it is rewritten until it passes.
 

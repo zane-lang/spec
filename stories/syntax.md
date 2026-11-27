@@ -42,7 +42,7 @@ and the short form is [shorthand for the long one](https://github.com/zane-lang/
 
 The cost is a token, and it is fair to name it rather than pretend the shorthand is free. Written out, `number Int = Int(2)` says `Int` twice, and the reason the language offers a shorthand at all is that the doubling is real and would otherwise be paid on every line. We are buying explicitness with repetition, collapsing the repetition where we can, and still paying it at every field write — `player.health = Int(20)` names the type each time, forever, where a language with inference writes `player.health = 20`. That is the bill for refusing inference and we do not think it can be argued away; the position is that the token is worth what it says.
 
-The second cost is subtler and it is a debt owed to a different document. `number Int(2)` is two identifiers with nothing between them, and it is only readable because the second one is obviously a type — which it is only because [casing carries the kind](lexical.md#casing-carries-the-kind). Written in a language where `number int(2)` were legal, this form would be unreadable mush. The order we chose is affordable because of a rule that was decided on other grounds, and it would not survive that rule being relaxed.
+The second cost is subtler and it is a debt owed to a different document. `number Int(2)` is two identifiers with nothing between them, and it is only readable because the second one is obviously a type — which it is only because [casing carries the kind](lexical.md#casing-separates-types-from-values). Written in a language where `number int(2)` were legal, this form would be unreadable mush. The order we chose is affordable because of a rule that was decided on other grounds, and it would not survive that rule being relaxed.
 
 ## One shape, and everywhere it turned up
 
@@ -52,7 +52,7 @@ Having settled the order for one kind of declaration, we did not go on to design
 
 There is one seam in all this reuse and it is worth pointing at, because it is the kind of thing a reader trips over once and remembers with irritation. A bare `name Type`, with no construction after it, is not a declaration — symbols require [direct initialization](https://github.com/zane-lang/spec/blob/4026aba01b3e07b28cf0476b79e32a354f8c22c3/spec/memory.md#211-symbols-require-direct-initialization) and the bare form is illegal as a statement. But inside a field-constructor header the very same text is legal and means something else: a required input the caller must supply. So the same two tokens are an error in one brace and a parameter in another, and the only thing distinguishing them is which body they sit in. We accept it because a required constructor input genuinely has no value to write — that is what "required" means — but it is a real wrinkle, and the alternative of minting a separate marker for it would have spent grammar to make a rule that context already settles.
 
-## Two orders, and the one we had already turned down
+## Two orders, and the order we had already turned down
 
 The shape does not reach the one declaration a reader meets most often: a named verb puts its type first, exactly as the C form this story opened by rejecting does:
 
@@ -106,7 +106,7 @@ We should be honest about what kind of argument the last paragraph is. "Not need
 
 And the density has a cost that lands squarely on tooling and on eyes. A declaration with no keyword and no separator is the shortest it can be, which also makes it the least redundant: there is no second signal to catch a misread, so a name miscased is a line that means something else with nothing to flag it. Nor can you find declarations by searching for a word, the way `let ` or `var ` lets you in other languages — a Zane declaration has no distinguishing token to grep for, and finding them all is a job for something that knows the grammar rather than something that knows strings. That is a real loss of a cheap habit, and it is the direct price of the line being as short as it is.
 
-## Every line admits to being a comment
+## Every comment line carries its own marker
 
 Comments are the one place where the width argument runs the other way. The case for `/* */` is that repeating the marker is waste: the remark is one thing, so one pair of delimiters should bracket it. The language takes the wider form anyway. Zane has `//` and the `///` documentation form, and no block comment at all — a multi-line remark is a run of single-line ones, with a marker repeated on every line.
 
@@ -154,7 +154,7 @@ The cost is that the bare word no longer means an operation. That is the sense a
 
 ## Callback lists stay inside the parentheses
 
-The account of subscripts in [the chapter on the two orders](#two-orders-and-the-one-we-had-already-turned-down) closed by admitting that nothing had ever pushed on them. The push, when it came, did not start with subscripts at all. It started with a list of callbacks.
+The account of subscripts in [the chapter on the two orders](#two-orders-and-the-order-we-had-already-turned-down) closed by admitting that nothing had ever pushed on them. The push, when it came, did not start with subscripts at all. It started with a list of callbacks.
 
 A call's last argument may trail when it is a `{ }` ([`syntax.md` §4.8](https://github.com/zane-lang/spec/blob/60a4389ed426e21e9ceeca786636485b26676b8e/spec/syntax.md#48-block-arguments-and-trailing-arguments)), and that is what took [the pipe's job](#removing-pipe-syntax): the calls that hurt to read nested are the ones with a large body at the call site. A function that takes a list of callbacks is exactly that call, and it gets no help. Its argument is an array literal of lambdas, each with a body of its own, and the literal has to close inside the parentheses — so two levels of nesting in, the tail of the call is a pile of `}`, `]` and `)` that a reader has to count. We asked how a library author would get around it, and the answer that came to mind was to ask for the wrong type on purpose: take a map of callbacks rather than a list, because a map literal is a `{ }` and a `{ }` may trail. The first key type to hand, `Unit`, does not even work — every `Unit` is equal, and a repeated key replaces the entry before it ([`syntax.md` §2.10](https://github.com/zane-lang/spec/blob/60a4389ed426e21e9ceeca786636485b26676b8e/spec/syntax.md#210-map-literals)), so such a map keeps only its last callback, and the keys would have to be counted out by hand. But the workaround said something larger than its own flaw. A map whose keys are thrown away is a list, and a literal that serves as both is a Lua table. So the question became whether lists should move into braces: `{ a; b; }` for a list, `{ k, v; }` for a map, the non-empty rule that [settled the bare brace](lexical.md#telling-a-body-brace-from-a-code-block-by-its-content) keeping the two apart, and `[ ]` left with nothing to do but subscript. That the two would share a bracket did not trouble us — a literal that is list-shaped or map-shaped and never both can still produce an `Array` or a `Map`, sharing a spelling without merging the types.
 

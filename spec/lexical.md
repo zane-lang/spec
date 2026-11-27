@@ -67,7 +67,7 @@ type Buffer<T Type, n @concepts$Int> = struct {   // T is a type parameter, n is
 
 A type parameter such as `T` is uppercase because it names a type; a number parameter such as `n` is lowercase because it names a compile-time integer. A parameter is introduced by a type's or a package's `<>` header or inline in a verb's signature, and referenced by its bare name. See [`generics.md`](generics.md) §3.
 
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 
@@ -133,7 +133,7 @@ ok Bool = a < b;         // comparison: a is lowercase, so < is the comparison o
 A comparison never has a type on its immediate left, and a type expression never has a value on its immediate left. The parser therefore distinguishes the two by inspecting the first letter of a single identifier token. A value on the left that is not an identifier, such as the literal `1` in `1 < count`, has no first letter, and the `<` after it is the comparison operator.
 
 > **See also:** [`generics.md`](generics.md) §4.3 for the type-expression rule and [`operators.md`](operators.md) for comparison-operator semantics.
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 
@@ -271,7 +271,7 @@ A `match` written as that first expression keeps its own commas inside its brack
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-enum-map-takes-braces) — "The enum map takes braces" explains why the enum map changed brackets to match.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#telling-a-body-brace-from-a-code-block-by-its-content) — "Telling a body brace from a code block by its content" explains why a map literal carries no leading token and why no literal may be empty.
 > **Story:** [`stories/lexical.md`](../stories/lexical.md#the-bracket-picks-the-separator) — "The bracket picks the separator".
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-thing) — "A delimiter for each separated thing" explains where the two marks and the trailing asymmetry came from.
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#a-delimiter-for-each-separated-construct) — "A delimiter for each separated construct" explains where the two marks and the trailing asymmetry came from.
 
 ---
 

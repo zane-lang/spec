@@ -2,7 +2,7 @@
 
 > **See also:** [`spec/lexical.md`](../spec/lexical.md) — the rules these chapters explain.
 
-## Casing carries the kind
+## Casing separates types from values
 
 The parser needs to distinguish type names from value names in places where the syntax could otherwise admit competing readings. We already intended types to use PascalCase and values to use camelCase, so the practical question was why the language should permit spellings that abandon that convention and make parsing harder. We made the initial-case distinction a rule, letting the lexer hand the parser separate identifier classes rather than leaving it to recover the distinction from declarations. OCaml supplied the technique of splitting identifiers by initial case, though its mapping of those classes differs from Zane's.
 
@@ -27,7 +27,7 @@ The second decision was *what* privacy is private to, and here Zane's extensibil
 
 The cost is a single, honest one, and it lands in tooling rather than in the language. Because visibility is spelled *in the name*, flipping a field from private to public is a rename, and a rename touches every site that mentions the field, where a specifier-based language flips one token in one place. By hand that is tedious; the real answer is a rename refactor, which is to say the cost is a dependence on a language server that does not exist yet and one day will. Beyond that the decision costs essentially nothing — no runtime, no grammar, no reader confusion — and pretending otherwise to look even-handed would be dishonest.
 
-## A delimiter for each separated thing
+## A delimiter for each separated construct
 
 Casing and the underscore load meaning onto the identifier; the last lexical decisions load it onto the punctuation *between* identifiers, under one governing rule — no mark may mean two things in the same context, so the parser never needs lookahead to know what a separator is separating.
 

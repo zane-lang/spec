@@ -166,7 +166,7 @@ The same review renamed the lock file. `zane-versions.coda` held no versions: th
 
 The costs are these. A committed path is specific to a machine, and a teammate without the sibling checkout gets an error until they create it or switch the row back. `from` reaches only direct dependencies: if a transitive package also uses the library someone is editing, that copy keeps the release, and the two versions link side by side.
 
-## A project says what it is
+## A project records whether it is a library or an application
 
 The first question `zane init` asks is whether the new project is a library or an application, and when we went to write the answer down there was nowhere to put it. The answer only chose which starter file to write. We first thought it did not need storing, because the difference seemed to show in the code: an application declares `main`, and a library does not. That turned out to be false. A library built on its own is the root of that build ([`packages.md` §6.1](https://github.com/zane-lang/spec/blob/5b86aad1b6130fefb78df8734687e8ebdbeb8ff9/spec/packages.md#61-the-root-package-is-the-root-of-the-build)), so it may declare a `main` of its own to try itself out, and then the two look identical.
 

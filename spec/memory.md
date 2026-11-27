@@ -559,7 +559,7 @@ When a **value itself** is copied into a slot owned by another scope, it reaches
 Placement never changes observable semantics: destruction stays deterministic (see [`lifetimes.md`](lifetimes.md) §2), and a reference names a settled owner, which no placement decision moves once it has settled (§4).
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#the-value-world-stays-closed-and-placement-stays-the-compilers) — "The value world stays closed, and placement stays the compiler's".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-requests-its-own-size) — "The region takes the boxes, and a box requests its own size".
 > **Story:** [`stories/memory.md`](../stories/memory.md#settled-overwrites-stay-in-place-and-only-an-escape-relocates) — "Settled overwrites stay in place, and only an escape relocates".
 
 ### 3.6 A handle has a fixed footprint; its payload lives in the dynamic region
@@ -595,7 +595,7 @@ A **boxed member** (§3.3) uses the same two-part representation with a payload 
 Dynamic chunks and oversized spans begin at cache-line-aligned addresses. A block within a chunk takes its own type's alignment, and a growable backing store or a boxed payload is aligned to at least 8 bytes, which §3.2 applies to reuse and to the frontier alike, so frontier allocations, reused blocks, and dedicated spans all keep their alignment without mixing payloads into fixed-size chunks.
 
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-free-zero-sentinel-and-cache-line-aligned-buffers) — "A free zero sentinel, and cache-line-aligned buffers".
-> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-asks-for-what-it-is) — "The region takes the boxes, and a box asks for what it is".
+> **Story:** [`stories/memory.md`](../stories/memory.md#the-region-takes-the-boxes-and-a-box-requests-its-own-size) — "The region takes the boxes, and a box requests its own size".
 > **Story:** [`stories/memory.md`](../stories/memory.md#a-lists-oversized-span-grows-in-place-within-a-reservation) — "A list's oversized span grows in place within a reservation".
 > **Story:** [`stories/memory.md`](../stories/memory.md#an-outgrown-span-gives-its-memory-back-as-the-list-leaves-it) — "An outgrown span gives its memory back as the list leaves it".
 > **Story:** [`stories/memory.md`](../stories/memory.md#growth-past-1-mib-takes-a-span-an-overwrite-returned) — "Growth past 1 MiB takes a span an overwrite returned".

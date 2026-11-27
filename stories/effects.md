@@ -56,7 +56,7 @@ The cost is inherited from a theorem rather than chosen: termination is undecida
 > [!NOTE]
 > Superseded: that compile-time evaluation needs a conservatively recognized terminating tier. It needs no proof of termination. See "[Compile-time evaluation needs no termination proof and sits beside capability access](#compile-time-evaluation-needs-no-termination-proof-and-sits-beside-capability-access)".
 
-## What deliberately is not an effect
+## Memory machinery is deliberately not an effect
 
 The last pressure runs the opposite way from the others. The memory model the effect system is built on top of is *busy* underneath — it allocates, it destroys deterministically when a scope drains, it mints anchors, it can abort and unwind. The danger is that all that machinery leaks upward into the effect classification and drags otherwise-pure code into an impure tier for reasons that have nothing to do with what the programmer wrote. A function that builds a small object, reads two fields, and returns a number is, to any reader, pure — and if the mere fact that it allocated a value forced it out of the pure levels, the classification would have stopped tracking *intent* and started tracking *implementation incident*.
 

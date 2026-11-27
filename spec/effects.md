@@ -257,7 +257,7 @@ Heap allocation and destruction are runtime implementation events, not writes in
 
 A verb's abort type and the kind of verb it is (§3) are independent: a verb of any kind may be abortable.
 
-> **Story:** [`stories/effects.md`](../stories/effects.md#what-deliberately-is-not-an-effect) — "What deliberately is not an effect".
+> **Story:** [`stories/effects.md`](../stories/effects.md#memory-machinery-is-deliberately-not-an-effect) — "Memory machinery is deliberately not an effect".
 
 ---
 

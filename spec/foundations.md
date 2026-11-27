@@ -48,7 +48,7 @@ Three consequences that other documents depend on:
 
 The surface grammar uses enforced identifier casing to simplify parsing and distinguish type names from value names. The initial-case rule and the ambiguities it resolves are specified by [`lexical.md`](lexical.md) §3 and §5. The casing rule supports the syntax; it does not define the staging, ownership, or layout model described here.
 
-> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-carries-the-kind) — "Casing carries the kind".
+> **Story:** [`stories/lexical.md`](../stories/lexical.md#casing-separates-types-from-values) — "Casing separates types from values".
 
 ---
 

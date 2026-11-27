@@ -425,7 +425,7 @@ Int[Node, Int] mut    // ILLEGAL: mut requires this as first parameter
 Unit[Int, this Node]  // ILLEGAL: this must be the first parameter
 ```
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-order-we-had-already-turned-down) — "Two orders, and the order we had already turned down".
 
 ### 2.14 The `#` reference modifier
 
@@ -498,7 +498,7 @@ A **reference-type** parameter independently selects one of the three passing mo
 
 A function, method, or constructor has no `<>` parameter header. It introduces a type or number parameter inline within its value parameters, at the parameter's first **marked** occurrence — on a value parameter's type (`param T Type`, carrying the parameter's passing mode as `param ^T Type` or `param &T Type`) or inside a value parameter's nested type (`param Container<T Type, n @concepts$Int>`, where the element of the parameter's own `@concepts$Array` may carry the elements' passing mode as `^T Type` or `&T Type`), or in a slot of a value parameter's function type (`make ^T Type[Int]`, §2.13) — and references it bare elsewhere, including in positions written earlier such as the return type. Inline parameters are inferred from the value arguments at the call; the same `Type` / `@concepts$Int` concepts are used as in a type definition's header (§2.5). See [`generics.md`](generics.md) §3 and §5.
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-order-we-had-already-turned-down) — "Two orders, and the order we had already turned down".
 
 ### 3.2 Methods
 
@@ -632,7 +632,7 @@ ReturnType (this SubjectType)[index ParamType] => expr
 
 `[]` is not a general function call form. A subscript definition always declares a place projection that references existing storage within the subject.
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-order-we-had-already-turned-down) — "Two orders, and the order we had already turned down".
 
 ### 3.7 `init{ }`
 
@@ -704,7 +704,7 @@ callback Unit(this Player) mut {        // shorthand for the line above
 }
 ```
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-one-we-had-already-turned-down) — "Two orders, and the one we had already turned down".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#two-orders-and-the-order-we-had-already-turned-down) — "Two orders, and the order we had already turned down".
 
 A package-scope lambda-variable may end in an `export` suffix, after its body, naming the C symbol it becomes ([`packages.md`](packages.md) §8.2):
 
@@ -1090,7 +1090,7 @@ Zane has none.
 
 Zane has no block-comment syntax. `//` starts a single-line comment. `///` starts a documentation comment line. Adjacent `///` lines are merged into one documentation block.
 
-> **Story:** [`stories/syntax.md`](../stories/syntax.md#every-line-admits-to-being-a-comment) — "Every line admits to being a comment".
+> **Story:** [`stories/syntax.md`](../stories/syntax.md#every-comment-line-carries-its-own-marker) — "Every comment line carries its own marker".
 
 ---
 
