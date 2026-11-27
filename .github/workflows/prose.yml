@@ -28,4 +28,7 @@ jobs:
       - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           python-version: "3.13"
-      - run: uv run --frozen --project .prose-lint prose-lint .
+      # actions/checkout writes only inside the workspace. Moving the clone
+      # out leaves `prose-lint .` with this repository's files alone.
+      - run: mv .prose-lint "$RUNNER_TEMP/prose-lint"
+      - run: uv run --frozen --project "$RUNNER_TEMP/prose-lint" prose-lint .
