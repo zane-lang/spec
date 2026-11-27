@@ -282,7 +282,7 @@ C lends what it passes for the call, as Zane lends C a view (§3.4): the functio
 
 C may call the function value any number of times before the foreign verb returns, and never after. What the function value reads and writes counts toward what the call reads and writes ([`effects.md`](effects.md) §5.2).
 
-C may call a function value that touches no capability and declares no context from several threads at once. C calls one at a time the function values one foreign call is passed that read or write capability-backed state, together with those that declare the context of a `mut` foreign method (§3.8): while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other, since the compiler orders the foreign call as a whole against the state it reaches ([`concurrency.md`](concurrency.md) §4.5) and against its subject, and sees none of the calls C makes inside it.
+C may call a function value from several threads at once when it touches no capability and declares no context of a `mut` foreign method. C calls one at a time the function values one foreign call is passed that read or write capability-backed state, together with those that declare the context of a `mut` foreign method (§3.8): while a call to any of them is running, C starts no call to it or to another of them. That keeps their accesses ordered against each other, since the compiler orders the foreign call as a whole against the state it reaches ([`concurrency.md`](concurrency.md) §4.5) and against its subject, and sees none of the calls C makes inside it.
 
 ### 3.7 The declaration is checked against the interface header
 
